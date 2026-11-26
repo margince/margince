@@ -343,15 +343,9 @@ func ConversationState(view crmcontracts.Company360, now time.Time, zone *time.L
 	if view.Activities != nil {
 		activities = view.Activities.Data
 	}
-	return draftcore.ClassifyWithLogged(now, zone, instant(view.LastInboundAt), instant(view.LastOutboundAt), append(activities, logged...))
-}
-
-// instant reads one optional stamp, treating an absent one as never.
-func instant(at *time.Time) time.Time {
-	if at == nil {
-		return time.Time{}
-	}
-	return *at
+	return draftcore.ClassifyWithLogged(now, zone,
+		activitywhen.StampOf(view.LastInboundAt, view.LastInboundPrecision),
+		activitywhen.StampOf(view.LastOutboundAt, view.LastOutboundPrecision), append(activities, logged...))
 }
 
 // languageEvidence is what the account's correspondence language is read from.

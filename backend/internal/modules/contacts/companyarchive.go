@@ -206,7 +206,8 @@ var companyColumns = `id, display_name, legal_name, description, industry, size_
 	status, parent_company_id, merged_into_id, logo_object_key, linkedin_url, phone, email, source, captured_by,
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL(companyEntity) + `,
-	version, created_at, updated_at, archived_at, is_anchor, last_activity_at, legal_hold, assess_against_entity_id`
+	version, created_at, updated_at, archived_at, is_anchor, last_activity_at, legal_hold, assess_against_entity_id,
+	` + LastActivityDaySQL("company")
 
 // readCompany resolves one company row; active names the
 // custom-field columns to carry alongside the core ones — nil for

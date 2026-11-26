@@ -73,7 +73,14 @@ type zaloOA struct{ id, oaID, secret, team string }
 
 func (c *telegramEnv) connectOA(t *testing.T, oaID string) zaloOA {
 	t.Helper()
-	oa := zaloOA{oaID: oaID, secret: "oa-secret-" + oaID, team: c.readerTeam(t).String()}
+	return c.connectOAFor(t, oaID, c.readerTeam(t).String())
+}
+
+// connectOAFor connects the OA with an existing reader team, as a reconnect of
+// the same OA must.
+func (c *telegramEnv) connectOAFor(t *testing.T, oaID, team string) zaloOA {
+	t.Helper()
+	oa := zaloOA{oaID: oaID, secret: "oa-secret-" + oaID, team: team}
 	var made struct{ ID, MailVisibility, SeatID string }
 	status := c.Call(t, http.MethodPost, "/v1/channel-connections/zalo-oa", integration.AnyMap{
 		"oaId": oaID, "appId": zaloAppID, "displayName": "Shop " + oaID, "appSecret": "app-secret-" + oaID,

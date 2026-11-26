@@ -4,11 +4,13 @@
 package ai
 
 import (
+	"context"
 	"maps"
 	"slices"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // withTaskGrades swaps the generated table for one test, so a case states the
@@ -227,5 +229,69 @@ func TestTheTaskGradeAndTheLeadVerdictReadOneRecord(t *testing.T) {
 				t.Errorf("%+v, %s: %s", grade, row.Task, why)
 			}
 		}
+	}
+}
+
+// The model a provider switched a step to is graded with that step's binding
+// settings. A record of the model under other settings does not grade it.
+func TestASwitchedModelIsGradedWithTheBindingItAnsweredFor(t *testing.T) {
+	bound := ProviderConfig{Provider: "gemini", Model: "gemini-3.1-flash-lite", ThinkingLevel: "low"}
+	cfg := RoutingConfig{
+		Profile: ProfileCloudFrontier,
+		Tiers:   map[Tier]ProviderConfig{TierLocalSmall: bound, TierCheapCloud: bound, TierPremium: bound, TierFrontier: bound},
+	}
+	lead := TaskLadder(TaskSummarize)[0]
+	servedAtLow := bound
+	servedAtLow.Model = "gemini-3.8-flash"
+	servedAtDefault := servedAtLow
+	servedAtDefault.ThinkingLevel = ""
+	withTaskGrades(t, map[CertKey]CertGrade{
+		CertKeyFor(TaskSummarize, servedAtLow, ProfileCloudFrontier):                                    {Verdict: "not_supported", State: "stale"},
+		CertKeyFor(TaskSummarize, servedAtDefault, ProfileCloudFrontier):                                {Verdict: "certified", State: "current"},
+		CertKeyFor(TaskSummarize, ProviderConfig{Provider: "gemini", Model: "m"}, ProfileCloudFrontier): {Verdict: "certified", State: "current"},
+	})
+
+	got := switchedCertification(cfg, TaskSummarize, lead, "gemini-3.8-flash")
+	want := crmcontracts.AiRouteCertification{Verdict: "not_supported", Current: false}
+	if got == nil || *got != want {
+		t.Errorf("a switch to a model measured with the binding's settings = %+v, want %+v", got, want)
+	}
+	if got := switchedCertification(cfg, TaskSummarize, lead, "m"); got != nil {
+		t.Errorf("a switch to a model measured only under other settings = %+v, want no grade", *got)
+	}
+	if got := switchedCertification(cfg, TaskSummarize, lead, "gemini-9-unknown"); got != nil {
+		t.Errorf("a switch to a model no record measured = %+v, want no grade", *got)
+	}
+	if got := switchedCertification(cfg, TaskSummarize, Tier("not-on-the-ladder"), "gemini-3.8-flash"); got != nil {
+		t.Errorf("a switch on a tier the task no longer walks = %+v, want no grade", *got)
+	}
+}
+
+// flowSeat binds a human holding ai_diagnostics read, and the routing grant
+// when routing is true.
+func flowSeat(routing bool) context.Context {
+	objects := map[string]principal.ObjectGrant{"ai_diagnostics": {Read: true}}
+	if routing {
+		objects[routingSettingsObject] = principal.ObjectGrant{Read: true}
+	}
+	return principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:test",
+		Permissions: principal.Permissions{RoleKeys: []string{"fixture"}, Objects: objects},
+	})
+}
+
+// A grade shows which settings a tier is bound with. So the call flow grades a
+// switched model only for a reader of the routing settings.
+func TestTheCallFlowGradesASwitchOnlyForAReaderOfTheRoutingSettings(t *testing.T) {
+	reads := 0
+	h := Handlers{routing: func(context.Context) (RoutingConfig, error) {
+		reads++
+		return RoutingConfig{Profile: ProfileCloudFrontier}, nil
+	}}
+	if got, err := h.storedRouting(flowSeat(false)); err != nil || got != nil || reads != 0 {
+		t.Errorf("a diagnostics-only seat got %+v (%v) after %d reads, want no settings and no read", got, err, reads)
+	}
+	if got, err := h.storedRouting(flowSeat(true)); err != nil || got == nil || got.Profile != ProfileCloudFrontier {
+		t.Errorf("a seat with routing read got %+v (%v), want the stored settings", got, err)
 	}
 }

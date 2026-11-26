@@ -139,13 +139,10 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml IngestVoiceCorpusSourceRequest.occurred_at":       "a voice sample's stated time, written to voice_corpus_source, not an activity",
 	"api/crm.yaml AttentionItem.subject_moved_at": "a lane's own moment the item's subject last moved, compared only with when " +
 		"the row was marked done; the description names occurred_at to say it is not that",
-	"api/crm.yaml Company.last_activity_at":                          storedClock,
 	"api/crm.yaml Contact.last_activity_at":                          storedClock,
-	"api/crm.yaml Company360Project.last_activity_at":                storedClock,
 	"api/crm.yaml TeamWeeklyStaleDeal.last_activity_at":              storedClock,
 	"api/crm.yaml ContactNetworkColleague.last_inbound_at":           storedClock,
 	"api/crm.yaml ContactNetworkColleague.last_outbound_at":          storedClock,
-	"api/crm.yaml DormancyReading.last_activity_at":                  storedClock,
 	"api/crm.yaml Partner.last_contact_at":                           storedClock,
 	"api/crm.yaml MorningBriefItemLineage.returned_with_activity_at": storedClock,
 	"api/crm.yaml StageEvidence.observed_at":                         storedClock,

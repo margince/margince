@@ -234,11 +234,12 @@ func TestASavedReportWithholdsACohortWhoseDefinitionChangedSinceItWasSaved(t *te
 	}
 }
 
-// Routing and capture both record the owner a lead arrived with.
-func TestRoutingAndCaptureRecordTheOwnerALeadArrivedWith(t *testing.T) {
+// Routing and capture both record the owner a lead arrived with, and both lead
+// inserts record the origin it arrived with.
+func TestRoutingAndCaptureRecordTheOwnerAndOriginALeadArrivedWith(t *testing.T) {
 	e := integration.Setup(t)
-	name := "Unrouted"
-	unowned, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: &name, Status: "new", Source: "manual"})
+	name, event := "Unrouted", "event"
+	unowned, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: &name, Status: "new", Source: "manual", Origin: &event})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +255,7 @@ func TestRoutingAndCaptureRecordTheOwnerALeadArrivedWith(t *testing.T) {
 	})
 	ref, err := newCaptureSink(e.Pool, CaptureConfig{}).Upsert(syncing, connector.NormalizedRecord{
 		EntityType: "lead", NaturalKey: connector.NaturalKey{SourceSystem: "test", SourceID: "arrival-1"},
-		Fields: capture.LeadFields{FullName: "Captured"}, Source: "test:arrival-1", CapturedBy: "connector:test",
+		Fields: capture.LeadFields{FullName: "Captured", Origin: "referral"}, Source: "test:arrival-1", CapturedBy: "connector:test",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -265,5 +266,11 @@ func TestRoutingAndCaptureRecordTheOwnerALeadArrivedWith(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id=$1 AND owner_id IS NOT NULL AND arrival_owner_id=owner_id`, ref.ID); n != 1 {
 		t.Error("a captured lead did not record the owner it was captured for")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id=$1 AND arrival_origin='event'`, ids.UUID(unowned.Id)); n != 1 {
+		t.Error("a lead created by hand did not record the origin it arrived with")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id=$1 AND arrival_origin='referral'`, ref.ID); n != 1 {
+		t.Error("a captured lead did not record the origin it arrived with")
 	}
 }

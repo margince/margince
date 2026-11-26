@@ -13,6 +13,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -60,15 +61,9 @@ func ConversationState(view crmcontracts.Contact360, now time.Time, zone *time.L
 	if view.Activities != nil {
 		activities = view.Activities.Data
 	}
-	return draftcore.ClassifyWithLogged(now, zone, instant(view.LastInboundAt), instant(view.LastOutboundAt), append(activities, logged...))
-}
-
-// instant parses one optional stamp, treating anything unreadable as absent.
-func instant(at *time.Time) time.Time {
-	if at == nil {
-		return time.Time{}
-	}
-	return *at
+	return draftcore.ClassifyWithLogged(now, zone,
+		activitywhen.StampOf(view.LastInboundAt, view.LastInboundPrecision),
+		activitywhen.StampOf(view.LastOutboundAt, view.LastOutboundPrecision), append(activities, logged...))
 }
 
 // languageEvidence is what the language of this contact's correspondence is

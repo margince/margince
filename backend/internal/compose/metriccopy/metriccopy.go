@@ -291,9 +291,9 @@ var Attribution = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 		Vi: "Kết quả tính cho người phụ trách mỗi lead tại lúc lead đến; một công ty được tính cho người phụ trách lead đi xa nhất, trong kỳ lead đó đến.",
 	},
 	"source_quality": {
-		En: "Credit goes to the owner the lead had when it arrived, so a reassigned lead stays with them; each lead counts under the origin it has now, in the period it arrived, so editing its origin moves it to the new one.",
-		De: "Gutgeschrieben wird der Person, der der Lead bei seinem Eingang gehörte, sodass ein neu zugewiesener Lead dort bleibt; jeder Lead zählt unter seiner aktuellen Herkunft, in dem Zeitraum seines Eingangs, eine geänderte Herkunft verschiebt ihn also dorthin.",
-		Vi: "Kết quả tính cho người phụ trách lead tại lúc lead đến, nên lead được giao lại vẫn tính cho họ; mỗi lead được tính theo nguồn hiện tại, trong kỳ lead đến, nên khi sửa nguồn thì lead chuyển sang nguồn mới.",
+		En: "Credit goes to the owner the lead had when it arrived, so a reassigned lead stays with them; each lead counts under the origin it had when it arrived, in the period it arrived, so editing its origin later does not move it.",
+		De: "Gutgeschrieben wird der Person, der der Lead bei seinem Eingang gehörte, sodass ein neu zugewiesener Lead dort bleibt; jeder Lead zählt unter der Herkunft, die er bei seinem Eingang hatte, in dem Zeitraum seines Eingangs, eine spätere Änderung der Herkunft verschiebt ihn also nicht.",
+		Vi: "Kết quả tính cho người phụ trách lead tại lúc lead đến, nên lead được giao lại vẫn tính cho họ; mỗi lead được tính theo nguồn lúc lead đến, trong kỳ lead đến, nên sửa nguồn sau đó không làm lead chuyển sang nguồn khác.",
 	},
 	"bookings_mix": {
 		En: "Credit goes to the deal's current owner and pipeline, so a reassigned deal moves with it; each allocation keeps the product's classification from when it was written, so a later catalog change does not rewrite a closed deal.",

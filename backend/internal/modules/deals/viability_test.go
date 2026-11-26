@@ -251,3 +251,42 @@ func TestAnEarlierAnswerDefersTheReviewUntilItRunsOut(t *testing.T) {
 		t.Fatalf("once the answer ran out the deal reads %s, want a review", after.Outcome)
 	}
 }
+
+// Customer progress that names only a date counts its silence from that date.
+// Its noon-UTC anchor is already the next day at UTC+14, so counting from the
+// instant read the deal a day less silent than it is.
+func TestADateOnlyCustomerProgressCountsSilenceFromItsOwnDate(t *testing.T) {
+	t.Parallel()
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	met := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	asOf := time.Date(2026, 11, 25, 10, 30, 0, 0, time.UTC)
+	in := ViabilityInput{CreatedAt: met.AddDate(-1, 0, 0), LastCustomerProgressAt: &met, MailCovered: true}
+	instant := AssessViability(in, asOf, kiritimati).SilentDays
+	in.LastCustomerProgressDateOnly = true
+	if day := AssessViability(in, asOf, kiritimati).SilentDays; day != 6 || instant != 5 {
+		t.Errorf("silent days = %d for date-only progress and %d for the instant, want 6 and 5", day, instant)
+	}
+}
+
+// A date-only entry whose date has begun at UTC+14 is past, though its stored
+// noon UTC is still ahead of the clock. Taken for the future, it was dropped
+// and the silence ran from the deal's creation.
+func TestADateOnlyProgressDatedTodayFarEastIsNotTheFuture(t *testing.T) {
+	t.Parallel()
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	today := time.Date(2026, 11, 26, 12, 0, 0, 0, time.UTC)
+	justAfterMidnight := time.Date(2026, 11, 26, 0, 30, 0, 0, kiritimati)
+	in := ViabilityInput{
+		CreatedAt: today.AddDate(-1, 0, 0), LastCustomerProgressAt: &today,
+		LastCustomerProgressDateOnly: true, MailCovered: true,
+	}
+	if got := AssessViability(in, justAfterMidnight, kiritimati).SilentDays; got != 0 {
+		t.Errorf("silent days = %d after progress dated today, want 0", got)
+	}
+}

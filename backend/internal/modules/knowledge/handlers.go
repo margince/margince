@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -85,8 +86,12 @@ func (h Handlers) WithEmbedIdentity(identity func() string) Handlers {
 }
 
 // ListCorpora serves listCorpora.
-func (h Handlers) ListCorpora(w http.ResponseWriter, r *http.Request) {
-	items, err := h.store.ListCorpora(r.Context())
+func (h Handlers) ListCorpora(w http.ResponseWriter, r *http.Request, params crmcontracts.ListCorporaParams) {
+	archived := storekit.LiveOnly
+	if params.IncludeArchived != nil && *params.IncludeArchived {
+		archived = storekit.IncludeArchived
+	}
+	items, err := h.store.ListCorpora(r.Context(), archived)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -275,6 +280,17 @@ func (h Handlers) DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// RestoreCorpus serves restoreCorpus: 200 with the corpus, back with
+// everything filed in it.
+func (h Handlers) RestoreCorpus(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	corpus, err := h.store.RestoreCorpus(r.Context(), ids.UUID(id))
+	if err != nil {
+		writeKnowledgeErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, corpus)
 }
 
 // ArchiveCorpus serves archiveCorpus: 204, the corpus and everything filed in
