@@ -455,9 +455,9 @@ func TestApplyResolvedHumanFactsWritesAuditableValues(t *testing.T) {
 	if len(applied) != 2 || len(tx.calls) != 4 {
 		t.Fatalf("applied = %#v, SQL calls = %d", applied, len(tx.calls))
 	}
-	// args[4] is value_key: the write's arguments are (companyID, category, field,
-	// value, value_key, by, source).
-	if got := tx.calls[1].args[4]; got != NormalizeFactValueKey("New Customer") {
+	// args[3] is value_key: the write's arguments are (companyID, field, value,
+	// value_key, by, source).
+	if got := tx.calls[1].args[3]; got != NormalizeFactValueKey("New Customer") {
 		t.Fatalf("multi-value key = %v, want normalized custom value", got)
 	}
 	if got := applied[0][auditKeySource]; got != CompanySourceHuman {
@@ -518,7 +518,7 @@ func TestAnAgentsResolvedFactNamesTheAgent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := tx.calls[1].args[6]; got != CompanySourceAgent {
+	if got := tx.calls[1].args[5]; got != CompanySourceAgent {
 		t.Fatalf("written source = %v, want %q", got, CompanySourceAgent)
 	}
 	if got := applied[0][auditKeySource]; got != CompanySourceAgent {

@@ -94,6 +94,9 @@ type EnsureResult struct {
 	// Problem names what the report says about the row beyond its outcome. It is
 	// the column, kind and value of a skip, or the warning a landed row carries.
 	Problem *SkippedRow
+	// MoreProblems are the further cells a skipped row has to have corrected,
+	// each reported as a skip of that same row beside Problem.
+	MoreProblems []SkippedRow
 	// Warnings retain independent disclosures when a row has more than one.
 	Warnings []SkippedRow
 }

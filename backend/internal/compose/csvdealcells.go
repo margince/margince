@@ -7,11 +7,13 @@ package compose
 // is found by name, the amount in minor units, the close date as a day.
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/importcells"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -19,27 +21,26 @@ import (
 )
 
 // checkCells reads a deal row's stage, amount, currency and close date into
-// typed. The first problem wins.
-func (d dealStages) checkCells(fields map[string]string, typed map[string]any) (map[string]any, *cellProblem) {
+// typed, or answers each of them the deals store would refuse. A row whose
+// stage is refused has its close date read as a day and no more.
+func (d dealStages) checkCells(fields map[string]string, typed map[string]any) (map[string]any, []*cellProblem) {
 	if typed == nil {
 		typed = map[string]any{}
 	}
+	var problems cellProblems
 	choice, staged, problem := d.stageOf(fields)
-	if problem != nil {
-		return nil, problem
-	}
+	problems.add(problem)
 	if staged {
 		typed[dealTargetPipeline], typed[dealTargetStage] = choice.pipeline, choice.stage
 	}
-	if problem := checkDealMoney(fields, typed); problem != nil {
-		return nil, problem
-	}
-	if problem := d.checkCloseDate(fields, choice, typed); problem != nil {
-		return nil, problem
-	}
+	problems.add(checkDealMoney(fields, typed))
+	problems.add(d.checkCloseDate(fields, choice, typed))
 	if choice.semantic == crmcontracts.StageSemanticLost && strings.TrimSpace(fields[dealTargetLostReason]) == "" {
-		return nil, problemOf(dealTargetLostReason, fields[dealTargetLostReason],
-			migration.Why(migration.ReasonLostReasonMissing))
+		problems.add(problemOf(dealTargetLostReason, fields[dealTargetLostReason],
+			migration.Why(migration.ReasonLostReasonMissing)))
+	}
+	if len(problems) > 0 {
+		return nil, problems
 	}
 	return typed, nil
 }
@@ -69,6 +70,11 @@ func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem
 			return problemOf(dealTargetCurrency, fields[dealTargetCurrency],
 				migration.Why(migration.ReasonCurrencyNotACode, "value", currency))
 		}
+		// Only the import refuses these: in a file they are slips for a real code.
+		if !values.NamesMoney(currency) {
+			return problemOf(dealTargetCurrency, fields[dealTargetCurrency],
+				migration.Why(migration.ReasonCurrencyNotMoney, "value", currency))
+		}
 		typed[dealTargetCurrency] = currency
 	}
 	if amount == "" {
@@ -76,19 +82,46 @@ func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem
 	}
 	if currency == "" {
 		return problemOf(dealTargetAmount, fields[dealTargetAmount],
-			migration.Why(migration.ReasonCurrencyUnset, "value", amount))
+			migration.Why(migration.ReasonAmountNeedsCurrency, "value", amount))
 	}
 	minor, ok := values.MinorUnits(amount, currency)
 	if !ok {
-		return problemOf(dealTargetAmount, fields[dealTargetAmount],
-			migration.Why(migration.ReasonNotAnAmount, "value", amount, "currency", currency))
-	}
-	if minor < 0 {
-		return problemOf(dealTargetAmount, fields[dealTargetAmount],
-			migration.Why(migration.ReasonAmountNegative, "value", amount))
+		return problemOf(dealTargetAmount, fields[dealTargetAmount], importcells.AmountReason(amount, currency))
 	}
 	typed[dealTargetAmount] = minor
 	return nil
+}
+
+// closeDateHorizonYears is how far ahead a close date lies before the import
+// asks whether it is a typing slip, such as 9999-12-31 for 2029-12-31.
+const closeDateHorizonYears = 50
+
+// farCloseDate is the warning a deal row lands with when its close date lies
+// past the horizon. The row still lands: only its reader knows the date is wrong.
+func (d dealStages) farCloseDate(fields map[string]string) *cellProblem {
+	text := strings.TrimSpace(fields[dealTargetCloseDate])
+	date, err := time.Parse(time.DateOnly, text)
+	if err != nil || !date.After(d.today.AddDate(closeDateHorizonYears, 0, 0)) {
+		return nil
+	}
+	return problemOf(dealTargetCloseDate, fields[dealTargetCloseDate],
+		migration.Why(migration.ReasonCloseDateFar, "value", text, "years", strconv.Itoa(closeDateHorizonYears)))
+}
+
+// farCloseDateWarning is farCloseDate for one of this part's rows, as the
+// warning the row lands with. Rows of other types have none.
+func (w *csvWriters) farCloseDateWarning(row migration.Row) []migration.SkippedRow {
+	if w.object != migration.ObjectDeal {
+		return nil
+	}
+	problem := w.dealStages.farCloseDate(textFields(row.Fields))
+	if problem == nil {
+		return nil
+	}
+	return []migration.SkippedRow{{
+		ExternalID: row.ExternalID, Line: row.Line, Column: w.headerFor(problem.Target), Value: problem.Value,
+		Reason: problem.Message, Code: problem.Why.Code, Params: problem.Why.Params,
+	}}
 }
 
 // closedSemantic is whether a stage ends a deal; the zero semantic of a row

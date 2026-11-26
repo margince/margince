@@ -880,9 +880,9 @@ func TestTheRetractionMatchesOnlyCanonicalActivityRefs(t *testing.T) {
 	// a spelling the writer never produces, one is not a uuid at all.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO contact_profile_field (contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
-			VALUES ($1, 'role', 'Partner', 'Partner', 'activity:' || upper($2::text), 'capture_enrich', 'agent:enrich'),
-			       ($1, 'linkedin', 'x', 'x', 'activity:not-a-uuid', 'capture_enrich', 'agent:enrich')`,
+			INSERT INTO field_provenance (object_type, object_id, field_name, value, evidence_snippet, evidence_ref, source, captured_by)
+			VALUES ('contact', $1, 'role', 'Partner', 'Partner', 'activity:' || upper($2::text), 'capture_enrich', 'agent:enrich'),
+			       ('contact', $1, 'linkedin', 'x', 'x', 'activity:not-a-uuid', 'capture_enrich', 'agent:enrich')`,
 			contact, activity)
 		return err
 	}); err != nil {

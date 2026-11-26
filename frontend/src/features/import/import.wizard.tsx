@@ -289,6 +289,7 @@ function UploadStep({
               format,
               recent.data,
               wizard.presetContact ? "activity" : undefined,
+              wizard.replaced,
             ),
           )
         }
