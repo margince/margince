@@ -28,11 +28,11 @@ func TestEveryWriterOfAnActivityBodySetsWhereTheSendersTextEnds(t *testing.T) {
 		if strings.HasSuffix(where, "_test.go") {
 			continue
 		}
-		source, err := gatekit.ReadFile(path)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
-			t.Fatalf("reading %s: %v", where, err)
+			t.Fatalf("parsing %s: %v", where, err)
 		}
-		for _, statement := range gatekit.SQLStatementsIn(t, where, string(source)) {
+		for _, statement := range gatekit.SQLStatementsOf(file) {
 			found, unpaired := gatekit.ActivityTextWrites(statement)
 			writers += found
 			if unpaired > 0 {

@@ -413,8 +413,9 @@ func findClaims(root string) ([]claim, error) {
 			// than being applied once here, so the two readings of the same
 			// text cannot disagree about which match is the claim.
 			rejects := map[string]func(string) bool{}
-			if named := namedExhaustiveness(decl); named != nil {
-				if claimPhrase(named, text, intensifier) != "" {
+			// The named pattern needs "every", and each one is compiled and held per name.
+			if mayHoldFolded(text, "every") {
+				if named := namedExhaustiveness(decl); named != nil && claimPhrase(named, text, intensifier) != "" {
 					shapes = append(shapes, namedShape)
 					patterns[namedShape] = named
 					rejects[namedShape] = intensifier
