@@ -33,10 +33,16 @@ together. It also could not see the user message, which the rendered file does n
 
 ## 3. Confirm a candidate on real models before you edit
 
-Send the recorded request from the payload trace again, with thought summaries on. Gemini returns
-them at `thinking_level: high`; the Gemini presets set `low`, which writes none. So the replay shows why a
-model answers the way it does, not what production answers. If two models quote two different rules,
-the conflict is real. If none of them mentions it, leave the prompt alone.
+Take a recorded request from the payload trace (`request_payload` holds `system` and `messages`) and send
+it again to two models, together with the candidate's invented input. For Gemini, set
+`generationConfig.thinkingConfig` to `{"includeThoughts": true, "thinkingLevel": "high"}`. The reply then
+holds parts marked `"thought": true`, which are the thought summaries. The Gemini presets set `low`, which
+writes none, so the replay shows why a model answers the way it does, not what production answers.
+
+Decide from the answers and use the summaries to explain them. A summary can leave out a conflict that
+really drove the answer, and two models can quote two different rules that agree. The conflict is real when
+the answers split the way the candidate predicts, for instance one model leaving out what the other invents.
+If every model answers the same correct way, leave the prompt alone.
 
 ## 4. Give the case one owner
 

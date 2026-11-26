@@ -3133,8 +3133,8 @@
             "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
-          "band": "not_supported",
-          "state": "stale",
+          "band": "supported_degraded",
+          "state": "current",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -3143,12 +3143,12 @@
               "env": "cloud_frontier"
             },
             "same_model": false,
-            "band": "supported_degraded",
-            "state": "stale"
+            "band": "not_supported",
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 57,
-          "passed": 57,
+          "runs": 51,
+          "passed": 51,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 2,
           "scope": "full_invocation",
@@ -3721,8 +3721,8 @@
       ],
       "bands": {
         "certified": 33,
-        "supported_degraded": 4,
-        "not_supported": 1,
+        "supported_degraded": 5,
+        "not_supported": 0,
         "too_few_runs": 0
       },
       "untested": 0,
@@ -10714,7 +10714,7 @@
       "usable_with_care": 3,
       "not_reliable_yet": 0,
       "too_few_runs": 19,
-      "recheck_pending": 1,
+      "recheck_pending": 0,
       "judges": [
         "gemini-3.1-flash-lite"
       ],
@@ -10726,21 +10726,21 @@
             "env": "cloud_frontier"
           },
           "sites": 55,
-          "sites_current": 54,
+          "sites_current": 55,
           "sites_partial": 0,
-          "sites_stale": 1,
-          "runs": 1377,
-          "passed": 1344,
-          "reliability": 0.9760348583877996,
+          "sites_stale": 0,
+          "runs": 1341,
+          "passed": 1313,
+          "reliability": 0.9791200596569725,
           "reliability_interval": {
-            "lower": 0.970158,
-            "upper": 0.980777
+            "lower": 0.973499,
+            "upper": 0.983569
           },
           "slowest_p95_ms": 43210,
           "bands": {
             "certified": 30,
-            "supported_degraded": 10,
-            "not_supported": 1,
+            "supported_degraded": 9,
+            "not_supported": 2,
             "too_few_runs": 14
           }
         },
@@ -10751,21 +10751,21 @@
             "env": "cloud_frontier"
           },
           "sites": 52,
-          "sites_current": 51,
+          "sites_current": 52,
           "sites_partial": 0,
-          "sites_stale": 1,
-          "runs": 999,
-          "passed": 980,
-          "reliability": 0.980980980980981,
+          "sites_stale": 0,
+          "runs": 993,
+          "passed": 974,
+          "reliability": 0.9808660624370594,
           "reliability_interval": {
-            "lower": 0.974601,
-            "upper": 0.985781
+            "lower": 0.974449,
+            "upper": 0.985695
           },
           "slowest_p95_ms": 67218,
           "bands": {
             "certified": 29,
-            "supported_degraded": 4,
-            "not_supported": 1,
+            "supported_degraded": 5,
+            "not_supported": 0,
             "too_few_runs": 18
           }
         }
@@ -11206,13 +11206,13 @@
           "task": "nl_search",
           "best": {
             "provider": "anthropic",
-            "model": "claude-haiku-5-5",
+            "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "stale",
-          "runs": 78,
-          "passed": 68,
+          "state": "current",
+          "runs": 24,
+          "passed": 24,
           "records": 2,
           "judge": "gemini-3.1-flash-lite"
         },
@@ -11720,11 +11720,11 @@
           "sites_partial": 0,
           "sites_stale": 0,
           "runs": 1503,
-          "passed": 1471,
-          "reliability": 0.978709248170326,
+          "passed": 1469,
+          "reliability": 0.9773785761809713,
           "reliability_interval": {
-            "lower": 0.973389,
-            "upper": 0.982985
+            "lower": 0.971917,
+            "upper": 0.981798
           },
           "slowest_p95_ms": 10760,
           "bands": {
@@ -14547,21 +14547,21 @@
         "env": "cloud_frontier"
       },
       "sites": 55,
-      "sites_current": 54,
+      "sites_current": 55,
       "sites_partial": 0,
-      "sites_stale": 1,
-      "runs": 1377,
-      "passed": 1344,
-      "reliability": 0.9760348583877996,
+      "sites_stale": 0,
+      "runs": 1341,
+      "passed": 1313,
+      "reliability": 0.9791200596569725,
       "reliability_interval": {
-        "lower": 0.970158,
-        "upper": 0.980777
+        "lower": 0.973499,
+        "upper": 0.983569
       },
       "slowest_p95_ms": 43210,
       "bands": {
         "certified": 30,
-        "supported_degraded": 10,
-        "not_supported": 1,
+        "supported_degraded": 9,
+        "not_supported": 2,
         "too_few_runs": 14
       }
     },
@@ -14572,21 +14572,21 @@
         "env": "cloud_frontier"
       },
       "sites": 52,
-      "sites_current": 51,
+      "sites_current": 52,
       "sites_partial": 0,
-      "sites_stale": 1,
-      "runs": 999,
-      "passed": 980,
-      "reliability": 0.980980980980981,
+      "sites_stale": 0,
+      "runs": 993,
+      "passed": 974,
+      "reliability": 0.9808660624370594,
       "reliability_interval": {
-        "lower": 0.974601,
-        "upper": 0.985781
+        "lower": 0.974449,
+        "upper": 0.985695
       },
       "slowest_p95_ms": 67218,
       "bands": {
         "certified": 29,
-        "supported_degraded": 4,
-        "not_supported": 1,
+        "supported_degraded": 5,
+        "not_supported": 0,
         "too_few_runs": 18
       }
     },
@@ -14601,11 +14601,11 @@
       "sites_partial": 0,
       "sites_stale": 3,
       "runs": 1662,
-      "passed": 1613,
-      "reliability": 0.970517448856799,
+      "passed": 1611,
+      "reliability": 0.9693140794223827,
       "reliability_interval": {
-        "lower": 0.964718,
-        "upper": 0.975388
+        "lower": 0.963412,
+        "upper": 0.97429
       },
       "slowest_p95_ms": 10760,
       "bands": {
@@ -29235,17 +29235,17 @@
           "judge": "gemini-3.1-flash-lite",
           "scenarios_measured": 9,
           "scenarios_total": 9,
-          "runs": 84,
-          "passed": 84,
+          "runs": 60,
+          "passed": 60,
           "reliability": 1,
           "reliability_interval": {
-            "lower": 0.980821,
+            "lower": 0.973354,
             "upper": 1
           },
-          "latency_p50_ms": 3053,
-          "latency_p95_ms": 5809,
+          "latency_p50_ms": 3242,
+          "latency_p95_ms": 6363,
           "reported": {
-            "accepted": 84,
+            "accepted": 60,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -29270,8 +29270,8 @@
             "lower": 0.942655,
             "upper": 1
           },
-          "latency_p50_ms": 2696,
-          "latency_p95_ms": 4761,
+          "latency_p50_ms": 2472,
+          "latency_p95_ms": 4243,
           "reported": {
             "accepted": 27,
             "wrong_answer": 0,
@@ -29952,18 +29952,17 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.8-flash",
-          "env": "cloud_frontier",
-          "thinking_level": "low"
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "env": "cloud_frontier"
         },
         "band": "supported_degraded",
-        "runs": 30,
-        "passed": 28,
-        "reliability": 0.9333333333333333,
+        "runs": 24,
+        "passed": 24,
+        "reliability": 1,
         "reliability_interval": {
-          "lower": 0.849719,
-          "upper": 0.971961
+          "lower": 0.935946,
+          "upper": 1
         },
         "state": "current"
       },
@@ -30018,47 +30017,27 @@
             "model": "claude-haiku-5-5",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "supported_degraded",
+          "state": "current",
+          "band": "not_supported",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 0,
+          "scenarios_measured": 7,
           "scenarios_total": 7,
-          "runs": 78,
-          "passed": 68,
-          "reliability": 0.8717948717948718,
+          "runs": 57,
+          "passed": 52,
+          "reliability": 0.9122807017543859,
           "reliability_interval": {
-            "lower": 0.815508,
-            "upper": 0.912747
+            "lower": 0.852002,
+            "upper": 0.949464
           },
-          "latency_p50_ms": 3053,
-          "latency_p95_ms": 5809,
+          "latency_p50_ms": 3242,
+          "latency_p95_ms": 6363,
           "reported": {
-            "accepted": 68,
-            "wrong_answer": 10,
+            "accepted": 52,
+            "wrong_answer": 5,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "7 scenarios it scored have changed since (the prompt this build sends and how a run is graded): search_data_counts_open_deals, search_data_counts_won_deals_in_a_period, search_data_eur_threshold, search_data_falls_back_for_a_handbook_question, search_data_german_threshold, search_data_jpy_threshold and 1 more",
-          "stale_cause": {
-            "prompt_changed": [
-              "search_data_counts_open_deals",
-              "search_data_counts_won_deals_in_a_period",
-              "search_data_eur_threshold",
-              "search_data_falls_back_for_a_handbook_question",
-              "search_data_german_threshold",
-              "search_data_jpy_threshold",
-              "search_data_vietnamese_threshold"
-            ],
-            "grader_changed": [
-              "search_data_counts_open_deals",
-              "search_data_counts_won_deals_in_a_period",
-              "search_data_eur_threshold",
-              "search_data_falls_back_for_a_handbook_question",
-              "search_data_german_threshold",
-              "search_data_jpy_threshold",
-              "search_data_vietnamese_threshold"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -30066,47 +30045,27 @@
             "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "not_supported",
+          "state": "current",
+          "band": "supported_degraded",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 0,
+          "scenarios_measured": 7,
           "scenarios_total": 7,
-          "runs": 30,
-          "passed": 30,
+          "runs": 24,
+          "passed": 24,
           "reliability": 1,
           "reliability_interval": {
-            "lower": 0.948092,
+            "lower": 0.935946,
             "upper": 1
           },
-          "latency_p50_ms": 2696,
-          "latency_p95_ms": 4761,
+          "latency_p50_ms": 2472,
+          "latency_p95_ms": 4243,
           "reported": {
-            "accepted": 30,
+            "accepted": 24,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "7 scenarios it scored have changed since (the prompt this build sends and how a run is graded): search_data_counts_open_deals, search_data_counts_won_deals_in_a_period, search_data_eur_threshold, search_data_falls_back_for_a_handbook_question, search_data_german_threshold, search_data_jpy_threshold and 1 more",
-          "stale_cause": {
-            "prompt_changed": [
-              "search_data_counts_open_deals",
-              "search_data_counts_won_deals_in_a_period",
-              "search_data_eur_threshold",
-              "search_data_falls_back_for_a_handbook_question",
-              "search_data_german_threshold",
-              "search_data_jpy_threshold",
-              "search_data_vietnamese_threshold"
-            ],
-            "grader_changed": [
-              "search_data_counts_open_deals",
-              "search_data_counts_won_deals_in_a_period",
-              "search_data_eur_threshold",
-              "search_data_falls_back_for_a_handbook_question",
-              "search_data_german_threshold",
-              "search_data_jpy_threshold",
-              "search_data_vietnamese_threshold"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -35252,17 +35211,17 @@
           "judge": "gemini-3.1-flash-lite",
           "scenarios_measured": 4,
           "scenarios_total": 4,
-          "runs": 12,
-          "passed": 12,
+          "runs": 21,
+          "passed": 21,
           "reliability": 1,
           "reliability_interval": {
-            "lower": 0.879604,
+            "lower": 0.927459,
             "upper": 1
           },
-          "latency_p50_ms": 1924,
-          "latency_p95_ms": 3198,
+          "latency_p50_ms": 1675,
+          "latency_p95_ms": 3379,
           "reported": {
-            "accepted": 12,
+            "accepted": 21,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -35287,8 +35246,8 @@
             "lower": 0.879604,
             "upper": 1
           },
-          "latency_p50_ms": 1697,
-          "latency_p95_ms": 2396,
+          "latency_p50_ms": 1759,
+          "latency_p95_ms": 2220,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -35309,18 +35268,18 @@
           "scenarios_measured": 4,
           "scenarios_total": 4,
           "runs": 36,
-          "passed": 33,
-          "reliability": 0.9166666666666666,
+          "passed": 31,
+          "reliability": 0.8611111111111112,
           "reliability_interval": {
-            "lower": 0.837957,
-            "upper": 0.959014
+            "lower": 0.771416,
+            "upper": 0.919293
           },
-          "latency_p50_ms": 1107,
-          "latency_p95_ms": 1344,
+          "latency_p50_ms": 1099,
+          "latency_p95_ms": 1873,
           "reported": {
-            "accepted": 33,
+            "accepted": 31,
             "wrong_answer": 0,
-            "invalid": 3,
+            "invalid": 5,
             "abstained": 0
           },
           "stale_reason": ""
@@ -35429,8 +35388,8 @@
             "lower": 0.879604,
             "upper": 1
           },
-          "latency_p50_ms": 3007,
-          "latency_p95_ms": 8435,
+          "latency_p50_ms": 3299,
+          "latency_p95_ms": 5799,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,

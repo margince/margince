@@ -22,7 +22,7 @@ Also called: which model should I use, best model, recommended model, which LLM,
 |---|---|---:|---:|---:|---:|
 | Google Gemini | global cloud | 28 | 10 | 0 | 0 |
 | Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 28 | 10 | 0 | 0 |
-| Anthropic Claude | global cloud | 33 | 4 | 1 | 0 |
+| Anthropic Claude | global cloud | 33 | 5 | 0 | 0 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 8 | 6 |
 | Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 0 | 4 | 33 |
@@ -30,7 +30,7 @@ Also called: which model should I use, best model, recommended model, which LLM,
 | Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 38 |
 | Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 38 |
 
-88 of these 201 grades were measured on an older version of Margince and wait for a re-check.
+87 of these 201 grades were measured on an older version of Margince and wait for a re-check.
 
 ### What does a grade of a Margince AI feature mean?
 A grade of a Margince AI feature says how often it was right. **Ready** means right in at least 90 of every 100 tries: turn it on. **Usable with care** means right in most tries: have someone look over what it makes. **Not reliable yet** means wrong too often: leave it off. **Not measured** means nobody has tested that feature on that model yet.
