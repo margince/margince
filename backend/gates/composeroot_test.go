@@ -142,7 +142,7 @@ const (
 	// for a named colleague, and their cases.
 	composeRootProductionLines = 232_142
 	// Raised by 18 test lines for the link suggestion tool cases.
-	composeRootTestLines = 363_648
+	composeRootTestLines = 363_698
 )
 
 // A read under these floors stopped early or read the wrong place, and would
