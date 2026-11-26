@@ -343,15 +343,14 @@ var actorKinds = map[string]string{
 // converts on its own with a test through the real gate. A converted file that
 // keeps its entry fails AssertAllMatched.
 var agentJobsStillSystemTyped = gatekit.Waive(map[string]string{
-	"internal/compose/approvalpreviewcommitment.go":   forAColleague,
-	"internal/compose/chatcapturefile.go":             forAColleague,
-	"internal/compose/deepreadprincipal.go":           forAColleague,
-	"internal/compose/extractionaccept.go":            forAColleague,
-	"internal/compose/jobs_documentextract.go":        forAColleague,
-	"internal/compose/jobs_transcript.go":             forAColleague,
-	"internal/compose/onboardingsitereadtransport.go": forAColleague,
-	"internal/compose/commitmenttask.go":              forNoOne,
-	"internal/compose/jobs_knowledgeingest.go":        forNoOne,
+	"internal/compose/approvalpreviewcommitment.go": forAColleague,
+	"internal/compose/chatcapturefile.go":           forAColleague,
+	"internal/compose/deepreadprincipal.go":         forAColleague,
+	"internal/compose/extractionaccept.go":          forAColleague,
+	"internal/compose/jobs_documentextract.go":      forAColleague,
+	"internal/compose/jobs_transcript.go":           forAColleague,
+	"internal/compose/commitmenttask.go":            forNoOne,
+	"internal/compose/jobs_knowledgeingest.go":      forNoOne,
 })
 
 const (
