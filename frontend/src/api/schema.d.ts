@@ -44530,6 +44530,18 @@ export interface components {
              * @enum {string}
              */
             relevance_source?: "human" | "classifier";
+            filed_by?: components["schemas"]["LinkFiler"];
+        };
+        /** @description On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again. */
+        LinkFiler: {
+            actor: string;
+            /**
+             * @description Which hook point filed it, for an extension actor. Absent for `core`.
+             * @enum {string}
+             */
+            hook?: "parties" | "deal";
+            /** @description For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations. Absent for `core`. */
+            reason?: string;
         };
         /**
          * @description The destination for every writable, non-archived activity of one conversation thread.

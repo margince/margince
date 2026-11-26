@@ -43,6 +43,15 @@ export const ENTRY_ICONS: Readonly<Record<string, LucideIcon>> = {
   plug: Plug,
 };
 
+/**
+ * The glyph an entry or app names, or undefined for a name the list lacks.
+ * Object.hasOwn: the map is an object literal, so a bare index would answer
+ * "constructor" from the prototype.
+ */
+export function entryIcon(name: string): LucideIcon | undefined {
+  return Object.hasOwn(ENTRY_ICONS, name) ? ENTRY_ICONS[name] : undefined;
+}
+
 // A slot with this prefix draws each entry as a note, not a button.
 const MARK_SLOT_PREFIX = "record_mark.";
 
@@ -126,10 +135,7 @@ function EntryMark({
   entry,
   label,
 }: Readonly<{ entry: UnitEntry; label: string }>) {
-  const icon = Object.hasOwn(ENTRY_ICONS, entry.icon)
-    ? ENTRY_ICONS[entry.icon]
-    : undefined;
-  return <Badge icon={icon}>{label}</Badge>;
+  return <Badge icon={entryIcon(entry.icon)}>{label}</Badge>;
 }
 
 function EntryButton({
@@ -137,11 +143,7 @@ function EntryButton({
   label,
   record,
 }: Readonly<{ entry: UnitEntry; label: string; record?: EntryRecord }>) {
-  // Object.hasOwn: the map is an object literal, so a bare index would answer
-  // "constructor" from the prototype.
-  const Icon = Object.hasOwn(ENTRY_ICONS, entry.icon)
-    ? ENTRY_ICONS[entry.icon]
-    : undefined;
+  const Icon = entryIcon(entry.icon);
   return (
     // The span lets a verb bar's narrow tile cut the label at its end; the
     // title still shows all of it.

@@ -488,7 +488,10 @@ var tableOwners = map[string]string{
 	"extension_ingest_refusal": "internal/compose",
 	// Where a unit's bulk load stopped, written by the extension port.
 	"extension_ingest_position": "internal/compose/extingress",
-	"idempotency_key":           "internal/compose",
+	// The running count and size of each unit's stored objects, kept by the
+	// object capability beside the store call it counts.
+	"extension_object_usage": "internal/compose/extcapability",
+	"idempotency_key":        "internal/compose",
 	// A bulk change and the user's confirmation of one. compose owns both
 	// because the change spans three record types in two modules, and the
 	// engine that writes them is the composition layer's (bulkchange.go).

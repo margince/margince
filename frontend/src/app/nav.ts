@@ -14,7 +14,12 @@ import {
 import type { MessageKey } from "../i18n/en";
 import { screenEnabled, type Withheld } from "../lib/corefeatures";
 import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
-import { EXTENSION_APP_SCREEN, type UnitApp } from "../lib/extensionapps";
+import {
+  EXTENSION_APP_GROUPS,
+  EXTENSION_APP_SCREEN,
+  type ExtensionAppGroup,
+  type UnitApp,
+} from "../lib/extensionapps";
 import { EXTENSION_SCREEN } from "../lib/extensions";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import type { Route, Screen } from "../lib/router";
@@ -284,18 +289,20 @@ export const RAIL_LESS_SCREENS: ReadonlySet<Screen> = new Set([
 // It carries the product's own destinations, a fork's, then the apps that
 // composed units declare (navapps.ts). Vanilla declares none, so its rows are
 // the ones rail.test.tsx pins.
-// Which of the three headings a fork screen names, keyed by the heading it
-// declares. A fork says "records" and this is what that means to the rail — the
-// mapping lives here rather than in app/custom.ts because the group KEYS are
-// this list's, and a fork naming a fourth one fails to typecheck against
-// CustomScreen["nav"]["group"] rather than rendering into nothing.
-const CUSTOM_NAV_GROUPS: Partial<
-  Record<MessageKey, "records" | "work" | "intelligence">
-> = {
-  "nav.group.records": "records",
-  "nav.group.work": "work",
-  "nav.group.intelligence": "intelligence",
-};
+// The app group each heading of the rail stands for: `nav.group.<group>`. A
+// group with no such copy key fails the typecheck here.
+const HEADING_GROUPS = new Map<MessageKey, ExtensionAppGroup>(
+  EXTENSION_APP_GROUPS.map((group): [MessageKey, ExtensionAppGroup] => [
+    `nav.group.${group}` as const satisfies MessageKey,
+    group,
+  ]),
+);
+
+function headingGroup(
+  headingKey: MessageKey | undefined,
+): ExtensionAppGroup | undefined {
+  return headingKey ? HEADING_GROUPS.get(headingKey) : undefined;
+}
 
 // A fork's own destinations, in the group each declared (app/custom.ts).
 //
@@ -315,7 +322,7 @@ const CUSTOM_NAV_GROUPS: Partial<
 function forkItems(
   headingKey: MessageKey | undefined,
 ): readonly NavLevelEntry[] {
-  const group = headingKey ? CUSTOM_NAV_GROUPS[headingKey] : undefined;
+  const group = headingGroup(headingKey);
   if (!group) {
     return [];
   }
@@ -354,10 +361,7 @@ function primaryLevel(
             icon: item.icon,
           })),
         ...forkItems(group.headingKey),
-        ...appItems(
-          group.headingKey ? CUSTOM_NAV_GROUPS[group.headingKey] : undefined,
-          apps,
-        ),
+        ...appItems(headingGroup(group.headingKey), apps),
       ],
     })).filter((group) => group.items.length > 0),
     ancestor: opensAPageBelow(route),

@@ -7,6 +7,7 @@ import {
   extensionTitle,
   findExtension,
   isExtensionRbacObject,
+  unitCopyPrefix,
   unitsForSecretScope,
 } from "./extensions";
 import { parseHash } from "./router";
@@ -219,5 +220,14 @@ describe("naming a unit", () => {
   it("reads the name as words for a unit this installation does not compose", () => {
     expect(extensionTitle("retired-unit", "en", REGISTRY)).toBe("Retired unit");
     expect(extensionTitle("dispact-connector", "en")).toBe("Dispact connector");
+  });
+});
+
+describe("the copy prefix of a unit", () => {
+  it("follows the generator's rule", () => {
+    expect(unitCopyPrefix("crm-hello")).toBe("extCrmHello.");
+    expect(unitCopyPrefix("deal-rules")).toBe("extDealRules.");
+    expect(unitCopyPrefix("openchannel")).toBe("extOpenchannel.");
+    expect(unitCopyPrefix("3d-print")).toBe("ext_3dPrint.");
   });
 });
