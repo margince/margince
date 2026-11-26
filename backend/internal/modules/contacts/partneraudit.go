@@ -28,8 +28,7 @@ func partnerAuditImage(r partnerRow) map[string]any {
 		"margin_tier": r.MarginTier, "certified_staff": r.CertifiedStaff,
 		"retention_rate": r.RetentionRate, "relationship_stage": r.RelationshipStage,
 		"next_step": r.NextStep, "next_step_due_at": r.NextStepDueAt,
-		"served_segments":   r.ServedSegments,
-		"partner_fit_score": r.FitScore, "partner_fit_override_reason": r.FitOverrideReason,
+		"served_segments":  r.ServedSegments,
 		"activation_basis": r.Activation.Basis, "activated_at": r.Activation.At,
 	}
 }

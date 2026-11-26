@@ -301,6 +301,8 @@
 1795665311_a_member_merge_confirmation_names_its_pair.down.sql | auth_token | holds only live single-use mail tokens, a few per account, and the rollback deletes the confirmation tokens, which are all of one purpose and expire in three days
 1795657800_a_google_docs_corpus_and_a_document_that_knows_its_source_id.down.sql | knowledge_corpus, knowledge_document | runs only on a rollback and deletes only the rows of the gdocs source, which is one corpus and the Google Docs a workspace chose to sync
 1795657801_the_google_docs_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795672271_the_partner_text_limits_follow_its_columns.up.sql | * | re-creates partner's two text_bound triggers without the dropped column's key; it changes no existing row
+1795672271_the_partner_text_limits_follow_its_columns.down.sql | * | re-creates partner's two text_bound triggers as they were; it changes no existing row
 1795657803_a_source_id_is_bounded.up.sql | * | replaces the two text-length guards on knowledge_document with ones that also name external_id; it creates triggers and reads or rewrites no row
 1795657803_a_source_id_is_bounded.down.sql | * | runs only on a rollback; restores the earlier guards without external_id and changes no row
 1795665583_a_zalo_message_can_name_its_channel.down.sql | * | the down migration is a single SELECT 1; the provider remains available to historical foreign keys and no row changes
