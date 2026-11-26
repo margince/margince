@@ -37,8 +37,8 @@ export function metricOf(
 }
 
 /**
- * The running sales trend the quarter's chart is drawn from, when it can be:
- * a quarter with nothing won yet still draws its line at zero.
+ * The running sales trend the quarter's chart is drawn from, when it can be.
+ * A quarter with nothing won yet still draws its line at zero.
  */
 export function drawableTrend(charts: ReportingEvaluation) {
   const trend = charts.charts.find((chart) => chart.kind === "bookings_trend");

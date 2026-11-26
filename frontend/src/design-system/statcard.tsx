@@ -121,8 +121,8 @@ export const STAT_CARD_ACTIONS = {
   chart: "stat.chart",
 } as const;
 
-// A door that stays on the page (a record list beside it, a chart above it)
-// carries no arrow; one that leaves for another page does.
+// A door that stays on the page carries no arrow: a record list beside it, or
+// a chart above it. One that leaves for another page does.
 const STAT_CARD_LEAVES: Record<keyof typeof STAT_CARD_ACTIONS, boolean> = {
   page: true,
   records: false,

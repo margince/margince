@@ -22,8 +22,8 @@ type Pipeline = components["schemas"]["Pipeline"];
 
 /**
  * Sales review's controls. The view, scope and period stand beside the page's
- * name; the pipeline, the close window and the filters sit behind View, with
- * any filter shown as a chip on the line that says what the figures cover.
+ * name. The pipeline, the close window and the filters sit behind View. A set
+ * filter shows as a chip on the line that says what the figures cover.
  */
 export function SalesHeader({
   selection,

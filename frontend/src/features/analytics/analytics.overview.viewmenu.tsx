@@ -88,8 +88,8 @@ export function useSalesViewRows(
 }
 
 /**
- * An Overview view's View button at the end of the tab row, as a list page
- * keeps its own: the view's quieter dials, and its verbs as the footer.
+ * An Overview view's View button at the end of the tab row, as on a list page.
+ * It holds the view's quieter dials, with its verbs as the footer.
  */
 export function OverviewViewMenu({
   rows = [],

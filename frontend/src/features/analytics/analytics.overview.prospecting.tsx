@@ -273,9 +273,8 @@ export function MyProspecting({
   );
 }
 
-// The work around the outcome, each a panel of its own: what waits on others,
-// what became of the handoffs, the meetings ahead, then how the outcome
-// developed.
+// The work around the outcome, each a panel of its own. What waits on others
+// comes first, then the handoffs, the meetings ahead and the outcome's history.
 function ProspectingWork({
   self,
   workflow,

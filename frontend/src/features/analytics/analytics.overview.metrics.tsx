@@ -74,8 +74,8 @@ export function SalesOverviewMetrics({
   );
 }
 
-// The chart under the tabs: what it shows, the chart, and its key with the
-// way to the records or the page the reading came from.
+// The chart under the tabs: what it shows, the chart, and its key. The key
+// leads to the records or the page the reading came from.
 function HeroPlot({
   shown,
   evaluation,

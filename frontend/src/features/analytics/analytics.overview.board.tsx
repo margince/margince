@@ -114,7 +114,7 @@ export function BoardChart({
 
 /**
  * Today's stock by stage beside the permitted sales by owner, from the chart
- * read, each a panel of its own, with any breakdown under the pair. While it is
+ * read. Each is a panel of its own, with any breakdown under the pair. While it is
  * read, or when it failed, it says so in its own place and the figures above
  * it stand.
  */
