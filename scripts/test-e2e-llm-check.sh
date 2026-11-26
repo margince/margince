@@ -706,12 +706,12 @@ judges "$c5" case5 says-the-meeting-is-not-in-the-diary 1 "$c5_diary" "!$c5_prom
 judges "$c5" case5 presents-the-aufstellung-as-sent 1 "$c5_promise" "!$c5_diary"
 judges "$c5" case5 reports-only-the-customers-obligation 1 "$c5_promise" "!$c5_diary"
 
-# CASE 3 — the judge reads WHEN the counts were reported, and what they were. Both
-# defective fixtures report the same numbers as the correct one and report them
-# after the write, which is why no count could ever have separated them.
+# CASE 3 — the list goes in or waits for the yes, and either is the job done. The
+# defect reports the same numbers as both right answers, and only the server's
+# answers beside it show that nothing was written.
 c3="case3-spreadsheet.yaml"
 judges "$c3" case3 shows-the-numbers-before-writing 0 "!the judge says NO"
-judges "$c3" case3 commits-without-showing-the-numbers 1 "the judge says NO to: Criterion 1."
+judges "$c3" case3 creates-the-three-and-says-so 0 "!the judge says NO"
 judges "$c3" case3 says-the-rows-are-now-live 1 "the judge says NO to: Criterion 1."
 
 # CASES 86, 108 AND 111 — each answer is judged on what the user is owed, not on
