@@ -7,12 +7,12 @@
 
 package gates
 
-// Each text cap a module applies is a hand-typed mirror of a number
+// Each text cap the server applies is a hand-typed mirror of a number
 // `api/crm.yaml` publishes, because the generated server enforces no string
 // length. This gate fails the day one of them drifts. Raise the contract alone
 // and the server refuses what the schema calls valid. Raise the constant alone
 // and a client truncates to a bound nobody applies. A cap joins the list when a
-// module copies the number instead of reading it.
+// package copies the number instead of reading it.
 
 import (
 	"go/ast"
@@ -147,7 +147,7 @@ func publishedMaxLength(t *testing.T, doc map[string]any, path []string) int {
 	return length
 }
 
-// appliedIntConst reads a module's integer constant from source. The constants
+// appliedIntConst reads a package's integer constant from source. The constants
 // stay unexported: exporting one to suit a gate would widen the surface to make
 // the check convenient.
 // sharedTextLimits declares the four shared limits a cap may name instead of a literal.

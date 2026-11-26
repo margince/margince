@@ -224,7 +224,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `systemrolekeys_test.go` | H3 | A unit declares default grants per system role, and generation refuses a key that names none. |
 | `teamoutlookmirror_test.go` | H3 | The team's frozen outlook and the rep's are the same fact over different books, so they must have the same shape. |
 | `teamweeklycopy_test.go` | H3 | The team week names coverage only against its basis. |
-| `textlimitparity_test.go` | H2 | Each text cap a module applies is a hand-typed mirror of a number `api/crm.yaml` publishes, because the generated server enforces no string length. |
+| `textlimitparity_test.go` | H2 | Each text cap the server applies is a hand-typed mirror of a number `api/crm.yaml` publishes, because the generated server enforces no string length. |
 | `transcriptmarker_test.go` | H3 | One value, spelled once. |
 | `uniqueitemscontract_test.go` | H3 | Every list the contract declares `uniqueItems: true` must reach the request decoders as a tagged generated field. |
 | `upkeeptypes_test.go` | H2 | Each upkeep and maintenance subject is a record type some audit writer is called with. |
