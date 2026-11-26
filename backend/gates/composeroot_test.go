@@ -140,7 +140,9 @@ const (
 	// and the stored-object ledger wiring, and the cases that drive them.
 	// Raised by 14 production and 14 test lines for the date-only precision the
 	// close silence and the customer-progress reads carry, and their case.
-	composeRootProductionLines = 232_052
+	// Raised by 1 production line for the retain policy of a link suggestion's
+	// colleague in the member reference registry.
+	composeRootProductionLines = 232_053
 	// Raised by 18 test lines for those cases.
 	composeRootTestLines = 362_850
 )
