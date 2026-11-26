@@ -113,9 +113,9 @@ const (
 	// Raised by 76 production and 459 test lines for the row scope of an owned
 	// extension kind and its cases. They drive the unexported report runner,
 	// History query, boot owner check and filter preview handler.
-	// Raised by 258 production and 264 test lines for the seat-bound deal reads
+	// Raised by 259 production and 264 test lines for the seat-bound deal reads
 	// and the stored-object ledger wiring, and the cases that drive them.
-	composeRootProductionLines = 231_717
+	composeRootProductionLines = 231_718
 	composeRootTestLines       = 362_529
 )
 
