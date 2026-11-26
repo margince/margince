@@ -1232,6 +1232,7 @@
     ],
     "attach_document": [
       "content_base64",
+      "content_text",
       "content_type",
       "contract_id",
       "entity_id",
@@ -2138,12 +2139,14 @@
     ],
     "import_linkedin_connections": [
       "content_base64",
+      "content_text",
       "content_type",
       "filename"
     ],
     "import_vcards": [
       "company_id",
       "content_base64",
+      "content_text",
       "content_type",
       "filename"
     ],
@@ -2850,6 +2853,7 @@
     ],
     "read_card_photo": [
       "content_base64",
+      "content_text",
       "content_type",
       "filename"
     ],
@@ -3814,22 +3818,26 @@
     ],
     "upload_company_logo": [
       "content_base64",
+      "content_text",
       "content_type",
       "filename"
     ],
     "upload_company_logo_icon": [
       "content_base64",
+      "content_text",
       "content_type",
       "filename"
     ],
     "upload_corpus_document": [
       "content_base64",
+      "content_text",
       "content_type",
       "filename",
       "id"
     ],
     "upload_legal_entity_logo": [
       "content_base64",
+      "content_text",
       "content_type",
       "filename",
       "id",

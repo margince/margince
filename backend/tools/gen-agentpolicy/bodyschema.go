@@ -96,7 +96,7 @@ func uploadField(requestBody *yaml.Node) (string, error) {
 // fileAnswerSchema is the answer of a route that returns a file's bytes.
 const fileAnswerSchema = `{"type":"object","required":["content_type","size_bytes","content_base64"],"properties":{` +
 	`"filename":{"type":"string"},"content_type":{"type":"string"},"size_bytes":{"type":"integer"},` +
-	`"content_base64":{"type":"string"}}}`
+	`"content_base64":{"type":"string"},"content_text":{"type":"string"}}}`
 
 // jsonMedia is the content of a response whose media type is JSON of any kind,
 // such as application/schema+json. The door passes each on as JSON.
