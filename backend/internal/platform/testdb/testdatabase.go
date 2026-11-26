@@ -149,15 +149,17 @@ func DeriveTemplate(ctx context.Context, build func(context.Context, *pgx.Conn) 
 		return nil, err
 	}
 	if err := withOwner(ctx, db, build); err != nil {
-		return nil, errors.Join(fmt.Errorf("building the derived template %s: %w", db.Name, err), release(ctx, "", db))
+		return nil, errors.Join(fmt.Errorf("building the derived template %s: %w", db.Name, err), release(ctx, db))
 	}
 	if err := awaitDisconnect(ctx, db.Name); err != nil {
-		return nil, errors.Join(err, release(ctx, "", db))
+		return nil, errors.Join(err, release(ctx, db))
 	}
 	derived.Store(&db.Name)
 	return func() error {
 		derived.Store(nil)
-		return release(context.Background(), "", db)
+		bounded, cancel := context.WithTimeout(context.WithoutCancel(ctx), adminStatementCeiling)
+		defer cancel()
+		return release(bounded, db)
 	}, nil
 }
 
@@ -256,7 +258,7 @@ func copyTemplate(ctx context.Context, template string) (Database, error) {
 	live[name] = true
 	databasesMu.Unlock()
 	if err := prepareCopy(ctx, db); err != nil {
-		return Database{}, errors.Join(err, release(ctx, "", db))
+		return Database{}, errors.Join(err, release(ctx, db))
 	}
 	return db, nil
 }
@@ -345,8 +347,8 @@ func verifyCopy(ctx context.Context, owner *pgx.Conn) error {
 }
 
 // release forgets db and drops it before it returns.
-func release(ctx context.Context, test string, db Database) error {
-	forget(test, db)
+func release(ctx context.Context, db Database) error {
+	forget("", db)
 	return drop(ctx, db.Name)
 }
 

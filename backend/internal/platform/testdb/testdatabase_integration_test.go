@@ -9,7 +9,6 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -56,27 +55,22 @@ func TestATestsDatabaseIsAtHeadEmptyAndDroppedWhenItEnds(t *testing.T) {
 	if isCopy(name) {
 		t.Errorf("%s is still handed out after the test that owned it ended", name)
 	}
-	// The drop runs behind the next test, so the server may hold it a moment.
-	conn := connect(t, maintenance)
-	deadline := time.Now().Add(dropWait)
-	for {
-		var exists bool
-		if err := conn.QueryRow(t.Context(),
-			`SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = $1)`, name).Scan(&exists); err != nil {
-			t.Fatal(err)
+	if end := droppedEnd(name); end != nil {
+		select {
+		case <-end:
+		case <-t.Context().Done():
+			t.Fatalf("the drop of %s never ran", name)
 		}
-		if !exists {
-			return
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("%s is still on the server %s after the test that owned it ended", name, dropWait)
-		}
-		time.Sleep(10 * time.Millisecond)
+	}
+	var exists bool
+	if err := connect(t, maintenance).QueryRow(t.Context(),
+		`SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = $1)`, name).Scan(&exists); err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Errorf("%s outlived the test that owned it", name)
 	}
 }
-
-// dropWait bounds how long a drop behind a finished test may take.
-const dropWait = 30 * time.Second
 
 func connect(t *testing.T, dsn string) *pgx.Conn {
 	t.Helper()

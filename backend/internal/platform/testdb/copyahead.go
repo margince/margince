@@ -16,10 +16,9 @@ import (
 
 // CREATE DATABASE waits for two checkpoints and DROP DATABASE for one. A
 // test that copied and dropped its own database inline sat idle through all
-// three. The next copy is made while the current test runs, and a finished
-// test's database is dropped behind it, so the test runs instead of waiting.
-// A copy or drop a process leaves unfinished when it exits is swept by the
-// lane, whose drop-db removes every test copy of the package's clone.
+// three. So the next copy is made while the current test runs. A finished
+// test's database is dropped behind it. When a process exits, the lane's
+// drop-db removes any copy it left, along with the package's clone.
 
 // AdminConnsEnv is how many admin connections the lane budgeted for each
 // package process: one for the drops behind the tests and one for the copies.
@@ -49,6 +48,8 @@ var behind struct {
 	queue  chan Database
 	mu     sync.Mutex
 	failed []error
+	// done closes each queued database's channel once its drop ran.
+	done map[string]chan struct{}
 }
 
 // nextCopy answers a copy of template: the spare when one is waiting,
@@ -73,12 +74,13 @@ func nextCopy(ctx context.Context, template string) (Database, error) {
 	if made.err != nil {
 		return Database{}, made.err
 	}
-	copyAhead(template)
+	copyAhead(ctx, template)
 	return made.db, nil
 }
 
 // copyAhead starts the next copy of template unless one is already on its way.
-func copyAhead(template string) {
+// The copy outlives the test that started it, so it ignores that test's end.
+func copyAhead(ctx context.Context, template string) {
 	spare.mu.Lock()
 	defer spare.mu.Unlock()
 	if spare.next != nil {
@@ -87,7 +89,9 @@ func copyAhead(template string) {
 	ready := make(chan madeCopy, 1)
 	spare.next, spare.from = ready, template
 	go func() {
-		db, err := copyTemplate(context.Background(), template)
+		bounded, cancel := context.WithTimeout(context.WithoutCancel(ctx), adminStatementCeiling)
+		defer cancel()
+		db, err := copyTemplate(bounded, template)
 		ready <- madeCopy{db: db, err: err}
 	}()
 }
@@ -104,19 +108,34 @@ func dropBehind(db Database) {
 	forget("", db)
 	behind.once.Do(func() {
 		behind.queue = make(chan Database, pendingDrops)
+		behind.done = map[string]chan struct{}{}
 		go dropQueued()
 	})
+	behind.mu.Lock()
+	behind.done[db.Name] = make(chan struct{})
+	behind.mu.Unlock()
 	behind.queue <- db
+}
+
+// droppedEnd answers a channel that closes once the drop queued for name ran,
+// or nil when no drop of name was queued.
+func droppedEnd(name string) <-chan struct{} {
+	behind.mu.Lock()
+	defer behind.mu.Unlock()
+	return behind.done[name]
 }
 
 // dropQueued drops the queued databases one at a time, on one admin connection.
 func dropQueued() {
 	for db := range behind.queue {
-		if err := drop(context.Background(), db.Name); err != nil {
-			behind.mu.Lock()
+		err := drop(context.Background(), db.Name)
+		behind.mu.Lock()
+		if err != nil {
 			behind.failed = append(behind.failed, err)
-			behind.mu.Unlock()
 		}
+		close(behind.done[db.Name])
+		delete(behind.done, db.Name)
+		behind.mu.Unlock()
 	}
 }
 

@@ -168,11 +168,11 @@ func readRepoFile(t *testing.T, path string) string {
 // laneConnectionDemand asks the lane's own declaration for the number, by
 // running declare_lane_budget the way every lane runs it.
 //
-// It deliberately does NOT re-implement `jobs * (perPackage + admin) + fixed`.
-// A second spelling of one formula is the defect this whole gate is about: drop
-// the admin term in the shell and a Go copy would go on asserting the old arithmetic
-// and passing, while the runtime guard in the integration lane compared against
-// a different number. There is one expression, and this reads it.
+// It does not re-implement `jobs * (perPackage + admin) + fixed`. A second
+// spelling of one formula is the defect this gate is about. With a Go copy, a
+// term dropped in the shell would leave the gate passing on the old arithmetic.
+// The runtime guard in the integration lane would compare against another
+// number. There is one expression, and this reads it.
 //
 // The shell is invoked rather than parsed for the same reason: a regex over the
 // expression would be a third reading of it.

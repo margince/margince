@@ -22,7 +22,7 @@ func TestACopyWaitsForASessionOnTheTemplateToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		if err := release(context.Background(), "", template); err != nil {
+		if err := release(context.Background(), template); err != nil {
 			t.Error(err)
 		}
 	})
@@ -40,7 +40,7 @@ func TestACopyWaitsForASessionOnTheTemplateToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("a copy refused while a session held the template: %v", err)
 	}
-	if err := release(context.Background(), "", db); err != nil {
+	if err := release(context.Background(), db); err != nil {
 		t.Fatal(err)
 	}
 }
