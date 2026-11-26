@@ -83,12 +83,19 @@ func TestASettingsSaveSentTwiceWritesHistoryOnce(t *testing.T) {
 			AnyMap{"start_time": "08:30", "end_time": "16:30", "days": []int{1, 2, 3, 4}}, http.StatusOK)
 	})
 	t.Run("onboarding state", func(t *testing.T) {
-		draft := AnyMap{"step": "voice", "source_mode": "manual", "company_draft": AnyMap{}, "selected_fact_keys": []string{}}
-		draft["expected_version"] = 0
-		if status := e.Call(t, "PUT", "/v1/onboarding/state", draft, nil, nil); status != http.StatusOK {
-			t.Fatalf("starting the wizard -> %d", status)
+		// Confirm is a step the creator may save before the company is complete.
+		// The version each save sends is the one the last answer carried.
+		var state struct {
+			Version int64 `json:"version"`
 		}
-		draft["expected_version"] = 1
+		draft := AnyMap{"step": "confirm", "source_mode": "manual", "company_draft": AnyMap{}, "selected_fact_keys": []string{}}
+		if status := e.Call(t, "GET", "/v1/onboarding/state", nil, nil, &state); status == http.StatusNotFound {
+			draft["expected_version"] = 0
+			mustCall(t, e.AppEnv, "PUT", "/v1/onboarding/state", draft, http.StatusOK, &state)
+		}
+		draft["expected_version"] = state.Version
+		mustCall(t, e.AppEnv, "PUT", "/v1/onboarding/state", draft, http.StatusOK, &state)
+		draft["expected_version"] = state.Version
 		assertRepeatWritesNothing(t, e.AppEnv, "PUT", "/v1/onboarding/state", draft, http.StatusOK)
 	})
 	t.Run("review template questions as read", func(t *testing.T) {

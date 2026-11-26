@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // A project whose newest activity names only a date has gone quiet once that
@@ -24,7 +25,7 @@ func TestAProjectWithADateOnlyActivityGoesQuietByItsDate(t *testing.T) {
 		`UPDATE setting SET value = to_jsonb('Pacific/Kiritimati'::text) WHERE key = 'installation.timezone'`); err != nil {
 		t.Fatal(err)
 	}
-	utcToday := time.Now().UTC()
+	utcToday := clocktest.Now(t).UTC()
 	visited := time.Date(utcToday.Year(), utcToday.Month(), utcToday.Day()-60, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Day Client", nil)
 	rollout := seedProject(admin, t, e, "Rollout", company, &e.Rep1)

@@ -251,12 +251,17 @@ func TestADealSaysWhetherItsLastActivityIsADay(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
+	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Day Deals GmbH", "source": "manual"})
+	newDeal := func(name string) string {
+		return createdID(t, e, "/v1/deals", AnyMap{"name": name, "pipeline_id": stages.PipelineID,
+			"stage_id": stages.Open, "company_id": company, "source": "manual"})
+	}
 	cases := map[string]AnyMap{
 		"day":     {"occurred_at": "2025-03-09T12:00:00Z", "occurred_precision": "day"},
 		"instant": {"occurred_at": "2025-03-09T12:00:00Z"},
 	}
 	for want, when := range cases {
-		dealID := apptest.CreateOpenDeal(t, e, stages)
+		dealID := newDeal("Deal read as " + want)
 		note := AnyMap{"kind": "note", "subject": "Met at the fair", "source": "manual",
 			"links": []AnyMap{{"entity_type": "deal", "entity_id": dealID}}}
 		for key, value := range when {
@@ -286,7 +291,7 @@ func TestADealSaysWhetherItsLastActivityIsADay(t *testing.T) {
 	var untouched struct {
 		Precision *string `json:"last_activity_precision"`
 	}
-	mustCall(t, e, "GET", "/v1/deals/"+apptest.CreateOpenDeal(t, e, stages), nil, http.StatusOK, &untouched)
+	mustCall(t, e, "GET", "/v1/deals/"+newDeal("Untouched deal"), nil, http.StatusOK, &untouched)
 	if untouched.Precision != nil {
 		t.Errorf("a deal with no activity reads last_activity_precision %q, want none", *untouched.Precision)
 	}

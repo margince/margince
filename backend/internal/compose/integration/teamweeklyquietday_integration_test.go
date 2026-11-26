@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -41,8 +42,9 @@ func TestATeamsStalledDealCountsADateOnlyActivityFromItsDate(t *testing.T) {
 	quiet := e.SeedDeal(t, "Visited, then nothing", pipeline, ids.From[ids.StageKind](open[0]), &e.Rep2)
 	e.WsExec(t, `UPDATE deal SET created_at = now() - interval '120 days' WHERE id = $1`, quiet)
 
-	utcToday := time.Now().UTC()
-	visited := time.Date(utcToday.Year(), utcToday.Month(), utcToday.Day()-40, 12, 0, 0, 0, time.UTC)
+	// Past the stalled period, so the deal is on the list at all.
+	utcToday := clocktest.Now(t).UTC()
+	visited := time.Date(utcToday.Year(), utcToday.Month(), utcToday.Day()-90, 12, 0, 0, 0, time.UTC)
 	subject := "Site visit"
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Source: provenance.RecordSourceManual, Subject: &subject,
@@ -56,7 +58,12 @@ func TestATeamsStalledDealCountsADateOnlyActivityFromItsDate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	local := time.Now().In(kiritimati)
+	// The read counts to the database's now(), so the expected count does too.
+	var dbNow time.Time
+	if err := integration.OwnerConn(t).QueryRow(context.Background(), `SELECT now()`).Scan(&dbNow); err != nil {
+		t.Fatal(err)
+	}
+	local := dbNow.In(kiritimati)
 	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
 	want := int(today.Sub(time.Date(visited.Year(), visited.Month(), visited.Day(), 0, 0, 0, 0, time.UTC)).Hours() / 24)
 	stale := read.Attention.StaleDeals

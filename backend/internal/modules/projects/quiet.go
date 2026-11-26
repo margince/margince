@@ -43,7 +43,7 @@ func ProjectQuietSQL(alias, nowSQL string, daysPos int) string {
 	// newest activity counts from its own date on the installation's calendar.
 	anchor := ProjectQuietAnchorSQL(alias)
 	return fmt.Sprintf(`(CASE WHEN %[4]s
-		THEN %[5]s <= %[6]s - $%[3]d
+		THEN %[5]s <= %[6]s - $%[3]d::int
 		ELSE %[1]s < (%[2]s)::timestamptz - make_interval(days => $%[3]d) END)`,
 		anchor, nowSQL, daysPos, LastActivityDaySQL(alias), occurredday.NamedDateSQL(anchor), occurredday.TodaySQL(nowSQL))
 }

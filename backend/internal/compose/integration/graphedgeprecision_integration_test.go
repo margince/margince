@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -84,7 +85,7 @@ func (v graphSkipEnv) precisions(t *testing.T, first, second ids.ContactID) (str
 func TestAnEdgeReadsItsLastPrecisionFromTheRowsItCounts(t *testing.T) {
 	v := graphSkipEnv{e: Setup(t)}
 	held, canceled := "held", "canceled"
-	visit := time.Now().UTC().AddDate(0, 0, -10).Truncate(24 * time.Hour).Add(12 * time.Hour)
+	visit := clocktest.Now(t).UTC().AddDate(0, 0, -10).Truncate(24 * time.Hour).Add(12 * time.Hour)
 	for _, c := range []struct {
 		name string
 		tied exchange
@@ -110,7 +111,7 @@ func TestAnEdgeReadsItsLastPrecisionFromTheRowsItCounts(t *testing.T) {
 	t.Run("a meeting still ahead", func(t *testing.T) {
 		first, second := v.contact(t, "Ada ahead"), v.contact(t, "Bo ahead")
 		day := v.exchangeAt(t, visit, exchange{kind: "meeting", precision: "day", audience: "workspace", meetingStatus: &held}, first, second)
-		ahead := v.exchangeAt(t, time.Now().UTC().AddDate(0, 0, 3),
+		ahead := v.exchangeAt(t, clocktest.Now(t).UTC().AddDate(0, 0, 3),
 			exchange{kind: "meeting", precision: "instant", audience: "workspace", meetingStatus: &held}, first, second)
 		v.recompute(t, day, ahead)
 		if member, pair := v.precisions(t, first, second); member != "day" || pair != "day" {

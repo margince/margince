@@ -407,11 +407,12 @@ func ClockIsDaySQL(rowsSQL, clock string) string {
 }
 
 // LinkedClockRowsSQL is the rows a record's stored clock is folded from: the
-// activities linked to the record through activity_link.column. column and
+// activities linked to the record through activity_link.column. A held row
+// sets no precision anyone reads. column and
 // record are SQL the caller renders, never request text.
 func LinkedClockRowsSQL(column, record string) string {
 	return `FROM activity_link clock_link JOIN activity clock_row ON clock_row.id = clock_link.activity_id
-		WHERE clock_link.` + column + ` = ` + record
+		WHERE clock_link.` + column + ` = ` + record + ` AND clock_row.restricted_at IS NULL`
 }
 
 // ClockPrecision is the wire precision of a stored clock: nil when it holds no

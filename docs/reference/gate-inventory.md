@@ -364,6 +364,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `duplicateindex_test.go` | H2 | One set of columns, one index. |
 | `edgeendpointcensus_test.go` | H2 | Every end a link can have is an end that link's history is read from. |
 | `edgereaders_test.go` | H2 | `relationship` is a first-class RBAC object, and it is the only join table in the schema that is one. |
+| `elapseddaysclock_test.go` | H2 | A day count from an activity's time reads that time's precision. |
 | `elapsedonespelling_test.go` | H2 | Every duration-to-day division is reviewed, including sites outside display packages. |
 | `emailpresentation_test.go` | H2 | A retained email reads the same everywhere, or it does not read the same anywhere. |
 | `emptyarraycheck_test.go` | H2 | array\_length answers NULL for an empty array rather than 0, so a CHECK that bounds a length with it evaluates to UNKNOWN for `{}`, and Postgres accepts a row on an UNKNOWN check. |

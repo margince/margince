@@ -4,6 +4,7 @@
 package activities
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -178,17 +179,29 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 }
 
 // unlessStoredQuestions is raw, or nil when the template already holds those
-// questions, compared as JSON values so key order is no change.
+// questions. The stored side is read into the question shape and written out
+// again. The comparison is then of questions, not of JSON spelling.
 func unlessStoredQuestions(ctx context.Context, tx pgx.Tx, id ids.UUID, raw []byte) ([]byte, error) {
 	if raw == nil {
 		return nil, nil
 	}
-	var same bool
-	if err := tx.QueryRow(ctx, `SELECT questions = $2::jsonb FROM activity_review_template WHERE id = $1`,
-		id, raw).Scan(&same); err != nil {
+	var stored []byte
+	if err := tx.QueryRow(ctx, `SELECT questions FROM activity_review_template WHERE id = $1`, id).Scan(&stored); err != nil {
 		return nil, fmt.Errorf("compare template questions: %w", err)
 	}
-	if same {
+	var held []ReviewQuestion
+	if err := json.Unmarshal(stored, &held); err != nil {
+		return raw, nil
+	}
+	// The catalog key is the table trigger's to name, and a save never carries it.
+	for i := range held {
+		held[i].LabelKey = ""
+	}
+	canonical, err := json.Marshal(held)
+	if err != nil {
+		return nil, fmt.Errorf("compare template questions: %w", err)
+	}
+	if bytes.Equal(canonical, raw) {
 		return nil, nil
 	}
 	return raw, nil

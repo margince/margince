@@ -290,8 +290,8 @@ func noOpProbedRoutesFromSource(t *testing.T) map[string]string {
 	return out
 }
 
-// integrationFuncsBeside is every function the integration test files of
-// package integration in dir declare, by name.
+// integrationFuncsBeside maps the functions that the package integration test
+// files in dir declare, by name.
 func integrationFuncsBeside(t *testing.T, dir string) map[string]*ast.FuncDecl {
 	t.Helper()
 	paths, err := filepath.Glob(filepath.Join(dir, "*_integration_test.go"))

@@ -5,6 +5,7 @@ package search
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -38,7 +39,7 @@ var standingReads = []standingColumns{
 		clockRows: occurredday.LinkedClockRowsSQL("contact_id", "t.id")},
 	{hitType: entityCompany, lastActivity: lastActivityColumn,
 		clockRows: "FROM (" + storekit.CompanyFiledActivityReach("t.id") + ") clock_link " +
-			"JOIN activity clock_row ON clock_row.id = clock_link.activity_id WHERE true"},
+			"JOIN activity clock_row ON clock_row.id = clock_link.activity_id WHERE clock_row.restricted_at IS NULL"},
 	{hitType: entityDeal, state: "t.status", dueOn: "t.expected_close_date", lastActivity: lastActivityColumn,
 		clockRows: occurredday.LinkedClockRowsSQL("deal_id", "t.id")},
 	{hitType: entityLead, state: "t.status"},
@@ -86,6 +87,9 @@ func (s *Store) attachStandings(ctx context.Context, tx pgx.Tx, hits []Hit) erro
 	if err != nil {
 		return err
 	}
+	if err := attachClockPrecisions(ctx, tx, standings); err != nil {
+		return err
+	}
 	for i := range hits {
 		if standing, ok := standings[hits[i].Type+":"+hits[i].ID.String()]; ok {
 			hits[i].Standing = &standing
@@ -111,14 +115,10 @@ func standingPart(ctx context.Context, read standingColumns, recordIDs []ids.UUI
 		}
 		join = " LEFT JOIN stage st ON st.id = t.stage_id"
 	}
-	lastActivityDay := "false"
-	if read.clockRows != "" {
-		lastActivityDay = occurredday.ClockIsDaySQL(read.clockRows, read.lastActivity)
-	}
 	return fmt.Sprintf(
-		"SELECT '%s'::text, t.id, %s, %s, %s, %s, %s, %s, %s, %s, %s FROM %s t%s WHERE t.id = ANY($%d) AND (%s)",
+		"SELECT '%s'::text, t.id, %s, %s, %s, %s, %s, %s, %s, %s FROM %s t%s WHERE t.id = ANY($%d) AND (%s)",
 		read.hitType, orNull(read.state, "text"), stage, amount, currency, orNull(read.dueOn, "date"),
-		orNull(read.jobTitle, "text"), orNull(read.lastActivity, "timestamptz"), lastActivityDay, masks,
+		orNull(read.jobTitle, "text"), orNull(read.lastActivity, "timestamptz"), masks,
 		read.hitType, join, arg(recordIDs), scope,
 	), nil
 }
@@ -174,13 +174,11 @@ func readStandings(ctx context.Context, tx pgx.Tx, statement string, args []any)
 			standing crmcontracts.SearchHitStanding
 			dueOn    *time.Time
 			masked   []string
-			day      bool
 		)
 		if err := rows.Scan(&hitType, &recordID, &standing.State, &standing.Stage, &standing.AmountMinor,
-			&standing.Currency, &dueOn, &standing.JobTitle, &standing.LastActivityAt, &day, &masked); err != nil {
+			&standing.Currency, &dueOn, &standing.JobTitle, &standing.LastActivityAt, &masked); err != nil {
 			return nil, fmt.Errorf("search: reading where this page's records stand: %w", err)
 		}
-		standing.LastActivityPrecision = occurredday.ClockPrecision[crmcontracts.OccurredPrecision](standing.LastActivityAt, day)
 		if dueOn != nil {
 			standing.DueOn = &openapi_types.Date{Time: *dueOn}
 		}
@@ -193,4 +191,97 @@ func readStandings(ctx context.Context, tx pgx.Tx, statement string, args []any)
 		return nil, fmt.Errorf("search: reading where this page's records stand: %w", err)
 	}
 	return standings, nil
+}
+
+// clockPrecisionLockWait bounds how long the precision read waits for the
+// activity table. The standings never wait on it: a page whose activities are
+// locked away keeps its standings and draws their times as instants.
+const clockPrecisionLockWait = "100ms"
+
+// attachClockPrecisions says how to read each standing's last activity, from
+// the activity its stored clock names. It reads under its own savepoint and a
+// short lock wait. A locked or slow activity table costs the page only the
+// precision, never the search.
+func attachClockPrecisions(ctx context.Context, tx pgx.Tx, standings map[string]crmcontracts.SearchHitStanding) error {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	var parts []string
+	for _, read := range standingReads {
+		var recordIDs []ids.UUID
+		for key, standing := range standings {
+			hitType, id, _ := strings.Cut(key, ":")
+			parsed, err := ids.Parse(id)
+			if hitType == read.hitType && read.clockRows != "" && standing.LastActivityAt != nil && err == nil {
+				recordIDs = append(recordIDs, parsed)
+			}
+		}
+		if len(recordIDs) == 0 {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("SELECT '%s'::text, t.id FROM %s t WHERE t.id = ANY($%d) AND %s",
+			read.hitType, read.hitType, arg(recordIDs), occurredday.ClockIsDaySQL(read.clockRows, read.lastActivity)))
+	}
+	if len(parts) == 0 {
+		return nil
+	}
+	days, err := readDayClocks(ctx, tx, strings.Join(parts, " UNION ALL "), args)
+	if err != nil {
+		return err
+	}
+	for key, standing := range standings {
+		standing.LastActivityPrecision = occurredday.ClockPrecision[crmcontracts.OccurredPrecision](standing.LastActivityAt, days[key])
+		standings[key] = standing
+	}
+	return nil
+}
+
+// readDayClocks runs statement in a savepoint under the short lock wait and
+// keys each day clock it names. A lock or a budget it runs out of answers none.
+func readDayClocks(ctx context.Context, tx pgx.Tx, statement string, args []any) (map[string]bool, error) {
+	var previous string
+	if err := tx.QueryRow(ctx, `SELECT current_setting('lock_timeout')`).Scan(&previous); err != nil {
+		return nil, fmt.Errorf("search: reading the lock wait: %w", err)
+	}
+	savepoint, err := tx.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	days, err := scanDayClocks(ctx, savepoint, statement, args)
+	if storekit.IsLockTimeout(err) || storekit.IsQueryCanceled(err) {
+		if rollbackErr := savepoint.Rollback(ctx); rollbackErr != nil {
+			return nil, rollbackErr
+		}
+		return map[string]bool{}, nil
+	}
+	if err != nil {
+		return nil, errors.Join(err, savepoint.Rollback(ctx))
+	}
+	if err := savepoint.Commit(ctx); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `SELECT set_config('lock_timeout', $1, true)`, previous); err != nil {
+		return nil, fmt.Errorf("search: restoring the lock wait: %w", err)
+	}
+	return days, nil
+}
+
+func scanDayClocks(ctx context.Context, tx pgx.Tx, statement string, args []any) (map[string]bool, error) {
+	if _, err := tx.Exec(ctx, `SELECT set_config('lock_timeout', $1, true)`, clockPrecisionLockWait); err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, statement, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	days := map[string]bool{}
+	for rows.Next() {
+		var hitType string
+		var id ids.UUID
+		if err := rows.Scan(&hitType, &id); err != nil {
+			return nil, err
+		}
+		days[hitType+":"+id.String()] = true
+	}
+	return days, rows.Err()
 }

@@ -136,19 +136,30 @@ func probeStageSaves(t *testing.T, e *apptest.AppEnv) {
 		{"name": "Talking", "position": 1, "semantic": "open"}, {"name": "Agreeing", "position": 2, "semantic": "open"},
 	}}, http.StatusCreated, &pipeline)
 	var ladder struct {
-		Version int64           `json:"version"`
-		Stages  []versionedWire `json:"stages"`
+		Version int64 `json:"version"`
+		Stages  []struct {
+			versionedWire
+			Name string `json:"name"`
+		} `json:"stages"`
 	}
 	mustCall(t, e, "GET", "/v1/pipelines/"+pipeline.ID, nil, http.StatusOK, &ladder)
-	if len(ladder.Stages) != 2 {
-		t.Fatalf("the probe ladder reads %d stages, want 2", len(ladder.Stages))
+	// The ladder holds the named stages and the closing stages every pipeline
+	// has. The order sent back is the whole order as read.
+	order := make([]string, 0, len(ladder.Stages))
+	var talking versionedWire
+	for _, stage := range ladder.Stages {
+		order = append(order, stage.ID)
+		if stage.Name == "Talking" {
+			talking = stage.versionedWire
+		}
 	}
-	talking := ladder.Stages[0]
+	if talking.ID == "" {
+		t.Fatalf("the probe ladder has no Talking stage: %+v", ladder.Stages)
+	}
 	assertResendChangesNothing(t, e, resend{method: "PATCH", path: "/v1/stages/" + talking.ID,
 		body: AnyMap{"name": "Talking"}, version: talking.Version, about: []string{talking.ID}})
 	assertResendChangesNothing(t, e, resend{method: "PUT", path: "/v1/pipelines/" + pipeline.ID + "/stage-order",
-		body: AnyMap{"stage_ids": []string{ladder.Stages[0].ID, ladder.Stages[1].ID}}, version: ladder.Version,
-		about: []string{pipeline.ID}})
+		body: AnyMap{"stage_ids": order}, version: ladder.Version, about: []string{pipeline.ID}})
 
 	var criterion versionedWire
 	mustCall(t, e, "POST", "/v1/stages/"+talking.ID+"/exit-criteria",
@@ -279,6 +290,7 @@ func TestAMessageSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 		}, version: saved.Version, about: []string{saved.ID}})
 	})
 	t.Run("scheduled send", func(t *testing.T) {
+		p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 		at := clocktest.Now(t).Add(48 * time.Hour).Truncate(time.Second)
 		id := p.scheduleFor(t, at)
 		var waiting versionedWire
