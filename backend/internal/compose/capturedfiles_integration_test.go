@@ -143,7 +143,6 @@ type capturedFile struct {
 	byteSize     int64
 	partID       *string
 	sourceID     *string
-	company      *string
 	withheld     bool
 }
 
@@ -181,7 +180,7 @@ func filesFrom(ctx context.Context, t *testing.T, db *database.DB, system, sourc
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT filename, content_type, declared_type, category, storage_key,
-			       byte_size, external_part_id, external_source_id, company_id::text, bytes_withheld
+			       byte_size, external_part_id, external_source_id, bytes_withheld
 			  FROM attachment
 			 WHERE external_source_id = $1
 			 ORDER BY external_part_id`, system+":"+sourceID)
@@ -192,7 +191,7 @@ func filesFrom(ctx context.Context, t *testing.T, db *database.DB, system, sourc
 		for rows.Next() {
 			var f capturedFile
 			if err := rows.Scan(&f.filename, &f.contentType, &f.declaredType, &f.category,
-				&f.storageKey, &f.byteSize, &f.partID, &f.sourceID, &f.company, &f.withheld); err != nil {
+				&f.storageKey, &f.byteSize, &f.partID, &f.sourceID, &f.withheld); err != nil {
 				return err
 			}
 			out = append(out, f)
@@ -362,45 +361,6 @@ func TestARefusedFileLeavesAnObservableReason(t *testing.T) {
 // that ships.
 func fileKeeper(pool *pgxpool.Pool, blob blobstore.Store) capture.FileKeeper {
 	return capturetimeline.FileKeeper{Store: activities.NewStore(InstallationDB(pool)).WithBlobstore(blob)}
-}
-
-// A captured file carries no company stamp, whether its message is filed
-// against a company or against nobody. The company's library reads a mail's
-// files through the message's links as they are at read time. A stamp
-// written here would only go stale (held by
-// TestAMailFileReachesEveryRecordTheMailIsLinkedTo).
-func TestACapturedFileCarriesNoCompanyStamp(t *testing.T) {
-	ctx, db, tag := captureWorkspace(t)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
-
-	companyID := ids.NewV7()
-	if err := db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO company (id, display_name, source, captured_by)
-			VALUES ($1, 'Voltaq', 'manual', 'human:test')`,
-			companyID)
-		return err
-	}); err != nil {
-		t.Fatalf("seed the company: %v", err)
-	}
-
-	filed := withFiles(mailRecord("msg-filed-"+tag), onePDF())
-	filed.Links = []datasource.EntityRef{{Type: datasource.EntityCompany, ID: companyID}}
-	for _, rec := range []connector.NormalizedRecord{filed, withFiles(mailRecord("msg-unfiled-"+tag), onePDF())} {
-		if _, err := sink.Upsert(ctx, rec); err != nil {
-			t.Fatalf("capture: %v", err)
-		}
-	}
-
-	for _, source := range []string{"msg-filed-" + tag, "msg-unfiled-" + tag} {
-		files := filesFor(ctx, t, db, source)
-		if len(files) != 1 {
-			t.Fatalf("%s: stored %d files, want 1", source, len(files))
-		}
-		if files[0].company != nil {
-			t.Errorf("%s: company_id = %v, want none", source, *files[0].company)
-		}
-	}
 }
 
 // activityOf reads the activity a captured file hangs off, so a duplicate can
