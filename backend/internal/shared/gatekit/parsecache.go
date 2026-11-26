@@ -49,11 +49,11 @@ func (slot *parseSlot) get(path string, mode parser.Mode) (*ast.File, error) {
 		files = fileSetFrom(slot.base)
 	}
 	tree, err := parser.ParseFile(files, path, src, mode)
+	if slot.base == 0 && tree != nil {
+		slot.base = int(tree.FileStart)
+	}
 	if err != nil {
 		return tree, err
-	}
-	if slot.base == 0 {
-		slot.base = int(tree.FileStart)
 	}
 	slot.tree = weak.Make(tree)
 	return tree, nil

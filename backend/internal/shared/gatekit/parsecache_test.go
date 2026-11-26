@@ -190,10 +190,17 @@ func TestAPathThatCannotBeReadIsAnErrorEachTimeItIsAsked(t *testing.T) {
 func TestAFileThatDoesNotParseIsNeverHeld(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "broken.go")
 	writeSource(t, path, "package broken\n\nfunc {\n", time.Unix(1_700_000_000, 0))
+	grown := 0
 	for range 2 {
 		if _, err := ParseFile(path, 0); err == nil {
 			t.Fatal("a file with a syntax error parsed without one")
 		}
+		if grown == 0 {
+			grown = sourceFiles.Base()
+		}
+	}
+	if sourceFiles.Base() != grown {
+		t.Errorf("parsing a broken file again grew the shared FileSet from base %d to %d", grown, sourceFiles.Base())
 	}
 	parses.mu.Lock()
 	entry := parses.entries[parseKey{spelled: path, mode: 0}]
