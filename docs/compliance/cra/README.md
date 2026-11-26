@@ -1,5 +1,21 @@
 # Reporting an actively exploited vulnerability (CRA Article 14)
 
+## CRA document set
+
+Gradion Pte. Ltd. is the manufacturer. Its EU-wide conformity documents stay here,
+apart from the country packs and customer paperwork.
+
+- [Technical documentation](technical-documentation.md): product category, risk assessment, production and release evidence.
+- [Essential requirements](essential-requirements.md): each Annex I requirement, its controls and open gaps.
+- [Draft declaration](declaration-of-conformity.md): unsigned until the assessment demonstrates conformity.
+- [Support period](support-period.md): security fixes, free upgrades and support dates.
+- [Operator security guide](../../how-to/run-margince-securely.md): setup, updates and decommissioning under Annex II.
+
+The reporting setup actions below are tracked in [#11227](https://github.com/margince/margince/issues/11227).
+They are independent of the conformity assessment and its 11 December 2027 application date.
+
+## Reporting scope
+
 This runbook covers Gradion's duty as manufacturer under CRA Article 14. The
 customer-side documents in [`../README.md`](../README.md) are what an installation
 signs before it reads employee mail. This directory is what we do when a

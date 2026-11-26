@@ -13,6 +13,9 @@ the "Security" tab of the repository and choose "Report a vulnerability". If you
 [security@gradion.com](mailto:security@gradion.com) instead. Do not open a public issue or pull request
 for a security problem. A public report before the fix ships puts every installation at risk.
 
+Our one point of contact is [security@gradion.com](mailto:security@gradion.com).
+Email and private advisories reach the maintainers. You choose the route.
+
 What to send:
 
 - the endpoint, tool or part of the code that has the problem;
@@ -27,8 +30,19 @@ What you can expect:
 - After that, we keep you up to date in the advisory until the fix ships.
 - We name you in the advisory and the release notes, unless you ask us not to.
 
-Margince is an early proof of concept, kept by a small team. So we do not promise a date for a fix. We
-do promise to tell you where your report stands.
+We check the risk and fix security holes without waiting.
+
+### How we share a fix
+
+We agree a date to make the report public. We make an advisory public when the fix ships.
+We may wait while users install the fix. We must record why a public report could put them at risk.
+The advisory names the versions with the hole, the fixed versions, the harm, how serious it is, and what users must do.
+An attack in use can need an earlier public report, as the route below says.
+
+We check holes in third-party parts for harm here. We tell their maintainers and share fixes where we can.
+Our report is open until the risk to Margince is fixed.
+Security fixes are free. Where we can, they ship in separate releases from new features.
+The [guide for the team that runs Margince](docs/how-to/run-margince-securely.md) shows how to check and install them.
 
 ### If someone is using it right now
 
@@ -68,7 +82,7 @@ In scope is a problem that breaks a security rule this code says it keeps, such 
 
 Out of scope:
 
-- a hole in a third-party package, unless you show harm here (report it to that project);
+- a hole in a third-party package with no harm to Margince (report it to that project);
 - a finding that needs the attacker to own the host or the database already;
 - denial of service against a dev installation (`MARGINCE_ENV=dev` turns off some trust checks by
   design).

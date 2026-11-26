@@ -8,6 +8,11 @@ yet.
 This page holds the rule and the reasons for it. The vulnerability process is in
 [SECURITY.md](../../../SECURITY.md), and the reporting duty is in [README.md](README.md).
 
+Legal baseline checked on 26 November 2026:
+[Regulation (EU) 2024/2847](https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng), OJ L, 20 November 2024,
+and [Commission guidance C(2026) 5252, Annex](https://transition-pathways.europa.eu/system/files/media/document/2026-09/C_2026_5252_1_EN_annexe_acte_autonome_cp_part1_v3_kXuCPwXXxAuG8Uj44Ar0o2Vros_131456.pdf),
+27 July 2026, points 126–135 and example 53. The guidance states the Commission's reading; it is not binding law.
+
 ## What the regulation asks
 
 | Article | Duty |
@@ -37,11 +42,11 @@ that ships often:
 
 | Duty | How |
 | --- | --- |
-| Latest release only (13(10)) | Fixes go to `main` and ship in the next `v*` release. No release branch gets a backport. This holds only while the next release adds no cost, as the row below says. The dist service lane in `release.yml` can release from an `lts/YYYY` branch; no such branch exists |
+| Latest release only (13(10)) | Fixes go to `main` and ship in the next `v*` release. No release branch gets a backport. This holds only while the next release adds no cost, as the row below says |
 | Free upgrade | A license token is not tied to a release: every build checks the same license generation, so a token that starts one release starts the next, and an upgrade costs no license fee. A build that checks a new generation would end this |
-| No added cost | A release does not raise the hardware a node needs past [system-requirements.md](../../operations/system-requirements.md) without a new substantially modified version and its own support period. Postgres and Redis upgrades inside the supported range are dependency upgrades |
+| No added cost | Check against [system-requirements.md](../../operations/system-requirements.md). If an upgrade requires added hardware or software cost, provide a compatible free upgrade or continue fixes for the earlier version during its remaining support period. A new version's support period does not remove that duty |
 | Upgrade path | The api applies migrations at start, so an upgrade is three new images or one new server bundle: [deploy-margince.md](../../how-to/deploy-margince.md#roll-out-in-this-order), [install-on-a-server.md](../../how-to/install-on-a-server.md#upgrade-to-a-new-release) |
-| Updates stay available (13(9)) | Not settled. Each `v*` release puts its images on `ghcr.io` and its server bundles on its GitHub release page. No rule yet keeps them there for 10 years |
+| Updates stay available (13(9)) | The [tagged workflow](../../../.github/workflows/release-tag.yml) publishes images and server bundles. No rule yet keeps each security update available for 10 years after issue, or the remainder of the support period if longer |
 | Archive notice (13(11)) | Not built. The GitHub release page of an earlier release does not say that it gets no more fixes, or what running it risks |
 | End date (13(19)) | Not built. The release notes, which are the GitHub release page, do not yet state the end date |
 | End notice (13(19)) | Not built. The app does not yet show that support has ended |
@@ -52,15 +57,19 @@ The support period of a version is five years from the date it is first placed o
 the floor, so the period stays open to change: a CRM is often in use for longer, and recital 60 asks for a
 longer period when the expected use time is longer.
 
-A release that is not a substantial modification keeps the end date of its version. A substantial
-modification is a new version, and it gets its own end date. The test for a substantial modification is in
-section 4 of the Commission guidance.
+A release that is not a substantial modification keeps the end date of its version.
+After a substantial modification, reassess the factors that determined expected use.
+Where those factors are unchanged, retain the existing end date; where they change, recalculate the period.
+Record the reasoning for the assessed version. Sections 4 and 5.1 of the Commission guidance describe these tests.
 
 Products placed on the market before 11 December 2027 come under the Article 13 duties only if they are
 substantially modified after that date (Article 69(2)). The Article 14 reporting duty applies to them in
 any case (Article 69(3)).
 
 ## Open
+
+Release evidence and retention are tracked in [#13592](https://github.com/margince/margince/issues/13592).
+Expected-use and update decisions are tracked in [#13593](https://github.com/margince/margince/issues/13593).
 
 - [ ] The expected use time is written down, and the period is confirmed at five years or set longer.
 - [ ] Each release, its images and its server bundles stay downloadable for 10 years.
