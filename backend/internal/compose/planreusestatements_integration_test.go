@@ -324,38 +324,28 @@ func readContactPageLanes(ctx context.Context, t *testing.T, sent *sentStatement
 	t.Helper()
 	db := InstallationDB(pool)
 	id := ids.From[ids.ContactKind](contact)
-	reads := map[string]func() error{
-		"latest inbound": func() error {
-			_, err := activities.NewStore(db).LatestInbound(ctx, "contact", contact)
-			return err
-		},
-		"attachments": func() error {
-			_, _, err := activities.NewStore(db).ListAttachments(ctx, "contact", contact, nil, nil)
-			return err
-		},
-		"contact row": func() error {
-			_, err := contacts.NewStore(db).GetContact(ctx, id, storekit.IncludeArchived)
-			return err
-		},
-		"consent guard": func() error {
-			_, err := consent.NewStore(db).ContactConsentGuard(ctx, id)
-			return err
-		},
-	}
-	for _, name := range slices.Sorted(maps.Keys(reads)) {
+	acts, contactStore := activities.NewStore(db), contacts.NewStore(db)
+	for _, read := range []struct {
+		name string
+		run  func() error
+	}{
+		{"attachments", func() error { _, _, err := acts.ListAttachments(ctx, "contact", contact, nil, nil); return err }},
+		{"consent guard", func() error { _, err := consent.NewStore(db).ContactConsentGuard(ctx, id); return err }},
+		{"contact row", func() error { _, err := contactStore.GetContact(ctx, id, storekit.IncludeArchived); return err }},
+		{"latest inbound", func() error { _, err := acts.LatestInbound(ctx, "contact", contact); return err }},
+	} {
 		before := len(sent.sql)
-		if err := reads[name](); err != nil {
-			t.Fatalf("reading the contact page's %s: %v", name, err)
+		if err := read.run(); err != nil {
+			t.Fatalf("reading the contact page's %s: %v", read.name, err)
 		}
 		if !ranUnderGenericPlans(sent.sql[before:]) {
-			t.Fatalf("the contact page's %s sent no statement under generic plans", name)
+			t.Fatalf("the contact page's %s sent no statement under generic plans", read.name)
 		}
 	}
 }
 
-// ranUnderGenericPlans reports whether a read's statements include one sent
-// between the switch to generic plans and the bound set_config that restores
-// the mode.
+// ranUnderGenericPlans reports whether a statement ran between the switch to
+// generic plans and the bound set_config that restores the mode.
 func ranUnderGenericPlans(window []string) bool {
 	generic := false
 	for _, sql := range window {
