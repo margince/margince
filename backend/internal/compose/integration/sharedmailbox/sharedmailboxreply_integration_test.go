@@ -11,6 +11,7 @@ package sharedmailbox
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"slices"
@@ -18,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -161,5 +163,52 @@ func TestTheCredentialOfASharedMailboxOpensOnlyForASeatThatStillReadsIt(t *testi
 	}
 	if _, _, _, err := s.registry.SenderFor(s.admin(), reader, mailbox); !errors.Is(err, capture.ErrSharedReplyRefused) {
 		t.Fatalf("a send after replies were turned off resolved %v, want ErrSharedReplyRefused", err)
+	}
+}
+
+func (s *sharedMailboxSuite) replyableFor(t *testing.T, seat, team ids.UUID) []string {
+	t.Helper()
+	rec := s.call(s.e.As(seat, []ids.UUID{team}, integration.RepPerms), t, http.MethodGet, "/shared-mailboxes/replyable", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("the replyable list answered %d: %s", rec.Code, rec.Body)
+	}
+	var list crmcontracts.ReplyableSharedMailboxList
+	if err := json.Unmarshal(rec.Body.Bytes(), &list); err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, item := range list.Items {
+		out = append(out, item.Id.String()+" "+item.Address)
+	}
+	return out
+}
+
+func TestAMemberListsOnlyTheSharedMailboxesTheyMayReplyAs(t *testing.T) {
+	s := newSharedMailboxSuite(t)
+	e := s.e
+	box, _ := s.connectReplying(t, e.Team1)
+	want := []string{box.String() + " " + salesMailbox}
+
+	if got := s.replyableFor(t, e.Rep2, e.Team1); len(got) != 0 {
+		t.Fatalf("a reader sees %v before replies are on, want nothing", got)
+	}
+	if code := s.setReplies(t, box, true); code != http.StatusOK {
+		t.Fatalf("turning replies on answered %d", code)
+	}
+	if got := s.replyableFor(t, e.Rep2, e.Team1); !slices.Equal(got, want) {
+		t.Fatalf("a reader sees %v, want %v", got, want)
+	}
+	if got := s.replyableFor(t, e.Rep3, e.Team2); len(got) != 0 {
+		t.Fatalf("a member of another team sees %v, want nothing", got)
+	}
+	if code := s.setReplies(t, box, false); code != http.StatusOK {
+		t.Fatalf("turning replies off answered %d", code)
+	}
+	if got := s.replyableFor(t, e.Rep2, e.Team1); len(got) != 0 {
+		t.Fatalf("a reader sees %v after replies are off, want nothing", got)
+	}
+	agent := e.AgentFor(t, e.Rep2, []ids.UUID{e.Team1}, integration.RepPerms)
+	if rec := s.call(agent, t, http.MethodGet, "/shared-mailboxes/replyable", nil); rec.Code != http.StatusForbidden {
+		t.Fatalf("an agent listing the mailboxes answered %d, want 403", rec.Code)
 	}
 }

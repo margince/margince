@@ -4115,6 +4115,10 @@ func (stubs) ConnectSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "ConnectSharedMailbox")
 }
 
+func (stubs) ListReplyableSharedMailboxes(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListReplyableSharedMailboxes")
+}
+
 func (stubs) UpdateSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "UpdateSharedMailbox")
 }

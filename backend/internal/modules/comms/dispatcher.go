@@ -163,6 +163,8 @@ func (d *Dispatcher) DispatchWithWait(ctx context.Context, id ids.UUID) (Outcome
 	return d.dispatchLoaded(ctx, del)
 }
 
+const notMailboxReaderReason = "the sender no longer reads the shared mailbox this reply was staged for, or replies were turned off; ask an admin, then write it again"
+
 // dispositionForUnresolvedSeam turns a failure to resolve the transmitting
 // credential into the disposition it deserves.
 //
@@ -178,8 +180,7 @@ func (d *Dispatcher) dispositionForUnresolvedSeam(ctx context.Context, del Deliv
 		return d.park(ctx, del.ID, fmt.Sprintf(
 			"nothing is connected for %s to transmit through; connect it to enable sending", del.Provider))
 	case errors.Is(err, ErrNotMailboxReader):
-		return d.park(ctx, del.ID,
-			"the sender no longer reads the shared mailbox this reply was staged for, or replies were turned off; ask an admin, then write it again")
+		return d.park(ctx, del.ID, notMailboxReaderReason)
 	case errors.Is(err, ErrCannotSend):
 		return d.park(ctx, del.ID, fmt.Sprintf("the %s connection cannot transmit messages", del.Provider))
 	case errors.Is(err, ErrNoControllerRelay):

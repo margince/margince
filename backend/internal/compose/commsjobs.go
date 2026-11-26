@@ -219,6 +219,7 @@ func (w *commsSendWorker) Work(ctx context.Context, job *river.Job[SendEmailArgs
 // a database. *capture.Registry is the only implementation the product ships.
 type mailboxSenders interface {
 	SenderFor(ctx context.Context, userID ids.UserID, mailbox capture.Mailbox) (connector.EmailSender, connector.Auth, []string, error)
+	RecheckSharedReply(ctx context.Context, seat ids.UserID, connection ids.UUID) error
 }
 
 var _ mailboxSenders = (*capture.Registry)(nil)
@@ -264,13 +265,20 @@ func (r commsResolver) Resolve(ctx context.Context, userID ids.UserID, provider 
 	return sender, auth, granted, nil
 }
 
-// NewSendConnectionResolver builds the mailbox resolver the dispatcher
-// transmits through. Exported for the reason NewSendSeatAuthority is: tests
-// drive the dispatcher with the translation the product ships.
+// NewSendConnectionResolver is the mailbox resolver the dispatcher transmits through, exported for tests.
 //
 //nolint:ireturn // returns the comms.ConnectionResolver seam by design: the concrete type is unexported
 func NewSendConnectionResolver(registry *capture.Registry) comms.ConnectionResolver {
 	return commsResolver{registry: registry, channels: registry}
+}
+
+// RecheckReply asks again whether a seat may still reply as a shared mailbox.
+func (r commsResolver) RecheckReply(ctx context.Context, userID ids.UserID, connection ids.UUID) error {
+	err := r.registry.RecheckSharedReply(ctx, userID, connection)
+	if errors.Is(err, capture.ErrSharedReplyRefused) {
+		return fmt.Errorf("%w: %w", comms.ErrNotMailboxReader, err)
+	}
+	return err
 }
 
 // seatResolver is the live-seat half of the authority the dispatcher re-reads

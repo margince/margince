@@ -22473,6 +22473,29 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /shared-mailboxes/replyable:
+    get:
+      tags: [Connectors]
+      operationId: listReplyableSharedMailboxes
+      summary: The shared mailboxes the signed-in member may reply as.
+      description: |
+        Each is a live shared mailbox with `reply_enabled` whose reader team has the caller as a
+        live member. A mailbox the caller may not reply as is absent, so the answer never shows
+        that it exists. The `id` is what a send names as `from_connection_id`.
+
+        Signed-in session only: an agent never names a shared mailbox.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The mailboxes the caller may reply as, ordered by address.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReplyableSharedMailboxList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
   /shared-mailboxes/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -47134,6 +47157,21 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/SharedMailbox' }
+    ReplyableSharedMailbox:
+      type: object
+      description: A shared mailbox the signed-in member may reply as.
+      required: [id, provider, address]
+      properties:
+        id: { type: string, format: uuid, description: 'The mailbox id, sent as `from_connection_id`.' }
+        provider: { type: string, enum: [graph, gmail], x-extensible-enum: true }
+        address: { type: string, description: 'The mailbox address, which is the From address of a reply.' }
+    ReplyableSharedMailboxList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ReplyableSharedMailbox' }
     ConnectSharedMailboxRequest:
       type: object
       description: |

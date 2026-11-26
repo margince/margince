@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -237,4 +238,55 @@ func AuditSharedReplyTx(ctx context.Context, tx pgx.Tx, connection ids.UUID, act
 		return fmt.Errorf("capture: auditing the reply sent as shared mailbox %s: %w", connection, err)
 	}
 	return nil
+}
+
+// ReplyableSharedMailboxes lists the live shared mailboxes the acting member
+// may reply as, by address. A mailbox the member may not use is absent.
+func (r *Registry) ReplyableSharedMailboxes(ctx context.Context) ([]SendingMailbox, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman {
+		return nil, fmt.Errorf("only a signed-in member lists the mailboxes they reply as: %w", apperrors.ErrPermissionDenied)
+	}
+	var out []SendingMailbox
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT c.id, c.provider, c.account_label, c.provider_scopes FROM capture_connection c
+		 WHERE c.user_id IS NULL AND c.archived_at IS NULL AND c.status IN ('connected','error')
+		   AND cardinality(coalesce(c.provider_scopes, '{}')) > 0
+		   AND `+auth.SeatReadsSharedMailboxSQL("c", "$1")+` ORDER BY lower(c.account_label)`, actor.UserID)
+		if err != nil {
+			return err
+		}
+		out, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (SendingMailbox, error) {
+			m := SendingMailbox{Shared: true}
+			return m, row.Scan(&m.ID, &m.Provider, &m.AccountLabel, &m.ProviderScopes)
+		})
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("capture: listing the shared mailboxes a member replies as: %w", err)
+	}
+	return out, nil
+}
+
+// RecheckSharedReply asks again, just before a reply is handed to the provider,
+// whether seat may still reply as connection. It answers nil for a connection
+// no shared mailbox owns. It answers ErrSharedReplyRefused once the seat left
+// the team, the team was archived, the mailbox disconnected or replies were
+// turned off. The earlier credential lookup cannot know of a change committed
+// after it.
+func (r *Registry) RecheckSharedReply(ctx context.Context, seat ids.UserID, connection ids.UUID) error {
+	return r.db.Tx(ctx, func(tx pgx.Tx) error {
+		shared, err := IsSharedMailboxTx(ctx, tx, connection)
+		if err != nil || !shared {
+			return err
+		}
+		_, replyable, err := sharedReplyTx(ctx, tx, seat, connection)
+		if err != nil {
+			return err
+		}
+		if !replyable {
+			return ErrSharedReplyRefused
+		}
+		return nil
+	})
 }

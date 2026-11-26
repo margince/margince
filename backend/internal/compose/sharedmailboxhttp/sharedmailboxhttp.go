@@ -50,6 +50,30 @@ func (h Handlers) List(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// ListReplyable answers the shared mailboxes the signed-in member may reply as.
+func (h Handlers) ListReplyable(w http.ResponseWriter, r *http.Request) {
+	if h.Registry == nil {
+		httperr.NotImplemented(w, r, "ListReplyableSharedMailboxes")
+		return
+	}
+	boxes, err := h.Registry.ReplyableSharedMailboxes(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.ReplyableSharedMailboxList{Items: make([]crmcontracts.ReplyableSharedMailbox, 0, len(boxes))}
+	for _, box := range boxes {
+		address := ""
+		if box.AccountLabel != nil {
+			address = *box.AccountLabel
+		}
+		out.Items = append(out.Items, crmcontracts.ReplyableSharedMailbox{
+			Id: openapi_types.UUID(box.ID), Provider: crmcontracts.ReplyableSharedMailboxProvider(box.Provider), Address: address,
+		})
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // Connect connects a shared mailbox, or reconnects the stored one.
 func (h Handlers) Connect(w http.ResponseWriter, r *http.Request) {
 	if h.Registry == nil {

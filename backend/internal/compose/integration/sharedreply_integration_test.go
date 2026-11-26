@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 const salesAddress = "sales@preflight.test"
@@ -118,14 +119,41 @@ func (p *preflightEnv) sharedMailbox(t *testing.T, readers ...string) ids.UUID {
 // capture registry's own credential lookup, against the fake tenant.
 func (p *preflightEnv) dispatchAsMailbox(t *testing.T, provider *sharedMailboxProvider, delivery ids.UUID) comms.Outcome {
 	t.Helper()
+	return p.dispatchAsMailboxWith(t, provider, delivery, nil)
+}
+
+// changeAfterResolve lets a test commit a change after the credential lookup
+// has answered. That is before the dispatcher's last check, in the window a
+// queued reply meets in production.
+type changeAfterResolve struct {
+	comms.ConnectionResolver
+	change func()
+}
+
+func (c changeAfterResolve) Resolve(ctx context.Context, user ids.UserID, provider string, connection *ids.UUID) (connector.EmailSender, connector.Auth, []string, error) {
+	sender, auth, granted, err := c.ConnectionResolver.Resolve(ctx, user, provider, connection)
+	c.change()
+	return sender, auth, granted, err
+}
+
+func (c changeAfterResolve) RecheckReply(ctx context.Context, user ids.UserID, connection ids.UUID) error {
+	return c.ConnectionResolver.(comms.ReplyRechecker).RecheckReply(ctx, user, connection)
+}
+
+func (p *preflightEnv) dispatchAsMailboxWith(t *testing.T, provider *sharedMailboxProvider, delivery ids.UUID, between func()) comms.Outcome {
+	t.Helper()
 	registry := compose.CaptureRegistryWithoutConnectorsForTest(p.Pool, p.Vault)
 	registry.Register(graph.New(nil, nil).WithSharedMailboxes(graph.SharedMailboxConfig{
 		Auth:       graph.SharedAuthConfig{TokenURLFormat: provider.srv.URL + "/%s/token", HTTPClient: provider.srv.Client()},
 		HTTPClient: provider.srv.Client(), APIBase: provider.srv.URL,
 	}))
+	var resolver comms.ConnectionResolver = compose.NewSendConnectionResolver(registry)
+	if between != nil {
+		resolver = changeAfterResolve{ConnectionResolver: resolver, change: between}
+	}
 	dispatcher := comms.NewDispatcher(
 		compose.NewMailDeliveryStore(p.Pool, nil),
-		compose.NewSendConnectionResolver(registry),
+		resolver,
 		compose.NewSendSeatAuthority(p.Pool),
 		compose.NewSendAttachmentAuthority(p.Pool, nil),
 		consent.NewGate(consent.NewStore(compose.InstallationDB(p.Pool))),
@@ -303,5 +331,46 @@ func TestAnAgentCannotNameTheSharedMailboxAndItsOwnSendsStayOnItsPersonsMailbox(
 	}
 	if got := a.sendAudits(t, box); len(got) != 0 {
 		t.Fatalf("the shared mailbox has send audit rows %+v after an agent send that never named it", got)
+	}
+}
+
+// A change can commit after the credential lookup and before the provider call.
+// It must still stop the reply, so the dispatcher asks again at the last moment.
+func TestAChangeCommittedBetweenTheLookupAndTheProviderCallParksTheReply(t *testing.T) {
+	for name, change := range map[string]string{
+		"the seat leaves the team": `DELETE FROM team_membership WHERE user_id = $1`,
+		"replies are turned off":   `UPDATE capture_connection SET provider_scopes = '{}' WHERE user_id IS NULL AND $1::uuid IS NOT NULL`,
+		"the mailbox is archived":  `UPDATE capture_connection SET archived_at = now() WHERE user_id IS NULL AND $1::uuid IS NOT NULL`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := setupPreflight(t)
+			p.stakeADeal(t)
+			box := p.sharedMailbox(t, p.user)
+			provider := newSharedMailboxProvider(t)
+			if status, code := p.sendAs(t, box); status != http.StatusAccepted {
+				t.Fatalf("a reader's send as the mailbox → %d %q, want 202", status, code)
+			}
+			var delivery ids.UUID
+			if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+				return tx.QueryRow(context.Background(), `SELECT id FROM comms_outbound`).Scan(&delivery)
+			}); err != nil {
+				t.Fatal(err)
+			}
+			committed := func() {
+				if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+					_, err := tx.Exec(context.Background(), change, p.user)
+					return err
+				}); err != nil {
+					t.Errorf("committing the change: %v", err)
+				}
+			}
+
+			if outcome := p.dispatchAsMailboxWith(t, provider, delivery, committed); outcome != comms.OutcomeParked {
+				t.Fatalf("dispatch outcome = %q, want parked", outcome)
+			}
+			if paths, _ := provider.submissions(); len(paths) != 0 {
+				t.Fatalf("the tenant received %v after %s, want nothing", paths, name)
+			}
+		})
 	}
 }

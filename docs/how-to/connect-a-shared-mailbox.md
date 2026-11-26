@@ -214,15 +214,20 @@ curl -sS -X PATCH "$API/v1/shared-mailboxes/<id>" -b "$COOKIE" -H 'Content-Type:
 Send `reply_enabled: false` to end it. Replies already queued for the mailbox then park. A provider that refuses the
 send parks the reply with its reason, and the mailbox keeps capturing.
 
-A member replies by naming the mailbox's id as `from_connection_id` in the send, the same field that picks one of
-their own mailboxes. The mailbox is never chosen for a send that names none, and a reply to mail the mailbox
+The admin screen has the same switch in **Change** on the mailbox, named **Members may reply as this mailbox**. It
+names the grant the provider needs, and shows as unavailable for IMAP.
+
+A member replies by choosing the mailbox in the composer's **From** list, where it shows as its address marked shared.
+`GET /v1/shared-mailboxes/replyable` lists the mailboxes the member may choose, and the choice sends the mailbox's id as
+`from_connection_id`, the same field that picks one of their own mailboxes. The mailbox is never chosen for a send that names none, and a reply to mail the mailbox
 captured does not default to it. A member outside the reader team gets `422 mailbox_not_send_capable`, the answer
 for any mailbox that is not theirs.
 
 The send path is the one every message takes, so the consent gate, the approval rules and the review of a refused
 send apply as they do to a member's own mail. The member who pressed send stays the sender on the delivery, in
 `captured_by` and on the audit row of the message. The mailbox's own audit trail gets one `send_email` row for each
-reply, naming that member. The reader team is asked again when the reply is transmitted, so a reply queued by a
-member who has left the team parks instead of going out. An agent's send tools take no mailbox argument, so an agent
+reply, naming that member. The reader team is asked again when the reply is transmitted, and once more just before the provider call. A reply
+queued by a member who has left the team, or for a mailbox whose replies were turned off, parks instead of going out.
+A change committed in the instant between that last check and the provider's answer cannot stop that one reply. An agent's send tools take no mailbox argument, so an agent
 never replies as a shared mailbox.
 

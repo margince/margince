@@ -654,6 +654,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/sdr-handoffs/{id}/assignee":                                       {Op: "getHandoffAssignee", Access: "tool", Tool: "get_handoff_assignee", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "route", Router: "read_details", Action: "handoff_assignee"},
 	"GET /v1/search":                                                           {Op: "search", Access: "tool", Tool: "search_records", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/shared-mailboxes":                                                 {Op: "listSharedMailboxes", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "security"},
+	"GET /v1/shared-mailboxes/replyable":                                       {Op: "listReplyableSharedMailboxes", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "security"},
 	"GET /v1/signals":                                                          {Op: "listSignals", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/signals/{id}":                                                     {Op: "getSignal", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/signals/{id}/intro-path":                                          {Op: "getSignalIntroPath", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},

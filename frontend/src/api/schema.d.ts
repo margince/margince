@@ -14757,6 +14757,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shared-mailboxes/replyable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The shared mailboxes the signed-in member may reply as.
+         * @description Each is a live shared mailbox with `reply_enabled` whose reader team has the caller as a
+         *     live member. A mailbox the caller may not reply as is absent, so the answer never shows
+         *     that it exists. The `id` is what a send names as `from_connection_id`.
+         *
+         *     Signed-in session only: an agent never names a shared mailbox.
+         */
+        get: operations["listReplyableSharedMailboxes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/shared-mailboxes/{id}": {
         parameters: {
             query?: never;
@@ -32491,6 +32515,21 @@ export interface components {
         SharedMailboxList: {
             items: components["schemas"]["SharedMailbox"][];
         };
+        /** @description A shared mailbox the signed-in member may reply as. */
+        ReplyableSharedMailbox: {
+            /**
+             * Format: uuid
+             * @description The mailbox id, sent as `from_connection_id`.
+             */
+            id: string;
+            /** @enum {string} */
+            provider: "graph" | "gmail";
+            /** @description The mailbox address, which is the From address of a reply. */
+            address: string;
+        };
+        ReplyableSharedMailboxList: {
+            items: components["schemas"]["ReplyableSharedMailbox"][];
+        };
         /**
          * @description The mailbox, its readers, and the provider's credentials. Each provider carries its own
          *     credentials member, named like the provider.
@@ -46826,10 +46865,8 @@ export interface components {
              *     `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
              *     conversation arrived in, and a new message from the sender's default mailbox. A mailbox
              *     that is not the sender's, or cannot send, is refused with 422
-             *     `mailbox_not_send_capable`. A shared mailbox (`SharedMailbox.reply_enabled`) is named
-             *     here by its id, never chosen for a send that names none. Only a live member of its reader
-             *     team may; any other sender gets the same `mailbox_not_send_capable`. The From address is
-             *     the mailbox's, and the audit trail names the member who sent.
+             *     `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+             *     its id, and only by a member of its reader team.
              */
             from_connection_id?: string | null;
             /** @description The subject line. Blank or only white space is refused with 422 `required`. */
@@ -91155,6 +91192,28 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listReplyableSharedMailboxes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mailboxes the caller may reply as, ordered by address. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplyableSharedMailboxList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     updateSharedMailbox: {

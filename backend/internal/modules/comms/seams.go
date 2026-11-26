@@ -239,6 +239,16 @@ type ConnectionResolver interface {
 	ResolveChannel(ctx context.Context, userID ids.UserID, provider string) (connector.MessageSender, connector.Auth, error)
 }
 
+// ReplyRechecker is the optional half of a ConnectionResolver. It asks again,
+// right before the provider call, whether a seat may still send through a
+// mailbox that is not its own. The credential lookup ran earlier, and a team
+// change or an admin's switch may have committed since. A connection a member
+// owns answers nil. No lock can be held across the provider call, so this is
+// the latest the question can be asked.
+type ReplyRechecker interface {
+	RecheckReply(ctx context.Context, userID ids.UserID, connection ids.UUID) error
+}
+
 // consentRecipients is every subject this delivery reaches, in the vocabulary
 // the suppression gate answers about. It is the ONE place a delivery's shape is
 // read on the way to that gate, which is what lets the dispatcher ask the same

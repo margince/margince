@@ -8272,6 +8272,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.relatedToNone": "Không cụ thể",
   "compose.relatedDeal": "Thuộc deal: {name}",
   "compose.aboutDeal": "Deal mà thư theo dõi này nói về",
+  "compose.from.shared": "Hộp thư dùng chung",
   "compose.from.label": "Từ",
   "compose.from.automatic":
     "Hộp thư nhận cuộc trò chuyện, nếu không thì hộp thư mặc định",
@@ -15146,6 +15147,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sharedMailboxes.changeConfirm": "Áp dụng cho mọi thư",
   "sharedMailboxes.changeWarning":
     "Thay đổi này áp dụng cho mọi thư hộp thư đã ghi nhận, không chỉ thư mới.",
+  "sharedMailboxes.replyEnabled": "Thành viên được trả lời bằng hộp thư này",
+  "sharedMailboxes.replyGrantGraph":
+    "Cần quyền ứng dụng Mail.Send trên ứng dụng Microsoft. Nếu không giới hạn bằng phạm vi Exchange, quyền này cho ứng dụng gửi như mọi hộp thư trong tenant.",
+  "sharedMailboxes.replyGrantGmail":
+    "Cần phạm vi gmail.send được ủy quyền cho tài khoản dịch vụ, bên cạnh gmail.readonly.",
+  "sharedMailboxes.replyUnavailableImap":
+    "Không khả dụng. Hộp thư IMAP chỉ thu thập thư. Hãy kết nối qua Microsoft hoặc Google để trả lời từ hộp thư này.",
   "sharedMailboxes.narrowHistory": "Giữ riêng cả thư đã ghi nhận",
   "sharedMailboxes.importHistory": "Nhập thư cũ",
   "sharedMailboxes.historyTitle": "Nhập thư cũ vào {address}",

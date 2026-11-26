@@ -134,8 +134,7 @@ func (m mailboxAuthority) SendableMailbox(ctx context.Context, from ids.UUID, an
 		func(mailbox capture.SendingMailbox) (bool, error) {
 			scope, _ := comms.SendScopeFor(mailbox.Provider)
 			if mailbox.Shared {
-				// A shared mailbox sends with the installation's own grant, never
-				// with the OAuth app a member connects through.
+				// A shared mailbox sends with the installation's grant, not a member's OAuth app.
 				return slices.Contains(mailbox.ProviderScopes, scope), nil
 			}
 			configured, err := m.mailAppConfigured(ctx, mailbox.Provider)
