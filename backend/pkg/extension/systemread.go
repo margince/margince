@@ -129,8 +129,8 @@ type Deals interface {
 	// about any deal.
 	Responsible(ctx context.Context, dealID string) ([]Responsible, error)
 
-	// ResponsibleAs is Responsible for a deal actAs may open. A deal the seat
-	// cannot open answers ErrNotFound.
+	// ResponsibleAs is Responsible for a deal actAs may open. A seat with no
+	// deal read answers ErrForbidden, and a deal outside its scope ErrNotFound.
 	ResponsibleAs(ctx context.Context, actAs UserID, dealID string) ([]Responsible, error)
 }
 
