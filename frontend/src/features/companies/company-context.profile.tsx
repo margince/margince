@@ -32,6 +32,7 @@ import { fromHere } from "../../lib/navigatefrom";
 import { fieldCheckSentence, unwrap } from "../../lib/problem";
 import type { CompanyInput } from "./company-context";
 import { PROFILE_GROUPS } from "./companycontextfacts";
+import { DialogRefusal } from "../../design-system/panelnotices";
 
 const EMPTY_COMPANY_INPUT: CompanyInput = {
   display_name: "",
@@ -225,8 +226,8 @@ export function CompanyProfileDialog({
               ))}
             </div>
           ))}
-          <WriteRefused
-            titleKey="settings.companySaveFailed"
+          <DialogRefusal
+            title={t("settings.companySaveFailed")}
             message={refused.rest}
           />
         </form>

@@ -4,7 +4,6 @@ import { api } from "../../api/client";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { Button, Modal, SegmentedControl } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
-import { WriteRefused } from "../../design-system/querystates";
 import { SettingRow } from "../../design-system/settingrow";
 import type { Toast } from "../../design-system/toast";
 import { useT } from "../../i18n";
@@ -18,6 +17,7 @@ import {
   type SignatureFormat as Format,
   SignatureFields,
 } from "./settingssignatureeditor";
+import { DialogRefusal } from "../../design-system/panelnotices";
 
 const FORMATS: readonly Format[] = ["text", "html"];
 
@@ -133,7 +133,7 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
               });
           }}
         >
-          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
+          <DialogRefusal title={t("settings.saveFailed")} error={save.error} />
           <p className="t-caption">
             {t(
               templated

@@ -144,15 +144,7 @@ export function LinkExistingDialog({
           checked={summarize}
           onChange={(event) => setSummarize(event.target.checked)}
         />
-        {failed && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("channelLink.linkFailed")}
-          >
-            {problemMessageOf(link.error, t)}
-          </Callout>
-        )}
+        <DialogRefusal title={t("channelLink.linkFailed")} error={failed ? link.error : null} />
       </form>
       <div className="actions">
         <Button type="button" onClick={onClose} disabled={link.isPending}>

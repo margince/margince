@@ -308,11 +308,7 @@ export function InstallationProfileDialog({
 
           {/* Only what no field claimed: a refusal on the input and again below
               states one problem twice, and the second is what nobody reads. */}
-          {blanketError !== null ? (
-            <Callout tone="danger" kind="outcome" title={refusalTitle}>
-              {blanketError}
-            </Callout>
-          ) : null}
+          <DialogRefusal title={refusalTitle} message={blanketError} />
         </form>
       </DrawerBody>
       <DrawerFoot className="actions">

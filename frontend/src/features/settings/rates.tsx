@@ -16,11 +16,7 @@ import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
-import {
-  QueryGate,
-  QueryStates,
-  WriteRefused,
-} from "../../design-system/querystates";
+import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { useFieldFaults } from "../../design-system/savepage";
 import { isAssignedCurrency } from "../../format/assignedcurrencies";
 import { todayIn } from "../../format/calendarday";
@@ -43,6 +39,7 @@ import { isPricedProvider } from "./rate-manual";
 import { RefreshFromSources } from "./rate-refresh";
 import { useRemoveFxRate } from "./rate-remove";
 import "./rates.css";
+import { DialogRefusal } from "../../design-system/panelnotices";
 
 type FxRate = components["schemas"]["FxRate"];
 type AiModelRate = components["schemas"]["AiModelRate"];
@@ -355,8 +352,8 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
             />
           )}
         </Field>
-        <WriteRefused
-          titleKey="settings.rates.notSaved"
+        <DialogRefusal
+          title={t("settings.rates.notSaved")}
           message={refused.rest}
         />
       </form>

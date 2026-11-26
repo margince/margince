@@ -34,6 +34,7 @@ import {
   useEnrichRun,
 } from "./contactprovider.run";
 import { ProviderValues } from "./contactprovider.values";
+import { DialogRefusal } from "../../design-system/panelnotices";
 
 export { keepPolling, POLL_LIMIT } from "./contactprovider.run";
 
@@ -100,7 +101,7 @@ function hasValues(profile: Profile): boolean {
  * A run writes the provider's details onto the contact, so it needs the right
  * to edit it. That is the predicate the page's other write verbs ask, read
  * from the page's own cached contact. Until that contact arrives the button
- * stands, and the server's refusal (WriteRefused) covers a race.
+ * stands, and the server's refusal (DialogRefusal) covers a race.
  */
 function useLookupRefusal(contactId: string): string | undefined {
   const t = useT();
@@ -229,8 +230,8 @@ function ProviderPanel({
     >
       <PanelBody>
         <Stack>
-          <WriteRefused
-            titleKey="provider.profile.lookupRefused"
+          <DialogRefusal
+            title={t("provider.profile.lookupRefused")}
             error={enrich.error}
           />
           {/* Above the values, because it is a caveat about what is under it. */}

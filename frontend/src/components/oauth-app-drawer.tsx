@@ -17,7 +17,7 @@ import {
 } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { DiscardDraftQuestion, Modal } from "../design-system/modal";
-import { QueryGate, WriteRefused } from "../design-system/querystates";
+import { QueryGate } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
@@ -35,6 +35,7 @@ import "./oauth-app.css";
 import { OAuthAppSteps, REDIRECTS_HOW_TO } from "./oauth-app-steps";
 import { RedirectUris } from "./oauth-redirects";
 import { useUnsavedGuard } from "./unsaved";
+import { DialogRefusal } from "../design-system/panelnotices";
 
 // The drawer's per-vendor wording, as literal keys for the reason vendorCopy
 // spells its own that way.
@@ -263,7 +264,7 @@ function SetupForm({
           )}
         </OAuthAppSteps>
         {/* Last in the body, so a refusal lands beside the Save that drew it. */}
-        <WriteRefused titleKey="oauthApp.saveFailed" error={save.error} />
+        <DialogRefusal title={t("oauthApp.saveFailed")} error={save.error} />
       </DrawerBody>
       <DrawerFoot>
         <span className="t-caption">{t("oauthApp.drawer.foot")}</span>

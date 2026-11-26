@@ -144,11 +144,7 @@ export function RoleDrawer({
             />
           )}
           {/* In the head, so a refusal stays in view however far the grid scrolled. */}
-          {writes.failure && (
-            <Callout tone="danger" kind="outcome" title={t("roles.notSaved")}>
-              {roleRefusalOf(writes.failure.error, t)}
-            </Callout>
-          )}
+          <DialogRefusal title={t("roles.notSaved")} message={writes.failure ? roleRefusalOf(writes.failure.error, t) : null} />
         </div>
       </DrawerHead>
       <ConfirmModal

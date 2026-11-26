@@ -12,7 +12,6 @@ import {
   DrawerHead,
 } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
-import { WriteRefused } from "../design-system/querystates";
 import { listFormat } from "../format/formatters";
 import { useLocale, useT } from "../i18n";
 import { usePassports } from "../lib/passports.queries";
@@ -25,6 +24,7 @@ import {
   WorkAreasChoice,
   workAreaName,
 } from "./workareas";
+import { DialogRefusal } from "../design-system/panelnotices";
 
 export type AreasSubject = Readonly<{
   id: string;
@@ -166,7 +166,7 @@ export function PassportAreasDrawer({
             </p>
           </Callout>
         )}
-        <WriteRefused titleKey="passportAreas.failed" error={save.error} />
+        <DialogRefusal title={t("passportAreas.failed")} error={save.error} />
       </DrawerBody>
       <DrawerFoot className="actions">
         <Button onClick={onClose} disabled={save.isPending}>

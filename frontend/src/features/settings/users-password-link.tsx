@@ -129,21 +129,7 @@ export function PasswordLinkModal({
           into and no visible way forward. So it belongs to the REFUSAL rather
           than to the dialog's own row, where the remedy sat two paragraphs
           from the thing it remedies. */}
-      {error && (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("users.link.failedTitle")}
-          actions={
-            <Button variant="primary" onClick={onRetry} disabled={pending}>
-              {t("users.link.retry")}
-            </Button>
-          }
-        >
-          <p>{error}</p>
-          <p>{t("users.link.failed")}</p>
-        </Callout>
-      )}
+      <DialogRefusal title={t("users.link.failedTitle")} message={ error ? ( <> <p>{error}</p> <p>{t("users.link.failed")}</p> </> ) : null } actions={ <Button variant="primary" onClick={onRetry} disabled={pending}> {t("users.link.retry")} </Button> } />
       {link && !pending && (
         <>
           <p>{t("users.link.body")}</p>

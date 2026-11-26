@@ -199,15 +199,7 @@ export function DecisionDialog({
             />
           )}
         </Field>
-        {set.isError && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("blockedDomains.saveFailed")}
-          >
-            {problemMessageOf(set.error, t)}
-          </Callout>
-        )}
+        <DialogRefusal title={t("blockedDomains.saveFailed")} error={set.error} />
       </form>
       <div className="actions">
         <Button type="button" onClick={onClose}>

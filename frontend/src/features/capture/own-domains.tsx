@@ -379,15 +379,7 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             />
           )}
         </Field>
-        {add.isError && (
-          <Callout
-            kind="outcome"
-            tone="danger"
-            title={t("ownDomains.addFailed")}
-          >
-            {captureValueMessage(add.error, "domain", t)}
-          </Callout>
-        )}
+        <DialogRefusal title={t("ownDomains.addFailed")} message={add.isError ? captureValueMessage(add.error, "domain", t) : null} />
       </form>
       <div className="actions">
         <Button type="button" onClick={onClose}>

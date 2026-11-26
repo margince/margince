@@ -31,16 +31,7 @@ export function ReadProblem({
 }: Readonly<{ error: Error | null; onRetry: () => void }>) {
   const t = useT();
   if (!error) return null;
-  return (
-    <Callout
-      tone="danger"
-      kind="outcome"
-      title={t("aiTaskSheet.readFailed")}
-      actions={<Button onClick={onRetry}>{t("common.retry")}</Button>}
-    >
-      {problemMessageOf(error, t)}
-    </Callout>
-  );
+  return ( <DialogRefusal title={t("aiTaskSheet.readFailed")} error={error} actions={<Button onClick={onRetry}>{t("common.retry")}</Button>} /> );
 }
 
 /** A refused save: a colleague's newer save, or the server's own reason. */
@@ -54,11 +45,7 @@ export function SaveProblem({ error }: Readonly<{ error: Error | null }>) {
       </Callout>
     );
   }
-  return (
-    <Callout tone="danger" kind="outcome" title={t("aiTaskSheet.saveFailed")}>
-      {problemMessageOf(error, t)}
-    </Callout>
-  );
+  return <DialogRefusal title={t("aiTaskSheet.saveFailed")} error={error} />;
 }
 
 export function TimeoutField({

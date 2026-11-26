@@ -158,20 +158,7 @@ function StartState({
   const t = useT();
   if (starting) return <p>{t("common.loading")}</p>;
   const enrolled = problemCodeOf(startError) === "mfa_already_enrolled";
-  return (
-    <Callout
-      kind="outcome"
-      tone="danger"
-      title={t("mfa.startFailedTitle")}
-      actions={
-        enrolled ? undefined : (
-          <Button onClick={onRetry}>{t("common.retry")}</Button>
-        )
-      }
-    >
-      {mfaFailureMessage(startError, t)}
-    </Callout>
-  );
+  return ( <DialogRefusal title={t("mfa.startFailedTitle")} message={mfaFailureMessage(startError, t)} actions={ enrolled ? undefined : ( <Button onClick={onRetry}>{t("common.retry")}</Button> ) } /> );
 }
 
 /**
@@ -269,15 +256,7 @@ export function MfaSetupSteps({
       <p>{t("mfa.scan")}</p>
       <QrCode value={enrolment.otpauth_uri} label={t("mfa.qrLabel")} />
       <SecretKey secret={enrolment.secret} />
-      {flow.confirm.isError && (
-        <Callout
-          kind="outcome"
-          tone="danger"
-          title={t("mfa.confirmFailedTitle")}
-        >
-          {mfaFailureMessage(flow.confirm.error, t)}
-        </Callout>
-      )}
+      <DialogRefusal title={t("mfa.confirmFailedTitle")} message={flow.confirm.isError ? mfaFailureMessage(flow.confirm.error, t) : null} />
       <p>{t("mfa.signsOut")}</p>
       <MfaCodeField
         label={t("mfa.code")}

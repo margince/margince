@@ -245,11 +245,7 @@ export function AskMarginceModal({
               <p>{t("corpusAsk.noSets")}</p>
             </EmptyState>
           ) : null}
-          {ask.isError ? (
-            <Callout tone="danger" kind="outcome" title={t("corpusAsk.failed")}>
-              {problemMessageOf(ask.error, t)}
-            </Callout>
-          ) : null}
+          <DialogRefusal title={t("corpusAsk.failed")} error={ask.error} />
         </section>
         {/* The document arrives only when a reader asks for it, and the answer
             has the width to itself until then. A pane held open on an empty

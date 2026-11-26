@@ -234,15 +234,7 @@ export function PasswordSettingRow({
           >
             {t("account.passwordWarnBody")}
           </Callout>
-          {change.isError && (
-            <Callout
-              kind="outcome"
-              tone="danger"
-              title={t("password.changeFailedTitle")}
-            >
-              {refusalCopy(change.error)}
-            </Callout>
-          )}
+          <DialogRefusal title={t("password.changeFailedTitle")} message={change.isError ? refusalCopy(change.error) : null} />
           {/* Every password field carries a reveal, this one included. A
                 mistyped CURRENT password is the cheapest of the three to
                 diagnose — the server refuses it in one round trip — but being
