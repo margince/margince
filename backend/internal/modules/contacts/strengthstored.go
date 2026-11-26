@@ -166,20 +166,21 @@ func DirectionlessSendersPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, 
 	if err != nil {
 		return nil, nil, fmt.Errorf("contacts: reading senders of direction-less mail: %w", err)
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var id ids.UUID
-		var wrote bool
-		if err := rows.Scan(&id, &wrote); err != nil {
-			return nil, nil, fmt.Errorf("contacts: reading senders of direction-less mail: %w", err)
-		}
-		inspected = append(inspected, id)
-		if wrote {
-			selected = append(selected, id)
-		}
-	}
-	if err := rows.Err(); err != nil {
+	page, err := pgx.CollectRows(rows, pgx.RowToStructByPos[senderPageRow])
+	if err != nil {
 		return nil, nil, fmt.Errorf("contacts: reading senders of direction-less mail: %w", err)
 	}
+	for _, c := range page {
+		inspected = append(inspected, c.ID)
+		if c.Wrote {
+			selected = append(selected, c.ID)
+		}
+	}
 	return inspected, selected, nil
+}
+
+// senderPageRow is one contact of a DirectionlessSendersPageTx page.
+type senderPageRow struct {
+	ID    ids.UUID
+	Wrote bool
 }

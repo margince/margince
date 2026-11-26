@@ -10,11 +10,13 @@ package contacts
 // so each case plants the shape older mail was kept in.
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -111,5 +113,17 @@ func TestADirectionlessMailWithNoUnambiguousContactSenderIsNotTheirs(t *testing.
 		if !sameMoment(got.LastInteraction, &wrote) {
 			t.Errorf("%s: last interaction %v, want the mail at %v", c.name, got.LastInteraction, wrote)
 		}
+	}
+}
+
+// The page is the data task's: a member's request may not walk every contact.
+func TestOnlyTheSystemReadsTheDirectionlessSenderPage(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, _, err := DirectionlessSendersPageTx(ctx, tx, ids.UUID{}, 10)
+		return err
+	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a member's read of the direction-less sender page answered %v, want a permission denial", err)
 	}
 }
