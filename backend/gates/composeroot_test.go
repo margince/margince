@@ -148,7 +148,9 @@ const (
 	// for a named colleague, and their cases.
 	composeRootProductionLines = 232_066
 	// Raised by 18 test lines for the link suggestion tool cases.
-	composeRootTestLines = 363_714
+	// Raised by 2 test lines for the actor census waivers of the two jobs that
+	// bind their colleague inside a method.
+	composeRootTestLines = 363_716
 )
 
 // A read under these floors stopped early or read the wrong place, and would
