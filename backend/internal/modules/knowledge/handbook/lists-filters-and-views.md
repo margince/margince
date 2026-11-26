@@ -261,7 +261,7 @@ Also called: multi-select, bulk edit, mass update, select all.
 To give many records a new owner at once in Margince, tick them on the **Contacts**, **Companies** or **Deals** table. Choose **Pick an owner** in the bar for many rows, and press **Assign owner**.
 1. A window shows how many records will change and up to three examples. It names each record left as it is, with its reason. For example "No permission to change" or "Changed since the list loaded".
 2. Press **Change owner**. A message says how many changed and how many were left as they were.
-On **Leads**, pick the colleague under **Choose owner** and press **Assign**.
+On **Leads**, pick the colleague, or **Unassigned**, under **Choose owner** and press **Assign**.
 Also called: bulk reassign, hand over accounts, transfer deals, a colleague left, reassign all their contacts.
 
 ### What can I do to several records at once?

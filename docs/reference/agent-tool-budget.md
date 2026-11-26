@@ -23,7 +23,7 @@ The heaviest menu is `overnight_at_risk_sweep`: 6722 of the window's 32768 token
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 48 | 2048 | 1646 | 4424 | 13% | 11960 | 0 | 4 |
 | `overnight_at_risk_sweep` | 7 | 7 of 48 | 3363 | 2629 | 6722 | 20% | 9662 | 4 | 5 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 54056 |  |  | 164% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 54061 |  |  | 164% |  |  |  |
 
 ### `morning_brief`
 

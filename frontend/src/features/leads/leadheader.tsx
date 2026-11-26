@@ -190,6 +190,7 @@ export function useLeadOwnerFlow(
         onClose={() => setOpen(false)}
         record={lead}
         assign={(ownerId, opened) => writer.assign(ownerId, opened, meId)}
+        unassign={writer.unassign}
         invalidate="leads"
         recordKey="lead"
         pending={writer.patch.isPending}

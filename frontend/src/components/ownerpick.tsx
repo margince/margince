@@ -21,10 +21,15 @@ export type OpenedRecord = Readonly<
 
 type OwnedRecord = OpenedRecord & Readonly<{ owner_id?: string | null }>;
 
+// The option id of "nobody": no seat id can be this word.
+const UNASSIGNED = "unassigned";
+
 type OwnerPickProps = Readonly<{
   /** Its owner is marked, and a pick of them writes nothing. */
   record: OwnedRecord;
   assign: (ownerId: string, opened: OpenedRecord) => Promise<unknown>;
+  /** Given, the list opens on "Unassigned", which hands the record back to the queue. */
+  unassign?: (opened: OpenedRecord) => Promise<unknown>;
   /** The list and record reads the write makes stale, as `useUpdateRecord` names them. */
   invalidate: string;
   recordKey: string;
@@ -56,6 +61,7 @@ type OwnerPickProps = Readonly<{
 export function OwnerPick({
   record,
   assign,
+  unassign,
   invalidate,
   recordKey,
   label,
@@ -96,14 +102,21 @@ export function OwnerPick({
       if (pinned === undefined) {
         throw new Error("an owner pick writes against the record it opened on");
       }
+      if (values.owner_id === null && unassign) {
+        await unassign(pinned);
+        return { id: pinned.id, cleared: true };
+      }
       await assign(String(values.owner_id), pinned);
-      return { id: pinned.id };
+      return { id: pinned.id, cleared: false };
     },
     invalidate,
     recordKey,
     recordId: record.id,
     // Named off the pick, never a re-read: the write sends only that option's id.
-    savedMessage: () => t("ownerPick.done", { name: pickedName.current }),
+    savedMessage: (updated) =>
+      updated.cleared
+        ? t("ownerPick.cleared")
+        : t("ownerPick.done", { name: pickedName.current }),
     onDone: () => {
       setOpen(false);
       onAssigned?.();
@@ -113,7 +126,7 @@ export function OwnerPick({
   const roster = owners.roster;
   // The viewer first: taking a record yourself is the common pick.
   const viewerId = me.data?.user?.id;
-  const options = roster.data
+  const colleagues = roster.data
     ? [
         ...owners.options.filter((owner) => owner.value === viewerId),
         ...owners.options.filter((owner) => owner.value !== viewerId),
@@ -125,6 +138,11 @@ export function OwnerPick({
         }),
       )
     : undefined;
+  const options =
+    colleagues && unassign
+      ? [{ id: UNASSIGNED, name: t("lead.unassigned") }, ...colleagues]
+      : colleagues;
+  const current = record.owner_id ?? (unassign ? UNASSIGNED : undefined);
   const title = label ?? t("ownerPick.change");
 
   const change = (next: boolean) => {
@@ -150,14 +168,15 @@ export function OwnerPick({
       searchLabel={t("ownerPick.search")}
       options={roster.isError ? [] : options}
       empty={roster.isError ? problemMessageOf(roster.error, t) : undefined}
-      selected={record.owner_id ?? undefined}
+      selected={current}
       onPick={(option, done) => {
-        if (option.id === record.owner_id) {
+        if (option.id === current) {
           done();
           return;
         }
         pickedName.current = option.name;
-        mutation.mutate({ values: { owner_id: option.id }, rows: {}, opened });
+        const owner = option.id === UNASSIGNED ? null : option.id;
+        mutation.mutate({ values: { owner_id: owner }, rows: {}, opened });
       }}
       pending={mutation.isPending || pending}
       error={mutation.isError ? problemMessageOf(mutation.error, t) : undefined}

@@ -496,6 +496,59 @@ describe("LeadBulkBar — confirm and busy state", () => {
     expect(sent).toEqual([]);
   });
 
+  it("hands the selection back to the unassigned queue with a null owner", async () => {
+    const bodies: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (request.method === "POST") {
+          const body = JSON.parse(await request.text());
+          bodies.push(body);
+          return jsonResponse({
+            results: body.leads.map((lead: { id: string }) => ({
+              lead_id: lead.id,
+              outcome: "assigned",
+              version: 2,
+            })),
+          });
+        }
+        if (url.pathname.endsWith("/users")) {
+          return jsonResponse({
+            data: [{ id: "u-9", email: "l@x.test", display_name: "Lena F." }],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }),
+    );
+    const onDone = vi.fn();
+    const user = userEvent.setup();
+    render(<LeadBulkBar leads={many(2)} onDone={onDone} />);
+    const owner = await screen.findByRole("combobox", { name: "New owner" });
+    await pickOption(user, owner, "Unassigned");
+    await user.click(screen.getByRole("button", { name: "Assign" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText("Return 2 leads to the unassigned queue?"),
+    ).toBeTruthy();
+    await user.click(within(dialog).getByRole("button", { name: "Assign" }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+    expect(bodies).toEqual([
+      {
+        owner_id: null,
+        leads: [
+          { id: "l-1", version: leads[0]?.version },
+          { id: "l-2", version: leads[0]?.version },
+        ],
+      },
+    ]);
+  });
+
   it("keeps Disqualify disabled while an Assign runs", async () => {
     let release: () => void = () => undefined;
     const gate = new Promise<void>((resolve) => {

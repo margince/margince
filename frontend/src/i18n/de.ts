@@ -3605,6 +3605,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ownerPick.change": "Verantwortung ändern",
   "ownerPick.search": "Teammitglieder suchen",
   "ownerPick.done": "{name} zugewiesen",
+  "ownerPick.cleared": "Zuweisung aufgehoben",
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
@@ -5745,6 +5746,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.tech.laneFailed":
     "{lane} hat nicht geantwortet. Das vorherige Ergebnis ist unverändert.",
   "co.tech.laneRefused": "Die Website hat die Analyse blockiert.",
+  "co.tech.laneFailedFirst":
+    "{lane} hat nicht geantwortet, daher liegt noch kein Ergebnis vor.",
   "co.tech.lane.dns": "DNS",
   "co.tech.lane.certlog": "Zertifikate",
   "co.tech.lane.homepage": "Startseite",
@@ -6087,6 +6090,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.bulkDisqualifiedDone_other": "{count} Leads disqualifiziert.",
   "lead.bulkAssignTitle_one": "Diesen Lead an {owner} zuweisen?",
   "lead.bulkAssignTitle_other": "{count} Leads an {owner} zuweisen?",
+  "lead.bulkUnassignTitle_one": "Zuweisung dieses Leads aufheben?",
+  "lead.bulkUnassignTitle_other": "Zuweisung von {count} Leads aufheben?",
+  "lead.bulkUnassignedDone_one": "Zuweisung von {count} Lead aufgehoben.",
+  "lead.bulkUnassignedDone_other": "Zuweisung von {count} Leads aufgehoben.",
+  "lead.unassignedAway":
+    "Zuweisung von {names} aufgehoben. Nicht mehr unter „Meine“.",
   "lead.bulkFailed": "{count} nicht übernommen:",
   "lead.bulkFailedRow": "nicht gespeichert",
   "lead.bulkOutcomeConflict": "inzwischen von jemand anderem geändert",
@@ -7636,6 +7645,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deepread.statusFailed": "Fehlgeschlagen",
   "deepread.statusCancelled": "Abgebrochen",
   "deepread.resumesAt": "Wird am {when} automatisch fortgesetzt.",
+  "deepread.failure.bot_blocked":
+    "Der Bot-Schutz der Website hat das Lesen abgelehnt.",
+  "deepread.failure.http_server_error":
+    "Die Website hat mit einem Serverfehler geantwortet.",
+  "deepread.failure.timeout": "Die Website hat nicht rechtzeitig geantwortet.",
+  "deepread.failure.http_client_error":
+    "Die Startseite der Website wurde nicht gefunden.",
+  "deepread.failure.dns": "Die Domain verweist auf keinen Server.",
+  "deepread.failure.tls":
+    "Das HTTPS-Zertifikat der Website ließ sich nicht prüfen.",
+  "deepread.failure.robots_disallowed":
+    "Die Website bittet Crawler, sie nicht zu lesen.",
+  "deepread.failure.unreadable":
+    "Die Website hat geantwortet, aber nichts Lesbares geliefert.",
+  "deepread.failure.internal":
+    "Margince konnte das Lesen nicht abschließen. Die Ursache liegt bei dieser Installation, nicht bei der Website. Ein Admin findet sie im Serverprotokoll.",
+  "deepread.failure.stale_reclaim":
+    "Das Lesen hat sich nicht mehr gemeldet und wurde beendet.",
   "deepread.pagesSoFar_one": "Bisher {count} Seite analysiert",
   "deepread.pagesSoFar_other": "Bisher {count} Seiten analysiert",
   "deepread.stoppedEarly": "Vorzeitig beendet: {reason}",

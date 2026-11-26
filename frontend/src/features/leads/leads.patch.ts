@@ -94,6 +94,9 @@ export function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
     !from.owner_id && ownerId === meId
       ? claim.mutateAsync(from.version)
       : reassign.mutateAsync(write({ owner_id: ownerId }, from));
+  // Back to the unassigned queue: the same write with no owner.
+  const unassign = (from: LeadAsOpened) =>
+    reassign.mutateAsync(write({ owner_id: null }, from));
 
-  return { patch, readOnly, readOnlyReason, save, assign };
+  return { patch, readOnly, readOnlyReason, save, assign, unassign };
 }

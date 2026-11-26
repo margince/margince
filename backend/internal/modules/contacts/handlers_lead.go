@@ -140,18 +140,12 @@ func (h Handlers) AssignLeads(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// An absent required id decodes to the zero UUID with no error, and a zero
-	// UUID reaching the assignment gate would be refused as "not a seat you may
-	// assign to" — a sentence about a colleague the caller never named. Both
-	// ids are refused here instead, naming the field that was missing.
-	if err := httperr.RequireBodyID("owner_id", ids.UUID(req.OwnerId)); err != nil {
+	owner, err := bulkOwner(r, req.OwnerId)
+	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	in := AssignLeadsInput{
-		OwnerID: ids.From[ids.UserKind](ids.UUID(req.OwnerId)),
-		Leads:   make([]AssignLeadItem, 0, len(req.Leads)),
-	}
+	in := AssignLeadsInput{OwnerID: owner, Leads: make([]AssignLeadItem, 0, len(req.Leads))}
 	for _, item := range req.Leads {
 		if err := httperr.RequireBodyID("leads.id", ids.UUID(item.Id)); err != nil {
 			writeStoreErr(w, r, err)
@@ -176,6 +170,23 @@ func (h Handlers) AssignLeads(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AssignLeadsResult{Results: results})
+}
+
+// bulkOwner reads the run's destination. An explicit null is the unassigned
+// queue; an absent owner is refused, naming the field, as an absent lead id is.
+func bulkOwner(r *http.Request, sent *openapi_types.UUID) (*ids.UserID, error) {
+	if _, present := httperr.PresentField(r, "owner_id"); present && sent == nil {
+		return nil, nil
+	}
+	var id ids.UUID
+	if sent != nil {
+		id = ids.UUID(*sent)
+	}
+	if err := httperr.RequireBodyID("owner_id", id); err != nil {
+		return nil, err
+	}
+	owner := ids.From[ids.UserKind](id)
+	return &owner, nil
 }
 
 // PromoteLead: POST /leads/{id}/promote — the lead graduates into the

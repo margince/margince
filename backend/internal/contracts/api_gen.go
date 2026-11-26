@@ -37509,8 +37509,10 @@ type AssignLeadsRequest struct {
 
 	// OwnerId The seat to hand them to. Must be one that can be handed work — an active, unarchived
 	// human seat that is not read-only, inside the caller's own row scope — else
-	// `422 owner_not_assignable` and nothing moves.
-	OwnerId openapi_types.UUID `json:"owner_id"`
+	// `422 owner_not_assignable` and nothing moves. An explicit `null` hands them back to
+	// the unassigned queue: each lead loses its owner as `updateLead` with `owner_id: null`
+	// would, so a lead the caller may not write answers `forbidden`.
+	OwnerId *openapi_types.UUID `json:"owner_id"`
 }
 
 // AssignLeadsResult defines model for AssignLeadsResult.

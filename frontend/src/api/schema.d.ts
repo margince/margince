@@ -43983,9 +43983,11 @@ export interface components {
              * Format: uuid
              * @description The seat to hand them to. Must be one that can be handed work — an active, unarchived
              *     human seat that is not read-only, inside the caller's own row scope — else
-             *     `422 owner_not_assignable` and nothing moves.
+             *     `422 owner_not_assignable` and nothing moves. An explicit `null` hands them back to
+             *     the unassigned queue: each lead loses its owner as `updateLead` with `owner_id: null`
+             *     would, so a lead the caller may not write answers `forbidden`.
              */
-            owner_id: string;
+            owner_id: string | null;
             leads: components["schemas"]["AssignLeadsItem"][];
         };
         AssignLeadsItem: {

@@ -86,6 +86,7 @@ type Harness = Readonly<{
   ownerId?: string | null;
   version?: number;
   assign?: (ownerId: string, opened: OpenedRecord) => Promise<unknown>;
+  unassign?: (opened: OpenedRecord) => Promise<unknown>;
   onAssigned?: () => void;
   pending?: boolean;
 }>;
@@ -98,6 +99,7 @@ function render(props: Harness = {}) {
     ownerId = null,
     version = 5,
     assign = vi.fn(async () => undefined),
+    unassign,
     onAssigned,
     pending,
   }: Harness) => (
@@ -107,6 +109,7 @@ function render(props: Harness = {}) {
           <OwnerPick
             record={{ id: "r-1", version, owner_id: ownerId }}
             assign={assign}
+            unassign={unassign}
             invalidate="projects"
             recordKey="project"
             onAssigned={onAssigned}
@@ -161,6 +164,45 @@ describe("OwnerPick", () => {
     );
     expect(onAssigned).toHaveBeenCalledTimes(1);
     expect(await screen.findByText("Assigned to Jane Doe")).toBeInTheDocument();
+  });
+
+  it("offers Unassigned first where the record may go back to the queue, and a pick clears the owner", async () => {
+    stubRoster("everyone", "u-7");
+    const assign = vi.fn(async () => undefined);
+    const unassign = vi.fn(async () => undefined);
+    const user = userEvent.setup();
+    render({ ownerId: "u-7", assign, unassign });
+
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Jane Doe" });
+    expect(
+      panel.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Unassigned", "Omar Haddad", "Jane Doe"]);
+    await user.click(panel.getByRole("option", { name: "Unassigned" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(unassign).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "r-1", version: 5 }),
+    );
+    expect(assign).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText("Returned to the unassigned queue"),
+    ).toBeInTheDocument();
+  });
+
+  it("marks Unassigned on a record nobody owns, and picking it writes nothing", async () => {
+    stubRoster();
+    const unassign = vi.fn(async () => undefined);
+    const user = userEvent.setup();
+    render({ ownerId: null, unassign });
+
+    const panel = await openPicker(user);
+    const nobody = await panel.findByRole("option", { name: "Unassigned" });
+    expect(nobody).toHaveAttribute("aria-selected", "true");
+    await user.click(nobody);
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(unassign).not.toHaveBeenCalled();
   });
 
   it("names the picked colleague in the toast when the roster is gone by then", async () => {
