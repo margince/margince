@@ -1924,8 +1924,15 @@ paths:
           description: Lookup by normalized domain (the employer-inference index).
         - name: status
           in: query
-          schema: {type: string, enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]}
-          description: Where the account stands with us.
+          schema:
+            type: array
+            items: {type: string, enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]}
+          style: form
+          explode: true
+          description: |-
+            Where the account stands with us. Repeat the parameter for
+            several: an account at any one of them matches, so onboarding, live and customer
+            together select every account we deliver for.
         - name: relationship_type
           in: query
           schema: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}

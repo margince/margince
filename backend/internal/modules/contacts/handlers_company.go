@@ -51,7 +51,7 @@ func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params c
 		AiWritten:        params.AiWritten,
 		Sort:             params.Sort,
 		CustomFilters:    httperr.CustomFieldFilters(r),
-		Status:           enumArg(params.Status),
+		Status:           enumArgs(params.Status),
 		RelationshipType: enumArg(params.RelationshipType),
 		Domain:           params.Domain,
 		TagIDs:           uuidArgs(params.TagId),
@@ -343,6 +343,18 @@ const maxRejectReason = 500
 // enumArg reads an optional generated enum query parameter as the plain string
 // the store filters on. A nil parameter stays nil: an omitted filter is not a
 // filter, never an empty-string match.
+// enumArgs is enumArg for a repeatable parameter: nil when none was sent.
+func enumArgs[T ~string](v *[]T) []string {
+	if v == nil {
+		return nil
+	}
+	out := make([]string, 0, len(*v))
+	for _, value := range *v {
+		out = append(out, string(value))
+	}
+	return out
+}
+
 func enumArg[T ~string](v *T) *string {
 	if v == nil {
 		return nil

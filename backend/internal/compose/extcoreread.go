@@ -306,7 +306,7 @@ func (c extensionCompanies) List(ctx context.Context, q extension.CompanyQuery) 
 	}
 	rows, page, err := c.store().ListCompaniesTx(ctx, c.core.tx, contacts.ListCompaniesInput{
 		Cursor: optional(q.Cursor), Limit: limit, Query: optional(q.Search), OwnerID: owner,
-		Domain: optional(q.Domain), Status: optional(q.Status),
+		Domain: optional(q.Domain), Status: contacts.OneStatus(optional(q.Status)),
 		SourceSystem: optional(q.SourceSystem), SourceID: optional(q.SourceID),
 		CustomFilters: q.CustomFields, IncludeArchived: q.IncludeArchived,
 	}, cols)

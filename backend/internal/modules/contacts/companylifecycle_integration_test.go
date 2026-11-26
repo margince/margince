@@ -159,14 +159,63 @@ func TestTheLifecycleFilterReachesOnboardingAndLive(t *testing.T) {
 	}
 	e.companyAtStage(ctx, t, "Plain Customer GmbH", "customer")
 	for stage, id := range want {
-		filter := stage
-		found, _, err := e.store.ListCompanies(ctx, ListCompaniesInput{Status: &filter})
+		found, _, err := e.store.ListCompanies(ctx, ListCompaniesInput{Status: []string{stage}})
 		if err != nil {
 			t.Fatalf("listing %s: %v", stage, err)
 		}
 		if len(found) != 1 || found[0].Id.String() != id.String() {
 			t.Errorf("lifecycle=%s listed %d companies, want only %s", stage, len(found), id)
 		}
+	}
+}
+
+// The Customers tab names three stages. An account at any one of them is ours
+// to deliver for, and a prospect is not.
+func TestSeveralLifecyclesSelectAnAccountAtAnyOfThem(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	want := map[string]bool{
+		e.companyAtStage(ctx, t, "Setting Up GmbH", "onboarding").String(): true,
+		e.companyAtStage(ctx, t, "In Use GmbH", "live").String():           true,
+		e.companyAtStage(ctx, t, "Paying GmbH", "customer").String():       true,
+	}
+	e.companyAtStage(ctx, t, "Maybe GmbH", "prospect")
+	found, _, err := e.store.ListCompanies(ctx, ListCompaniesInput{Status: []string{"onboarding", "live", "customer"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found) != len(want) {
+		t.Fatalf("listed %d companies, want the %d at onboarding, live or customer", len(found), len(want))
+	}
+	for _, company := range found {
+		if !want[company.Id.String()] {
+			t.Errorf("listed %s at %v, which none of the three stages names", company.DisplayName, company.Status)
+		}
+	}
+}
+
+// Sorting by Lifecycle reads the funnel, not the alphabet: customer sorts
+// after prospect, which the stored words would put the other way round.
+func TestTheLifecycleSortFollowsTheFunnel(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	for _, stage := range []string{"disqualified", "customer", "prospect", "unknown"} {
+		e.companyAtStage(ctx, t, "Funnel "+stage, stage)
+	}
+	sort, named := "status", "Funnel"
+	found, _, err := e.store.ListCompanies(ctx, ListCompaniesInput{Sort: &sort, Query: &named})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, company := range found {
+		if company.Status != nil {
+			got = append(got, string(*company.Status))
+		}
+	}
+	want := []string{"unknown", "prospect", "customer", "disqualified"}
+	if !slices.Equal(got, want) {
+		t.Errorf("sort=status ordered %v, want the funnel's %v", got, want)
 	}
 }
 

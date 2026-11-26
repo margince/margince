@@ -78915,8 +78915,10 @@ type ListCompaniesParams struct {
 	// Domain Lookup by normalized domain (the employer-inference index).
 	Domain *string `form:"domain,omitempty" json:"domain,omitempty"`
 
-	// Status Where the account stands with us (DM-VOCAB-2, ADR-0079).
-	Status *ListCompaniesParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	// Status Where the account stands with us (DM-VOCAB-2, ADR-0079). Repeat the parameter for
+	// several: an account at any one of them matches, so onboarding, live and customer
+	// together select every account we deliver for.
+	Status *[]ListCompaniesParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// RelationshipType Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both.
 	RelationshipType *ListCompaniesParamsRelationshipType `form:"relationship_type,omitempty" json:"relationship_type,omitempty"`
@@ -125368,7 +125370,7 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 
 	// ------------- Optional query parameter "status" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {

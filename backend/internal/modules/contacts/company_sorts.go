@@ -13,9 +13,11 @@ package contacts
 
 import (
 	"context"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // orderByPrimaryDomain orders by the host the Website column draws.
@@ -85,7 +87,31 @@ func orderByOpenDealCount(ctx context.Context, arg func(any) int) (string, error
 // is the one their cursor keys already round-trip through.
 const withheldSortValue = "NULL::numeric"
 
+// orderByLifecycle orders by the funnel position of the Lifecycle column,
+// from unknown to disqualified, in the order values.ClassifiedLifecycles holds.
+func orderByLifecycle(context.Context, func(any) int) (string, error) {
+	return "array_position(ARRAY[" + quotedLifecycles() + "]::text[], company.status)", nil
+}
+
+// quotedLifecycles is the lifecycles as an SQL list; they are constants of the
+// values package, never input.
+func quotedLifecycles() string {
+	quoted := make([]string, 0, len(values.ClassifiedLifecycles()))
+	for _, stage := range values.ClassifiedLifecycles() {
+		quoted = append(quoted, "'"+stage+"'")
+	}
+	return strings.Join(quoted, ",")
+}
+
+// OneStatus is the status filter of a caller that names at most one stage.
+func OneStatus(status *string) []string {
+	if status == nil {
+		return nil
+	}
+	return []string{*status}
+}
+
 // Compile-time proof that each of these is the shape a sortable field takes.
 var _ = []func(context.Context, func(any) int) (string, error){
-	orderByPrimaryDomain, orderByContactCount, orderByOpenDealCount,
+	orderByPrimaryDomain, orderByContactCount, orderByOpenDealCount, orderByLifecycle,
 }

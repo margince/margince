@@ -119,8 +119,8 @@ export function useActiveView(
  * box would light over the whole list and name it acme.
  *
  * The invariant, then: a tab is lit only while the list on screen is the one it
- * names, down to the search box. Page size is the one allowed exception. It
- * changes how many of those rows are drawn at once, not which rows they are.
+ * names, down to the search box. Page size and the order of a tab that claims
+ * none are the exceptions: they change how the rows are drawn, not which.
  */
 function matchesView(
   spec: Readonly<{
@@ -134,7 +134,7 @@ function matchesView(
   if (query.q !== (spec.q ?? "")) {
     return false;
   }
-  if (query.sort !== (spec.sort ?? "")) {
+  if (spec.sort !== undefined && query.sort !== spec.sort) {
     return false;
   }
   if (query.includeArchived !== (spec.includeArchived ?? false)) {

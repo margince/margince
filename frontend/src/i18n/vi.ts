@@ -3645,7 +3645,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "list.viewMine": "Của tôi",
   "list.viewCustomers": "Khách hàng",
   "list.viewProspects": "Tiềm năng",
-  "company.filterLifecycleAll": "Mọi giai đoạn",
+  "company.filterLifecycleAll": "Mọi vòng đời",
+  "company.filterLifecycleDelivering":
+    "Đang triển khai, đang vận hành hoặc khách hàng",
+  "company.filterIndustryAll": "Mọi ngành",
+  "company.industry": "Ngành",
+  "company.employees": "Nhân viên",
   "company.filterRelTypeAll": "Mọi loại",
   "company.filterSizeBandAll": "Mọi số nhân viên",
   "company.filterDormancyAll": "Mọi mức hoạt động",

@@ -112,7 +112,7 @@ export function clearAll(dials: QueryDials) {
 export function applyView(dials: QueryDials, index: number) {
   dials.onViewChange?.(index);
   const view = dials.views[index];
-  if (dials.sort) {
+  if (dials.sort && (view === undefined || view.sort !== undefined)) {
     dials.sort.onChange(view?.sort ?? "");
   }
   for (const key of filterKeys(dials, Object.keys(view?.filters ?? {}))) {
