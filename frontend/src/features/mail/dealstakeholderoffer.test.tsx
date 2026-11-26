@@ -3,14 +3,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { components } from "../api/schema";
-import { Button } from "../design-system/atoms";
-import { LocaleProvider } from "../i18n";
+import type { components } from "../../api/schema";
+import type { Relationship } from "../../components/relationships";
+import { Button } from "../../design-system/atoms";
+import { LocaleProvider } from "../../i18n";
 import {
   stakeholderCandidates,
   useDealStakeholderOffer,
 } from "./dealstakeholderoffer";
-import type { Relationship } from "./relationships";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 type EmailParty = components["schemas"]["EmailParty"];

@@ -19064,7 +19064,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Có ai đó liên kết một deal, công ty hoặc liên hệ với bản ghi khác, hoặc gỡ một liên kết.",
   "linkSuggestions.title": "Liên kết gợi ý",
   "linkSuggestions.reason": "{unit} cho biết: {reason}",
-  "linkSuggestions.byMargince": "Margince",
+  "linkSuggestions.byMargince": "Hệ thống Margince",
   "linkSuggestions.target": "{subject} vào {record} ({kind})",
   "linkSuggestions.noSubject": "Thư không có tiêu đề",
   "linkSuggestions.kind.contact": "liên hệ",
