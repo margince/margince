@@ -4,7 +4,9 @@
 package langcopytest
 
 import (
+	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,23 +15,25 @@ import (
 	"sync"
 )
 
-// stylebaseline.txt holds the English and Vietnamese findings the tree had
-// when it was cut. It may only shrink:
-// TestEveryStyleWaiverStillBreaksItsRule fails an entry whose sentence passes,
-// and TestEveryStyleWaiverNamesASentenceInTheTree one whose sentence is gone.
+// stylebaseline.txt holds the findings the tree still has. A test fails an
+// entry whose sentence passes or is gone, and the recut never adds one.
 //
 //go:embed stylebaseline.txt
 var baselineText string
 
 const baselinePath = "backend/internal/shared/kernel/langcopy/langcopytest/stylebaseline.txt"
 
-// recordVariable names a file. When it is set, every finding is appended there
-// and none fails, so a re-cut sees the whole tree.
-const recordVariable = "LANGCOPY_STYLE_RECORD"
+// A recut sets both variables. The file must open with the token, so a stray
+// export of the first cannot turn the style check into a pass.
+const (
+	recordVariable = "LANGCOPY_STYLE_RECORD"
+	tokenVariable  = "LANGCOPY_STYLE_RECORD_TOKEN"
+	recordHeader   = "# langcopytest recut "
+)
 
-// Waiver is one finding the baseline holds: a rule id, which leads with the
-// language, and the sentence as the table holds it.
-type Waiver struct{ Rule, Text string }
+// Waiver is one finding the baseline holds: a rule id and the sentence. A rule
+// that reads the English also keeps the English it was checked beside.
+type Waiver struct{ Rule, Text, English string }
 
 // StyleBaseline answers every waiver the baseline holds, in file order.
 func StyleBaseline() ([]Waiver, error) { return parseBaseline(baselineText) }
@@ -40,18 +44,44 @@ func parseBaseline(text string) ([]Waiver, error) {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		rule, quoted, found := strings.Cut(line, "\t")
-		sentence, err := strconv.Unquote(quoted)
-		if !found || err != nil {
-			return nil, fmt.Errorf("%s:%d is not a rule id, a tab and a quoted sentence: %q",
-				baselinePath, number+1, line)
+		w, err := parseWaiver(line)
+		if err != nil {
+			return nil, fmt.Errorf("%s:%d: %w", baselinePath, number+1, err)
 		}
-		waivers = append(waivers, Waiver{Rule: rule, Text: sentence})
+		waivers = append(waivers, w)
 	}
 	return waivers, nil
 }
 
-func (w Waiver) line() string { return w.Rule + "\t" + strconv.Quote(w.Text) }
+func parseWaiver(line string) (Waiver, error) {
+	fields := strings.Split(line, "\t")
+	rule, known := ruleNamed(fields[0])
+	want := 2
+	if known && rule.readsEnglish {
+		want = 3
+	}
+	quoted := make([]string, len(fields))
+	for i, field := range fields[1:] {
+		unquoted, err := strconv.Unquote(field)
+		if err != nil {
+			return Waiver{}, fmt.Errorf("%q is not a rule id and tab-separated quoted sentences", line)
+		}
+		quoted[i] = unquoted
+	}
+	if len(fields) != want {
+		return Waiver{}, fmt.Errorf("%q has %d fields, and %s takes %d: the rule id, the sentence and, "+
+			"for a rule that reads it, the English", line, len(fields), fields[0], want)
+	}
+	return Waiver{Rule: fields[0], Text: quoted[0], English: quoted[1]}, nil
+}
+
+func (w Waiver) line() string {
+	line := w.Rule + "\t" + strconv.Quote(w.Text)
+	if rule, known := ruleNamed(w.Rule); known && rule.readsEnglish {
+		line += "\t" + strconv.Quote(w.English)
+	}
+	return line
+}
 
 var baselineSet = sync.OnceValues(func() (map[Waiver]bool, error) {
 	waivers, err := StyleBaseline()
@@ -66,12 +96,17 @@ var baselineSet = sync.OnceValues(func() (map[Waiver]bool, error) {
 })
 
 // waived reports whether the baseline holds a finding, or records it when a
-// re-cut is running.
-func waived(t reporter, rule, text string) bool {
+// recut is running.
+func waived(t reporter, rule styleRule, text, english string) bool {
 	t.Helper()
+	w := Waiver{Rule: rule.id, Text: text}
+	if rule.readsEnglish {
+		w.English = english
+	}
 	if path := os.Getenv(recordVariable); path != "" {
-		if err := record(path, Waiver{Rule: rule, Text: text}); err != nil {
-			t.Fatalf("recording a style finding: %v", err)
+		if err := record(path, os.Getenv(tokenVariable), w); err != nil {
+			t.Fatalf("%s is set, and recording a style finding failed: %v. Only TestRecutStyleBaseline -recut "+
+				"records findings; unset the variable", recordVariable, err)
 		}
 		return true
 	}
@@ -79,27 +114,32 @@ func waived(t reporter, rule, text string) bool {
 	if err != nil {
 		t.Fatalf("the style baseline cannot be read: %v", err)
 	}
-	return set[Waiver{Rule: rule, Text: text}]
+	return set[w]
 }
 
 var recording sync.Mutex
 
-// record appends a finding and the package that found it. One write to a file
-// opened for append keeps test binaries running side by side from interleaving.
-func record(path string, w Waiver) error {
+// record appends a finding and its package to the file a recut opened with
+// token. One append write keeps test binaries running side by side apart.
+func record(path, token string, w Waiver) error {
 	recording.Lock()
 	defer recording.Unlock()
 	dir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	file, err := os.OpenFile(filepath.Clean(path), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	file, err := os.OpenFile(filepath.Clean(path), os.O_APPEND|os.O_RDWR, 0o600)
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(w.line() + "\t" + strconv.Quote(dir) + "\n")
-	if closeErr := file.Close(); err == nil {
-		err = closeErr
+	first, readErr := bufio.NewReader(file).ReadString('\n')
+	switch {
+	case readErr != nil:
+		err = fmt.Errorf("%s opens with no line: %w", path, readErr)
+	case token == "" || first != recordHeader+token+"\n":
+		err = fmt.Errorf("%s does not open with the token %s holds", path, tokenVariable)
+	default:
+		_, err = file.WriteString(strconv.Quote(dir) + "\t" + w.line() + "\n")
 	}
-	return err
+	return errors.Join(err, file.Close())
 }

@@ -26,6 +26,7 @@ reviewer reads a Vietnamese change against this page.
   qualifier. That covers can and may (có thể), designed to (được thiết kế để), intended to (nhằm) and
   subject to (tùy thuộc vào). It also covers where applicable (trong trường hợp áp dụng), typically (thường)
   and does not guarantee (không đảm bảo). "Designed to support compliance" never becomes "đảm bảo tuân thủ".
+  The opt-out receipt keeps the decree's term "thư điện tử quảng cáo".
 - **No superlative the English does not state.** "nhất", "duy nhất", "hàng đầu" and "số 1" are regulated
   claims under Luật Quảng cáo 16/2012/QH13.
 - **Unchanged**: Margince, Gradion, Voice DNA, Deal Room, vendor and product names (Google Workspace,
@@ -245,7 +246,7 @@ one that does stays plain, held by the reviewer in the sense its row gives.
 | Recommended (a badge) | Khuyên dùng | nên dùng for the badge |
 | Work that runs long or stops | Quá trình only as the subject of kéo dài bất thường or bị gián đoạn; elsewhere the concrete noun or verb (Đang nhập…, đợt nhập, lần đọc) | Quá trình in a control or a second mention |
 | Stopped partway; failed | bị gián đoạn; bị lỗi, or không thành công for a result; a neutral Stopped status is Đã dừng, an adverse one Bị dừng | `dừng giữa chừng`; thất bại in a title, status or counter |
-| Email | email | `thư điện tử`, `e-mail` |
+| Email | email | `thư điện tử`, `e-mail` (thư điện tử quảng cáo keeps it) |
 | Message | tin nhắn; mail inside a mailbox thư; one email message email | |
 | Mailbox | hộp thư | `mailbox` |
 | Meeting; its attendee | cuộc họp; người tham dự | `buổi họp`, `meeting`; khách for an attendee (khách is a booking guest) |
@@ -388,12 +389,12 @@ column. Those are the author's and the reviewer's judgement.
 
 In Go, `langcopytest.Census` holds the Vietnamese of every `langcopy.Phrase` table, and `langcopytest.VietnameseText`
 a table of another shape. They hold NFC, tone marks, no dashes, no !, the three Never rows, formal address, outsider
-address and retired vocabulary, and they also fail "nhé", "nha" and "ạ". The retired words are read from the
-Vocabulary table when the test runs. A table is member copy unless its test names another register with a reason.
-Agent allows tôi. Outsider allows quý khách and vui lòng and fails bạn. Controller also allows chúng tôi. Own voice
-keeps only NFC, tone marks, dashes and !, and Verbatim only NFC. What was wrong when the check started is listed in
-`backend/internal/shared/kernel/langcopy/langcopytest/stylebaseline.txt`, and that list only shrinks;
-[ui-copy-style.md](ui-copy-style.md#copy-the-server-writes) gives the command that cuts it again. The check does not
-reach the voice of a draft the member sends as themselves (`draftfloor`, intro notes), the demo mail of
-`capture/offlinedemo`, or the word lists of `draftcheck`, `salutation` and `searchplan`. Nor does it reach text
-returned from a `switch`, or strings outside a table: problem details, `crm.yaml` and MCP tool copy (#13561, #13562).
+address and retired vocabulary, and they also fail "nhé", "nha" and "ạ". Each run reads the retired words from the
+Vocabulary table and the patterns from `copy-style-vi.census.ts`; formal address is a hand port pinned to its census
+pattern. A table is member copy unless its test names another register with a reason. Agent allows tôi. Outsider
+allows quý khách and vui lòng and fails bạn. Controller also allows chúng tôi. Own voice keeps only NFC, tone marks,
+dashes and !, and Verbatim only NFC. Findings that wait for a rewrite sit in `langcopytest/stylebaseline.txt`, which
+the command in [ui-copy-style.md](ui-copy-style.md#copy-the-server-writes) only shortens. The check does not reach the
+voice of a draft the member sends as themselves (`draftfloor`, intro notes), the demo mail of `capture/offlinedemo`,
+or the word lists of `draftcheck`, `salutation` and `searchplan`. Nor does it reach text returned from a `switch`, or
+strings outside a table: problem details, `crm.yaml` and MCP tool copy (#13561, #13562).

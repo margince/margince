@@ -37,38 +37,24 @@ const (
 )
 
 // styleRule is one mechanical rule of a style page. breaks reads the sentence
-// and, where a rule needs it, the English it was translated from.
+// and, for a rule that readsEnglish, the English it was translated from.
 type styleRule struct {
-	id     string
-	lang   textlang.Lang
-	advice string
-	breaks func(src sources, text, english string) bool
+	id           string
+	lang         textlang.Lang
+	advice       string
+	readsEnglish bool
+	breaks       func(src sources, text, english string) bool
 }
 
-var (
-	dash        = regexp.MustCompile(`[–—]|--|\s-\s`)
-	bang        = regexp.MustCompile(`!`)
-	ampersand   = regexp.MustCompile(`&`)
-	curlyQuoted = regexp.MustCompile(`“[^“”]*”`)
-	braced      = regexp.MustCompile(`\{[^}]*\}`)
+const besideEnglish, alone = true, false
 
-	// Ported from copy-style-vi.census.ts. Go has no lookaround, so a
-	// lookbehind becomes a consumed character or the start of the text.
-	toneOpen = regexp.MustCompile(`(?i)(?:^|[^q])o[àáảãạ](?:$|[^\p{L}])|o[èéẻẽẹ](?:$|[^\p{L}])|` +
-		`(?:^|[^q])u[ỳýỷỹỵ](?:$|[^\p{L}])`)
-	toneClosed   = regexp.MustCompile(`(?i)[òóỏõọ][ae]\p{L}|(?:^|[^q])[ùúủũụ]y\p{L}`)
-	webAddress   = regexp.MustCompile(`[a-z][a-z\d+.-]*://[^\s“”()]+`)
-	fileName     = regexp.MustCompile(`[^\s“”(),]+\.[a-z][a-z\d]{0,4}(?:$|[^\p{L}\d])`)
-	saysMe       = regexp.MustCompile(`(?i)\b(?:me|my|mine)\b`)
-	toi          = wholeWord("tôi")
-	chungToi     = wholeWord("chúng tôi")
-	chungTa      = wholeWord("chúng ta|mình")
-	reflexive    = wholeWord("(?:chính|tự|một) mình")
-	formal       = wholeWord("quý vị|anh/chị|anh chị|kính thưa")
-	siblings     = wholeWord("anh chị em")
-	particle     = wholeWord("nhé|nha|ạ")
-	outsiderWord = wholeWord("quý khách|vui lòng")
-	memberWord   = wholeWord("bạn")
+var (
+	braced = regexp.MustCompile(`\{[^}]*\}`)
+	// formal and siblings port the census's pinned formal pattern, whose
+	// (?! em) Go cannot read. particle is held by the page alone.
+	formal   = wholeWord("quý vị|anh/chị|anh chị|kính thưa")
+	siblings = wholeWord("anh chị em")
+	particle = wholeWord("nhé|nha|ạ")
 )
 
 // prose drops the placeholders, which name a parameter and not copy. sep is
@@ -78,69 +64,89 @@ func prose(text, sep string) string {
 	return braced.ReplaceAllString(verbs.ReplaceAllString(text, sep), sep)
 }
 
-func matches(pattern *regexp.Regexp, prepare func(string) string) func(sources, string, string) bool {
-	return func(_ sources, text, _ string) bool { return pattern.MatchString(prepare(text)) }
+// textOf prepares a sentence for one pattern.
+type textOf func(src sources, text string) string
+
+func enProse(_ sources, text string) string  { return prose(text, "") }
+func viProse(_ sources, text string) string  { return prose(text, " ") }
+func padded(_ sources, text string) string   { return " " + text + " " }
+func verbatim(_ sources, text string) string { return text }
+
+func matches(pattern string, prepare textOf) func(sources, string, string) bool {
+	return func(src sources, text, _ string) bool { return src.patterns[pattern].MatchString(prepare(src, text)) }
 }
 
-func enProse(text string) string  { return prose(text, "") }
-func viProse(text string) string  { return prose(text, " ") }
-func padded(text string) string   { return " " + text + " " }
-func verbatim(text string) string { return text }
-
-func without(pattern *regexp.Regexp, prepare func(string) string) func(string) string {
-	return func(text string) string { return pattern.ReplaceAllString(prepare(text), " ") }
+func matchesHere(pattern *regexp.Regexp, prepare textOf) func(sources, string, string) bool {
+	return func(src sources, text, _ string) bool { return pattern.MatchString(prepare(src, text)) }
 }
 
-func englishFrom(rule string) func(sources, string, string) bool {
-	return func(src sources, text, _ string) bool { return src.english[rule].MatchString(enProse(text)) }
+func without(pattern string, prepare textOf) textOf {
+	return func(src sources, text string) string { return erase(src.patterns[pattern], prepare(src, text)) }
+}
+
+// erase blanks every match. A match takes the character on each side, which an
+// adjacent match needs as its own, so it repeats until nothing matches.
+func erase(pattern *regexp.Regexp, text string) string {
+	for {
+		next := pattern.ReplaceAllString(text, " ")
+		if next == text {
+			return text
+		}
+		text = next
+	}
 }
 
 var styleRules = []styleRule{
-	{ruleEnDash, textlang.English, "uses a dash as punctuation; rewrite with a period, colon, comma or parentheses",
-		matches(dash, padded)},
-	{ruleEnContraction, textlang.English, "uses a contraction; write it out (cannot, is not)",
-		englishFrom(ruleEnContraction)},
-	{ruleEnWe, textlang.English, "speaks as we; Margince is software, so name the actor or drop the pronoun",
-		englishFrom(ruleEnWe)},
-	{ruleEnI, textlang.English, "speaks as I; only an agent in a chat bubble says I", englishFrom(ruleEnI)},
-	{ruleEnSpelling, textlang.English, "uses a British spelling; write American English", englishFrom(ruleEnSpelling)},
-	{ruleEnAmpersand, textlang.English, "uses &; write and",
-		matches(ampersand, without(curlyQuoted, verbatim))},
+	// ui-copy-style.md fails the marks the Vietnamese census fails, wider than
+	// the English catalog gate's em and en dash.
+	{ruleEnDash, textlang.English, "uses a dash as punctuation; rewrite with a period, colon, comma or parentheses", alone,
+		matches(patternDash, padded)},
+	{ruleEnContraction, textlang.English, "uses a contraction; write it out (cannot, is not)", alone,
+		matches(ruleEnContraction, enProse)},
+	{ruleEnWe, textlang.English, "speaks as we; Margince is software, so name the actor or drop the pronoun", alone,
+		matches(ruleEnWe, enProse)},
+	{ruleEnI, textlang.English, "speaks as I; only an agent in a chat bubble says I", alone, matches(ruleEnI, enProse)},
+	{ruleEnSpelling, textlang.English, "uses a British spelling; write American English", alone,
+		matches(ruleEnSpelling, enProse)},
+	{ruleEnAmpersand, textlang.English, "uses &; write and", alone,
+		matches(ruleEnAmpersand, without(patternEnQuoted, verbatim))},
 
-	{ruleViNFC, textlang.Vietnamese, "is not NFC; normalize it",
+	{ruleViNFC, textlang.Vietnamese, "is not NFC; normalize it", alone,
 		func(_ sources, text, _ string) bool { return !norm.NFC.IsNormalString(text) }},
-	{ruleViToneOpen, textlang.Vietnamese, "marks an open oa, oe or uy on the second vowel; write hòa, xóa, tùy",
-		matches(toneOpen, viProse)},
-	{ruleViToneClosed, textlang.Vietnamese, "marks the first vowel before a final consonant; write hoàn, khuyên",
-		matches(toneClosed, viProse)},
-	{ruleViDash, textlang.Vietnamese, "uses a dash as punctuation; rewrite with a comma, period, colon or parentheses",
-		matches(dash, padded)},
-	{ruleViExclamation, textlang.Vietnamese, "uses !; state the fact without it", matches(bang, verbatim)},
-	{ruleViToi, textlang.Vietnamese, "speaks as tôi; the product never speaks as itself",
-		func(_ sources, text, english string) bool {
-			return toi.MatchString(without(chungToi, viProse)(text)) && !saysMe.MatchString(english)
+	{ruleViToneOpen, textlang.Vietnamese, "marks an open oa, oe or uy on the second vowel; write hòa, xóa, tùy", alone,
+		matches(ruleViToneOpen, viProse)},
+	{ruleViToneClosed, textlang.Vietnamese, "marks the first vowel before a final consonant; write hoàn, khuyên", alone,
+		matches(ruleViToneClosed, viProse)},
+	{ruleViDash, textlang.Vietnamese, "uses a dash as punctuation; rewrite with a comma, period, colon or parentheses", alone,
+		matches(patternDash, padded)},
+	{ruleViExclamation, textlang.Vietnamese, "uses !; state the fact without it", alone,
+		matches(ruleViExclamation, verbatim)},
+	{ruleViToi, textlang.Vietnamese, "speaks as tôi; the product never speaks as itself", besideEnglish,
+		func(src sources, text, english string) bool {
+			return matches(ruleViToi, without(patternToiWe, viProse))(src, text, english) &&
+				!src.patterns[patternSaysMe].MatchString(english)
 		}},
-	{ruleViChungToi, textlang.Vietnamese, "speaks as chúng tôi; only the data controller does",
-		matches(chungToi, viProse)},
-	{ruleViChungTa, textlang.Vietnamese, "speaks as chúng ta or mình", matches(chungTa, without(reflexive, viProse))},
-	{ruleViFormal, textlang.Vietnamese, "addresses the reader as quý vị, anh/chị or kính thưa",
-		matches(formal, without(siblings, viProse))},
-	{ruleViParticle, textlang.Vietnamese, "ends on nhé, nha or ạ", matches(particle, viProse)},
-	{ruleViMemberAddress, textlang.Vietnamese, "says quý khách or vui lòng to a member; those are for an outsider",
-		matches(outsiderWord, viProse)},
-	{ruleViOutsiderAddress, textlang.Vietnamese, "says bạn to an outsider; write quý khách",
-		matches(memberWord, viProse)},
-	{ruleViRetired, textlang.Vietnamese, "uses a word the Vocabulary table of ui-copy-style-vi.md retires",
+	{ruleViChungToi, textlang.Vietnamese, "speaks as chúng tôi; only the data controller does", alone,
+		matches(ruleViChungToi, viProse)},
+	{ruleViChungTa, textlang.Vietnamese, "speaks as chúng ta or mình", alone,
+		matches(ruleViChungTa, without(patternReflexive, viProse))},
+	{ruleViFormal, textlang.Vietnamese, "addresses the reader as quý vị, anh/chị or kính thưa", alone,
+		func(src sources, text, _ string) bool { return formal.MatchString(erase(siblings, viProse(src, text))) }},
+	{ruleViParticle, textlang.Vietnamese, "ends on nhé, nha or ạ", alone, matchesHere(particle, viProse)},
+	{ruleViMemberAddress, textlang.Vietnamese, "says quý khách or vui lòng to a member; those are for an outsider", alone,
+		matches(ruleViMemberAddress, viProse)},
+	{ruleViOutsiderAddress, textlang.Vietnamese, "says bạn to an outsider; write quý khách", alone,
+		matches(ruleViOutsiderAddress, viProse)},
+	{ruleViRetired, textlang.Vietnamese, "uses a word the Vocabulary table of ui-copy-style-vi.md retires", alone,
 		func(src sources, text, _ string) bool {
-			return src.retired.MatchString(src.ordinary.ReplaceAllString(withoutPaths(text), " "))
+			return src.retired.MatchString(erase(src.ordinary, withoutPaths(src, text)))
 		}},
 }
 
 // withoutPaths keeps a quoted vendor label, a file name and a URL out of the
 // vocabulary rule. Each keeps the spelling the reader must match or type.
-func withoutPaths(text string) string {
-	unquoted := curlyQuoted.ReplaceAllString(viProse(text), " ")
-	return fileName.ReplaceAllString(webAddress.ReplaceAllString(unquoted, " "), " ")
+func withoutPaths(src sources, text string) string {
+	return without(patternFileName, without(patternWebAddress, without(patternViQuoted, viProse)))(src, text)
 }
 
 // ruleNamed answers the rule an id names, for a baseline entry.
@@ -178,10 +184,10 @@ func judge(t reporter, r Register, lang textlang.Lang, name, text, english strin
 		if rule.lang != lang || !r.holds(rule.id) || !rule.breaks(src, text, english) {
 			continue
 		}
-		if waived(t, rule.id, text) {
+		if waived(t, rule, text, english) {
 			continue
 		}
-		t.Errorf("%s %s %s (%s, %s): %q\nRewrite the sentence; %s waives only what was wrong before this check.",
+		t.Errorf("%s %s %s (%s, %s): %q\nRewrite the sentence; %s only shrinks.",
 			lang, name, rule.advice, rule.id, r.name, text, baselinePath)
 	}
 }

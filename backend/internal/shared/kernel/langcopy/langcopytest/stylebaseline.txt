@@ -1,8 +1,9 @@
-# English and Vietnamese copy that broke a rule of ui-copy-style.md or
-# ui-copy-style-vi.md when the Go style check began. Rewrite a sentence, then
-# delete its line. A line whose sentence passes or is gone fails a test.
-# One line: rule id, a tab, the sentence as a Go string.
-# Re-cut, from backend/:
+# English and Vietnamese copy that breaks a rule of ui-copy-style.md or
+# ui-copy-style-vi.md and waits for a rewrite. Rewrite a sentence, then delete
+# its line. A line whose sentence passes or is gone fails a test.
+# One line: rule id, a tab, the sentence as a Go string; vi.toi adds a tab and
+# the English the sentence was checked beside.
+# The recut drops every line nothing reports and never adds one. From backend/:
 #   go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut -timeout 30m
 en.contraction	"Asking a colleague for context isn't available yet"
 en.contraction	"The model's answer didn't match the records, so only the rule-based advice is shown."
@@ -60,6 +61,7 @@ en.we	"A date, a price or a resource is promised that nobody on our side has agr
 en.we	"Close out what we owe %s, overdue since %s, and agree the next step: %s"
 en.we	"Close out what we owe %s, overdue since %s: %s"
 en.we	"Close out what we promised %s: %s"
+en.we	"It is the thing %s named, and the plan should be built on it rather than on what we assume."
 en.we	"My website research has stopped without completing. We can fill the %d missing required details together here; nothing is saved yet."
 en.we	"Our AI provider is busy right now and turned the call away, so the build did not run. Your previous version is unchanged; wait a minute and build again."
 en.we	"Our AI provider refused the call: the account behind it is out of budget or over its quota, so the build never ran. Your previous version is unchanged. Raise the limit on the provider account, then build again."
@@ -77,7 +79,9 @@ en.we	"We are past due to %s on: %s"
 en.we	"We called %s on %s and nothing has happened since — %s."
 en.we	"We met %s on %s and nothing has happened since — %s."
 en.we	"We owe %s: %s"
+en.we	"We promised %s this and it is still open."
 en.we	"We promised %s: %s"
+en.we	"We wrote at least %d days ago and nobody has answered."
 en.we	"We wrote last, about “%s”."
 en.we	"We wrote to %s on %s and there has been no reply — %s."
 vi.chung-ta	"%s còn nợ chúng ta %s — hỏi về tình trạng hiện tại."
@@ -89,7 +93,9 @@ vi.chung-ta	"Cam kết của chúng ta: “%s”, đến hạn %s."
 vi.chung-ta	"Cam kết của chúng ta: “%s”."
 vi.chung-ta	"Chúng ta còn nợ %s: %s"
 vi.chung-ta	"Chúng ta đã hứa với %s: %s"
+vi.chung-ta	"Chúng ta đã hứa điều này với %s và vẫn chưa hoàn tất."
 vi.chung-ta	"Chúng ta đã quá hạn với %s về: %s"
+vi.chung-ta	"Chúng ta đã viết cách đây ít nhất %d ngày và chưa ai trả lời."
 vi.chung-ta	"Hoàn tất điều chúng ta còn nợ %s, đã quá hạn từ %s, và thống nhất bước tiếp theo: %s"
 vi.chung-ta	"Hoàn tất điều chúng ta còn nợ %s, đã quá hạn từ %s: %s"
 vi.chung-ta	"Hoàn tất điều chúng ta đã hứa với %s: %s"
@@ -101,6 +107,7 @@ vi.chung-ta	"Phần tìm hiểu website của tôi đã dừng mà chưa hoàn t
 vi.chung-ta	"Thẳng thắn nhận trách nhiệm về sự chậm trễ và nêu ngày cụ thể: chúng ta còn nợ %s về “%s”."
 vi.chung-ta	"Tin nhắn gần nhất do chúng ta gửi, về “%s”."
 vi.chung-ta	"Trả lời từng câu hỏi mà không bao giờ đặt được câu hỏi của mình."
+vi.chung-ta	"Đây là điều %s đã nêu và kế hoạch nên dựa trên đó thay vì những giả định của chúng ta."
 vi.chung-toi	"Nhà cung cấp AI từ chối yêu cầu tạo vì định dạng sai, nên quá trình tạo chưa chạy. Phiên bản trước không thay đổi. Đây là lỗi phía chúng tôi, không phải ở mẫu viết của bạn; nhật ký máy chủ có lý do từ nhà cung cấp."
 vi.dash	"%s còn nợ chúng ta %s — hỏi về tình trạng hiện tại."
 vi.dash	"%s từng phản đối %s — xác nhận vấn đề đã được giải quyết trước khi tiếp tục."
@@ -132,10 +139,11 @@ vi.dash	"quá ít người liên hệ đang tương tác — thương vụ chỉ
 vi.dash	"Đã ghi nhận — lựa chọn của bạn đã nằm trong bản nháp. Trợ lý không trả lời ở lượt này, nên ở đây không còn gì để đọc thêm."
 vi.dash	"đã %d ngày không có tương tác nào được ghi nhận — thương vụ vẫn mở và không ai trao đổi"
 vi.dash	"“%s” — hãy chuẩn bị vì họ có thể nêu lại vấn đề này."
+vi.outsider-address	"Tệp này đã bị xóa hoặc bạn không còn quyền truy cập."
 vi.retired	"%d khách hàng tiềm năng đã quá hạn phản hồi"
-vi.retired	"Chúng tôi đã nhận được yêu cầu từ chối nhận thư điện tử quảng cáo của quý khách lúc %[1]s (giờ Việt Nam). Chúng tôi đã ngừng gửi thư điện tử quảng cáo cho các mục đích quảng cáo quý khách đã từ chối kể từ %[2]s (giờ Việt Nam). Thư đã gửi trước thời điểm này vẫn có thể đến hộp thư của quý khách."
 vi.retired	"Chọn một phễu để so sánh các giai đoạn."
 vi.retired	"Cuộc họp không được phân theo phễu; hãy chọn tất cả phễu."
+vi.retired	"Deal này có hợp đồng thuộc một công ty khác với công ty trong hàng này nên hàng bị bỏ qua. Hợp đồng đã lưu trữ cũng được tính. Hãy nhờ quản trị viên sửa liên kết hợp đồng rồi nhập lại."
 vi.retired	"Dùng giá trị của website"
 vi.retired	"Ghi nhận cơ hội được chấp nhận không có dữ liệu phễu lịch sử; hãy chọn tất cả phễu."
 vi.retired	"Giá trị đã lưu của bạn cho %s khác với thông tin trên website. Tôi nên dùng giá trị nào?"
@@ -146,7 +154,6 @@ vi.retired	"Trang thông tin pháp lý của website nêu nhiều pháp nhân. P
 vi.retired	"Trong các deal đã thắng hoặc thua có ngày đóng trong khoảng thời gian bạn chọn, phần deal đã thắng, tính cho người đang phụ trách deal. Ví dụ: tháng 3 có 6 deal thắng và 4 deal thua thì tỷ lệ thắng là 60%."
 vi.retired	"Với mỗi nguồn lead, có bao nhiêu lead đến trong khoảng thời gian bạn chọn và bao nhiêu lead trong số đó đã gắn với một deal tại thời điểm số liệu được đọc. Ví dụ: tháng 5 có 20 lead đến từ website và 5 lead đủ điều kiện thành deal, nên website hiển thị 5 trên 20."
 vi.retired	"Website nêu nhiều địa chỉ đăng ký. Địa chỉ nào là của công ty bạn?"
-vi.retired	"Xác nhận đã nhận yêu cầu từ chối nhận thư điện tử quảng cáo"
 vi.retired	"khách hàng tiềm năng"
 vi.retired	"khách hàng tiềm năng quá hạn phản hồi"
 vi.retired	"khách hàng tiềm năng đến"

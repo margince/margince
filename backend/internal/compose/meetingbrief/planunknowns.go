@@ -118,15 +118,15 @@ func (said briefCopy) askLines(claim ClaimIn) (string, string) {
 	switch claim.Kind {
 	case kindOpenQuestion:
 		return fmt.Sprintf("%q", claim.Body),
-			said.Say(questionWords.Answer)
+			said.Say(questionNoteWords.Answer)
 	case kindCommitmentOurs:
 		// The body is a whole sentence, so it is quoted without its own full
 		// stop rather than spliced into ours.
-		return fmt.Sprintf(said.Say(questionWords.Progress), strings.TrimRight(claim.Body, ". ")),
-			said.Say(questionWords.Prepare)
+		return fmt.Sprintf(said.Say(questionNoteWords.Progress), strings.TrimRight(claim.Body, ". ")),
+			said.Say(questionNoteWords.Prepare)
 	case kindObjection:
-		return fmt.Sprintf(said.Say(questionWords.Objection), claim.Body),
-			said.Say(questionWords.Evidence)
+		return fmt.Sprintf(said.Say(questionNoteWords.Objection), claim.Body),
+			said.Say(questionNoteWords.Evidence)
 	default:
 		return "", ""
 	}
@@ -134,9 +134,9 @@ func (said briefCopy) askLines(claim ClaimIn) (string, string) {
 
 func (said briefCopy) askBasis(claim ClaimIn) string {
 	if claim.Kind == kindCommitmentOurs {
-		return fmt.Sprintf(said.Say(questionWords.PromiseOpen), said.whom(claim))
+		return fmt.Sprintf(said.Say(questionNoteWords.PromiseOpen), said.whom(claim))
 	}
-	return fmt.Sprintf(said.Say(questionWords.RaisedOpen), said.whom(claim))
+	return fmt.Sprintf(said.Say(questionNoteWords.RaisedOpen), said.whom(claim))
 }
 
 // questionsFor is what to ask THEM.
@@ -158,9 +158,9 @@ func questionsFor(in Input, unknowns []Unknown, ranked *rankedClaims) []Question
 		out = append(out, Question{
 			Ask: fmt.Sprintf(said.Say(questionWords.Changed), claim.Body),
 			Why: fmt.Sprintf(
-				said.Say(questionWords.Named),
+				said.Say(questionNoteWords.Named),
 				said.whom(claim)),
-			ListenFor: said.Say(questionWords.ListenPriority),
+			ListenFor: said.Say(questionNoteWords.ListenPriority),
 			Evidence:  []Evidence{{EntityType: citeActivity, EntityID: claim.SourceID}},
 		})
 	}
@@ -201,11 +201,11 @@ func accountAnchor(in Input) string {
 func (said briefCopy) unknownWhy(kind crmcontracts.MeetingPlanUnknownKind, anchor string) string {
 	switch kind {
 	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownIntentNotCaptured:
-		return fmt.Sprintf(said.Say(questionWords.WhyIntent), anchor)
+		return fmt.Sprintf(said.Say(questionNoteWords.WhyIntent), anchor)
 	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownDecisionRouteNotCaptured:
-		return fmt.Sprintf(said.Say(questionWords.WhyDecision), anchor)
+		return fmt.Sprintf(said.Say(questionNoteWords.WhyDecision), anchor)
 	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoOpenDeal:
-		return fmt.Sprintf(said.Say(questionWords.WhyDeal), anchor)
+		return fmt.Sprintf(said.Say(questionNoteWords.WhyDeal), anchor)
 	default:
 		// The rest are gaps worth stating and not worth spending one of five
 		// questions on — a rep does not need prompting to ask whether anything
@@ -217,10 +217,10 @@ func (said briefCopy) unknownWhy(kind crmcontracts.MeetingPlanUnknownKind, ancho
 func (said briefCopy) unknownListenFor(kind crmcontracts.MeetingPlanUnknownKind) string {
 	switch kind {
 	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownIntentNotCaptured:
-		return said.Say(questionWords.ListenProblem)
+		return said.Say(questionNoteWords.ListenProblem)
 	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownDecisionRouteNotCaptured:
-		return said.Say(questionWords.ListenRoles)
+		return said.Say(questionNoteWords.ListenRoles)
 	default:
-		return said.Say(questionWords.ListenContact)
+		return said.Say(questionNoteWords.ListenContact)
 	}
 }

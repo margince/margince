@@ -227,9 +227,12 @@ English of every `langcopy.Phrase` table, and `langcopytest.EnglishText` checks 
 table of another shape from its own test. Both live in
 `backend/internal/shared/kernel/langcopy/langcopytest/`. They fail a dash as
 punctuation: an em dash, an en dash, `--` or a spaced hyphen. They also fail a
-contraction, `we`, `I`, a British spelling and `&`. The patterns for a contraction, a British
-spelling, `we` and `I` are read from `copy-style.test.ts` when the test runs, so
-both gates hold one list.
+contraction, `we`, `I`, a British spelling and `&`. Each test run reads those
+patterns from `copy-style.test.ts`, so both gates hold one list.
+
+A table keyed by language is walked from its own test.
+`backend/gates/langcopylanguagetables_test.go` fails one that no test walks. The
+gate names each table no reader sees, with a reason.
 
 A table is the product speaking to a member unless its test names another
 register, with a reason. An agent in a chat bubble may say `I`. The data
@@ -237,10 +240,11 @@ controller may say `we`. A sentence someone says as their own keeps only the
 dash, spelling and `&` rules. Text a program matches, or a reader copies as it
 stands, keeps none of them.
 
-What was wrong when the check started is listed in `stylebaseline.txt` in that
-folder, one rule and sentence a line. The list can only get shorter: a test fails
-a line whose sentence now passes, or that no Go string spells. To cut it again
-after a rewrite, run this from `backend/`:
+Findings that wait for a rewrite are listed in `stylebaseline.txt` in that
+folder, one rule and sentence a line. A test fails a line whose sentence now
+passes, or that no Go string spells. The command below drops every line nothing
+reports, and fails on a finding the list does not hold, so the list only gets
+shorter. Run it from `backend/`:
 
 ```sh
 go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut -timeout 30m

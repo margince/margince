@@ -21,13 +21,8 @@ package gates
 // than the sentence a reader might take from it:
 //
 //   - A copy table that does not use langcopy.Phrase is not governed here.
-//     Several remain (internal/modules/{deals,agents,capture,automation},
-//     platform/mailcopy, compose/promptlang), and they are a different shape:
-//     a map[textlang.Lang]T keyed language-outward rather than a struct of
-//     phrases. Migrating them is real work, not a rename, and until it is done
-//     each keeps its own walk. A new table written in that shape passes here.
-//     Those walks hold the style pages through langcopytest.EnglishText and
-//     VietnameseText, which no arm here checks is called.
+//     A map[textlang.Lang]T table keeps its own walk, and
+//     langcopylanguagetables_test.go holds that a test walks it.
 //   - The private-walk arm recognises a reflect walk over textlang.Shipped. A
 //     walk written some other way, such as a hand-listed switch over each
 //     shipped language, is invisible to it.
