@@ -106,12 +106,13 @@ func TestAnImporterWhoCannotChangeTheMeetingFilesItsOwn(t *testing.T) {
 // the live import would not have bound it either.
 func TestTheImportedCopiesTaskFoldsOnlyTheAuthorsCalendarCopy(t *testing.T) {
 	for _, tc := range []struct {
-		name     string
-		subject  string
-		author   func(e *integration.SearchEnv) ids.UUID
-		scope    principal.RowScope
-		departed bool
-		folded   bool
+		name    string
+		subject string
+		author  func(e *integration.SearchEnv) ids.UUID
+		scope   principal.RowScope
+		// changed alters the importer's seat after the import, as $1.
+		changed string
+		folded  bool
 	}{
 		{
 			name: "the author's calendar holds it", subject: "Kick-off review", scope: principal.RowScopeAll, folded: true,
@@ -130,8 +131,14 @@ func TestTheImportedCopiesTaskFoldsOnlyTheAuthorsCalendarCopy(t *testing.T) {
 			author: func(e *integration.SearchEnv) ids.UUID { return e.Rep1 },
 		},
 		{
-			name: "an importer who has left", subject: "Kick-off review", scope: principal.RowScopeAll, departed: true,
-			author: func(e *integration.SearchEnv) ids.UUID { return e.Rep1 },
+			name: "an importer who has left", subject: "Kick-off review", scope: principal.RowScopeAll,
+			changed: `UPDATE app_user SET status = 'deactivated' WHERE id = $1`,
+			author:  func(e *integration.SearchEnv) ids.UUID { return e.Rep1 },
+		},
+		{
+			name: "an importer moved to a read seat", subject: "Kick-off review", scope: principal.RowScopeAll,
+			changed: `UPDATE app_user SET seat_type = 'read' WHERE id = $1`,
+			author:  func(e *integration.SearchEnv) ids.UUID { return e.Rep1 },
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -151,9 +158,8 @@ func TestTheImportedCopiesTaskFoldsOnlyTheAuthorsCalendarCopy(t *testing.T) {
 			connectFeed(t, env, feed)()
 			calendarMeeting := onlyCalendarMeeting(t, e)
 			imported := importTitledMeeting(t, e, tc.scope, contact, tc.author(e), "", tc.subject, start)
-			if tc.departed {
-				if _, err := e.Owner.Exec(context.Background(),
-					`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep3); err != nil {
+			if tc.changed != "" {
+				if _, err := e.Owner.Exec(context.Background(), tc.changed, e.Rep3); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -269,7 +275,7 @@ func declaredImporterCtx(e *integration.SearchEnv, seat ids.UUID, scope principa
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat, OnBehalfOf: seat,
+		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat, OnBehalfOf: seat, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true, Update: true},

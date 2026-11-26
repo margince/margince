@@ -19,15 +19,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// ImportedMeetingCopiesDataTask folds a meeting an importer stored beside the
-// calendar meeting of the seat it names as the author. Such imports hold no
-// meeting identity: the author's calendar held it first, and the import door
-// did not bind across seats. The calendar meeting gains the copy's links, and
-// unarchiving the copy undoes the fold. A copy folds only when its importer may
-// still change the calendar meeting, as the live import checks before it binds.
+// ImportedMeetingCopiesDataTask folds an import that holds no meeting identity
+// onto its named author's calendar meeting, which gains the copy's links. A
+// copy folds only when its importer may still change that meeting, the live
+// import's check, which version 2 adds. A copy version 1 folded stays archived
+// and is not selected again; unarchiving it undoes the fold.
 func ImportedMeetingCopiesDataTask(store *Store, importer ImporterPrincipal) datatask.Task {
 	return datatask.Task{
-		ID: "core/1795580400_imported_meeting_copies", Version: 1,
+		ID: "core/1795580400_imported_meeting_copies", Version: 2,
 		Title: systemtext.Literal("datatask.title.core.1795580400_imported_meeting_copies"),
 		Steps: []datatask.Step{{
 			Name: "fold_imported_copies", Limit: 100, MinLimit: 1,

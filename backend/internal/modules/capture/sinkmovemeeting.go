@@ -250,11 +250,10 @@ func (s *Sink) foldOwnDuplicate(
 // calendarMayMove says whether this calendar may move a meeting it reached past
 // its own key. Its own row moves: an occurrence of a series keeps its identity
 // when moved, so the row is reached through it too. A row it matched onto moves
-// as well, unless another seat's calendar filed it; that calendar moves it.
-// Any other row stays, or a second calendar on the old time would move it back.
+// as matchedRowMayMove says. Any other row stays, or a second calendar on the
+// old time would move it back.
 func (s *Sink) calendarMayMove(ctx context.Context, tx pgx.Tx, id ids.ActivityID, key connector.NaturalKey) (bool, error) {
-	seat := actorUserID(ctx)
-	own, found, err := ownLiveMeetingTx(ctx, tx, key, seat)
+	own, found, err := ownLiveMeetingTx(ctx, tx, key, actorUserID(ctx))
 	if err != nil || found {
 		return found && own == id, err
 	}
@@ -262,14 +261,32 @@ func (s *Sink) calendarMayMove(ctx context.Context, tx pgx.Tx, id ids.ActivityID
 	if err != nil || !held || delivered != id {
 		return false, err
 	}
-	var system string
-	var filer *string
-	if err := tx.QueryRow(ctx, `SELECT source_system, `+auth.ConnectorSeatSQL("activity")+` FROM activity WHERE id = $1`,
-		id).Scan(&system, &filer); err != nil {
+	return matchedRowMayMove(ctx, tx, id)
+}
+
+// matchedRowMayMove says whether this seat's calendar may retime a row another
+// door filed and it matched onto. A colleague's calendar row is that calendar's
+// to move while the colleague's calendar is live; after that, any calendar
+// holding the row moves it. An import's row moves only for the seat that filed
+// or authored it, or the meeting's organizer. A guest's calendar joins it but
+// may carry a stale time, so it never retimes it.
+func matchedRowMayMove(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool, error) {
+	seat := actorUserID(ctx)
+	filer := auth.ConnectorSeatSQL("a")
+	var calendar, filed, filerLive bool
+	if err := tx.QueryRow(ctx, `
+		SELECT coalesce(a.source_system = ANY(@`+calendarProvidersArg+`), false),
+		       a.captured_by LIKE @stamp OR a.source_author_id IS NOT DISTINCT FROM @`+rosterSeatArg+`::uuid,
+		       coalesce(`+filer+` <> @`+rosterSeatArg+`::text AND `+calendarLiveSQL("("+filer+")::uuid", "@"+calendarProvidersArg)+`, false)
+		  FROM activity a WHERE a.id = @`+capturedActivityObject, pgx.StrictNamedArgs{
+		capturedActivityObject: id, rosterSeatArg: seat, calendarProvidersArg: calendarProviderNames(), "stamp": "%:" + seat.String(),
+	}).Scan(&calendar, &filed, &filerLive); err != nil {
 		return false, fmt.Errorf("capture: reading which door filed a meeting: %w", err)
 	}
-	_, calendar := calendarWriteScopes[system]
-	return !calendar || (filer != nil && *filer == seat.String()), nil
+	if calendar || filed {
+		return filed || !filerLive, nil
+	}
+	return SeatOrganizesMeetingTx(ctx, tx, id, seat)
 }
 
 // ownLiveMeetingTx is the live meeting this seat's calendar stored under the
