@@ -212,7 +212,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		projectsHandlers: projects.HandlersOver(ProjectsStore(pool)),
 		contractsHandlers: contracts.NewHandlers(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()).
 			WithFieldCatalog(customfields.NewService(pool, nil)),
-		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)),
+		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)).WithCompanyName(identity.InstallationNameOf),
 		commissionsHandlers: commissions.NewHandlers(InstallationDB(pool)),
 		activitiesHandlers:  newActivitiesHandlers(pool).WithUploadLimit(limits.Attachment),
 		// The ranking lane is the one read a page limit does not bound.

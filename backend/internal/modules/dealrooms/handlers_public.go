@@ -190,7 +190,7 @@ func (h Handlers) GetBuyerRoom(w http.ResponseWriter, r *http.Request) {
 		httperr.Unauthorized(w, r, NoSessionDetail)
 		return
 	}
-	view, err := h.store.BuyerView(r.Context(), sess)
+	view, err := h.store.BuyerView(r.Context(), sess, h.companyName)
 	if err != nil {
 		writeBuyerFault(w, r, err)
 		return
