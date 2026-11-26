@@ -87,6 +87,34 @@ describe("A custom interval with no days yet", () => {
     expect(screen.getByText(PROMPT)).toBeVisible();
   });
 
+  it("says an end before the start in the reader's words and never asks the server", async () => {
+    const asked = open(
+      "#/analytics/overview?overview=sales&period=custom&from=2026-10-20&through=2026-10-10",
+      () => salesEvaluation(),
+      { template: "sdr" },
+    );
+    expect(
+      await screen.findByText("Choose an end date on or after the start date."),
+    ).toBeVisible();
+    expect(screen.getByText(PROMPT)).toBeVisible();
+    expect(
+      asked.some(({ url }) => url.pathname.endsWith("/analytics/evaluate")),
+    ).toBe(false);
+  });
+
+  it("says an interval past twelve months before it is asked", async () => {
+    open(
+      "#/analytics/overview?overview=sales&period=custom&from=2025-01-01&through=2026-01-01",
+      () => salesEvaluation(),
+      { template: "sdr" },
+    );
+    expect(
+      await screen.findByText(
+        "Choose an interval of no more than twelve months.",
+      ),
+    ).toBeVisible();
+  });
+
   it("shows the prompt on the report overview and no loading bars", async () => {
     const user = userEvent.setup({ delay: null });
     installFetchStub(reportingStoryRoutes());

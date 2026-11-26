@@ -361,6 +361,9 @@ export type Refusal = Readonly<{
   kind: RefusalKind;
   suggest: string;
   message: string;
+  // A reason this build words itself, with the field names it speaks of.
+  reason?: string;
+  params: Readonly<Record<string, string>>;
 }>;
 
 function isRefusalKind(kind: unknown): kind is RefusalKind {
@@ -378,7 +381,7 @@ export function refusalOf(problem: unknown): Refusal | null {
   if (details === null) {
     return null;
   }
-  const { kind, suggest, message } = details;
+  const { kind, suggest, message, reason, params } = details;
   if (!isRefusalKind(kind)) {
     return null;
   }
@@ -386,5 +389,44 @@ export function refusalOf(problem: unknown): Refusal | null {
     kind,
     suggest: typeof suggest === "string" ? suggest : "",
     message: typeof message === "string" ? message : "",
+    ...(typeof reason === "string" ? { reason } : {}),
+    params: stringParams(params),
+  };
+}
+
+function stringParams(params: unknown): Readonly<Record<string, string>> {
+  if (typeof params !== "object" || params === null) return {};
+  return Object.fromEntries(
+    Object.entries(params).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
+}
+
+/**
+ * A refusal's two sentences in the reader's language: the reasons this build
+ * knows are worded from their field names, any other keeps the engine's own.
+ */
+export function refusalWords(
+  t: Translate,
+  refusal: Refusal,
+  custom?: CustomLabels,
+): Readonly<{ message: string; suggest: string }> {
+  const { fn, field, by, base } = refusal.params;
+  const measureFn = MEASURE_FNS.find((each) => each === fn);
+  if (refusal.reason !== "mixed_currency" || !measureFn || !field || !by) {
+    return refusal;
+  }
+  const currency = analyticsFieldLabel(t, by, custom);
+  return {
+    message: t("analytics.q.refusal.mixedCurrency", {
+      measure: measureLabel(t, { fn: measureFn, field }, custom),
+    }),
+    suggest: base
+      ? t("analytics.q.refusal.mixedCurrencyBase", {
+          currency,
+          base: analyticsFieldLabel(t, base, custom),
+        })
+      : t("analytics.q.refusal.mixedCurrencyGroup", { currency }),
   };
 }

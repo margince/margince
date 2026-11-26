@@ -7,7 +7,11 @@ import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { ProblemError } from "../../lib/problem";
-import { REFUSAL_KEY, refusalOf } from "./analytics.questions.vocab";
+import {
+  REFUSAL_KEY,
+  refusalOf,
+  refusalWords,
+} from "./analytics.questions.vocab";
 
 /**
  * Why a question was not answered. A refusal is guidance, not a fault. The
@@ -34,14 +38,15 @@ export function QuestionFailure({
       />
     );
   }
+  const { message, suggest } = refusalWords(t, refusal);
   return (
     <Callout
       tone="info"
       kind="outcome"
       title={t(labelFor(REFUSAL_KEY, refusal.kind))}
     >
-      {refusal.suggest !== "" && <p>{refusal.suggest}</p>}
-      {refusal.message !== "" && <p>{refusal.message}</p>}
+      {suggest !== "" && <p>{suggest}</p>}
+      {message !== "" && <p>{message}</p>}
     </Callout>
   );
 }

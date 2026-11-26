@@ -47,14 +47,17 @@ func (c PerRowCurrency) Mixes(fn AggFn, groupBy []string, pinned any) bool {
 // Refusal says why the plan was refused and what to ask instead.
 func (c PerRowCurrency) Refusal(fn AggFn, field string) *RefusalError {
 	suggest := fmt.Sprintf("group by %s or filter %s to one currency", c.By, c.By)
+	params := map[string]string{"fn": string(fn), "field": field, "by": c.By}
 	if c.Base != "" {
 		suggest += fmt.Sprintf(", or measure %s, which is converted to the base currency", c.Base)
+		params["base"] = c.Base
 	}
 	return &RefusalError{
 		Kind: RefusalInvalid,
 		Message: fmt.Sprintf("%s of %s would add amounts in different currencies into one number with no unit",
 			fn, httperr.QuoteCaller(field)),
 		Suggest: suggest,
+		Reason:  RefusalMixedCurrency, Params: params,
 	}
 }
 

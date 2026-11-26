@@ -59,20 +59,20 @@ func Interval(selection crmcontracts.ReportingSelection, calendar Calendar, at t
 		start = end.AddDate(-1, 0, 0)
 	case reportingCustom:
 		if selection.Interval == nil {
-			return crmcontracts.ReportingWindow{}, intervalError("choose the reporting interval")
+			return crmcontracts.ReportingWindow{}, intervalError{intervalMissing, "choose the reporting interval"}
 		}
 		start, end = selection.Interval.StartAt.In(zone), selection.Interval.EndAt.In(zone)
 	default:
 		return crmcontracts.ReportingWindow{}, invalid("choose a supported reporting period: this_week, last_week, this_month, last_month, this_quarter, last_quarter, last_year or custom")
 	}
 	if !end.After(start) {
-		return crmcontracts.ReportingWindow{}, intervalError("choose an end date after the start date")
+		return crmcontracts.ReportingWindow{}, intervalError{intervalEndBeforeStart, "choose an end date after the start date"}
 	}
 	if end.After(start.AddDate(1, 0, 0)) {
-		return crmcontracts.ReportingWindow{}, intervalError("choose an interval of no more than twelve months")
+		return crmcontracts.ReportingWindow{}, intervalError{intervalLongerThanAYear, "choose an interval of no more than twelve months"}
 	}
 	if !start.Before(at) {
-		return crmcontracts.ReportingWindow{}, intervalError("choose a start date before the reporting cutoff")
+		return crmcontracts.ReportingWindow{}, intervalError{intervalAfterCutoff, "choose a start date before the reporting cutoff"}
 	}
 	if end.After(at) {
 		end = at

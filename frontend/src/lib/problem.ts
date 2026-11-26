@@ -18,6 +18,7 @@ import {
   heldByColleagueCopy,
   legalReviewRefusalCopy,
   PROBLEM_CODE_COPY,
+  reportingIntervalCopy,
   roleCannotCaptureCopy,
 } from "./problemcodecopy";
 
@@ -48,6 +49,7 @@ function problemDetail(
     heldByColleagueCopy(problem) ??
     roleCannotCaptureCopy(problem) ??
     legalReviewRefusalCopy(problem) ??
+    reportingIntervalCopy(problem) ??
     PROBLEM_CODE_COPY.get(problemCode(problem) ?? "") ??
     fieldCopyKey(problem);
   if (t && copyKey) return t(copyKey);

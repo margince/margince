@@ -186,6 +186,24 @@ export const RefusedInvalid: Story = {
   ),
 };
 
+// A reason the screen words itself, with the builder's names for the fields.
+export const RefusedMixedCurrency: Story = {
+  render: failureStory({
+    ...refusal(
+      "invalid",
+      'sum of "amount_minor" would add amounts in different currencies into one number with no unit',
+      "group by currency or filter currency to one currency",
+    ),
+    details: {
+      kind: "invalid",
+      message: "",
+      suggest: "",
+      reason: "mixed_currency",
+      params: { fn: "sum", field: "amount_minor", by: "currency" },
+    },
+  }),
+};
+
 export const RefusedUnsupported: Story = {
   render: failureStory(
     refusal(

@@ -1,23 +1,25 @@
 import { useState } from "react";
 import { Field } from "../../design-system/atoms";
-import {
-  DateInput,
-  isISODate,
-  isoOrBlank,
-} from "../../design-system/dateinput";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import { useNow } from "../../format/now";
-import { dayInZone, startOfDayInZone } from "../../format/timezone";
+import { dayInZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
+import { intervalRefusalCopy } from "../../lib/problemcodecopy";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { DimensionFilters, FoldedDimensions } from "./reporting.dimensions";
 import type { ReportingSelection } from "./reporting.model";
 
-import { REPORTING_PERIODS } from "./reporting.selection";
+import {
+  customInterval,
+  customIntervalRefusal,
+  type IntervalRefusal,
+  REPORTING_PERIODS,
+} from "./reporting.selection";
 
 export { REPORTING_PERIODS } from "./reporting.selection";
 
@@ -69,6 +71,10 @@ export function ReportingFilters({
   const dates = controlledDates;
   const from = dates?.from ?? draftFrom;
   const through = dates?.through ?? draftThrough;
+  const refused = refusalSentence(
+    t,
+    customIntervalRefusal(selection.period, from, through, today),
+  );
   const setDates = (start: string, end: string) => {
     if (dates) {
       dates.onChange(start, end);
@@ -76,16 +82,9 @@ export function ReportingFilters({
     }
     setDraftFrom(start);
     setDraftThrough(end);
-    if (!isISODate(start) || !isISODate(end)) {
-      onChange({ ...selection, interval: undefined });
-      return;
-    }
     onChange({
       ...selection,
-      interval: {
-        start_at: startOfDayInZone(start, zone),
-        end_at: startOfDayInZone(end, zone, 1),
-      },
+      interval: askedInterval(selection.period, start, end, today, zone),
     });
   };
   return (
@@ -134,7 +133,7 @@ export function ReportingFilters({
               />
             )}
           </Field>
-          <Field label={t("reporting.throughDate")}>
+          <Field label={t("reporting.throughDate")} error={refused}>
             {(field) => (
               <DateInput
                 {...field}
@@ -218,4 +217,27 @@ export function ReportingFilters({
       <ErrorLine error={context.error ?? pipelines.error} />
     </div>
   );
+}
+
+function refusalSentence(
+  t: ReturnType<typeof useT>,
+  refusal: IntervalRefusal | null,
+): string | undefined {
+  return refusal ? t(intervalRefusalCopy(refusal)) : undefined;
+}
+
+// The interval a draft of two days asks for: none until both are days and the
+// server would take them.
+function askedInterval(
+  period: ReportingSelection["period"],
+  start: string,
+  end: string,
+  today: string | undefined,
+  zone: string,
+): ReportingSelection["interval"] {
+  const from = isoOrBlank(start);
+  const through = isoOrBlank(end);
+  if (customIntervalRefusal(period, from, through, today ?? ""))
+    return undefined;
+  return customInterval(period, from, through, zone);
 }

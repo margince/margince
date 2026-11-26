@@ -8,6 +8,7 @@ import { AppLink } from "../../design-system/applink";
 import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { QueryGate } from "../../design-system/querystates";
+import { todayIn } from "../../format/calendarday";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
@@ -104,7 +105,12 @@ function SalesReviewBody({
   const filters = useOverviewFilters(pipelines, OVERVIEW_DEFAULT_PERIOD.sales);
   const { selection, blocks } = salesQuestion(catalog, scope, filters, zone);
   const { metrics } = selection;
-  const validDates = validDateRange(filters.period, filters.start, filters.end);
+  const validDates = validDateRange(
+    filters.period,
+    filters.start,
+    filters.end,
+    todayIn(zone),
+  );
   // A pipeline the address names and this reader cannot open is said, never
   // swapped for the default one.
   const pipelineGone = pipelineIsGone(params.get("pipeline"), pipelines);

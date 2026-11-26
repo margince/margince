@@ -45,43 +45,62 @@ it.each([
     name: "oversized",
     from: "2025-01-01",
     through: "2026-10-31",
-    message: "choose an interval of no more than twelve months",
+    message: "Choose an interval of no more than twelve months.",
   },
   {
     name: "reversed",
     from: "2026-10-31",
     through: "2026-01-01",
-    message: "choose an end date after the start date",
+    message: "Choose an end date on or after the start date.",
   },
 ])(
-  "asks for corrected $name dates without retrying",
+  "says what to correct in $name dates without asking the server",
   async ({ from, through, message }) => {
     window.location.hash = `#/analytics/performance?period=custom&from=${from}&through=${through}`;
+    const evaluate = vi.fn(() => jsonResponse(reportingStoryEvaluation));
     installFetchStub({
       ...reportingStoryRoutes(),
-      "GET /analytics/evaluate": () =>
-        jsonResponse(
-          {
-            status: 400,
-            code: "reporting_interval_invalid",
-            detail: message,
-          },
-          400,
-        ),
+      "GET /analytics/evaluate": evaluate,
     });
     render(
       <StoryProviders>
         <ReportingOverview view="sales" scope={reportingStoryScope} />
       </StoryProviders>,
     );
-    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(await screen.findByText(message)).toBeVisible();
     expect(
       screen.queryByRole("button", { name: "Retry" }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText(/Reload the page/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/invalid argument/)).not.toBeInTheDocument();
+    expect(evaluate).not.toHaveBeenCalled();
   },
 );
+
+it("words the server's refusal of an interval by its reason", async () => {
+  window.location.hash =
+    "#/analytics/performance?period=custom&from=2026-01-01&through=2026-01-31";
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/evaluate": () =>
+      jsonResponse(
+        {
+          status: 400,
+          code: "reporting_interval_invalid",
+          detail: "choose a start date before the reporting cutoff",
+          details: { reason: "starts_after_cutoff" },
+        },
+        400,
+      ),
+  });
+  render(
+    <StoryProviders>
+      <ReportingOverview view="sales" scope={reportingStoryScope} />
+    </StoryProviders>,
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Choose a start date no later than today.",
+  );
+  expect(screen.queryByText(/reporting cutoff/)).not.toBeInTheDocument();
+});
 
 it("labels an empty sales period without calling unknown values zero", () => {
   const evaluation: typeof reportingStoryEvaluation = {

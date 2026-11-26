@@ -119,11 +119,36 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["fx_rate_currency", "settings.rates.fromNotCurrency"],
   ["fx_rate_positive", "settings.rates.rateNotPositive"],
   ["fx_rate_past", "settings.rates.pastDate"],
+  // A target month a published sales goal plan owns; the detail is English.
+  ["plan_owned", "reporting.targetPlanOwned"],
   // An archived report's refusal of a snapshot or schedule; the detail is English.
   ["report_archived", "reporting.archivedRefused"],
   // A member's own profile that is not a LinkedIn profile.
   ["linkedin_profile_url_invalid", "common.linkedinProfileInvalid"],
 ]);
+
+// A refused custom interval, by the reason the server or the date fields
+// name. A reason this build does not know reads as the general sentence.
+const INTERVAL_REFUSAL_COPY: Readonly<Record<string, MessageKey>> = {
+  interval_missing: "reporting.interval.missing",
+  end_before_start: "reporting.interval.endBeforeStart",
+  longer_than_a_year: "reporting.interval.tooLong",
+  starts_after_cutoff: "reporting.interval.afterCutoff",
+};
+
+export function intervalRefusalCopy(reason: unknown): MessageKey {
+  return typeof reason === "string" &&
+    Object.hasOwn(INTERVAL_REFUSAL_COPY, reason)
+    ? INTERVAL_REFUSAL_COPY[reason]
+    : "reporting.interval.invalid";
+}
+
+export function reportingIntervalCopy(
+  problem: unknown,
+): MessageKey | undefined {
+  if (problemCode(problem) !== "reporting_interval_invalid") return undefined;
+  return intervalRefusalCopy(problemDetails(problem)?.reason);
+}
 
 // The held refusal names no record; its words depend only on whether the
 // colleague who holds the contact was asked to share it.

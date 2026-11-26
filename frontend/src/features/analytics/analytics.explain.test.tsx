@@ -5,11 +5,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { AnalyticsScreen } from "./analytics";
+import { parseDerivationQuery } from "./analytics.explain";
 import {
   derivationCellCurrency,
   derivationColumns,
-  parseDerivationQuery,
-} from "./analytics.explain";
+} from "./analytics.explain.cells";
 import { REPORT_SCHEMA } from "./analytics.questions.testkit";
 import { type ReportsStubOpts, render, reportsStub } from "./analytics.testkit";
 
@@ -40,8 +40,8 @@ const derivation = (extra: Record<string, unknown> = {}) => ({
   report: "pipeline-current",
   definition: "Sum over open deals",
   plan: {},
-  columns: ["name"],
-  rows: [{ name: "Fleet retrofit" }],
+  columns: ["label"],
+  rows: [{ label: "Fleet retrofit" }],
   ...extra,
 });
 
@@ -507,6 +507,52 @@ describe("what the explanation owns up to", () => {
         en["state.partialCount"].replace("{count}", "1,200"),
       ),
     ).toBeTruthy();
+  });
+
+  // The server's sentence names aggregate aliases and wire keys, in English.
+  const plan = (predicates: Record<string, string>) => ({
+    aggregates: [
+      { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
+      { fn: "count", as: "deal_count" },
+    ],
+    predicates,
+  });
+  const SERVER_SENTENCE =
+    "Over open deals: the sum of amount_base_minor as raw_minor.";
+
+  it("says what the figure counts in the reader's words, from the plan", async () => {
+    const drawer = await drawerWith({
+      definition: SERVER_SENTENCE,
+      plan: plan({ close_month: "2026-12" }),
+    });
+    expect(
+      within(drawer).getByText(
+        `${en["analytics.reportDeals"]}: Sum (Converted amount), Count.`,
+      ),
+    ).toBeTruthy();
+    expect(within(drawer).getByText(/Close month: 2026-12/)).toBeTruthy();
+    expect(within(drawer).queryByText(/raw_minor/)).toBeNull();
+  });
+
+  it("keeps the server's sentence for a plan naming a field it has no words for", async () => {
+    const drawer = await drawerWith({
+      definition: SERVER_SENTENCE,
+      plan: plan({ mystery_key: "x" }),
+    });
+    expect(within(drawer).getByText(SERVER_SENTENCE)).toBeTruthy();
+  });
+
+  it("shows no source-row column it has no name for", async () => {
+    const drawer = await drawerWith({
+      columns: ["label", "close_month", "mystery_key"],
+      rows: [
+        { label: "Fleet retrofit", close_month: "2026-12", mystery_key: "x" },
+      ],
+    });
+    const headers = within(drawer)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
+    expect(headers).toEqual(["Deal", "Close month"]);
   });
 });
 

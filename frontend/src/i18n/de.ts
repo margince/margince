@@ -1162,6 +1162,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.fromDate": "Von",
   "reporting.throughDate": "Bis einschließlich",
   "reporting.chooseDates": "Wähle ein Start- und Enddatum für diesen Zeitraum.",
+  "reporting.interval.missing": "Wähle ein Start- und ein Enddatum.",
+  "reporting.interval.endBeforeStart":
+    "Wähle ein Enddatum am oder nach dem Startdatum.",
+  "reporting.interval.tooLong":
+    "Wähle einen Zeitraum von höchstens zwölf Monaten.",
+  "reporting.interval.afterCutoff":
+    "Wähle ein Startdatum, das nicht nach heute liegt.",
+  "reporting.interval.invalid": "Wähle andere Daten für diesen Zeitraum.",
+  "reporting.targetPlanOwned":
+    "Dieser Monat gehört zu den veröffentlichten Umsatzzielen. Ändere ihn auf der Seite „Umsatzziele“.",
   "reporting.expired":
     "Ausgabe abgelaufen · Werte nach der Aufbewahrungsrichtlinie entfernt",
   "brief.weekly.legacyDefinitions":
@@ -9426,6 +9436,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.q.refusal.invalid": "Diese Frage lässt sich so nicht beantworten.",
   "analytics.q.refusal.privacy":
     "Die Antwort würde zu wenige Datensätze beschreiben.",
+  "analytics.q.refusal.mixedCurrency":
+    "{measure} würde Beträge in verschiedenen Währungen zu einer Zahl addieren.",
+  "analytics.q.refusal.mixedCurrencyGroup":
+    "Gruppiere nach „{currency}“ oder filtere „{currency}“ auf eine Währung.",
+  "analytics.q.refusal.mixedCurrencyBase":
+    "Gruppiere nach „{currency}“, filtere „{currency}“ auf eine Währung oder wähle „{base}“, das in die Basiswährung umgerechnet ist.",
   "analytics.q.refusal.unsupported":
     "Diese Frage lässt sich mit dem, was dir zur Verfügung steht, nicht beantworten.",
   "analytics.q.removeMeasure": "Kennzahl {n} entfernen",
@@ -9778,6 +9794,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.openDeals": "Offene Deals",
   "explain.sources": "Quellzeilen",
   "explain.col.record": "Deal",
+  "explain.definition": "{population}: {measures}.",
   "explain.col.stage": "Phase",
   "explain.col.owner": "Verantwortlich",
   "explain.col.pipeline": "Pipeline",

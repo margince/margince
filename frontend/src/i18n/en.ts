@@ -1105,6 +1105,15 @@ export const en = {
   "reporting.fromDate": "From",
   "reporting.throughDate": "Through",
   "reporting.chooseDates": "Choose a start and end date to view this period.",
+  "reporting.interval.missing": "Choose a start and an end date.",
+  "reporting.interval.endBeforeStart":
+    "Choose an end date on or after the start date.",
+  "reporting.interval.tooLong":
+    "Choose an interval of no more than twelve months.",
+  "reporting.interval.afterCutoff": "Choose a start date no later than today.",
+  "reporting.interval.invalid": "Choose other dates for this interval.",
+  "reporting.targetPlanOwned":
+    "This month belongs to the published sales goals. Change it on the Sales goals page.",
   "reporting.expired":
     "Edition expired · Readings removed under the retention policy",
   "brief.weekly.legacyDefinitions":
@@ -9380,6 +9389,12 @@ export const en = {
   "analytics.q.recordId": "ID",
   "analytics.q.refusal.invalid": "This question cannot be answered as asked.",
   "analytics.q.refusal.privacy": "The answer would describe too few records.",
+  "analytics.q.refusal.mixedCurrency":
+    "{measure} would add amounts in different currencies into one number.",
+  "analytics.q.refusal.mixedCurrencyGroup":
+    "Group by “{currency}”, or filter “{currency}” to one currency.",
+  "analytics.q.refusal.mixedCurrencyBase":
+    "Group by “{currency}”, filter “{currency}” to one currency, or choose “{base}”, which is converted to the base currency.",
   "analytics.q.refusal.unsupported":
     "This question cannot be answered with what is available to you.",
   "analytics.q.removeMeasure": "Remove measure {n}",
@@ -9720,6 +9735,7 @@ export const en = {
   "analytics.openDeals": "Open deals",
   "explain.sources": "Source rows",
   "explain.col.record": "Deal",
+  "explain.definition": "{population}: {measures}.",
   "explain.col.stage": "Stage",
   "explain.col.owner": "Owner",
   "explain.col.pipeline": "Pipeline",

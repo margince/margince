@@ -4,6 +4,7 @@ import { Button, EmptyState } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
+import { todayIn } from "../../format/calendarday";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
@@ -174,7 +175,7 @@ function OverviewBody({
     metrics,
     blocks,
   };
-  const validDates = validDateRange(period, start, end);
+  const validDates = validDateRange(period, start, end, todayIn(zone));
   // A seat whose catalog holds none of the view's metrics has nothing to ask.
   const validPeriod = canEvaluateDetail(
     validDates,

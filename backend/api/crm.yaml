@@ -16108,6 +16108,10 @@ paths:
       operationId: evaluateReporting
       x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
       summary: Evaluate reporting
+      description: >-
+        A custom interval the reporting calendar refuses answers the code
+        `reporting_interval_invalid`, and `details.reason` says why: `interval_missing`,
+        `end_before_start`, `longer_than_a_year` or `starts_after_cutoff`.
       responses:
         '200':
           description: Reporting result.
@@ -72110,6 +72114,21 @@ components:
             records.
         message: { type: string, description: "What is wrong, in the asker's terms." }
         suggest: { type: string, description: "The smallest change that would have worked." }
+        reason:
+          type: string
+          enum: [mixed_currency]
+          x-extensible-enum: true
+          description: >-
+            Names a refusal a client words in its reader's language, from `params`; absent when
+            only `message` and `suggest` say it. `mixed_currency`: the measure would add amounts
+            in different currencies into one number.
+        params:
+          type: object
+          additionalProperties: { type: string }
+          description: >-
+            The names the reason speaks of. For `mixed_currency`: `fn` and `field` are the
+            measure, `by` the field naming each row's currency, and `base` the converted measure
+            to ask instead, absent when the population offers none.
       additionalProperties: false
     ReportRun:
       type: object

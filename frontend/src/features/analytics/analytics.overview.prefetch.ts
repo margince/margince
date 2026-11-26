@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
+import { todayIn } from "../../format/calendarday";
 import { grants } from "../../lib/accessgrants";
 import { sectionFromAddress } from "../../lib/analytics.address";
 import { renderableCompanyZone } from "../../lib/companyzone";
@@ -87,8 +88,11 @@ export async function prefetchOverview(
     view === "sales" ? (pipelines ?? []) : [],
     OVERVIEW_DEFAULT_PERIOD[view],
   );
-  if (!validDateRange(filters.period, filters.start, filters.end)) return;
   const zone = renderableCompanyZone(settings.timezone);
+  if (
+    !validDateRange(filters.period, filters.start, filters.end, todayIn(zone))
+  )
+    return;
   const question = questionForView(
     view,
     catalog,

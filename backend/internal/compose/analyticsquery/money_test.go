@@ -96,3 +96,31 @@ func TestTheVocabularyCheckLeavesTheCurrencyRuleToValidate(t *testing.T) {
 		t.Errorf("every name in the plan exists, and the vocabulary check refused it: %v", err)
 	}
 }
+
+// A client words the refusal in its reader's language from these names, and
+// the sentence stays for a client that reads only prose.
+func TestTheCurrencyRefusalNamesItsReasonAndFieldsForAClient(t *testing.T) {
+	t.Parallel()
+	q := Query{Entity: "deals", Measures: []Measure{{Fn: Sum, Field: "amount_minor"}}}
+	var refusal *RefusalError
+	if !errors.As(q.Validate(moneySchema("amount_base_minor")), &refusal) {
+		t.Fatal("the ungrouped sum was answered")
+	}
+	reference := refusal.FaultReference()
+	params, ok := reference["params"].(map[string]string)
+	if reference["reason"] != RefusalMixedCurrency || !ok {
+		t.Fatalf("the refusal names no reason a client can word: %+v", reference)
+	}
+	want := map[string]string{"fn": "sum", "field": "amount_minor", "by": "currency", "base": "amount_base_minor"}
+	for key, value := range want {
+		if params[key] != value {
+			t.Errorf("params[%s] = %q, want %q", key, params[key], value)
+		}
+	}
+	if reference["message"] != refusal.Message || reference["suggest"] != refusal.Suggest {
+		t.Errorf("the sentence a prose client reads is lost: %+v", reference)
+	}
+	if _, named := (&RefusalError{Kind: RefusalInvalid}).FaultReference()["reason"]; named {
+		t.Error("a refusal with no reason sent one")
+	}
+}

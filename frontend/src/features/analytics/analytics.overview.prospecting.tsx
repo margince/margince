@@ -13,6 +13,7 @@ import { FilterBar } from "../../design-system/filterbar";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SurfaceState } from "../../design-system/surfacestate";
+import { todayIn } from "../../format/calendarday";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
@@ -108,7 +109,12 @@ export function MyProspecting({
     workflowTemplate(workflowOf(framework, summary)),
   );
   const { metrics } = selection;
-  const validDates = validDateRange(filters.period, filters.start, filters.end);
+  const validDates = validDateRange(
+    filters.period,
+    filters.start,
+    filters.end,
+    todayIn(zone),
+  );
   const workflow = workflowOf(framework, summary);
   useOverviewNavigation("prospecting", selection, {
     start: filters.start,

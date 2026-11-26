@@ -147,9 +147,10 @@ A custom report can group or filter by **Year**, **Quarter** or **Month**. Won a
 Every Analytics report card carries **Explain this number**. It opens **How this
 number is built** and gives you three things:
 
-1. **The definition** of the filter, the grouping and the total, in words.
+1. **The definition** of the filter, the grouping and the total, in words, with
+   each field by the name the question builder gives it.
 2. **Source rows**: the records behind the number, limited to what the report
-   covered. Amounts are shown as money. Column names are put into your words where Margince knows them; others keep their original name.
+   covered. Amounts are shown as money. A column shows under the name the question builder gives its field; a column with no such name is not shown.
 3. **A warning where the figures may be old.** If the link did
    not say when the number was worked out, the figures were worked out again
    right now. The panel says so: "If an exchange rate changed since, they may

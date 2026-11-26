@@ -155,3 +155,65 @@ describe("a name or membership clash", () => {
     }
   });
 });
+
+describe("a refused reporting interval", () => {
+  const refused = (details?: Record<string, unknown>) => ({
+    status: 400,
+    code: "reporting_interval_invalid",
+    detail: "choose an end date after the start date",
+    ...(details ? { details } : {}),
+  });
+  it.each([
+    ["interval_missing", "reporting.interval.missing"],
+    ["end_before_start", "reporting.interval.endBeforeStart"],
+    ["longer_than_a_year", "reporting.interval.tooLong"],
+    ["starts_after_cutoff", "reporting.interval.afterCutoff"],
+  ] as const)("words %s in every catalog", (reason, key) => {
+    for (const catalog of [en, de, vi]) {
+      expect(problemMessage(refused({ reason }), (each) => catalog[each])).toBe(
+        catalog[key],
+      );
+    }
+  });
+
+  it("reads a reason this build does not know, or none, as the general sentence", () => {
+    expect(problemMessage(refused({ reason: "constructor" }), t)).toBe(
+      en["reporting.interval.invalid"],
+    );
+    expect(problemMessage(refused(), t)).toBe(en["reporting.interval.invalid"]);
+  });
+});
+
+it.each([en, de, vi])(
+  "words a target month the published sales goals own",
+  (catalog) => {
+    const problem = {
+      code: "validation_error",
+      details: {
+        errors: [
+          {
+            field: "period_start",
+            code: "plan_owned",
+            message: "an English API sentence",
+          },
+        ],
+      },
+    };
+    expect(problemMessage(problem, (key) => catalog[key])).toBe(
+      catalog["reporting.targetPlanOwned"],
+    );
+  },
+);
+
+it.each([en, de, vi])("words the refusal of an archived report", (catalog) => {
+  expect(
+    problemMessage(
+      {
+        status: 409,
+        code: "report_archived",
+        detail: "an English API sentence",
+      },
+      (key) => catalog[key],
+    ),
+  ).toBe(catalog["reporting.archivedRefused"]);
+});

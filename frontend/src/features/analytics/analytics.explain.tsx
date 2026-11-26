@@ -10,29 +10,18 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Stack } from "../../design-system/stack";
 import { rowsState, SurfaceState } from "../../design-system/surfacestate";
-import {
-  formatAnalyticsMoneyOrAbsent,
-  formatAnalyticsNumber,
-  formatDateTime,
-} from "../../format/format";
+import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import { zoneLabelAt } from "../../format/timezone";
-import {
-  type Locale,
-  type Translator,
-  useLocale,
-  usePlural,
-  useT,
-} from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { translatedPipeline } from "../../lib/labeltranslation";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { ExplainDrawer } from "./analytics.explain.drawer";
 import {
-  isMoneyField,
-  isNativeMoneyField,
-  type MoneyFields,
-  moneyFieldsOf,
-} from "./analytics.questions.money";
+  derivationHeader,
+  renderDerivationCell,
+  shownDerivationColumns,
+} from "./analytics.explain.cells";
+import { DerivationDefinition } from "./analytics.explain.definition";
+import { ExplainDrawer } from "./analytics.explain.drawer";
+import { moneyFieldsOf } from "./analytics.questions.money";
 import { useAnalyticsSchema } from "./analytics.schema";
 
 // "Explain this number": where a figure on the Analytics screen came from. ONE
@@ -112,158 +101,6 @@ function useDerivation(url: string | null) {
   });
 }
 
-// The vocabulary's words for a drill-through's columns. A column outside it
-// keeps its wire name: what the plan selected, not a guess at what it meant.
-const DERIVATION_HEADERS: Readonly<Record<string, MessageKey>> = {
-  amount_base_minor: "analytics.unweighted",
-  weighted_base_minor: "analytics.weighted",
-  amount_minor: "analytics.unweighted",
-  currency: "analytics.currency",
-  stage_id: "explain.col.stage",
-  owner_id: "explain.col.owner",
-  pipeline_id: "explain.col.pipeline",
-  company_id: "analytics.company",
-  partner_company_id: "analytics.field.partner_company_id",
-};
-
-// What a source row IS, per report: the label names the record the row stands
-// for, and the three delivery reports count projects rather than deals.
-const RECORD_NOUN: Readonly<Record<string, MessageKey>> = {
-  "projects-by-phase": "analytics.project",
-  "project-commitments": "analytics.project",
-  "projects-gone-quiet": "analytics.project",
-};
-
-// A converted money column names the base currency, because the row's own
-// `currency` column beside it names the deal's.
-function derivationHeader(
-  col: string,
-  report: string,
-  frame: Readonly<{
-    baseCurrency: string | null;
-    money: MoneyFields;
-    t: Translator;
-  }>,
-): string {
-  const { baseCurrency, money, t } = frame;
-  const key =
-    col === "label"
-      ? (RECORD_NOUN[report] ?? "explain.col.record")
-      : DERIVATION_HEADERS[col];
-  const label = key ? t(key) : col;
-  return baseCurrency && countsInBase(col, money)
-    ? t("explain.col.inCurrency", { label, currency: baseCurrency })
-    : label;
-}
-
-// The id is noise beside a name, but only once EVERY row has one: a name is
-// withheld per row, and dropping the id then blanks that row's only identifier.
-// The record and its company lead, whatever order the plan selected. Columns
-// past a narrow drawer's edge are the ones a reader never sees.
-export function derivationColumns(
-  derivation: Pick<Derivation, "columns" | "rows">,
-): string[] {
-  const rows = derivation.rows ?? [];
-  const everyRowNamed =
-    derivation.columns.includes("label") &&
-    rows.length > 0 &&
-    rows.every((row) => typeof row.label === "string" && row.label !== "");
-  const shown = derivation.columns.filter(
-    (col) => !everyRowNamed || col !== "id",
-  );
-  const lead = LEAD_COLUMNS.filter((col) => shown.includes(col));
-  return [...lead, ...shown.filter((col) => !lead.includes(col))];
-}
-
-const LEAD_COLUMNS = ["label", "id", "company_id"];
-
-// Whether a money column is counted in the base currency, as the report's
-// served schema marks it. Never read from the column's name, which a converted
-// project value shares with a native amount.
-function countsInBase(col: string, money: MoneyFields): boolean {
-  return isMoneyField(col, money) && !isNativeMoneyField(col, money);
-}
-
-export function derivationCellCurrency(
-  col: string,
-  row: Record<string, unknown>,
-  baseCurrency: string | null,
-  money: MoneyFields,
-): string | null {
-  if (countsInBase(col, money)) {
-    return baseCurrency;
-  }
-  const own = row.currency;
-  return typeof own === "string" && own !== "" ? own : null;
-}
-
-// Money is stored in minor units, and 500000 printed raw beside €5,000.00 is the
-// most misread thing on this screen.
-function renderDerivationCell(
-  col: string,
-  row: Record<string, unknown>,
-  frame: Readonly<{
-    baseCurrency: string | null;
-    money: MoneyFields;
-    locale: Locale;
-  }>,
-): ReactNode {
-  const value = row[col];
-  if (value == null) {
-    return "";
-  }
-  if (typeof value === "string" && value !== "") {
-    if (col === "pipeline_id")
-      return <DerivationPipelineName pipelineId={value} />;
-    if (col === "stage_id" && typeof row.pipeline_id === "string") {
-      return (
-        <DerivationPipelineName pipelineId={row.pipeline_id} stageId={value} />
-      );
-    }
-    if (col === "owner_id") return <EntityRef kind="user" id={value} />;
-    if (col === "company_id" || col === "partner_company_id") {
-      return <EntityRef kind="company" id={value} />;
-    }
-  }
-  if (isMoneyField(col, frame.money) && typeof value === "number") {
-    return formatAnalyticsMoneyOrAbsent(
-      value,
-      derivationCellCurrency(col, row, frame.baseCurrency, frame.money),
-      frame.locale,
-    );
-  }
-  return String(value);
-}
-
-function DerivationPipelineName({
-  pipelineId,
-  stageId,
-}: Readonly<{ pipelineId: string; stageId?: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const pipeline = useQuery({
-    select: (data) => translatedPipeline(data, locale),
-    queryKey: ["pipeline", pipelineId],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/pipelines/{id}", {
-          params: { path: { id: pipelineId } },
-        }),
-      );
-    },
-  });
-  if (pipeline.isPending) return <>{t("common.loading")}</>;
-  if (pipeline.isError) return <>{t("common.error")}</>;
-  return (
-    <>
-      {stageId
-        ? (pipeline.data?.stages?.find((stage) => stage.id === stageId)?.name ??
-          t("common.empty"))
-        : pipeline.data?.name}
-    </>
-  );
-}
-
 // The source rows the figure reconciles to. The server caps them and says how
 // many matched, so a capped list states the rest instead of reading as whole.
 function DerivationRows({
@@ -273,7 +110,7 @@ function DerivationRows({
   const t = useT();
   const { locale } = useLocale();
   const schema = useAnalyticsSchema();
-  const columns = derivationColumns(derivation);
+  const columns = shownDerivationColumns(derivation);
   const { rows } = derivation;
   const { state, remaining } = rowsState(rows.length, derivation.total_rows);
   const position = new Map(rows.map((row, index) => [row, index]));
@@ -371,10 +208,15 @@ function ExplainBody({
   const asOf = query.data?.as_of;
   return (
     <>
-      {/* What the figure MEANS, in the server's own words. */}
-      <p className="t-sub">
-        {query.data?.definition ?? t("analytics.planNote")}
-      </p>
+      {/* What the figure MEANS: the reader's words where the plan allows. */}
+      {query.data ? (
+        <DerivationDefinition
+          derivation={query.data}
+          unset={[parseDerivationQuery(url ?? "").isnull ?? []].flat()}
+        />
+      ) : (
+        <p className="t-sub">{t("analytics.planNote")}</p>
+      )}
       {url == null && <p>{t("common.empty")}</p>}
       {url != null && query.isPending && (
         <Stack gap="2">

@@ -1134,6 +1134,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.fromDate": "Từ ngày",
   "reporting.throughDate": "Đến hết ngày",
   "reporting.chooseDates": "Chọn ngày bắt đầu và ngày kết thúc để xem kỳ này.",
+  "reporting.interval.missing": "Chọn ngày bắt đầu và ngày kết thúc.",
+  "reporting.interval.endBeforeStart":
+    "Chọn ngày kết thúc bằng hoặc sau ngày bắt đầu.",
+  "reporting.interval.tooLong":
+    "Chọn khoảng thời gian không quá mười hai tháng.",
+  "reporting.interval.afterCutoff": "Chọn ngày bắt đầu không muộn hơn hôm nay.",
+  "reporting.interval.invalid": "Chọn ngày khác cho khoảng thời gian này.",
+  "reporting.targetPlanOwned":
+    "Tháng này thuộc mục tiêu doanh số đã công bố. Hãy thay đổi trên trang Mục tiêu doanh số.",
   "reporting.expired":
     "Bản báo cáo đã hết hạn · Số liệu đã bị xóa theo chính sách lưu trữ",
   "brief.weekly.legacyDefinitions":
@@ -9172,6 +9181,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.q.refusal.invalid":
     "Không thể trả lời câu hỏi này theo cách đã hỏi.",
   "analytics.q.refusal.privacy": "Câu trả lời sẽ mô tả quá ít hồ sơ.",
+  "analytics.q.refusal.mixedCurrency":
+    "{measure} sẽ cộng các số tiền thuộc nhiều loại tiền tệ khác nhau thành một con số.",
+  "analytics.q.refusal.mixedCurrencyGroup":
+    "Nhóm theo “{currency}” hoặc lọc “{currency}” theo một loại tiền tệ.",
+  "analytics.q.refusal.mixedCurrencyBase":
+    "Nhóm theo “{currency}”, lọc “{currency}” theo một loại tiền tệ, hoặc chọn “{base}”, đã được quy đổi sang tiền tệ cơ sở.",
   "analytics.q.refusal.unsupported":
     "Không thể trả lời câu hỏi này với dữ liệu bạn có quyền xem.",
   "analytics.q.removeMeasure": "Gỡ chỉ số {n}",
@@ -9515,6 +9530,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.openDeals": "Deal đang mở",
   "explain.sources": "Dòng nguồn",
   "explain.col.record": "Deal",
+  "explain.definition": "{population}: {measures}.",
   "explain.col.stage": "Giai đoạn",
   "explain.col.owner": "Người chịu trách nhiệm",
   "explain.col.pipeline": "Pipeline",

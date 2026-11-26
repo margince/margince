@@ -233,6 +233,7 @@ describe("a refusal read off the problem body", () => {
       kind: "privacy",
       suggest: "group by stage",
       message: "too few records",
+      params: {},
     });
   });
 

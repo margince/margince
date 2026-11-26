@@ -143,12 +143,48 @@ export function customInterval(
   };
 }
 
+// A custom interval is asked only once it has both days and the server would
+// take it. `today` is the day in the company zone, when known.
 export function validDateRange(
   period: string,
   start: string,
   end: string,
+  today: string | undefined,
 ): boolean {
-  return period !== "custom" || !!(start && end);
+  return (
+    period !== "custom" ||
+    (!!(start && end) &&
+      customIntervalRefusal(period, start, end, today) === null)
+  );
+}
+
+// Why the server would refuse a custom interval, so the fields say it before
+// it is asked. The values are the server's own `details.reason`.
+export type IntervalRefusal =
+  | "end_before_start"
+  | "longer_than_a_year"
+  | "starts_after_cutoff";
+
+export function customIntervalRefusal(
+  period: string,
+  start: string,
+  end: string,
+  today: string | undefined,
+): IntervalRefusal | null {
+  if (period !== "custom" || !start || !end) return null;
+  if (end < start) return "end_before_start";
+  if (end >= sameDayAYearOn(start)) return "longer_than_a_year";
+  if (today && start > today) return "starts_after_cutoff";
+  return null;
+}
+
+// The day a year after `day`, rolled over as the server's calendar rolls it:
+// 29 February moves to 1 March.
+function sameDayAYearOn(day: string): string {
+  const [year, month, date] = day.split("-").map(Number);
+  return new Date(Date.UTC(year + 1, month - 1, date))
+    .toISOString()
+    .slice(0, 10);
 }
 
 // A pipeline the address names that is not among the reader's pipelines.

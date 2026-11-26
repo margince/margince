@@ -82,6 +82,24 @@ export const DrawerOpen: Story = {
   },
 };
 
+// A plan the drawer can read: the definition in the reader's words, with the
+// group the figure was cut to, never the server's aliases.
+export const DefinitionFromThePlan: Story = {
+  render: drawerStory(() =>
+    jsonResponse({
+      ...derivation,
+      plan: {
+        aggregates: [{ fn: "sum", field: "amount_base_minor", as: "raw_minor" }],
+        predicates: { close_month: "2026-12" },
+      },
+    }),
+  ),
+  play: async (context) => {
+    await openDrawer(context);
+    await screen.findByText(/Close month: 2026-12/);
+  },
+};
+
 // A field mask took records out of the figure and the rows alike; the drawer
 // says how many, so a smaller number reads as governed rather than missing.
 export const ExcludedByPermission: Story = {

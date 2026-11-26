@@ -15,7 +15,7 @@ import {
 } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
-import { derivationColumns } from "./analytics.explain";
+import { derivationColumns } from "./analytics.explain.cells";
 import { ExplainDrawer } from "./analytics.explain.drawer";
 import type { ExplainSource } from "./analytics.questions.answer";
 import { QuestionFailure } from "./analytics.questions.failure";

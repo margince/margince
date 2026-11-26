@@ -2287,6 +2287,21 @@ func (e AnalyticsRefusalDetailsKind) Valid() bool {
 	}
 }
 
+// Defines values for AnalyticsRefusalDetailsReason.
+const (
+	AnalyticsRefusalDetailsReasonMixedCurrency AnalyticsRefusalDetailsReason = "mixed_currency"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsRefusalDetailsReason enum.
+func (e AnalyticsRefusalDetailsReason) Valid() bool {
+	switch e {
+	case AnalyticsRefusalDetailsReasonMixedCurrency:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AnalyticsScopeKind.
 const (
 	AnalyticsScopeKindManagedTeams AnalyticsScopeKind = "managed_teams"
@@ -36830,12 +36845,21 @@ type AnalyticsRefusalDetails struct {
 	// Message What is wrong, in the asker's terms.
 	Message string `json:"message"`
 
+	// Params The names the reason speaks of. For `mixed_currency`: `fn` and `field` are the measure, `by` the field naming each row's currency, and `base` the converted measure to ask instead, absent when the population offers none.
+	Params *map[string]string `json:"params,omitempty"`
+
+	// Reason Names a refusal a client words in its reader's language, from `params`; absent when only `message` and `suggest` say it. `mixed_currency`: the measure would add amounts in different currencies into one number.
+	Reason *AnalyticsRefusalDetailsReason `json:"reason,omitempty"`
+
 	// Suggest The smallest change that would have worked.
 	Suggest string `json:"suggest"`
 }
 
 // AnalyticsRefusalDetailsKind `invalid`: the question means nothing as asked, such as a sum over a stage name. `unsupported`: it names a population, field, aggregate or comparison this caller's vocabulary does not have. `privacy`: the answer would describe too few records.
 type AnalyticsRefusalDetailsKind string
+
+// AnalyticsRefusalDetailsReason Names a refusal a client words in its reader's language, from `params`; absent when only `message` and `suggest` say it. `mixed_currency`: the measure would add amounts in different currencies into one number.
+type AnalyticsRefusalDetailsReason string
 
 // AnalyticsSchema The populations and fields one caller may ask about.
 type AnalyticsSchema struct {

@@ -394,6 +394,41 @@ describe("a question that was not answered", () => {
     );
   });
 
+  it("words a measure across currencies with the builder's field names", () => {
+    const problem = refusal(
+      "invalid",
+      'sum of "amount_minor" would add amounts in different currencies into one number with no unit',
+      "group by currency or filter currency to one currency, or measure amount_base_minor, which is converted to the base currency",
+    );
+    render(
+      <QuestionFailure
+        error={
+          new ProblemError({
+            ...problem,
+            details: {
+              ...problem.details,
+              reason: "mixed_currency",
+              params: {
+                fn: "sum",
+                field: "amount_minor",
+                by: "currency",
+                base: "amount_base_minor",
+              },
+            },
+          })
+        }
+      />,
+    );
+    const note = screen.getByRole("status").textContent ?? "";
+    expect(note).toContain(
+      "Sum (Amount) would add amounts in different currencies into one number.",
+    );
+    expect(note).toContain(
+      "Group by “Currency”, filter “Currency” to one currency, or choose “Converted amount”, which is converted to the base currency.",
+    );
+    expect(note).not.toMatch(/amount_minor|amount_base_minor/);
+  });
+
   it("reads each refusal kind in its own words", () => {
     for (const [kind, words] of [
       ["invalid", "This question cannot be answered as asked."],

@@ -10727,7 +10727,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Evaluate reporting */
+        /**
+         * Evaluate reporting
+         * @description A custom interval the reporting calendar refuses answers the code `reporting_interval_invalid`, and `details.reason` says why: `interval_missing`, `end_before_start`, `longer_than_a_year` or `starts_after_cutoff`.
+         */
         get: operations["evaluateReporting"];
         put?: never;
         post?: never;
@@ -52706,6 +52709,15 @@ export interface components {
             message: string;
             /** @description The smallest change that would have worked. */
             suggest: string;
+            /**
+             * @description Names a refusal a client words in its reader's language, from `params`; absent when only `message` and `suggest` say it. `mixed_currency`: the measure would add amounts in different currencies into one number.
+             * @enum {string}
+             */
+            reason?: "mixed_currency";
+            /** @description The names the reason speaks of. For `mixed_currency`: `fn` and `field` are the measure, `by` the field naming each row's currency, and `base` the converted measure to ask instead, absent when the population offers none. */
+            params?: {
+                [key: string]: string;
+            };
         };
         /** @description A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor. */
         ReportRun: {

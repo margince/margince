@@ -52,7 +52,16 @@ type RefusalError struct {
 	// refusal a caller could act on — a refusal without one is a dead end, and
 	// this type exists so those are visible in review rather than shipped.
 	Suggest string
+	// Reason names a refusal a client words in its reader's language, and
+	// Params the field names and values it speaks of. Empty when only the
+	// sentence says it.
+	Reason string
+	Params map[string]string
 }
+
+// RefusalMixedCurrency is the reason of a measure that would fold amounts in
+// several currencies into one number.
+const RefusalMixedCurrency = "mixed_currency"
 
 func (e *RefusalError) Error() string {
 	if e.Suggest == "" {
@@ -74,7 +83,11 @@ func (e *RefusalError) Unwrap() error { return apperrors.ErrInvalidArgument }
 // fields, so a client branches on the kind and shows the suggestion without
 // parsing the detail sentence, which stays exactly as Error() spells it.
 func (e *RefusalError) FaultReference() map[string]any {
-	return map[string]any{"kind": string(e.Kind), "message": e.Message, "suggest": e.Suggest}
+	out := map[string]any{"kind": string(e.Kind), "message": e.Message, "suggest": e.Suggest}
+	if e.Reason != "" {
+		out["reason"], out["params"] = e.Reason, e.Params
+	}
+	return out
 }
 
 // Unreferenced is the sentinel that decides the status, not the receiver,
