@@ -121,3 +121,5 @@ be0d255ef6fe9d4e7c275c89ede69d6c7d3a290c 2184ae8aca59ae41fe9d12374b98f9b8906a868
 c32f447b6148327531c375dc02c652ee93735cda 2184ae8aca59ae41fe9d12374b98f9b8906a8680 ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
 f9ecac1b7d6487d7009b52b104eb3b897b853fa3 95ff1b62e86fba053228d97443b74aa5b55fdd43 ratified-develop-s-which-deal-question-as-a-link-suggestion-13581-carried-into-main
 c32f447b6148327531c375dc02c652ee93735cda 95ff1b62e86fba053228d97443b74aa5b55fdd43 ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
+f9ecac1b7d6487d7009b52b104eb3b897b853fa3 795eff56dc341f7e3d642a100f30d8663826971f ratified-develop-s-which-deal-question-as-a-link-suggestion-13581-carried-into-main
+e06b489fdb0933d51d647b0db5372040c8721241 795eff56dc341f7e3d642a100f30d8663826971f ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
