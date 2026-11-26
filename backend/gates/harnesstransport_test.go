@@ -16,7 +16,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"path"
 	"slices"
 	"strconv"
@@ -58,7 +57,7 @@ func parseProductGoFiles(t *testing.T) []harnessSourceFile {
 			if strings.HasSuffix(filePath, "_test.go") {
 				return
 			}
-			parsed, err := gatekit.ParseFile(filePath, parser.SkipObjectResolution)
+			parsed, err := gatekit.ParseFile(filePath, 0)
 			if err != nil {
 				t.Fatalf("parsing %s: %v", filePath, err)
 			}

@@ -213,8 +213,7 @@ func requireIdentityCensus(t *testing.T, writers []identityKeyWriter) {
 // callReach answers, within one package, whether a function asks the probe:
 // itself, through a function it calls, or because every caller of it does.
 type callReach struct {
-	funcs []*ast.FuncDecl
-	// calls holds the names each function calls, read once rather than per question.
+	funcs    []*ast.FuncDecl
 	calls    map[*ast.FuncDecl]map[string]bool
 	probe    string
 	visiting map[*ast.FuncDecl]bool

@@ -142,12 +142,10 @@ const (
 var updateCitationRegister = flag.Bool("update-citations", false,
 	"prune danglingcitations.txt of entries the tree no longer has")
 
-// Sequential under -update-citations, and named in parallelExempt for the reason:
-// that flag makes it rewrite danglingcitations.txt, which
-// TestTheCitationRegisterIsSortedAndUnique reads. Go resumes parallel tests
-// only once every sequential one has finished, so staying sequential orders
-// this write after every read — including reads nobody has added yet, which
-// holding the reader back instead would not cover.
+// Sequential under -update-citations, which makes it rewrite danglingcitations.txt
+// for TestTheCitationRegisterIsSortedAndUnique to read. Go resumes paused parallel
+// tests only after every sequential one has finished, so the write comes before
+// every read.
 func TestEveryCitedMigrationExists(t *testing.T) {
 	if !*updateCitationRegister {
 		t.Parallel()

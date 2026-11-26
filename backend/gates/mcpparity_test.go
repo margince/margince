@@ -501,6 +501,7 @@ func summarizeParity(scan webScan, ops []parityOperation) parityReport {
 	return report
 }
 
+// Sequential under -update-mcp-parity, which makes it rewrite the parity page.
 func TestTheMCPParityCatalogIsPublished(t *testing.T) {
 	if !*updateMCPParity {
 		t.Parallel()

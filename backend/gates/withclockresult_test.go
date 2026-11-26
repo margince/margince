@@ -14,9 +14,11 @@ package gates
 // `withClock` keeps the same promise.
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/scanner"
 	"go/token"
 	"os"
 	"slices"
@@ -46,13 +48,18 @@ func TestWithClockReturnsACopyWhoseResultIsUsed(t *testing.T) {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
-			// A file that does not parse is left to the compiler.
-			if file, parseErr := gatekit.ParseFile(path, 0); parseErr == nil {
-				found, seen := withClockFindingsIn(gatekit.SourceFileSet(), file)
-				calls += seen
-				for _, f := range found {
-					t.Error(f)
-				}
+			file, err := gatekit.ParseFile(path, 0)
+			if errors.As(err, new(scanner.ErrorList)) {
+				// A file that does not parse is left to the compiler.
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			found, seen := withClockFindingsIn(gatekit.SourceFileSet(), file)
+			calls += seen
+			for _, f := range found {
+				t.Error(f)
 			}
 			return nil
 		})
