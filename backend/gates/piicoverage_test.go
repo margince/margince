@@ -260,12 +260,12 @@ var piiTables = map[string]piiHandling{
 		sarRead:        true,
 		retentionPurge: []string{"object_type = 'contact'", "object_type = 'activity'"},
 	},
-	// The enrichment sidecar holds the subject's title, phone, employer and
-	// public profile URL, each with the verbatim sentence it was read from —
-	// their data twice over, the value and the quote naming them. Nothing
-	// cascades to it, because anonymize-in-place leaves the contact row
-	// standing, so erasure has to reach it by statement.
-	"contact_profile_field": {erasureWrite: true, sarRead: true},
+	// The enrichment evidence written before field_provenance held it: the
+	// subject's title, phone, employer and profile URL, each with its quote.
+	// Anonymize-in-place leaves the contact row standing, so nothing cascades
+	// and erasure reaches it by statement. The export reads it through the
+	// contact_profile_field view.
+	"contact_profile_field_legacy": {erasureWrite: true},
 	// What a licensed data provider asserted about the subject and this
 	// installation retained (ADR-0101). Bought from a third party rather than
 	// given by them, which makes it disclosable twice over — the values and

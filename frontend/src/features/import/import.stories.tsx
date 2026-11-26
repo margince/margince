@@ -14,6 +14,15 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ImportCard } from "./import";
+import type { ImportRun } from "./importtypes";
+
+// The list as the server cuts it for `?view=`: the drafts, or the runs that
+// are history. The hub asks for each, so one answer for both draws a run twice.
+function inView(runs: readonly ImportRun[], view: string | null) {
+  return runs.filter(
+    (one) => (one.status === "pending") === (view === "drafts"),
+  );
+}
 
 // Bringing a customer's data in. The settings page is the hub: the drop zone,
 // the template with its import order, and the recent runs. The wizard that performs
@@ -24,7 +33,7 @@ import { ImportCard } from "./import";
 function story(
   allow: Parameters<typeof meRoute>[0],
   subpage?: string,
-  runs: readonly unknown[] | "refused" = recentRunsFixture,
+  runs: readonly ImportRun[] | "refused" = recentRunsFixture,
 ) {
   return () => {
     // The run page reads its run from the address, and the capture harness
@@ -33,13 +42,16 @@ function story(
     installFetchStub({
       "GET /me": meRoute(allow),
       "GET /imports/format": () => jsonResponse(formatFixture),
-      "GET /imports": () =>
+      "GET /imports": (_body, url) =>
         runs === "refused"
           ? jsonResponse(
               { title: "Server error", status: 500, type: "about:blank" },
               500,
             )
-          : jsonResponse({ data: runs, page: { has_more: false } }),
+          : jsonResponse({
+              data: inView(runs, url.searchParams.get("view")),
+              page: { has_more: false },
+            }),
       "GET /users/names": () =>
         jsonResponse({ data: [{ id: "u-ada", display_name: "Ada Lovelace" }] }),
     });
@@ -62,9 +74,20 @@ const meta: Meta<typeof ImportCard> = {
 export default meta;
 type Story = StoryObj<typeof ImportCard>;
 
-// The hub with two runs behind it: one complete that may still be undone, and
-// one already undone.
-export const Hub: Story = { render: story(OPERATOR) };
+// The hub with its runs behind it: a draft, a tested run to continue, one
+// complete that may still be undone, and one already undone.
+export const Hub: Story = {
+  render: story(OPERATOR),
+  play: async ({ canvasElement }) => {
+    const panel = await within(canvasElement).findByRole("region", {
+      name: "Recent imports",
+    });
+    await expect(
+      await within(panel).findByText("Test run ready"),
+    ).toBeVisible();
+    await expect(within(panel).getAllByRole("row")).toHaveLength(5);
+  },
+};
 
 // The same hub in dark: the status badges and the drop zone read off derived
 // tokens.

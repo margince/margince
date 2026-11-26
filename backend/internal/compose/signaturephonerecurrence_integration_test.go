@@ -90,7 +90,7 @@ func TestRestoringAContactDoesNotReviveUnsupportedSignatureNumbers(t *testing.T)
 			mail := onlyMailOf(t, e, contact)
 			applySignature(t, e, contact, mail, phoneField(germany))
 			if evidenceRemoved == "before_archive" {
-				e.WsExec(t, `DELETE FROM contact_profile_field WHERE contact_id = @id`, pgx.StrictNamedArgs{"id": contact})
+				e.WsExec(t, `DELETE FROM field_provenance WHERE object_type = 'contact' AND value IS NOT NULL AND object_id = @id`, pgx.StrictNamedArgs{"id": contact})
 			}
 			if _, err := e.Contacts.ArchiveContact(e.Admin(), ids.From[ids.ContactKind](contact), nil); err != nil {
 				t.Fatal(err)
@@ -152,7 +152,7 @@ func TestSignaturePhoneSupportUsesTheCanonicalEvidenceKey(t *testing.T) {
 	e := integration.Setup(t)
 	contact := seedEnrichContact(t, e, "spelling@recurrence.example", "Bob Contact\n"+germany)
 	applySignature(t, e, contact, onlyMailOf(t, e, contact), phoneField(germany))
-	e.WsExec(t, `UPDATE contact_profile_field SET value = @value WHERE contact_id = @id AND field = 'phone'`, pgx.StrictNamedArgs{"id": contact, "value": germany})
+	e.WsExec(t, `UPDATE field_provenance SET value = @value WHERE object_type = 'contact' AND value IS NOT NULL AND object_id = @id AND field_name = 'phone'`, pgx.StrictNamedArgs{"id": contact, "value": germany})
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	runMachineAddressTask(ctx, t, e, signaturePhonesDataTask())
 	if got := liveNumbers(t, e, contact); !slices.Equal(got, []string{"+491755550101"}) {
@@ -183,7 +183,7 @@ func TestRepairClosesUnsupportedPhonePairsWithoutRefilingThem(t *testing.T) {
 		t.Fatalf("shared numbers filed %d pairs, want three", got)
 	}
 	for _, id := range subjects[:2] {
-		e.WsExec(t, `DELETE FROM contact_profile_field WHERE contact_id = @id AND field = 'phone'`, pgx.StrictNamedArgs{"id": id})
+		e.WsExec(t, `DELETE FROM field_provenance WHERE object_type = 'contact' AND value IS NOT NULL AND object_id = @id AND field_name = 'phone'`, pgx.StrictNamedArgs{"id": id})
 	}
 	runMachineAddressTask(ctx, t, e, signaturePhonesDataTask())
 	worker := dedupeRecheckWorker{pool: e.Pool}

@@ -19,6 +19,10 @@ import (
 const mergeProfileColumns = `field, value_key, value, evidence_snippet, source_ref, confidence, source,
  captured_by, observed_at, superseded_value, superseded_captured_by, superseded_observed_at`
 
+// mergeEvidenceColumns are the same columns as field_provenance spells them.
+const mergeEvidenceColumns = `field_name, value_key, value, evidence_snippet, evidence_ref, confidence, source,
+ captured_by, observed_at, superseded_value, superseded_captured_by, superseded_observed_at`
+
 // MergeProfileAssertion retains provenance and version for a profile value under review.
 type MergeProfileAssertion struct {
 	ID                   ids.UUID
