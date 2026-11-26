@@ -55,16 +55,20 @@ func (s *Store) BuyerThreads(ctx context.Context, sess Session, documentID *ids.
 		if !servesContent(st.access()) {
 			return nil
 		}
-		all, err := threadRows(ctx, tx, sess.RoomID, documentID)
+		// Every thread is read whatever documentID says, so HiddenOwn is one
+		// answer for every filter. Asking per document would otherwise show
+		// which file a withheld thread was on.
+		all, err := threadRows(ctx, tx, sess.RoomID, nil)
 		if err != nil {
 			return err
 		}
 		var hidden []ids.UUID
 		for _, th := range all {
-			if th.VisibleToBuyer {
-				out.Threads = append(out.Threads, th)
-			} else {
+			switch {
+			case !th.VisibleToBuyer:
 				hidden = append(hidden, ids.UUID(th.Id))
+			case documentID == nil || (th.DocumentId != nil && ids.UUID(*th.DocumentId) == *documentID):
+				out.Threads = append(out.Threads, th)
 			}
 		}
 		out.HiddenOwn, err = anyWrittenBy(ctx, tx, sess, hidden)
@@ -213,7 +217,7 @@ func (s *Store) ReplyAsBuyer(ctx context.Context, sess Session, threadID ids.UUI
 // ErrNotFound, not a permission error: the list announces a withdrawal, and a
 // direct fetch is no place to explain one.
 func ensureThreadStillVisible(ctx context.Context, tx pgx.Tx, sess Session, threadID ids.UUID) error {
-	var documentID *ids.UUID
+	var documentID *openapi_types.UUID
 	err := tx.QueryRow(ctx,
 		`SELECT document_id FROM deal_room_thread WHERE id = $1 AND room_id = $2`,
 		threadID, sess.RoomID).Scan(&documentID)
@@ -223,8 +227,12 @@ func ensureThreadStillVisible(ctx context.Context, tx pgx.Tx, sess Session, thre
 	if err != nil {
 		return fmt.Errorf("read the thread's document: %w", err)
 	}
-	if documentID == nil {
-		return nil
+	inView, err := documentsInViewSet(ctx, tx, sess.RoomID)
+	if err != nil {
+		return err
 	}
-	return requireBuyerVisibleDocument(ctx, tx, sess.RoomID, *documentID)
+	if !buyerSeesThread(inView, crmcontracts.DealRoomThread{DocumentId: documentID}) {
+		return apperrors.ErrNotFound
+	}
+	return nil
 }

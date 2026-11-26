@@ -93,18 +93,27 @@ func buyerSeesThread(inView map[openapi_types.UUID]bool, th crmcontracts.DealRoo
 // markBuyerSight sets VisibleToBuyer on every thread from buyerSeesThread. Room
 // state is left out: a paused room says so to both sides already.
 func markBuyerSight(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, threads []crmcontracts.DealRoomThread) error {
-	docs, err := documentsInView(ctx, tx, roomID)
+	inView, err := documentsInViewSet(ctx, tx, roomID)
 	if err != nil {
 		return err
-	}
-	inView := make(map[openapi_types.UUID]bool, len(docs))
-	for _, d := range docs {
-		inView[d.Id] = true
 	}
 	for i := range threads {
 		threads[i].VisibleToBuyer = buyerSeesThread(inView, threads[i])
 	}
 	return nil
+}
+
+// documentsInViewSet is documentsInView as the lookup buyerSeesThread takes.
+func documentsInViewSet(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) (map[openapi_types.UUID]bool, error) {
+	docs, err := documentsInView(ctx, tx, roomID)
+	if err != nil {
+		return nil, err
+	}
+	inView := make(map[openapi_types.UUID]bool, len(docs))
+	for _, d := range docs {
+		inView[d.Id] = true
+	}
+	return inView, nil
 }
 
 func scanThread(row rowScanner) (crmcontracts.DealRoomThread, error) {

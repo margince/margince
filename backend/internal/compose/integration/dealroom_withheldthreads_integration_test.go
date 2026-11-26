@@ -11,6 +11,7 @@ package integration
 // the thread as no longer visible to the buyer.
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -25,13 +26,22 @@ type withheldRoom struct {
 	laura, mira  string
 	attachmentID string
 	docID        string
+	activityID   string
 }
 
 // roomWithOneSharedFile opens a room with two buyer seats (Laura and Mira),
 // both signed in, and one file shared in it.
 func roomWithOneSharedFile(t *testing.T) withheldRoom {
 	t.Helper()
-	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
+	return roomSharing(t, false)
+}
+
+// roomSharing shares an uploaded deal file, or a file that arrived on an
+// email linked to the deal when mail is true.
+func roomSharing(t *testing.T, mail bool) withheldRoom {
+	t.Helper()
+	blob := blobstore.NewMemory()
+	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
 	var roomRow AnyMap
@@ -39,7 +49,12 @@ func roomWithOneSharedFile(t *testing.T) withheldRoom {
 		t.Fatalf("room = %d", status)
 	}
 	dealID, _ := roomRow["deal_id"].(string)
-	attachmentID := uploadDealFile(t, e, dealID, "terms.pdf", []byte("%PDF-TERMS"))
+	var attachmentID, activityID string
+	if mail {
+		activityID, attachmentID = captureFileOnEmail(t, e, blob, dealID)
+	} else {
+		attachmentID = uploadDealFile(t, e, dealID, "terms.pdf", []byte("%PDF-TERMS"))
+	}
 	var doc AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
 		"attachment_id": attachmentID, "group_key": "legal", "source": "manual",
@@ -49,7 +64,7 @@ func roomWithOneSharedFile(t *testing.T) withheldRoom {
 	docID, _ := doc["id"].(string)
 	mira := inviteAnotherBuyer(t, e, room.roomID, "mira@buyer.example")
 	return withheldRoom{
-		e: e, room: room, attachmentID: attachmentID, docID: docID,
+		e: e, room: room, attachmentID: attachmentID, docID: docID, activityID: activityID,
 		laura: signIn(t, e, room.credential), mira: signIn(t, e, mira.credential),
 	}
 }
@@ -94,8 +109,18 @@ func (w withheldRoom) sellerOpens(t *testing.T, docID, body string) string {
 // buyerList returns the thread ids the buyer reads and the withheld-own flag.
 func (w withheldRoom) buyerList(t *testing.T, token string) (threadIDs []string, hiddenOwn bool) {
 	t.Helper()
+	return w.buyerListFor(t, token, "")
+}
+
+// buyerListFor is buyerList narrowed to one document id, as the query allows.
+func (w withheldRoom) buyerListFor(t *testing.T, token, docID string) (threadIDs []string, hiddenOwn bool) {
+	t.Helper()
+	path := "/v1/public/rooms/threads"
+	if docID != "" {
+		path += "?document_id=" + docID
+	}
 	var got AnyMap
-	if status := publicCall(t, w.e, "GET", "/v1/public/rooms/threads", nil, bearer(token), &got); status != http.StatusOK {
+	if status := publicCall(t, w.e, "GET", path, nil, bearer(token), &got); status != http.StatusOK {
 		t.Fatalf("buyer threads = %d %v", status, got)
 	}
 	list, _ := got["data"].([]any)
@@ -141,6 +166,13 @@ func (w withheldRoom) withdraw(t *testing.T, how string) {
 	case "archived":
 		if status := w.e.Call(t, "DELETE", "/v1/attachments/"+w.attachmentID, nil, nil, nil); status != http.StatusNoContent {
 			t.Fatalf("archive attachment = %d", status)
+		}
+	case "unlinked":
+		// No endpoint removes a message's link to a deal, so the row goes directly.
+		if _, err := w.e.Pool.Exec(context.Background(),
+			`DELETE FROM activity_link WHERE activity_id = $1 AND entity_type = 'deal' AND deal_id = $2`,
+			w.activityID, w.room.dealID); err != nil {
+			t.Fatalf("unlink the email from the deal: %v", err)
 		}
 	case "hidden":
 		if status := w.e.Call(t, "PUT", "/v1/deals/"+w.room.dealID+"/documents/"+w.attachmentID+"/hide", nil, nil, nil); status != http.StatusNoContent {
@@ -245,5 +277,95 @@ func TestAPausedRoomWithholdsNoNewLineAndReopensWithItsThreads(t *testing.T) {
 	ids, hidden = w.buyerList(t, w.laura)
 	if len(ids) != 1 || ids[0] != own || hidden {
 		t.Errorf("reopened: threads=%v hidden_own=%v, want the thread back and no line", ids, hidden)
+	}
+}
+
+func TestAMailFileLeavingTheDealsFilesAreaWithholdsTheBuyersConversation(t *testing.T) {
+	w := roomSharing(t, true)
+	own := w.buyerOpens(t, w.laura, w.docID, "Is the redline final?")
+	w.withdraw(t, "unlinked")
+
+	ids, hidden := w.buyerList(t, w.laura)
+	if len(ids) != 0 || !hidden {
+		t.Errorf("after the email left the deal: threads=%v hidden_own=%v, want none and the line", ids, hidden)
+	}
+	if w.sellerVisibleToBuyer(t)[own] {
+		t.Errorf("the seller's list calls the withheld thread visible")
+	}
+}
+
+func TestAWithdrawnFileSharedAgainBringsTheConversationBack(t *testing.T) {
+	w := roomWithOneSharedFile(t)
+	own := w.buyerOpens(t, w.laura, w.docID, "Is clause 4 negotiable?")
+	w.withdraw(t, "hidden")
+	if _, hidden := w.buyerList(t, w.laura); !hidden {
+		t.Fatalf("the withdrawal was not announced")
+	}
+
+	if status := w.e.Call(t, "DELETE", "/v1/deals/"+w.room.dealID+"/documents/"+w.attachmentID+"/hide", nil, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("unhide = %d", status)
+	}
+	ids, hidden := w.buyerList(t, w.laura)
+	if len(ids) != 1 || ids[0] != own || hidden {
+		t.Errorf("shared again: threads=%v hidden_own=%v, want the thread back and no line", ids, hidden)
+	}
+	if !w.sellerVisibleToBuyer(t)[own] {
+		t.Errorf("the seller's badge did not clear")
+	}
+}
+
+func TestAClosedRoomServesItsConversationAndTheLineFollows(t *testing.T) {
+	w := roomWithOneSharedFile(t)
+	own := w.buyerOpens(t, w.laura, w.docID, "Is clause 4 negotiable?")
+	room := w.buyerOpens(t, w.laura, "", "When does rollout start?")
+	if status := w.e.Call(t, "POST", "/v1/deal-rooms/"+w.room.roomID+"/close", AnyMap{}, nil, nil); status != http.StatusOK {
+		t.Fatalf("close = %d", status)
+	}
+	ids, hidden := w.buyerList(t, w.laura)
+	if len(ids) != 2 || hidden {
+		t.Errorf("closed: threads=%v hidden_own=%v, want both threads and no line", ids, hidden)
+	}
+	w.withdraw(t, "archived")
+	ids, hidden = w.buyerList(t, w.laura)
+	if len(ids) != 1 || ids[0] != room || !hidden {
+		t.Errorf("closed and withdrawn: threads=%v hidden_own=%v, want only %s and the line (thread %s)", ids, hidden, room, own)
+	}
+}
+
+func TestAnExpiredRoomServesNoThreadsAndNoLine(t *testing.T) {
+	w := roomWithOneSharedFile(t)
+	w.buyerOpens(t, w.laura, w.docID, "Is clause 4 negotiable?")
+	w.withdraw(t, "archived")
+	expireRoom(t, w.e, w.room.roomID)
+
+	ids, hidden := w.buyerList(t, w.laura)
+	if len(ids) != 0 || hidden {
+		t.Errorf("expired: threads=%v hidden_own=%v, want an empty list and no line", ids, hidden)
+	}
+}
+
+func TestTheLineIsTheSameWhicheverDocumentTheBuyerAsksAbout(t *testing.T) {
+	w := roomWithOneSharedFile(t)
+	otherAttachment := uploadDealFile(t, w.e, w.room.dealID, "annex.pdf", []byte("%PDF-ANNEX"))
+	var other AnyMap
+	if status := w.e.Call(t, "POST", "/v1/deal-rooms/"+w.room.roomID+"/documents", AnyMap{
+		"attachment_id": otherAttachment, "group_key": "legal", "source": "manual",
+	}, nil, &other); status != http.StatusCreated {
+		t.Fatalf("add second document = %d", status)
+	}
+	otherDoc, _ := other["id"].(string)
+	w.buyerOpens(t, w.laura, w.docID, "About the first file")
+	w.withdraw(t, "archived")
+	if status := w.e.Call(t, "DELETE", "/v1/attachments/"+otherAttachment, nil, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("archive second attachment = %d", status)
+	}
+
+	for _, filter := range []string{"", w.docID, otherDoc} {
+		if _, hidden := w.buyerListFor(t, w.laura, filter); !hidden {
+			t.Errorf("document_id=%q: no line, but the answer must not depend on the filter", filter)
+		}
+		if _, hidden := w.buyerListFor(t, w.mira, filter); hidden {
+			t.Errorf("document_id=%q: Mira was told of a conversation she never wrote in", filter)
+		}
 	}
 }
