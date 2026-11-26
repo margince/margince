@@ -309,3 +309,4 @@
 1795657803_a_source_id_is_bounded.down.sql | * | runs only on a rollback; restores the earlier guards without external_id and changes no row
 1795710028_a_lead_source_names_a_channel.up.sql | * | adds an unvalidated check and the trigger that maps a lead's source on later writes, and drops the lead_source list of a handful of rows; it changes no lead row
 1795710028_a_lead_source_names_a_channel.down.sql | * | runs only on a rollback; restores the lead_source list with its seven built-in rows and changes no lead row
+1795675792_the_token_count_floors_are_validated.up.sql | ai_usage | ai_usage holds one row per day, task and tier a call was metered on, with no retention, so it grows by at most tasks times tiers rows a day; the correction scans it once, as the VALIDATE that follows must anyway, and changes only rows a negative count lowered below zero

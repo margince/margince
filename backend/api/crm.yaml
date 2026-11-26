@@ -61075,7 +61075,7 @@ components:
         assignee_id: { type: [string, 'null'], format: uuid, description: Task only. }
         is_done: { type: boolean, default: false, description: Task only. }
         done_at: { type: [string, 'null'], format: date-time }
-        duration_seconds: { type: [integer, 'null'], description: Meeting/call only. }
+        duration_seconds: { type: [integer, 'null'], minimum: 0, description: Meeting/call only. }
         host_user_id:
           type: [string, 'null']
           format: uuid
@@ -61925,7 +61925,7 @@ components:
             win over this field. A contact that is not in `links` returns
             `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`,
             returns `422 code: field_not_valid_for_kind`.
-        duration_seconds: { type: [integer, 'null'] }
+        duration_seconds: { type: [integer, 'null'], minimum: 0 }
         direction: { type: [string, 'null'], enum: [null, inbound, outbound] }
         call_outcome:
           type: [string, 'null']
