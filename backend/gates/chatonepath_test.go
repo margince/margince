@@ -1,33 +1,39 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind census H2
+//gate:kind census H3
 
 package gates
 
 // Every chat network receives, files, changes and sends through the same core
-// functions. A later feature, such as a bot reply, then works once for all of them.
+// functions. A later feature, such as a bot reply, then works once for all.
 //
-// Three places can fork that path, and each is derived from the tree:
+// The gate reads the type-checked module, so an alias, a method value or an
+// embedded wrapper resolves to the object it names. Three places can fork the path:
 //
-//   - A chat-speaking file builds a connector.NormalizedRecord or calls
-//     Sink.Upsert. capture.FileChatMessage maps a chat message to a record, and
-//     compose/extingress.go routes the unit ingress through it.
-//   - A chat-speaking file writes the activities table or calls a write method of
-//     the activities store, outside capture and the activities module.
-//   - A call reaches a provider's send API outside its connector.MessageSender,
-//     or a file outside the provider package names the provider's host.
+//   - A chat-speaking file constructs a connector.NormalizedRecord or references
+//     Upsert of the capture sink. capture.FileChatMessage maps a chat message to a
+//     record, and compose/extingress.go routes the unit ingress through it.
+//   - A chat-speaking file writes a table of the activities module in SQL, or
+//     references a write method of the activities Store, outside capture and the
+//     activities module.
+//   - A provider's send API is reached outside its connector.MessageSender, or
+//     a file outside the provider package uses the provider's host.
 //
-// The vocabulary is read off connector/chatmessage.go and chatchange.go. The
-// provider packages are the capture subpackages that use it, and their Send*
-// methods are the send API. A network added tomorrow enrols itself.
+// The provider packages are the capture subpackages that declare a Provider
+// constant, checked against the channel_provider seeds in the migrations. Send and
+// I/O functions are found by what they reach in net/http. The activities tables
+// come from tableOwners.
 
 import (
 	"go/ast"
+	"go/constant"
+	"go/importer"
 	"go/parser"
 	"go/token"
+	"go/types"
+	"io/fs"
 	"path"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
@@ -41,337 +47,568 @@ import (
 const (
 	chatRecordOwner   = "internal/modules/capture/chatmessage.go"
 	sdkIngressMapping = "internal/compose/extingress.go"
-	chatVocabularyDir = "internal/shared/ports/connector/"
-	chatProviderRoot  = "internal/modules/capture/"
-	chatWritersDir    = "internal/modules/capture/"
-	activitiesDir     = "internal/modules/activities/"
+	connectorDir      = "internal/shared/ports/connector"
+	captureDir        = "internal/modules/capture"
+	activitiesDir     = "internal/modules/activities"
 	chatSendResolver  = "internal/compose/commschannel.go"
-	backendImportBase = "github.com/margince/margince/backend/"
 )
-
-var activitiesTableWrite = regexp.MustCompile(`(?i)\b(insert\s+into|update|delete\s+from)\s+activities\b`)
-
-var providerHost = regexp.MustCompile(`^https://[A-Za-z0-9.-]+`)
 
 var activityWriterPrefixes = []string{"Create", "Insert", "Update", "Delete", "Archive", "Edit", "Remove", "Set"}
 
-// chatSource is one parsed non-test Go file, named by its module-relative path.
-type chatSource struct {
-	path string
-	file *ast.File
+var providerHost = regexp.MustCompile(`^https://[A-Za-z0-9.-]+`)
+
+var channelProviderSeed = regexp.MustCompile(`(?s)INSERT INTO channel_provider.*?;`)
+
+var seedQuotedName = regexp.MustCompile(`'([a-z_]+)'`)
+
+// chatPackages is the type-checked module a run reads, with what the rules derive from it.
+type chatPackages struct {
+	pkgs      []typedPackage
+	fset      *token.FileSet
+	vocab     map[types.Object]bool
+	providers map[string]string
+	ioFuncs   map[types.Object]bool
+	direct    map[types.Object]bool
+	sends     map[types.Object]bool
+	writers   map[types.Object]bool
+	hosts     map[string]string
+	tables    *regexp.Regexp
 }
 
-func (s chatSource) dir() string { return path.Dir(s.path) + "/" }
+func (c *chatPackages) file(f *ast.File) string { return c.fset.Position(f.Pos()).Filename }
+
+func pkgDir(p typedPackage) string { return strings.TrimPrefix(p.path, modulePath+"/") }
 
 func TestChatNetworksShareOneReceiveFileChangeAndSendPath(t *testing.T) {
 	t.Parallel()
-	corpus := chatCorpus(t)
-	for _, f := range chatOnePathFindings(t, corpus) {
+	c := newChatPackages(t, typedModule(t))
+	for _, f := range c.findings() {
 		t.Error(f)
 	}
 }
 
 // TestChatOnePathGateFailsOnAForkedPath plants one violation per rule in a
-// synthetic file and runs the real census over the tree plus that file. A rule
-// that reads a smaller tree than it should passes the real run and fails here.
+// synthetic package, checked against the real module, and expects a finding that
+// names it. Two plants must stay clean: a file that uses the shared entry, and
+// an unrelated type that happens to share method names.
 func TestChatOnePathGateFailsOnAForkedPath(t *testing.T) {
 	t.Parallel()
-	corpus := chatCorpus(t)
-	const connectorImport = "import \"github.com/margince/margince/backend/internal/shared/ports/connector\"\n"
+	module := typedModule(t)
+	const imp = "import \"" + modulePath + "/internal/shared/ports/connector\"\n"
 	cases := []struct {
-		name, at, src, want string
+		name, want string
+		files      map[string]string
+		path       string
 	}{
 		{
-			name: "a record built beside FileChatMessage", at: "internal/compose/forkrecord.go", want: "NormalizedRecord",
-			src: "package compose\n" + connectorImport + "var _ connector.ChatBinding\nvar _ = connector.NormalizedRecord{}\n",
+			name: "a record built through an alias", want: "NormalizedRecord", path: modulePath + "/internal/compose/forkalias",
+			files: map[string]string{"a.go": "package forkalias\n" + imp + "type rec = connector.NormalizedRecord\nvar _ connector.ChatBinding\nvar _ = rec{}\n"},
 		},
 		{
-			name: "a chat message upserted straight into the sink", at: "internal/compose/forkupsert.go", want: "Upsert",
-			src: "package compose\n" + connectorImport + "func f(s connector.Sink, m connector.ChatMessage) { s.Upsert(nil, m) }\n",
+			name: "Upsert taken as a method value", want: "Upsert", path: modulePath + "/internal/compose/forkvalue",
+			files: map[string]string{"a.go": "package forkvalue\n" + imp + "var _ connector.ChatMessage\nfunc f(s connector.Sink) { w := s.Upsert; _ = w }\n"},
 		},
 		{
-			name: "an activities insert for a chat message", at: "internal/compose/forkactivity.go", want: "activities",
-			src: "package compose\n" + connectorImport + "var _ connector.ChatMessage\nconst q = `INSERT INTO activities (id) VALUES (1)`\n",
+			name: "Upsert through an embedded wrapper", want: "Upsert", path: modulePath + "/internal/compose/forkembed",
+			files: map[string]string{"a.go": "package forkembed\n" + imp + "var _ connector.ChatMessage\ntype wrap struct{ connector.Sink }\nfunc f(w wrap, r connector.NormalizedRecord) { w.Upsert(nil, r) }\n"},
 		},
 		{
-			name: "an activities store write for a chat change", at: "internal/compose/forkstorewrite.go", want: "activities store",
-			src: "package compose\n" + connectorImport + "var _ connector.ChatChange\nfunc f(s interface{ UpdateActivity() }) { s.UpdateActivity() }\n",
+			name: "SQL that writes an activities table", want: "writes the table", path: modulePath + "/internal/compose/forksql",
+			files: map[string]string{"a.go": "package forksql\n" + imp + "var _ connector.ChatMessage\nconst q = `INSERT INTO activity (id) VALUES (1)`\n"},
 		},
 		{
-			name: "a provider's SendText called by a compose file", at: "internal/compose/forksend.go", want: "SendText",
-			src: "package compose\nfunc f(c interface{ SendText() }) { c.SendText() }\n",
+			name: "a write method of the activities store", want: "SetAudience", path: modulePath + "/internal/compose/forkstore",
+			files: map[string]string{"a.go": "package forkstore\n" + imp + "import \"" + modulePath + "/internal/modules/activities\"\n" +
+				"var _ connector.ChatChange\nfunc f(s *activities.Store) { _ = s.SetAudience }\n"},
 		},
 		{
-			name: "a provider's SendMessage called after importing its package", at: "internal/compose/forktelegram.go", want: "SendMessage",
-			src: "package compose\nimport \"github.com/margince/margince/backend/internal/modules/capture/telegram\"\n" +
-				"var _ telegram.Bot\nfunc f(c interface{ SendMessage() }) { c.SendMessage() }\n",
+			name: "a provider's SendText called outside it", want: "SendText", path: modulePath + "/internal/compose/forksend",
+			files: map[string]string{"a.go": "package forksend\nimport \"" + modulePath + "/internal/modules/capture/whatsapp\"\n" +
+				"func f(c *whatsapp.Client) { _, _ = c.SendText(nil, \"\", \"\", \"\", \"\") }\n"},
 		},
 		{
-			name: "a send inside a provider package but outside its MessageSender", at: "internal/modules/capture/whatsapp/forksend.go", want: "SendText",
-			src: "package whatsapp\nfunc f(c *Client) { c.SendText(nil, \"\", \"\", \"\", \"\") }\n",
+			name: "a provider host constant used with http.Client.Do", want: "GraphBase", path: modulePath + "/internal/compose/forkhost",
+			files: map[string]string{"a.go": "package forkhost\nimport (\n\"net/http\"\n\"" + modulePath + "/internal/modules/capture/whatsapp\"\n)\n" +
+				"func f(c *http.Client) { _, _ = c.Get(whatsapp.GraphBase) }\n"},
 		},
 		{
-			name: "a provider host named outside its package", at: "internal/compose/forkhost.go", want: "graph.facebook.com",
-			src: "package compose\nconst u = \"https://graph.facebook.com/v1/messages\"\n",
+			name: "a provider POST through its low-level do outside its sender", want: "sends to the provider", path: modulePath + "/internal/modules/capture/signal",
+			files: map[string]string{
+				"client.go": "package signal\nimport \"net/http\"\nconst Provider = \"signal\"\ntype C struct{}\n" +
+					"func (c *C) do(r *http.Request) (*http.Response, error) { return http.DefaultClient.Do(r) }\n" +
+					"func (c *C) SendText() { _, _ = c.do(nil) }\n",
+				"fork.go": "package signal\nfunc (c *C) Fork() { _, _ = c.do(nil) }\n",
+			},
 		},
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			planted, err := parser.ParseFile(token.NewFileSet(), c.at, c.src, 0)
-			if err != nil {
-				t.Fatalf("parsing the planted file: %v", err)
-			}
-			got := chatOnePathFindings(t, append(slices.Clone(corpus), chatSource{path: c.at, file: planted}))
-			if !slices.ContainsFunc(got, func(f string) bool {
-				return strings.HasPrefix(f, c.at) && strings.Contains(f, c.want)
-			}) {
-				t.Errorf("planting %s found nothing naming %q; findings: %v", c.at, c.want, got)
+			c := newChatPackages(t, append(slices.Clone(module), plantPackage(t, module, tc.path, tc.files)))
+			got := c.findings()
+			planted := strings.TrimPrefix(tc.path, modulePath+"/")
+			if !slices.ContainsFunc(got, func(f string) bool { return strings.Contains(f, planted) && strings.Contains(f, tc.want) }) {
+				t.Errorf("planting %s found nothing naming %q; findings: %v", tc.path, tc.want, got)
 			}
 		})
 	}
-	t.Run("a file that files through FileChatMessage is clean", func(t *testing.T) {
-		t.Parallel()
-		at := "internal/compose/cleanadapter.go"
-		src := "package compose\nimport (\n\"github.com/margince/margince/backend/internal/modules/capture\"\n" +
-			"\"github.com/margince/margince/backend/internal/shared/ports/connector\"\n)\n" +
-			"func f(s connector.Sink, b connector.ChatBinding, m connector.ChatMessage) { capture.FileChatMessage(nil, s, b, m) }\n"
-		planted, err := parser.ParseFile(token.NewFileSet(), at, src, 0)
-		if err != nil {
-			t.Fatalf("parsing the clean file: %v", err)
-		}
-		for _, f := range chatOnePathFindings(t, append(slices.Clone(corpus), chatSource{path: at, file: planted})) {
-			t.Errorf("a file that uses the shared entry was refused: %s", f)
-		}
-	})
-}
-
-// chatCorpus parses every hand-written non-test Go file under internal/.
-func chatCorpus(t *testing.T) []chatSource {
-	t.Helper()
-	var corpus []chatSource
-	for _, p := range handWrittenGoSources(t) {
-		slash := filepath.ToSlash(p)
-		if strings.HasSuffix(slash, "_test.go") || !strings.HasPrefix(slash, "internal/") {
-			continue
-		}
-		file, err := gatekit.ParseFile(p, 0)
-		if err != nil {
-			t.Fatalf("parsing %s: %v", slash, err)
-		}
-		corpus = append(corpus, chatSource{path: slash, file: file})
+	clean := map[string]map[string]string{
+		"a file that files through FileChatMessage": {"a.go": "package cleanentry\n" + imp +
+			"import \"" + modulePath + "/internal/modules/capture\"\n" +
+			"func f(s connector.Sink, b connector.ChatBinding, m connector.ChatMessage) { _, _ = capture.FileChatMessage(nil, s, b, m) }\n"},
+		"an unrelated type with the same method names": {"a.go": "package cleanother\n" + imp +
+			"var _ connector.ChatMessage\ntype other struct{}\nfunc (other) SetAudience() {}\nfunc (other) SendText() {}\n" +
+			"func f(o other) { o.SetAudience(); o.SendText() }\n"},
 	}
-	return corpus
-}
-
-// chatOnePathFindings runs the three rules over a corpus. It fails the test when
-// a derived set comes up short. A short set reads less of the tree and reports a
-// pass.
-func chatOnePathFindings(t *testing.T, corpus []chatSource) []string {
-	t.Helper()
-	vocabulary := chatVocabulary(corpus)
-	providers := chatProviderDirs(corpus, vocabulary)
-	sends := providerSendNames(corpus, providers)
-	hosts := providerHosts(corpus, providers)
-	writers := activityStoreWriters(corpus)
-	for _, floor := range []struct {
-		what string
-		got  int
-		min  int
-	}{
-		{"chat vocabulary types", len(vocabulary), 6},
-		{"provider packages", len(providers), 3},
-		{"provider send methods", len(sends), 3},
-		{"provider hosts", len(hosts), 3},
-		{"activities store write methods", len(writers), 2},
-	} {
-		if floor.got < floor.min {
-			t.Fatalf("found %d %s, fewer than the %d the tree holds: the derivation has stopped reading it", floor.got, floor.what, floor.min)
-		}
-	}
-	if !slices.ContainsFunc(corpus, func(s chatSource) bool { return s.path == chatSendResolver }) {
-		t.Fatalf("%s is not in the corpus: the send path has moved, and this gate names where sends resolve", chatSendResolver)
-	}
-	var findings []string
-	for _, src := range corpus {
-		findings = append(findings, chatRecordFindings(src, vocabulary)...)
-		findings = append(findings, chatActivityFindings(src, vocabulary, writers)...)
-		findings = append(findings, chatSendFindings(src, providers, sends, hosts)...)
-	}
-	sort.Strings(findings)
-	return findings
-}
-
-// chatVocabulary is the exported type names of the connector's chat files, plus
-// the channel identity every chat counterparty carries.
-func chatVocabulary(corpus []chatSource) map[string]bool {
-	names := map[string]bool{"ChannelIdentity": true}
-	for _, src := range corpus {
-		base := path.Base(src.path)
-		if src.dir() != chatVocabularyDir || (base != "chatmessage.go" && base != "chatchange.go") {
-			continue
-		}
-		for _, decl := range src.file.Decls {
-			gen, ok := decl.(*ast.GenDecl)
-			if !ok {
-				continue
+	for name, files := range clean {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			p := modulePath + "/internal/compose/" + strings.Fields(files["a.go"])[1]
+			c := newChatPackages(t, append(slices.Clone(module), plantPackage(t, module, p, files)))
+			for _, f := range c.findings() {
+				t.Errorf("a clean file was refused: %s", f)
 			}
-			for _, spec := range gen.Specs {
-				if ts, ok := spec.(*ast.TypeSpec); ok && ts.Name.IsExported() {
-					names[ts.Name.Name] = true
+		})
+	}
+}
+
+// plantPackage type-checks synthetic files as one package beside the real
+// module. Imports of module packages resolve to the packages already checked.
+func plantPackage(t *testing.T, module []typedPackage, pkgPath string, files map[string]string) typedPackage {
+	t.Helper()
+	fset := gatekit.SourceFileSet()
+	names := make([]string, 0, len(files))
+	for name := range files {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var parsed []*ast.File
+	for _, name := range names {
+		f, err := parser.ParseFile(fset, strings.TrimPrefix(pkgPath, modulePath+"/")+"/"+name, files[name], 0)
+		if err != nil {
+			t.Fatalf("parsing the planted file: %v", err)
+		}
+		parsed = append(parsed, f)
+	}
+	info := newTypedInfo()
+	conf := types.Config{Importer: plantImporter{module: module, std: importer.ForCompiler(fset, "source", nil)}}
+	checked, err := conf.Check(pkgPath, fset, parsed, info)
+	if err != nil {
+		t.Fatalf("type-checking the planted package %s: %v", pkgPath, err)
+	}
+	return typedPackage{path: pkgPath, files: parsed, info: info, types: checked}
+}
+
+type plantImporter struct {
+	module []typedPackage
+	std    types.Importer
+}
+
+func (p plantImporter) Import(importPath string) (*types.Package, error) {
+	for _, pkg := range p.module {
+		if pkg.path == importPath {
+			return pkg.types, nil
+		}
+	}
+	return p.std.Import(importPath)
+}
+
+func newChatPackages(t *testing.T, pkgs []typedPackage) *chatPackages {
+	t.Helper()
+	c := &chatPackages{
+		pkgs: pkgs, fset: gatekit.SourceFileSet(),
+		vocab: map[types.Object]bool{}, providers: map[string]string{}, ioFuncs: map[types.Object]bool{},
+		direct: map[types.Object]bool{}, sends: map[types.Object]bool{}, writers: map[types.Object]bool{}, hosts: map[string]string{},
+	}
+	c.deriveVocabulary()
+	c.deriveProviders()
+	c.deriveIO()
+	c.deriveWriters()
+	c.deriveTables(t)
+	c.checkCensus(t)
+	return c
+}
+
+func (c *chatPackages) pkgAt(dir string) *typedPackage {
+	for i := range c.pkgs {
+		if pkgDir(c.pkgs[i]) == dir {
+			return &c.pkgs[i]
+		}
+	}
+	return nil
+}
+
+// deriveVocabulary reads the exported types the connector declares in its chat
+// files, and the channel identity every chat counterparty carries.
+func (c *chatPackages) deriveVocabulary() {
+	p := c.pkgAt(connectorDir)
+	if p == nil {
+		return
+	}
+	if obj := p.types.Scope().Lookup("ChannelIdentity"); obj != nil {
+		c.vocab[obj] = true
+	}
+	for _, name := range p.types.Scope().Names() {
+		obj := p.types.Scope().Lookup(name)
+		if _, ok := obj.(*types.TypeName); ok && obj.Exported() &&
+			strings.HasPrefix(path.Base(c.fset.Position(obj.Pos()).Filename), "chat") {
+			c.vocab[obj] = true
+		}
+	}
+}
+
+// deriveProviders finds the capture subpackages that declare a Provider constant.
+func (c *chatPackages) deriveProviders() {
+	for _, p := range c.pkgs {
+		rest, ok := strings.CutPrefix(pkgDir(p), captureDir+"/")
+		if !ok || strings.Contains(rest, "/") {
+			continue
+		}
+		if k, ok := p.types.Scope().Lookup("Provider").(*types.Const); ok && k.Val().Kind() == constant.String {
+			c.providers[pkgDir(p)] = constant.StringVal(k.Val())
+		}
+	}
+}
+
+// isNetHTTPCall reports a reference to a net/http function that sends a request.
+func isNetHTTPCall(fn *types.Func) bool {
+	if fn.Pkg() == nil || fn.Pkg().Path() != "net/http" {
+		return false
+	}
+	switch fn.Name() {
+	case "Do", "Get", "Post", "PostForm", "Head", "RoundTrip":
+		return true
+	}
+	return false
+}
+
+func funcOf(obj types.Object) *types.Func {
+	fn, ok := obj.(*types.Func)
+	if !ok {
+		return nil
+	}
+	return fn.Origin()
+}
+
+func recvNamed(fn *types.Func) *types.Named {
+	recv := fn.Type().(*types.Signature).Recv()
+	if recv == nil {
+		return nil
+	}
+	t := recv.Type()
+	if ptr, ok := t.(*types.Pointer); ok {
+		t = ptr.Elem()
+	}
+	n, _ := t.(*types.Named)
+	return n
+}
+
+// deriveIO reads each provider package for three sets. ioFuncs reach net/http.
+// direct call it themselves. sends are the Send* functions among ioFuncs. An
+// interface method counts when a method of that name does.
+func (c *chatPackages) deriveIO() {
+	for dir := range c.providers {
+		p := c.pkgAt(dir)
+		refs := map[types.Object]map[*types.Func]bool{}
+		names := map[string][]types.Object{}
+		for _, f := range p.files {
+			for _, d := range f.Decls {
+				fd, ok := d.(*ast.FuncDecl)
+				if !ok || fd.Body == nil {
+					continue
+				}
+				self := p.info.Defs[fd.Name]
+				refs[self] = map[*types.Func]bool{}
+				names[fd.Name.Name] = append(names[fd.Name.Name], self)
+				ast.Inspect(fd.Body, func(n ast.Node) bool {
+					if id, ok := n.(*ast.Ident); ok {
+						if fn := funcOf(p.info.Uses[id]); fn != nil {
+							refs[self][fn] = true
+						}
+					}
+					return true
+				})
+			}
+		}
+		for self, used := range refs {
+			for fn := range used {
+				if isNetHTTPCall(fn) {
+					c.direct[self] = true
+					c.ioFuncs[self] = true
 				}
 			}
 		}
-	}
-	return names
-}
-
-// speaksChat reports whether a file names any chat vocabulary.
-func speaksChat(file *ast.File, vocabulary map[string]bool) bool {
-	found := false
-	ast.Inspect(file, func(n ast.Node) bool {
-		if id, ok := n.(*ast.Ident); ok && vocabulary[id.Name] {
-			found = true
+		for changed := true; changed; {
+			changed = false
+			for self, used := range refs {
+				for fn := range used {
+					if !c.ioFuncs[self] && c.reachesIO(fn, names) {
+						c.ioFuncs[self] = true
+						changed = true
+					}
+				}
+			}
 		}
-		return !found
-	})
-	return found
+		for _, objs := range names {
+			for _, o := range objs {
+				if c.ioFuncs[o] && strings.HasPrefix(strings.ToLower(o.Name()), "send") && !isMessageSenderFunc(o.(*types.Func)) {
+					c.sends[o] = true
+				}
+			}
+		}
+		c.markInterfaceSends(p, names)
+	}
 }
 
-// chatProviderDirs are the capture subpackages that speak the chat vocabulary,
-// the places a network's own code lives.
-func chatProviderDirs(corpus []chatSource, vocabulary map[string]bool) map[string]bool {
-	dirs := map[string]bool{}
-	for _, src := range corpus {
-		rest, ok := strings.CutPrefix(src.dir(), chatProviderRoot)
-		if !ok || rest == "" || strings.Contains(strings.TrimSuffix(rest, "/"), "/") {
+func (c *chatPackages) reachesIO(fn *types.Func, names map[string][]types.Object) bool {
+	if c.ioFuncs[fn] {
+		return true
+	}
+	n := recvNamed(fn)
+	if n == nil {
+		return false
+	}
+	if _, isIface := n.Underlying().(*types.Interface); !isIface {
+		return false
+	}
+	return slices.ContainsFunc(names[fn.Name()], func(o types.Object) bool { return c.ioFuncs[o] })
+}
+
+// markInterfaceSends adds the Send* methods of the package's interfaces whose
+// concrete methods reach net/http.
+func (c *chatPackages) markInterfaceSends(p *typedPackage, names map[string][]types.Object) {
+	for _, name := range p.types.Scope().Names() {
+		tn, ok := p.types.Scope().Lookup(name).(*types.TypeName)
+		if !ok {
 			continue
 		}
-		if speaksChat(src.file, vocabulary) {
-			dirs[src.dir()] = true
+		iface, ok := tn.Type().Underlying().(*types.Interface)
+		if !ok {
+			continue
+		}
+		for i := range iface.NumExplicitMethods() {
+			m := iface.ExplicitMethod(i)
+			if strings.HasPrefix(strings.ToLower(m.Name()), "send") && !takesChannelMessage(m) &&
+				slices.ContainsFunc(names[m.Name()], func(o types.Object) bool { return c.ioFuncs[o] }) {
+				c.sends[m] = true
+			}
 		}
 	}
-	return dirs
 }
 
-// isMessageSenderImpl is the SendMessage method taking a connector.ChannelMessage,
-// the one place a provider may transmit.
-func isMessageSenderImpl(fn *ast.FuncDecl) bool {
-	return fn.Recv != nil && fn.Name.Name == "SendMessage" && takesChannelMessage(fn.Type)
-}
-
-func takesChannelMessage(ft *ast.FuncType) bool {
-	for _, p := range ft.Params.List {
-		if sel, ok := p.Type.(*ast.SelectorExpr); ok && sel.Sel.Name == "ChannelMessage" {
+func takesChannelMessage(fn *types.Func) bool {
+	params := fn.Type().(*types.Signature).Params()
+	for i := range params.Len() {
+		if n, ok := params.At(i).Type().(*types.Named); ok && n.Obj().Name() == "ChannelMessage" {
 			return true
 		}
 	}
 	return false
 }
 
-// providerSendNames are the Send* methods and interface methods the provider
-// packages declare, apart from the MessageSender implementations themselves.
-func providerSendNames(corpus []chatSource, providers map[string]bool) map[string]bool {
-	names := map[string]bool{}
-	for _, src := range corpus {
-		if !providers[src.dir()] {
-			continue
-		}
-		ast.Inspect(src.file, func(n ast.Node) bool {
-			switch d := n.(type) {
-			case *ast.FuncDecl:
-				if d.Recv != nil && strings.HasPrefix(d.Name.Name, "Send") && !isMessageSenderImpl(d) {
-					names[d.Name.Name] = true
-				}
-			case *ast.InterfaceType:
-				for _, m := range d.Methods.List {
-					ft, ok := m.Type.(*ast.FuncType)
-					if !ok || len(m.Names) == 0 || !strings.HasPrefix(m.Names[0].Name, "Send") || takesChannelMessage(ft) {
-						continue
-					}
-					names[m.Names[0].Name] = true
-				}
-			}
-			return true
-		})
-	}
-	return names
+// isMessageSenderFunc is a SendMessage method taking a ChannelMessage.
+func isMessageSenderFunc(fn *types.Func) bool {
+	return fn.Name() == "SendMessage" && recvNamed(fn) != nil && takesChannelMessage(fn)
 }
 
-// providerHosts are the https hosts the provider packages name as their API.
-func providerHosts(corpus []chatSource, providers map[string]bool) map[string]string {
-	hosts := map[string]string{}
-	for _, src := range corpus {
-		if !providers[src.dir()] {
-			continue
-		}
-		for _, lit := range chatStringLiterals(src.file) {
-			if host := providerHost.FindString(lit); host != "" {
-				hosts[strings.TrimPrefix(host, "https://")] = src.dir()
-			}
+// deriveWriters finds the write methods of the activities Store by type.
+func (c *chatPackages) deriveWriters() {
+	p := c.pkgAt(activitiesDir)
+	if p == nil {
+		return
+	}
+	store, ok := p.types.Scope().Lookup("Store").(*types.TypeName)
+	if !ok {
+		return
+	}
+	ms := types.NewMethodSet(types.NewPointer(store.Type()))
+	for i := range ms.Len() {
+		fn, ok := ms.At(i).Obj().(*types.Func)
+		if ok && fn.Exported() && slices.ContainsFunc(activityWriterPrefixes, func(pre string) bool { return strings.HasPrefix(fn.Name(), pre) }) {
+			c.writers[fn.Origin()] = true
 		}
 	}
-	return hosts
 }
 
-func chatStringLiterals(file *ast.File) []string {
+// deriveTables builds the SQL pattern from the tables tableOwners gives the
+// activities module.
+func (c *chatPackages) deriveTables(t *testing.T) {
+	t.Helper()
+	var tables []string
+	for table, owner := range tableOwners {
+		if owner == activitiesDir {
+			tables = append(tables, regexp.QuoteMeta(table))
+		}
+	}
+	if len(tables) == 0 {
+		t.Fatal("tableOwners gives the activities module no table, so the SQL rule would read nothing")
+	}
+	sort.Strings(tables)
+	c.tables = regexp.MustCompile(`(?i)\b(insert\s+into|update|delete\s+from)\s+(` + strings.Join(tables, "|") + `)\b`)
+}
+
+// checkCensus fails when a derived set is smaller than a second source says.
+func (c *chatPackages) checkCensus(t *testing.T) {
+	t.Helper()
+	if len(c.vocab) == 0 {
+		t.Fatal("the connector declares no chat type, so no file would count as chat-speaking")
+	}
+	seeded := seededProviders(t)
+	subdirs := c.captureSubdirs()
+	want := 0
+	for name := range seeded {
+		if slices.ContainsFunc(subdirs, func(d string) bool { return strings.HasPrefix(name, d) }) {
+			want++
+		}
+	}
+	if want == 0 || len(c.providers) < want {
+		t.Fatalf("found %d provider packages, but the migrations seed %d providers that have a capture package: %v", len(c.providers), want, c.providers)
+	}
+	for dir := range c.providers {
+		found := false
+		for o := range c.sends {
+			found = found || (o.Pkg() != nil && o.Pkg().Path() == modulePath+"/"+dir)
+		}
+		if !found {
+			t.Errorf("%s has no send function found: the derivation reads less than it holds", dir)
+		}
+	}
+	if len(c.writers) == 0 {
+		t.Fatal("the activities Store has no write method, so the store rule would read nothing")
+	}
+	c.hostsFromProviders()
+	if len(c.hosts) < len(c.providers) {
+		t.Fatalf("found %d provider hosts for %d providers", len(c.hosts), len(c.providers))
+	}
+	resolver := c.pkgAt(path.Dir(chatSendResolver))
+	if resolver == nil || !slices.ContainsFunc(resolver.files, func(f *ast.File) bool { return c.file(f) == chatSendResolver }) {
+		t.Fatalf("%s is not in the module: the send path moved", chatSendResolver)
+	}
+}
+
+func (c *chatPackages) captureSubdirs() []string {
 	var out []string
-	ast.Inspect(file, func(n ast.Node) bool {
-		if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-			if v, err := strconv.Unquote(lit.Value); err == nil {
-				out = append(out, v)
-			}
+	for _, p := range c.pkgs {
+		if rest, ok := strings.CutPrefix(pkgDir(p), captureDir+"/"); ok && !strings.Contains(rest, "/") {
+			out = append(out, rest)
 		}
-		return true
-	})
+	}
 	return out
 }
 
-// activityStoreWriters are the exported write methods of the activities Store.
-func activityStoreWriters(corpus []chatSource) map[string]bool {
-	names := map[string]bool{}
-	for _, src := range corpus {
-		if src.dir() != activitiesDir {
-			continue
+func seededProviders(t *testing.T) map[string]bool {
+	t.Helper()
+	out := map[string]bool{}
+	err := gatekit.WalkDir("migrations/core", func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".up.sql") {
+			return err
 		}
-		for _, decl := range src.file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Recv == nil || !fn.Name.IsExported() || !chatReceiverIs(fn, "Store") {
+		for _, stmt := range channelProviderSeed.FindAllString(readGateFile(t, p), -1) {
+			for _, m := range seedQuotedName.FindAllStringSubmatch(stmt, -1) {
+				out[m[1]] = true
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("reading the channel_provider seeds: %v", err)
+	}
+	return out
+}
+
+func (c *chatPackages) hostsFromProviders() {
+	for dir := range c.providers {
+		p := c.pkgAt(dir)
+		for _, name := range p.types.Scope().Names() {
+			k, ok := p.types.Scope().Lookup(name).(*types.Const)
+			if !ok || k.Val().Kind() != constant.String {
 				continue
 			}
-			if slices.ContainsFunc(activityWriterPrefixes, func(p string) bool { return strings.HasPrefix(fn.Name.Name, p) }) {
-				names[fn.Name.Name] = true
+			if host := providerHost.FindString(constant.StringVal(k.Val())); host != "" {
+				c.hosts[strings.TrimPrefix(host, "https://")] = dir
 			}
 		}
 	}
-	return names
 }
 
-func chatReceiverIs(fn *ast.FuncDecl, name string) bool {
-	typ := fn.Recv.List[0].Type
-	if star, ok := typ.(*ast.StarExpr); ok {
-		typ = star.X
+// speaksChat reports whether a file uses chat vocabulary or a provider package.
+func (c *chatPackages) speaksChat(p typedPackage, f *ast.File) bool {
+	if _, ok := c.providers[pkgDir(p)]; ok {
+		return true
 	}
-	id, ok := typ.(*ast.Ident)
-	return ok && id.Name == name
+	found := false
+	ast.Inspect(f, func(n ast.Node) bool {
+		if id, ok := n.(*ast.Ident); ok {
+			if obj := p.info.Uses[id]; obj != nil && (c.vocab[obj] || c.providerObject(obj)) {
+				found = true
+			}
+		}
+		return !found
+	})
+	return found
 }
 
-// chatRecordFindings is rule one: a chat-speaking file outside the two shared
-// owners builds a record or upserts.
-func chatRecordFindings(src chatSource, vocabulary map[string]bool) []string {
-	if src.path == chatRecordOwner || src.path == sdkIngressMapping || src.dir() == chatVocabularyDir || !speaksChat(src.file, vocabulary) {
+func (c *chatPackages) providerObject(obj types.Object) bool {
+	if obj.Pkg() == nil {
+		return false
+	}
+	_, ok := c.providers[strings.TrimPrefix(obj.Pkg().Path(), modulePath+"/")]
+	return ok
+}
+
+func (c *chatPackages) findings() []string {
+	var out []string
+	for _, p := range c.pkgs {
+		for _, f := range p.files {
+			if !c.speaksChat(p, f) {
+				continue
+			}
+			out = append(out, c.recordFindings(p, f)...)
+			out = append(out, c.activityFindings(p, f)...)
+			out = append(out, c.sendFindings(p, f)...)
+		}
+	}
+	sort.Strings(out)
+	return slices.Compact(out)
+}
+
+func isNormalizedRecord(p typedPackage, e ast.Expr) bool {
+	tv, ok := p.info.Types[e]
+	if !ok {
+		return false
+	}
+	n, ok := types.Unalias(tv.Type).(*types.Named)
+	return ok && n.Obj().Name() == "NormalizedRecord" && n.Obj().Pkg() != nil && n.Obj().Pkg().Path() == modulePath+"/"+connectorDir
+}
+
+// isSinkUpsert reports a reference to Upsert of the connector's Sink or the capture Sink.
+func isSinkUpsert(fn *types.Func) bool {
+	if fn.Name() != "Upsert" {
+		return false
+	}
+	n := recvNamed(fn)
+	if n == nil || n.Obj().Pkg() == nil || n.Obj().Name() != "Sink" {
+		return false
+	}
+	pkg := strings.TrimPrefix(n.Obj().Pkg().Path(), modulePath+"/")
+	return pkg == connectorDir || pkg == captureDir
+}
+
+func (c *chatPackages) recordFindings(p typedPackage, f *ast.File) []string {
+	name := c.file(f)
+	if name == chatRecordOwner || name == sdkIngressMapping || pkgDir(p) == connectorDir {
 		return nil
 	}
 	var out []string
-	ast.Inspect(src.file, func(n ast.Node) bool {
+	ast.Inspect(f, func(n ast.Node) bool {
 		switch x := n.(type) {
 		case *ast.CompositeLit:
-			if chatTypeName(x.Type) == "NormalizedRecord" {
-				out = append(out, src.path+": builds a NormalizedRecord for a chat message; file it through capture.FileChatMessage")
+			if isNormalizedRecord(p, x) {
+				out = append(out, name+": constructs a NormalizedRecord for a chat message; file it through capture.FileChatMessage")
 			}
-		case *ast.CallExpr:
-			if sel, ok := x.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Upsert" {
-				out = append(out, src.path+": calls Sink.Upsert for a chat message; file it through capture.FileChatMessage")
+		case *ast.Ident:
+			if fn := funcOf(p.info.Uses[x]); fn != nil && isSinkUpsert(fn) {
+				out = append(out, name+": references Sink.Upsert for a chat message; file it through capture.FileChatMessage")
 			}
 		}
 		return true
@@ -379,79 +616,102 @@ func chatRecordFindings(src chatSource, vocabulary map[string]bool) []string {
 	return out
 }
 
-func chatTypeName(e ast.Expr) string {
-	switch x := e.(type) {
-	case *ast.Ident:
-		return x.Name
-	case *ast.SelectorExpr:
-		return x.Sel.Name
-	}
-	return ""
-}
-
-// chatActivityFindings is rule two: a chat-speaking file outside capture and the
-// activities module writes activity rows itself.
-func chatActivityFindings(src chatSource, vocabulary, writers map[string]bool) []string {
-	if src.dir() == chatWritersDir || src.dir() == activitiesDir || src.dir() == chatVocabularyDir || !speaksChat(src.file, vocabulary) {
+func (c *chatPackages) activityFindings(p typedPackage, f *ast.File) []string {
+	dir := pkgDir(p)
+	if dir == captureDir || dir == activitiesDir || dir == connectorDir {
 		return nil
 	}
+	name := c.file(f)
 	var out []string
-	for _, lit := range chatStringLiterals(src.file) {
-		if activitiesTableWrite.MatchString(lit) {
-			out = append(out, src.path+": writes the activities table for a chat message; capture.FileChatMessage and ChangeChatMessage own those rows")
-		}
-	}
-	ast.Inspect(src.file, func(n ast.Node) bool {
-		if call, ok := n.(*ast.CallExpr); ok {
-			if sel, ok := call.Fun.(*ast.SelectorExpr); ok && writers[sel.Sel.Name] {
-				out = append(out, src.path+": calls "+sel.Sel.Name+", a write of the activities store, for a chat message")
+	ast.Inspect(f, func(n ast.Node) bool {
+		if id, ok := n.(*ast.Ident); ok {
+			if fn := funcOf(p.info.Uses[id]); fn != nil && c.writers[fn] {
+				out = append(out, name+": references "+fn.Name()+", a write method of the activities store, for a chat message")
 			}
 		}
 		return true
 	})
+	for _, lit := range chatLiterals(p, f) {
+		if c.tables.MatchString(lit) {
+			out = append(out, name+": writes the table of an activity row for a chat message; capture owns those rows")
+		}
+	}
 	return out
 }
 
-// chatSendFindings is rule three: a provider's send API is reached only from
-// its own MessageSender, and no file outside the provider package names its host.
-func chatSendFindings(src chatSource, providers, sends map[string]bool, hosts map[string]string) []string {
-	var out []string
-	inProvider := providers[src.dir()]
+func (c *chatPackages) sendFindings(p typedPackage, f *ast.File) []string {
+	dir := pkgDir(p)
+	_, inProvider := c.providers[dir]
+	name := c.file(f)
 	importsProvider := false
-	for _, imp := range src.file.Imports {
-		if p, err := strconv.Unquote(imp.Path.Value); err == nil && providers[strings.TrimPrefix(p, backendImportBase)+"/"] {
-			importsProvider = true
+	for _, imp := range f.Imports {
+		if ip, err := strconv.Unquote(imp.Path.Value); err == nil {
+			_, ok := c.providers[strings.TrimPrefix(ip, modulePath+"/")]
+			importsProvider = importsProvider || ok
 		}
 	}
-	for _, decl := range src.file.Decls {
-		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Body == nil {
+	clientFile := inProvider && c.holdsDirectIO(p, f)
+	var out []string
+	for _, d := range f.Decls {
+		fd, ok := d.(*ast.FuncDecl)
+		if !ok || fd.Body == nil {
 			continue
 		}
-		allowed := inProvider && isMessageSenderImpl(fn)
-		ast.Inspect(fn.Body, func(n ast.Node) bool {
-			sel, ok := n.(*ast.SelectorExpr)
-			if !ok || !sends[sel.Sel.Name] || allowed {
+		self, _ := p.info.Defs[fd.Name].(*types.Func)
+		sender := self != nil && isMessageSenderFunc(self)
+		ast.Inspect(fd.Body, func(n ast.Node) bool {
+			id, ok := n.(*ast.Ident)
+			if !ok {
 				return true
 			}
-			// SendMessage is also the MessageSender method every sender is called by,
-			// so outside a provider package it counts only when the file imports one.
-			if sel.Sel.Name == "SendMessage" && !inProvider && !importsProvider {
-				return true
+			obj := p.info.Uses[id]
+			fn := funcOf(obj)
+			switch {
+			case fn != nil && inProvider && c.providerObject(fn) && (c.direct[fn] || c.sends[fn]):
+				if !sender && !clientFile {
+					out = append(out, name+": reaches "+fn.Name()+", which sends to the provider, outside its MessageSender and its client files")
+				}
+			case fn != nil && !inProvider && c.sends[fn] && (importsProvider || fn.Name() != "SendMessage"):
+				out = append(out, name+": reaches the provider send method "+fn.Name()+" outside a connector.MessageSender; send through the sender compose/commschannel.go resolves")
 			}
-			out = append(out, src.path+": reaches the provider send method "+sel.Sel.Name+
-				" outside a connector.MessageSender; send through the sender compose/commschannel.go resolves")
+			if k, ok := obj.(*types.Const); ok && !inProvider && c.providerObject(k) && k.Val().Kind() == constant.String && providerHost.MatchString(constant.StringVal(k.Val())) {
+				out = append(out, name+": uses the provider host constant "+k.Name()+" outside its package")
+			}
 			return true
 		})
 	}
 	if !inProvider {
-		for _, lit := range chatStringLiterals(src.file) {
-			for host, owner := range hosts {
+		for _, lit := range chatLiterals(p, f) {
+			for host, owner := range c.hosts {
 				if strings.Contains(lit, host) {
-					out = append(out, src.path+": names the provider host "+host+", which only "+owner+" calls")
+					out = append(out, name+": names the provider host "+host+", which only "+owner+" calls")
 				}
 			}
 		}
 	}
+	return out
+}
+
+// holdsDirectIO reports whether the file declares a function that calls net/http
+// itself or a send function. Such a file is the provider's client code.
+func (c *chatPackages) holdsDirectIO(p typedPackage, f *ast.File) bool {
+	for _, d := range f.Decls {
+		if fd, ok := d.(*ast.FuncDecl); ok && (c.direct[p.info.Defs[fd.Name]] || c.sends[p.info.Defs[fd.Name]]) {
+			return true
+		}
+	}
+	return false
+}
+
+func chatLiterals(p typedPackage, f *ast.File) []string {
+	var out []string
+	ast.Inspect(f, func(n ast.Node) bool {
+		if e, ok := n.(ast.Expr); ok {
+			if tv, ok := p.info.Types[e]; ok && tv.Value != nil && tv.Value.Kind() == constant.String {
+				out = append(out, constant.StringVal(tv.Value))
+			}
+		}
+		return true
+	})
 	return out
 }

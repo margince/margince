@@ -13,14 +13,18 @@ package channels
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
@@ -175,6 +179,90 @@ func assertFiledOnce(t *testing.T, c *telegramEnv, n webhookNetwork, msgID strin
 	}
 }
 
+// filingHoldKey is the advisory lock the filing hold waits on.
+const filingHoldKey = 7770001
+
+// holdFilingUntilOverlap holds the first filing transaction open at its event
+// insert, until a second worker is observably waiting on a lock of its own. The
+// first worker already holds the lock of the message key by then, so the second
+// is inside filing the same message. Release lets both go.
+func holdFilingUntilOverlap(t *testing.T) (overlapped, release func()) {
+	t.Helper()
+	ctx := context.Background()
+	holder, watcher, owner := integration.FreshOwnerConn(t), integration.FreshOwnerConn(t), integration.OwnerConn(t)
+	if _, err := holder.Exec(ctx, `SELECT pg_advisory_lock($1)`, filingHoldKey); err != nil {
+		t.Fatalf("taking the hold: %v", err)
+	}
+	for _, stmt := range []string{
+		`CREATE OR REPLACE FUNCTION chat_recovery_hold() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_advisory_xact_lock(7770001); RETURN NEW; END $$`,
+		`CREATE TRIGGER chat_recovery_hold BEFORE INSERT ON event_outbox FOR EACH ROW WHEN (NEW.envelope->'actor'->>'type' = 'connector') EXECUTE FUNCTION chat_recovery_hold()`,
+	} {
+		if _, err := owner.Exec(ctx, stmt); err != nil {
+			t.Fatalf("arming the hold: %v", err)
+		}
+	}
+	released := false
+	release = func() {
+		if released {
+			return
+		}
+		released = true
+		if _, err := holder.Exec(ctx, `SELECT pg_advisory_unlock($1)`, filingHoldKey); err != nil {
+			t.Errorf("releasing the hold: %v", err)
+		}
+		for _, stmt := range []string{`DROP TRIGGER IF EXISTS chat_recovery_hold ON event_outbox`, `DROP FUNCTION IF EXISTS chat_recovery_hold()`} {
+			if _, err := integration.OwnerConn(t).Exec(ctx, stmt); err != nil {
+				t.Errorf("lifting the hold: %v", err)
+			}
+		}
+	}
+	t.Cleanup(release)
+	overlapped = func() {
+		t.Helper()
+		limit, cancel := context.WithTimeout(ctx, 60*time.Second)
+		defer cancel()
+		for {
+			var held, other int
+			if err := watcher.QueryRow(ctx, `SELECT count(*) FILTER (WHERE objid = $1), count(*) FILTER (WHERE objid <> $1)
+				FROM pg_locks WHERE locktype = 'advisory' AND NOT granted`, filingHoldKey).Scan(&held, &other); err != nil {
+				t.Fatalf("reading the waiting locks: %v", err)
+			}
+			if held >= 1 && other >= 1 {
+				return
+			}
+			if limit.Err() != nil {
+				t.Fatalf("%d workers wait on the hold and %d on another lock: no second worker entered filing while the first held it", held, other)
+			}
+			if _, err := watcher.Exec(ctx, `SELECT pg_sleep(0.05)`); err != nil {
+				t.Fatalf("waiting to look again: %v", err)
+			}
+		}
+	}
+	return overlapped, release
+}
+
+// startWorkerWhileHeld starts the runner without waiting for its start to
+// return, because a held job can slow the start on a loaded machine. The
+// returned function waits for the start once the hold is released.
+func startWorkerWhileHeld(t *testing.T, runner *jobs.Runner) (started func()) {
+	t.Helper()
+	errc := make(chan error, 1)
+	go func() { errc <- runner.Start(context.Background()) }()
+	t.Cleanup(func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := runner.Stop(stopCtx); err != nil {
+			t.Errorf("stopping the worker: %v", err)
+		}
+	})
+	return func() {
+		t.Helper()
+		if err := <-errc; err != nil {
+			t.Fatalf("starting the worker: %v", err)
+		}
+	}
+}
+
 func TestTheSameMessageRunByTwoWorkersAtOnceFilesOnce(t *testing.T) {
 	for _, n := range webhookNetworks() {
 		t.Run(n.name, func(t *testing.T) {
@@ -193,7 +281,11 @@ func TestTheSameMessageRunByTwoWorkersAtOnceFilesOnce(t *testing.T) {
 					t.Fatalf("queueing a second run of the same item: %v", err)
 				}
 			}
-			startTelegramWorker(t, runner)
+			overlapped, release := holdFilingUntilOverlap(t)
+			started := startWorkerWhileHeld(t, runner)
+			overlapped()
+			release()
+			started()
 			for range copies + 1 {
 				n.await(t, sub)
 			}
@@ -247,7 +339,7 @@ func failEventOutbox(t *testing.T) (lift func()) {
 	ctx := context.Background()
 	for _, stmt := range []string{
 		`CREATE OR REPLACE FUNCTION chat_recovery_fault() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected commit fault'; END $$`,
-		`CREATE TRIGGER chat_recovery_fault BEFORE INSERT ON event_outbox FOR EACH ROW EXECUTE FUNCTION chat_recovery_fault()`,
+		`CREATE TRIGGER chat_recovery_fault BEFORE INSERT ON event_outbox FOR EACH ROW WHEN (NEW.envelope->'actor'->>'type' = 'connector') EXECUTE FUNCTION chat_recovery_fault()`,
 	} {
 		if _, err := conn.Exec(ctx, stmt); err != nil {
 			t.Fatalf("arming the commit fault: %v", err)
@@ -275,10 +367,11 @@ func failEventOutbox(t *testing.T) (lift func()) {
 
 func awaitJobFailure(t *testing.T, failed <-chan *river.Event, kind string) {
 	t.Helper()
-	timeout := time.After(60 * time.Second)
+	limit, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	for {
 		select {
-		case <-timeout:
+		case <-limit.Done():
 			t.Fatalf("timed out waiting for a %s job to fail", kind)
 		case ev := <-failed:
 			if ev != nil && ev.Job != nil && ev.Job.Kind == kind {
@@ -288,30 +381,167 @@ func awaitJobFailure(t *testing.T, failed <-chan *river.Event, kind string) {
 	}
 }
 
+// runnerBookkeeping are the tables the worker role writes on start-up and on its
+// own schedule, whatever a test delivers. Measured on a runner that was given no
+// message: its rows change while the runner runs, so counting them says nothing
+// about a filing. The audit log and the event outbox are counted for the connector
+// alone, which is the actor of a filing. The audit log leaves out the
+// connection's own rows, which the Zalo token renewal writes on start-up.
+var runnerBookkeeping = []string{"brief_run", "capture_sweep_run", "data_task_run", "installation_state", "system_log"}
+
+// tableCounts counts the rows a filing could write, in every table apart from
+// the job queue's own and the runner's bookkeeping.
+func (c *telegramEnv) tableCounts(t *testing.T) map[string]int {
+	t.Helper()
+	counts := map[string]int{}
+	err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
+		rows, err := tx.Query(context.Background(), `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename NOT LIKE 'river%'`)
+		if err != nil {
+			return err
+		}
+		tables, err := pgx.CollectRows(rows, pgx.RowTo[string])
+		if err != nil {
+			return err
+		}
+		for _, name := range tables {
+			if slices.Contains(runnerBookkeeping, name) {
+				continue
+			}
+			query := `SELECT count(*) FROM ` + pgx.Identifier{name}.Sanitize()
+			switch name {
+			case "audit_log":
+				query += ` WHERE actor_type = 'connector' AND entity_type <> 'channel_connection'`
+			case "event_outbox":
+				query += ` WHERE envelope->'actor'->>'type' = 'connector'`
+			}
+			var n int
+			if err := tx.QueryRow(context.Background(), query).Scan(&n); err != nil {
+				return err
+			}
+			counts[name] = n
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("counting the rows of every table: %v", err)
+	}
+	return counts
+}
+
+// countDelta is what changed between two counts, by table.
+func countDelta(after, before map[string]int) map[string]int {
+	delta := map[string]int{}
+	for table, n := range after {
+		if n != before[table] {
+			delta[table] = n - before[table]
+		}
+	}
+	return delta
+}
+
+// assertJobsCompleted checks the queue holds want jobs of the kind, all completed.
+func (c *telegramEnv) assertJobsCompleted(t *testing.T, kind string, want int) {
+	t.Helper()
+	var total, done int
+	if err := c.Pool.QueryRow(context.Background(),
+		`SELECT count(*), count(*) FILTER (WHERE state = 'completed') FROM river_job WHERE kind = $1`, kind).Scan(&total, &done); err != nil {
+		t.Fatalf("reading the %s jobs: %v", kind, err)
+	}
+	if total != want || done != want {
+		t.Errorf("%d %s jobs, %d completed, want %d of each", total, kind, done, want)
+	}
+}
+
+// filingRows is what one run of a stored message added to the tables. Mid is the
+// state after a failed first run, nil when the run did not fail. Final is the
+// state once the message filed.
+type filingRows struct {
+	mid, final map[string]int
+	audit      []string
+}
+
+// connectorAudit lists the connector's audit rows by entity and action.
+func (c *telegramEnv) connectorAudit(t *testing.T) []string {
+	t.Helper()
+	var out []string
+	err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
+		rows, err := tx.Query(context.Background(), `SELECT entity_type || ':' || action FROM audit_log WHERE actor_type = 'connector' AND entity_type <> 'channel_connection' ORDER BY id`)
+		if err != nil {
+			return err
+		}
+		out, err = pgx.CollectRows(rows, pgx.RowTo[string])
+		return err
+	})
+	if err != nil {
+		t.Fatalf("listing the connector's audit rows: %v", err)
+	}
+	return out
+}
+
+// onlyTables keeps the counts of the named tables.
+func onlyTables(counts, tables map[string]int) map[string]int {
+	out := map[string]int{}
+	for table := range tables {
+		out[table] = counts[table]
+	}
+	return out
+}
+
+// failingFiling runs one stored message to its filing, with or without a fault
+// on its first run.
+func failingFiling(t *testing.T, n webhookNetwork, fault bool) filingRows {
+	t.Helper()
+	c := n.setup(t)
+	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
+	failed, cancelFailed := runner.SubscribeFailed()
+	t.Cleanup(cancelFailed)
+	acct := n.connect(t, c, "8103")
+	acct.in(t, "retry-1", "one message")
+	before := c.tableCounts(t)
+	var rows filingRows
+	if fault {
+		lift := failEventOutbox(t)
+		startTelegramWorker(t, runner)
+		awaitJobFailure(t, failed, n.job)
+		rows.mid = countDelta(c.tableCounts(t), before)
+		lift()
+	} else {
+		startTelegramWorker(t, runner)
+	}
+	n.await(t, sub)
+	c.assertJobsCompleted(t, n.job, 1)
+	rows.final = countDelta(c.tableCounts(t), before)
+	rows.audit = c.connectorAudit(t)
+	return rows
+}
+
+// assertRetryMatchesCleanRun compares a failed run and its retry with a clean
+// run. The tables a filing writes are the ones the clean run changed. The failed
+// run must have changed none of them, and the retry must have changed each by the
+// same count as the clean run.
+func assertRetryMatchesCleanRun(t *testing.T, clean, retried filingRows, storedBeforeRun ...string) {
+	t.Helper()
+	if clean.final["activity"] != 1 {
+		t.Fatalf("a clean run added %d activities, want 1 (%v)", clean.final["activity"], clean.final)
+	}
+	for table, n := range onlyTables(retried.mid, clean.final) {
+		if n != 0 && !slices.Contains(storedBeforeRun, table) {
+			t.Errorf("a failed run left %d rows in %s, want none", n, table)
+		}
+	}
+	if got := onlyTables(retried.final, clean.final); !maps.Equal(got, clean.final) {
+		t.Errorf("a failed run and its retry added %v, but a clean run adds %v\nconnector audit rows, retried: %v, clean: %v",
+			got, clean.final, retried.audit, clean.audit)
+	}
+}
+
 func TestAnIngestThatFailsMidFilingLeavesNothingAndItsRetryFilesOnce(t *testing.T) {
 	for _, n := range webhookNetworks() {
 		t.Run(n.name, func(t *testing.T) {
-			c := n.setup(t)
-			runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
-			failed, cancelFailed := runner.SubscribeFailed()
-			t.Cleanup(cancelFailed)
-			acct := n.connect(t, c, "8103")
-			contactsBefore := c.contacts(t)
-			acct.in(t, "retry-1", "one message")
-			lift := failEventOutbox(t)
-
-			startTelegramWorker(t, runner)
-			awaitJobFailure(t, failed, n.job)
-			if a, ct := n.activities(c, t), c.contacts(t)-contactsBefore; a != 0 || ct != 0 {
-				t.Errorf("a failed run left %d activities and %d contacts, want none", a, ct)
-			}
-			if got := n.raw(c, t); got != 1 {
-				t.Fatalf("a failed run left %d raw originals, want the one the retry reads", got)
-			}
-
-			lift()
-			n.await(t, sub)
-			assertFiledOnce(t, c, n, "retry-1", contactsBefore)
+			var clean, retried filingRows
+			t.Run("clean", func(t *testing.T) { clean = failingFiling(t, n, false) })
+			t.Run("faulty", func(t *testing.T) { retried = failingFiling(t, n, true) })
+			assertRetryMatchesCleanRun(t, clean, retried)
 		})
 	}
 }
@@ -411,27 +641,55 @@ func TestATelegramOwnersReplyThatArrivesBeforeTheCustomerMessageFilesInOneThread
 	}
 }
 
-// A first run fails after part of its work. Three more runs of the same item are
-// queued while the fault holds. Once the fault lifts, the runs retry together and
-// must end as one filed message.
-func TestATelegramUpdateThatFailsMidFilingAndIsRunAgainByAFewWorkersFilesOnce(t *testing.T) {
+// telegramFiling runs one business message to its filing, with or without a
+// fault on the first run.
+func telegramFiling(t *testing.T, fault bool) filingRows {
+	t.Helper()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	failed, cancelFailed := runner.SubscribeFailed()
 	t.Cleanup(cancelFailed)
 	c.link(t, 880041, "bc-retry", "connected")
-	lift := failEventOutbox(t)
-	startTelegramWorker(t, runner)
 	m := businessMessage{updateID: 7601, messageID: 31, chatID: 990007, fromID: 990007, connection: "bc-retry", text: "one message"}
+	before := c.tableCounts(t)
+	var lift func()
+	if fault {
+		lift = failEventOutbox(t)
+	}
+	startTelegramWorker(t, runner)
+	c.api.hold(m.body(t))
+	c.pollNow(t, sub, m.updateID+1)
+	var rows filingRows
+	if fault {
+		awaitJobFailure(t, failed, compose.TelegramIngestArgs{}.Kind())
+		rows.mid = countDelta(c.tableCounts(t), before)
+		lift()
+	}
+	awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
+	c.assertJobsCompleted(t, compose.TelegramIngestArgs{}.Kind(), 1)
+	rows.final = countDelta(c.tableCounts(t), before)
+	rows.audit = c.connectorAudit(t)
+	return rows
+}
+
+func TestATelegramUpdateThatFailsMidFilingLeavesNothingAndItsRetryFilesOnce(t *testing.T) {
+	var clean, retried filingRows
+	t.Run("clean", func(t *testing.T) { clean = telegramFiling(t, false) })
+	t.Run("faulty", func(t *testing.T) { retried = telegramFiling(t, true) })
+	assertRetryMatchesCleanRun(t, clean, retried, "raw_capture")
+}
+
+func TestATelegramUpdateRunByTwoWorkersAtOnceFilesOnce(t *testing.T) {
+	c := setupTelegramConnected(t)
+	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
+	c.link(t, 880042, "bc-twice", "connected")
+	m := businessMessage{updateID: 7602, messageID: 32, chatID: 990008, fromID: 990008, connection: "bc-twice", text: "one message"}
 	contactsBefore := c.contacts(t)
+	overlapped, release := holdFilingUntilOverlap(t)
+	startTelegramWorker(t, runner)
 
 	c.api.hold(m.body(t))
 	c.pollNow(t, sub, m.updateID+1)
-	awaitJobFailure(t, failed, compose.TelegramIngestArgs{}.Kind())
-	if a := c.activitiesOnBot(t); a != 0 {
-		t.Fatalf("a failed run left %d activities, want none", a)
-	}
-
 	queued := c.storedJobArgs(t, compose.TelegramIngestArgs{}.Kind())
 	if len(queued) != 1 {
 		t.Fatalf("%d ingest jobs queued by one update, want 1", len(queued))
@@ -446,12 +704,13 @@ func TestATelegramUpdateThatFailsMidFilingAndIsRunAgainByAFewWorkersFilesOnce(t 
 			t.Fatalf("queueing another run of the same update: %v", err)
 		}
 	}
-	lift()
+	overlapped()
+	release()
 	for range copies + 1 {
 		awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
 	}
 
-	filed, ok := c.filed(t, m.sourceID(880041))
+	filed, ok := c.filed(t, m.sourceID(880042))
 	if !ok {
 		t.Fatal("the update was not filed")
 	}
