@@ -119,8 +119,8 @@ is. A value the document prints in words or figures you can quote is 0.9 or high
 only when the wording leaves it open what the value is.
 
 The close date is the day the document says the deal takes effect: the deadline to countersign,
-accept or return it, or the day it says charges begin. A date that fits this is a printed value like any other and scores like one, so "charges begin on
-cutover, 15 March 2027" gives a close date of 2027-03-15 at 0.9 or higher.
+accept or return it, or the day it says charges begin. When it prints both, the deadline is the close date, and the day charges begin is the close date only when no such deadline is printed. A date that fits this is a printed value like any other and scores like one, so "charges begin on
+cutover, 15 March 2027" with no deadline gives a close date of 2027-03-15 at 0.9 or higher.
 A term or a notice period is a length of time and is never a close date.
 
 The name is decided by what the document records:
