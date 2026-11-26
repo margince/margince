@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"slices"
 	"time"
 
 	"golang.org/x/sync/semaphore"
@@ -56,11 +57,11 @@ func faultOf(id string, err error) error {
 	return err
 }
 
-// stalledFault says the error is a fetch fault of the message the engine
+// stalledFault says the error is a fetch fault of a message the engine
 // asked the page to walk past.
-func stalledFault(err error, skipID string) bool {
+func stalledFault(err error, skipIDs []string) bool {
 	var mf *connector.MessageFaultError
-	return skipID != "" && errors.As(err, &mf) && mf.ID == skipID
+	return errors.As(err, &mf) && slices.Contains(skipIDs, mf.ID)
 }
 
 // walk answers the page's page size and its walk, tuned by the installation.
@@ -117,8 +118,8 @@ func (c *Connector) backfillPageWith(
 		return connector.BackfillPageResult{}, err
 	}
 	pageSize, walk := c.walk()
-	skipID := connector.BackfillSkipFrom(ctx)
-	walk.Halts = func(err error) bool { return !errors.Is(err, connector.ErrSkip) && !stalledFault(err, skipID) }
+	skipIDs := connector.BackfillSkipFrom(ctx)
+	walk.Halts = func(err error) bool { return !errors.Is(err, connector.ErrSkip) && !stalledFault(err, skipIDs) }
 	msgs, next, err := c.api.ListAfter(ctx, access, after, pageToken, pageSize)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
@@ -148,7 +149,7 @@ func (c *Connector) backfillPageWith(
 			switch {
 			case err == nil:
 				failedInRow = 0
-			case endsPage(ctx, err) && (ctx.Err() != nil || !stalledFault(err, skipID)):
+			case endsPage(ctx, err) && (ctx.Err() != nil || !stalledFault(err, skipIDs)):
 				return err
 			default:
 				// One message the capture refuses is walked past and counted;

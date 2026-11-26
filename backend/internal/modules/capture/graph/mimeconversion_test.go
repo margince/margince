@@ -76,3 +76,20 @@ func TestBackfillPageStillEndsOnAnotherMessagesFault(t *testing.T) {
 		t.Fatalf("want the page to end, got %v", err)
 	}
 }
+
+// Two messages that both fail are each walked past once the engine names both.
+func TestBackfillPageWalksPastEveryStalledMessage(t *testing.T) {
+	api := &fakeAPI{
+		listIDs:   []string{"m1", "m2", "m3"},
+		raws:      map[string][]byte{"m1": rawMsg("a@mail.example", "good@acme.com")},
+		getErrIDs: map[string]error{"m2": serverFault(), "m3": serverFault()},
+	}
+	ctx := connector.WithBackfillSkip(context.Background(), "m2", "m3")
+	res, err := pinnedConn(api).BackfillPage(ctx, authBytes(t), time.Time{}, "", &recordingSink{})
+	if err != nil {
+		t.Fatalf("the stalled messages must not end the page: %v", err)
+	}
+	if res.Scanned != 3 || res.Captured != 1 || res.Failed != 2 {
+		t.Fatalf("tally = %+v, want scanned=3 captured=1 failed=2", res)
+	}
+}

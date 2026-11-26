@@ -5,17 +5,19 @@ package capture
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-func TestBackfillStallReadsTheMessageAndItsStrikes(t *testing.T) {
-	if id, n := backfillStall([]byte(`{"page_token":"p","stall_id":"m1","stall_count":3}`)); id != "m1" || n != backfillMessageStrikes {
-		t.Fatalf("got %q %d", id, n)
+func TestBackfillStalledKeepsEveryMessageAtTheStrikeLimit(t *testing.T) {
+	got := backfillStalled([]byte(`{"page_token":"p","stalls":{"b":3,"a":4,"c":2}}`))
+	if !slices.Equal(got, []string{"a", "b"}) {
+		t.Fatalf("got %q", got)
 	}
-	if id, n := backfillStall(nil); id != "" || n != 0 {
-		t.Fatalf("no cursor must read as no stall, got %q %d", id, n)
+	if got := backfillStalled(nil); got != nil {
+		t.Fatalf("no cursor must read as no stall, got %q", got)
 	}
 }
 

@@ -165,17 +165,17 @@ func (e *MessageFaultError) Unwrap() error { return e.Err }
 // backfillSkipKey is the private context key for the message to walk past.
 type backfillSkipKey struct{}
 
-// WithBackfillSkip tells the page to walk past the message with this id when
-// its fetch fails, counting it in Failed instead of ending the page. The
-// engine sets it once the message has failed several attempts in a row.
-func WithBackfillSkip(ctx context.Context, id string) context.Context {
-	return context.WithValue(ctx, backfillSkipKey{}, id)
+// WithBackfillSkip tells the page to walk past the messages with these ids
+// when their fetch fails, counting each in Failed instead of ending the page.
+// The engine sets it once a message has failed several attempts of the page.
+func WithBackfillSkip(ctx context.Context, ids ...string) context.Context {
+	return context.WithValue(ctx, backfillSkipKey{}, ids)
 }
 
-// BackfillSkipFrom returns the id WithBackfillSkip set, or "".
-func BackfillSkipFrom(ctx context.Context) string {
-	id, _ := ctx.Value(backfillSkipKey{}).(string)
-	return id
+// BackfillSkipFrom returns the ids WithBackfillSkip set, or nil.
+func BackfillSkipFrom(ctx context.Context) []string {
+	ids, _ := ctx.Value(backfillSkipKey{}).([]string)
+	return ids
 }
 
 // Container qualifies one provider container for NormalizedRecord.Containers
