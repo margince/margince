@@ -560,7 +560,7 @@ func TestARefusedBaseCurrencyCarriesTheFactsTheReadShows(t *testing.T) {
 		message string
 	}{
 		"a converted deal": {convertADeal, "rates_frozen", false, "1 record(s) (closed deals: 1) have already frozen"},
-		"a priced sheet":   {priceTheSheet, "rate_sheet", true, "clear the rate sheet"},
+		"a priced sheet":   {priceTheSheet, "rate_sheet", true, "remove every currency from the rate sheet"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := apptest.SetupApp(t)

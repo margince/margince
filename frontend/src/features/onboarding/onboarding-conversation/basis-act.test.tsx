@@ -5,7 +5,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
-import { type Locale, LocaleProvider } from "../../../i18n";
+import { type Locale, LocaleProvider, translatePlural } from "../../../i18n";
 import {
   installFetchStub,
   jsonResponse,
@@ -180,8 +180,12 @@ describe("BasisAct", () => {
     await user.type(currency, "chf");
     await user.click(screen.getByRole("button", { name: "Weiter" }));
 
-    const sentence =
-      "2 Wechselkurse rechnen in EUR um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.";
+    const sentence = translatePlural(
+      "de",
+      "installationSettings.baseCurrencyLock.rateSheet",
+      2,
+      { count: "2", base: "EUR" },
+    );
     const refusal = await screen.findByText(sentence);
     expect(refusal).toHaveClass("field-error");
     expect(currency).toHaveAttribute("aria-invalid", "true");
