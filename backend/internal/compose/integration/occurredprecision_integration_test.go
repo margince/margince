@@ -8,6 +8,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"testing"
 	"time"
@@ -264,9 +265,7 @@ func TestADealSaysWhetherItsLastActivityIsADay(t *testing.T) {
 		dealID := newDeal("Deal read as " + want)
 		note := AnyMap{"kind": "note", "subject": "Met at the fair", "source": "manual",
 			"links": []AnyMap{{"entity_type": "deal", "entity_id": dealID}}}
-		for key, value := range when {
-			note[key] = value
-		}
+		maps.Copy(note, when)
 		mustCall(t, e, "POST", "/v1/activities", note, http.StatusCreated, nil)
 		var deal struct {
 			Precision string `json:"last_activity_precision"`

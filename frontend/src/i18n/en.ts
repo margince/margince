@@ -4,6 +4,7 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
+  "systemJob.google_directory": "Reading a member’s Google groups",
   "systemJob.legal_review_desk": "Legal review desk",
   "systemJob.import_identity_links": "Attaching imported mail links",
   "systemJob.history_narrowing": "Narrowing earlier mail",
@@ -2351,7 +2352,7 @@ export const en = {
   "systemJob.technical_lookup": "Company technical lookup",
   "systemJob.vatcheck": "VAT number check",
   "systemJob.weekly_review": "Weekly review",
-  "agentJob.agent_task_retention": "Agent task cleanup",
+  "systemJob.agent_task_retention": "Agent task cleanup",
   "agentJob.attachment_extractor": "Attachment reader",
   "agentJob.auto_apply": "Automatic approval",
   "agentJob.margince": "Margince",
@@ -2368,7 +2369,7 @@ export const en = {
   "agentJob.deepread": "Website reader",
   "agentJob.document_extractor": "Document reader",
   "agentJob.enrich": "Signature reader",
-  "agentJob.idempotency_retention": "Request record cleanup",
+  "systemJob.idempotency_retention": "Request record cleanup",
   "agentJob.knowledge_ingest": "Knowledge import",
   "agentJob.lifecycle_change": "Lifecycle update",
   "agentJob.offer_drafting": "Offer drafting",
@@ -3602,6 +3603,10 @@ export const en = {
   "state.staleAsOf": "Last known values, as of {when}",
   "state.partial": "Showing part of the list",
   "state.partialCount": "{count} more not shown",
+  "state.hidden_one": "{count} more you cannot see.",
+  "state.hidden_other": "{count} more you cannot see.",
+  "state.hiddenAsk_one": "{count} more you cannot see. Ask {names}.",
+  "state.hiddenAsk_other": "{count} more you cannot see. Ask {names}.",
   // The opened file. `FilePreview` is a design-system control every surface
   // that draws a file card can open, so its words belong to the control rather
   // than to any one screen â the same three verbs stand over a contract on an
@@ -17378,7 +17383,7 @@ export const en = {
     "Signing in with a password will require setting up two-step sign-in for this account too.",
   "groupRoles.title": "Group role grants",
   "groupRoles.sub":
-    "When someone you invited signs in with Google or Microsoft, they get the role mapped to a group they belong to in your company directory. Nobody gets in without an invitation.",
+    "When someone you invited signs in with Microsoft, they get the role mapped to a group they belong to in your company directory. Google does not send groups, so for Google the map works once the Google group lookup below is connected. Nobody gets in without an invitation.",
   "groupRoles.grantOnlyTitle": "Groups only ever add a role",
   "groupRoles.grantOnly":
     "Taking someone out of a directory group does not take the role away here. Change it on their entry in Members.",
@@ -17398,6 +17403,36 @@ export const en = {
     "A group name cannot begin or end with a space. It must match your directory exactly.",
   "groupRoles.duplicateGroup": "Each group can be mapped only once.",
   "groupRoles.tooMany": "At most 64 groups can be mapped.",
+  "googleDirectory.title": "Google group lookup",
+  "googleDirectory.sub":
+    "Google’s sign-in does not send a member’s groups. This connection reads them from your Google directory when a member signs in with Google. Create a service account, give it domain-wide delegation for the read-only directory group scope, and store its key here with the address of a Google admin it acts for. Google names a group by its email address, so map groups above exactly as Google lists them, for example sales@example.com. Only groups a member belongs to directly count, not groups nested inside other groups.",
+  "googleDirectory.state.none":
+    "Not connected. Members who sign in with Google get no roles from the map.",
+  "googleDirectory.state.unchecked": "Connected. No lookup has run yet.",
+  "googleDirectory.state.ok": "Connected. The last lookup worked on {time}.",
+  "googleDirectory.state.failedTitle":
+    "The last Google lookup failed on {time}",
+  "googleDirectory.state.failedEffect":
+    "Until this is fixed, members who sign in with Google get no roles from the map. Nobody loses a role they already hold.",
+  "googleDirectory.reason.key_invalid":
+    "The stored key file cannot be used to sign requests. Store the key again.",
+  "googleDirectory.reason.delegation_refused":
+    "Google refused the delegation. Check that the service account’s client ID has domain-wide delegation for the read-only directory group scope, and that the admin address is right.",
+  "googleDirectory.reason.permission_denied":
+    "Google refused to list groups. The admin address must belong to an admin of your Google domain who can read groups.",
+  "googleDirectory.reason.member_not_found":
+    "Google does not know the address of the member who signed in.",
+  "googleDirectory.reason.timeout": "Google did not answer in time.",
+  "googleDirectory.reason.unavailable":
+    "Google could not be reached or is limiting requests.",
+  "googleDirectory.reason.bad_answer":
+    "Google answered in a form this server cannot read.",
+  "googleDirectory.admin": "Google admin the key acts for",
+  "googleDirectory.adminHint":
+    "The service account reads the directory as this admin. Use the address of a real Google admin.",
+  "googleDirectory.needBoth": "Add the key file and the admin address.",
+  "googleDirectory.save": "Check and store",
+  "googleDirectory.remove": "Remove connection",
   "oauthApp.google.title": "Google app",
   "oauthApp.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",

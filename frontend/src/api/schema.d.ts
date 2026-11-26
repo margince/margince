@@ -15859,6 +15859,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/installation/authentication-policy/google-directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether the Google directory connection is set up, and how its last check went.
+         * @description The group→role map reads a Google member's groups from the Workspace Directory API,
+         *     because Google's ID tokens carry none. This says whether the credential that does it
+         *     is stored and how the last lookup went. The key and the admin address have no read
+         *     path: nothing here returns either.
+         *
+         *     `last_result` and `last_reason` describe the newest check: a sign-in lookup that
+         *     failed, a lookup that ended a run of failures, or the check made when the credential
+         *     was stored. Both are absent before any check. A failed lookup never fails the
+         *     sign-in, so this is where an operator sees that members are signing in without the
+         *     roles their groups map to.
+         *
+         *     Governed by `authentication_policy` read. Human-only.
+         */
+        get: operations["getGoogleDirectory"];
+        /**
+         * Store or replace the Google directory credential.
+         * @description Seals a Google service-account key and the admin address it acts for in the key
+         *     vault, replacing any earlier credential. The old sealed copy is destroyed after the
+         *     new one is in place.
+         *
+         *     The credential is checked before it is sealed: Google must exchange the key for a
+         *     token under domain-wide delegation with the one read-only scope
+         *     `https://www.googleapis.com/auth/admin.directory.group.readonly`, and answer a group
+         *     read for the admin address. A credential that fails is a 422 naming what to fix,
+         *     never echoing the key, and nothing is stored.
+         *
+         *     `service_account_json` and `admin_subject` are write-only. Takes effect on the next
+         *     Google sign-in, without a restart.
+         *
+         *     Requires a key vault; without one the answer is 503. 409 when a boot source sets the
+         *     credential. Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        put: operations["setGoogleDirectory"];
+        post?: never;
+        /**
+         * Remove the Google directory credential.
+         * @description Drops the reference and destroys the sealed credential. Removing one that was never
+         *     stored succeeds, so a retry is safe. Google members then sign in as before the
+         *     connection existed: the map grants them nothing.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        delete: operations["deleteGoogleDirectory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/installation/settings": {
         parameters: {
             query?: never;
@@ -29773,6 +29830,35 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** @description Whether the Google directory credential is stored and how the newest check went. Carries neither the key nor the admin address. */
+        GoogleDirectoryStatus: {
+            /** @description A credential is stored, or a boot source sets one. */
+            configured: boolean;
+            /**
+             * Format: date-time
+             * @description When the newest check ran. Absent before any check.
+             */
+            last_checked_at?: string;
+            /**
+             * @description How the newest check ended. Absent before any check.
+             * @enum {string}
+             */
+            last_result?: "ok" | "failed";
+            /**
+             * @description Why the newest check failed, present only when `last_result` is `failed`. A closed vocabulary, never Google's own words. `delegation_refused` is the common setup mistake: the service account's client ID has no domain-wide delegation for the read-only group scope, or the admin address is wrong.
+             * @enum {string}
+             */
+            last_reason?: "key_invalid" | "delegation_refused" | "permission_denied" | "member_not_found" | "timeout" | "unavailable" | "bad_answer";
+        };
+        GoogleDirectoryInput: {
+            /** @description The service account's JSON key file, as Google issues it. */
+            service_account_json: string;
+            /**
+             * Format: email
+             * @description The Workspace admin the service account acts for. The Directory API refuses a delegated read that names no admin.
+             */
+            admin_subject: string;
+        };
         /** @description Why the base currency is locked, as facts a client words in its reader's language. Present exactly when `base_currency_locked_reason` is (ADR-0085 §7). */
         BaseCurrencyLock: {
             /**
@@ -35061,6 +35147,18 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** @description What the caller's row scope withheld from one list on a record page, so a short list never reads as the whole one. It states how many entries were withheld and which live colleagues own them, so the reader knows whom to ask. A withheld record's name, value and every other field stay withheld. Count 0 with no holders when nothing was withheld. */
+        HiddenRecords: {
+            /** @description How many entries the list would have shown under an unbounded scope and did not. It includes entries owned by a colleague who has left, who is not in `holders`. */
+            count: number;
+            /** @description The live colleagues who own at least one withheld entry, each once, by name. */
+            holders: components["schemas"]["HiddenRecordHolder"][];
+        };
+        HiddenRecordHolder: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string;
+        };
         PageInfo: {
             /** @description Opaque cursor for the next page, or null if none. */
             next_cursor?: string | null;
@@ -37214,9 +37312,11 @@ export interface components {
             state: components["schemas"]["FinanceSummaryState"];
             /**
              * @description Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
-             *     Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
+             *     Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
              */
             billing_contacts?: components["schemas"]["BillingContact"][];
+            /** @description The billing entries the caller's contact row scope withheld from `billing_contacts`, the same answer the company page gives. Absent exactly when `billing_contacts` is. */
+            billing_contacts_hidden?: components["schemas"]["HiddenRecords"];
             /** @description Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected. */
             provider?: string | null;
             /** @description The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key. */
@@ -38060,8 +38160,12 @@ export interface components {
                 data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
             };
-            /** @description Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld. */
+            /** @description The account's current employees the caller may not see, by the contact row scope or by the employment tie's own read scope. Absent exactly when `contacts` is. */
+            contacts_hidden?: components["schemas"]["HiddenRecords"];
+            /** @description Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`. A contact outside the caller's row scope is not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them. */
             billing_contacts?: components["schemas"]["BillingContact"][];
+            /** @description The billing entries the caller's contact row scope withheld from `billing_contacts`. Absent exactly when `billing_contacts` is. */
+            billing_contacts_hidden?: components["schemas"]["HiddenRecords"];
             deals?: components["schemas"]["Company360Deals"];
             /** @description The company's unarchived projects, work in motion first (delivering, pursuing, initiative, then closed), under the caller's project row scope. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
             projects?: components["schemas"]["Company360Project"][];
@@ -91869,6 +91973,95 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getGoogleDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The connection status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleDirectoryStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    setGoogleDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleDirectoryInput"];
+            };
+        };
+        responses: {
+            /** @description Sealed. The status, with the check just made. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleDirectoryStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
+            422: components["responses"]["ValidationError"];
+            /** @description This installation has no key vault, so the credential cannot be stored. The remedy is the operator's, the vault root key, and not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteGoogleDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed, or there was nothing to remove. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
+            /** @description This installation has no key vault, so there is no sealed credential to remove. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getInstallationSettings: {

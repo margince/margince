@@ -166,7 +166,18 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// enter the ladder below: every tier of it reads a mail address or a mail
 	// domain, and its deferral ledger is keyed on the address itself.
 	if counterpartyShapeOf(cp) == shapeChannel {
-		return s.decideChannelCounterparty(ctx), nil
+		decision := s.decideChannelCounterparty(ctx)
+		if user := actorUserID(ctx); decision.create && !user.IsZero() {
+			private, _, err := chatThreadIsPrivateTx(ctx, tx, user, rec.ThreadKey)
+			if err != nil {
+				return counterpartyDecision{}, err
+			}
+			if private {
+				// A chat with a private burst files under the contacts it already has and creates nobody.
+				decision.create, decision.linkOnly = false, true
+			}
+		}
+		return decision, nil
 	}
 	// T0 internal own-domain: colleagues, not customers. Whom the ladder is
 	// ABOUT is settled before anything else, because the disposition ledger and

@@ -210,8 +210,8 @@ func (w *telegramIngestWorker) settleFilingError(ctx context.Context, err error)
 	return fmt.Errorf("telegram_ingest: capturing an update: %w", err)
 }
 
-// changeChat applies an edit or a deletion through the one function every chat
-// network changes a message through. A change to a message that has not landed
+// changeChat applies an edit or a deletion through capture.ChangeChatMessage, which
+// every chat network changes a message through. A change to a message that has not landed
 // and could not be restated fails the job, so River retries it after the
 // original.
 func (w *telegramIngestWorker) changeChat(actorCtx context.Context, raw connector.RawRecord, link *telegram.BusinessLink, rawID ids.UUID) error {

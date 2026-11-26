@@ -28,8 +28,10 @@ import (
 // page renders the identical list from the identical read, and a second
 // projection here would be a second answer to "who gets the invoice" — with the
 // half that drifted being the one somebody acts on.
+//
+// The second answer is what the reader's contact scope withheld from the list.
 type BillingContactReader interface {
-	BillingContactsFor(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]crmcontracts.BillingContact, error)
+	BillingContactsFor(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]crmcontracts.BillingContact, crmcontracts.HiddenRecords, error)
 }
 
 // WithBillingContacts binds the reader. Optional by construction: an
@@ -61,7 +63,7 @@ func (s *Store) readBillingContacts(
 	if s.billingContacts == nil {
 		return nil
 	}
-	rows, err := s.billingContacts.BillingContactsFor(ctx, tx, companyID)
+	rows, hidden, err := s.billingContacts.BillingContactsFor(ctx, tx, companyID)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil
@@ -69,5 +71,6 @@ func (s *Store) readBillingContacts(
 		return err
 	}
 	out.BillingContacts = &rows
+	out.BillingContactsHidden = &hidden
 	return nil
 }
