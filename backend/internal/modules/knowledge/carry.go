@@ -40,12 +40,12 @@ func readCarriedVectors(ctx context.Context, tx pgx.Tx, documentID ids.UUID) (ca
 	defer rows.Close()
 	carried := carriedVectors{}
 	for rows.Next() {
-		var text, hash, identity string
-		var vector []float32
-		if err := rows.Scan(&text, &hash, &identity, &vector); err != nil {
+		var text string
+		var v carriedVector
+		if err := rows.Scan(&text, &v.hash, &v.identity, &v.vector); err != nil {
 			return nil, fmt.Errorf("read a stored vector: %w", err)
 		}
-		carried.add(text, carriedVector{hash: hash, identity: identity, vector: vector})
+		carried.add(text, v)
 	}
 	return carried, rows.Err()
 }
@@ -78,6 +78,7 @@ func (c carriedVectors) take(pending []pendingChunk, identity string) (reused []
 	return reused, vectors, owed
 }
 
+// current is the carried vector of this text under the live binding, if any.
 func (c carriedVectors) current(text, identity string) ([]float32, bool) {
 	hash := Chunk{Text: text}.Hash()
 	for _, v := range c[hash] {

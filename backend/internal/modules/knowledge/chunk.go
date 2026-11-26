@@ -42,8 +42,8 @@ type Chunk struct {
 }
 
 // Hash identifies this span's exact text. It decides whether a passage costs a
-// model call: vectorkit.Unchanged reads it against the row's stored hash in the
-// drift sweep, and against the vectors its own document held before a re-ingest.
+// model call: vectorkit.Unchanged reads it against the hash stored beside a
+// vector, on the passage's own row or on one its document held before a re-ingest.
 //
 // Spelled here rather than at the writer because the value belongs to the span,
 // not to the row — two writers computing it two ways is how a corpus starts
