@@ -156,6 +156,10 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 		"core never performed, and the flag decides which replay proof applies",
 	"memberOwned":   "unexported, and derived from the binding FileChatMessage is handed: a source is member-owned when it pins a posture, which is a declaration an operator reads and no record can state",
 	"pinnedPosture": "unexported, and copied from the declared source's IngressSource.PinnedPosture onto the chat binding. A unit stating it per record could pick the widest posture its declaration allows",
+	"sourceRevision": "zero, an original with no edit, is the right answer for a record a unit hands over. Unexported, and " +
+		"set only by FileChatMessage from the chat message's own reported edit time",
+	"sourceRevisionSeq": "zero is the right answer for the reason sourceRevision's is: it breaks ties between two edits of one " +
+		"time, and a unit's record reports no edit",
 	"judged": "unexported, and the sink sets it from Envelope. A unit stating it would state the " +
 		"conclusion the sink exists to draw",
 })

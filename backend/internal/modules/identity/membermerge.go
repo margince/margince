@@ -90,7 +90,7 @@ const (
 // readMergeToken reads the live token side holds for a merge with other in the
 // given role, preferring a confirmed one. It locks the row when the caller is
 // about to rely on it.
-func readMergeToken(ctx context.Context, tx pgx.Tx, side, other ids.UUID, survivor mergeRole, lock bool) (*mergeToken, error) {
+func readMergeToken(ctx context.Context, tx pgx.Tx, side, other ids.UUID, survivor mergeRole, lock bool) (mergeToken, bool, error) {
 	query := `SELECT id, used_at IS NOT NULL FROM auth_token
  WHERE user_id = @side AND counterpart_user_id = @other AND merge_survivor = @survivor AND purpose = @purpose AND expires_at > now()
  ORDER BY (used_at IS NOT NULL) DESC, created_at DESC, id DESC LIMIT 1`
@@ -98,15 +98,28 @@ func readMergeToken(ctx context.Context, tx pgx.Tx, side, other ids.UUID, surviv
 		query += " FOR UPDATE"
 	}
 	var token mergeToken
-	err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{"side": side, "other": other, "survivor": bool(survivor), "purpose": purposeMemberMergeConfirm}).
-		Scan(&token.ID, &token.Confirmed)
+	err := tx.QueryRow(ctx, query, mergeSideArgs(side, other, survivor)).Scan(&token.ID, &token.Confirmed)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return mergeToken{}, false, nil
 	}
 	if err != nil {
-		return nil, err
+		return mergeToken{}, false, err
 	}
-	return &token, nil
+	return token, true, nil
+}
+
+// purposeArg is the @purpose argument every merge confirmation statement binds.
+const purposeArg = "purpose"
+
+// mergeSideArgs names one side's confirmation for the auth_token statements:
+// @side, @other, @survivor and @purpose.
+func mergeSideArgs(side, other ids.UUID, survivor mergeRole) pgx.StrictNamedArgs {
+	return pgx.StrictNamedArgs{"side": side, "other": other, "survivor": bool(survivor), purposeArg: purposeMemberMergeConfirm}
+}
+
+// mergeLinkArgs names a confirmation link by its token for @hash and @purpose.
+func mergeLinkArgs(rawToken string) pgx.StrictNamedArgs {
+	return pgx.StrictNamedArgs{"hash": hashToken(rawToken), purposeArg: purposeMemberMergeConfirm}
 }
 
 // applyMergeConfirmations adds each side's confirmation state to a merge
@@ -125,17 +138,21 @@ func applyMergeConfirmations(
 		side   crmcontracts.MemberMergeConfirmationSide
 		member retirementMember
 	}{
-		{source, survivor, "source", member},
-		{survivor, source, "survivor", other},
+		{source, survivor, crmcontracts.MemberMergeConfirmationSideSource, member},
+		{survivor, source, crmcontracts.MemberMergeConfirmationSideSurvivor, other},
 	}
 	confirmations := make([]crmcontracts.MemberMergeConfirmation, 0, len(sides))
 	open, suspended := false, false
 	for _, s := range sides {
-		token, err := readMergeToken(ctx, tx, s.id, s.of, mergeRole(s.side == "survivor"), lock)
+		token, found, err := readMergeToken(ctx, tx, s.id, s.of, mergeRole(s.side == crmcontracts.MemberMergeConfirmationSideSurvivor), lock)
 		if err != nil {
 			return err
 		}
-		state := mergeSideState(true, s.member.Status, token)
+		var held *mergeToken
+		if found {
+			held = &token
+		}
+		state := mergeSideState(true, s.member.Status, held)
 		open = open || stillOpen(state)
 		suspended = suspended || mergeSideSuspended(s.member.Status)
 		confirmations = append(confirmations, crmcontracts.MemberMergeConfirmation{
@@ -270,20 +287,22 @@ func mintMergeConfirmation(ctx context.Context, tx pgx.Tx, side, other ids.UUID,
 	}
 	if _, err := tx.Exec(ctx, `UPDATE auth_token SET `+expireNowSQL+`
  WHERE user_id = @side AND counterpart_user_id = @other AND merge_survivor = @survivor AND purpose = @purpose AND used_at IS NULL AND expires_at > now()`,
-		pgx.StrictNamedArgs{"side": side, "other": other, "survivor": bool(survivor), "purpose": purposeMemberMergeConfirm}); err != nil {
+		mergeSideArgs(side, other, survivor)); err != nil {
 		return link, err
 	}
 	var tokenID ids.UUID
 	var expires time.Time
+	minted := mergeSideArgs(side, other, survivor)
+	minted["hash"], minted["ttl"] = hash, mergeConfirmTTL.String()
 	if err := tx.QueryRow(ctx, `INSERT INTO auth_token (user_id, counterpart_user_id, merge_survivor, purpose, token_hash, expires_at, mail_queued_at)
  VALUES (@side, @other, @survivor, @purpose, @hash, now() + @ttl::interval, now()) RETURNING id, expires_at`,
-		pgx.StrictNamedArgs{"side": side, "other": other, "survivor": bool(survivor), "purpose": purposeMemberMergeConfirm, "hash": hash, "ttl": mergeConfirmTTL.String()}).
-		Scan(&tokenID, &expires); err != nil {
+		minted).Scan(&tokenID, &expires); err != nil {
 		return link, err
 	}
 	// Audit-only: the closed event catalog has no member-merge type, and a
 	// confirmation request changes nothing a subscriber could act on.
 	_, err = storekit.Audit(ctx, tx, "invite", "user", side, nil, map[string]any{
+		//nolint:goconst // audit keys name the auth_token columns they record; the grant's "expires_at" is another table's column
 		"purpose": purposeMemberMergeConfirm, "counterpart_user_id": other, "merge_survivor": bool(survivor), "token_id": tokenID, "expires_at": expires,
 	})
 	return link, err
@@ -309,7 +328,7 @@ func (s *Service) MergeConfirmationRecipient(ctx context.Context, actor Identity
  FROM auth_token t JOIN app_user u ON u.id = t.user_id JOIN app_user c ON c.id = t.counterpart_user_id
  WHERE t.token_hash = @hash AND t.purpose = @purpose AND t.used_at IS NULL AND t.expires_at > now()
    AND `+ActivatableMemberSQL("u")+` AND NOT u.is_agent AND u.removed_at IS NULL AND c.removed_at IS NULL`,
-			pgx.StrictNamedArgs{"hash": hashToken(rawToken), "purpose": purposeMemberMergeConfirm}).Scan(&mail.To, &mail.Goes, &mail.Stays)
+			mergeLinkArgs(rawToken)).Scan(&mail.To, &mail.Goes, &mail.Stays)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return mail, false, nil
@@ -332,7 +351,7 @@ func (s *Service) RecordMergeMailOutcome(ctx context.Context, actor Identity, ra
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE auth_token SET `+column+` = now()
  WHERE token_hash = @hash AND purpose = @purpose AND used_at IS NULL`,
-			pgx.StrictNamedArgs{"hash": hashToken(rawToken), "purpose": purposeMemberMergeConfirm})
+			mergeLinkArgs(rawToken))
 		return err
 	})
 }
@@ -354,7 +373,7 @@ func (s *Service) ConfirmMemberMerge(ctx context.Context, rawToken string) error
  WHERE t.token_hash = @hash AND t.purpose = @purpose AND t.used_at IS NULL AND t.expires_at > now()
    AND `+ActivatableMemberSQL("u")+` AND NOT u.is_agent AND u.removed_at IS NULL
    AND NOT c.is_agent AND c.archived_at IS NULL AND c.removed_at IS NULL
- FOR UPDATE OF t`, pgx.StrictNamedArgs{"hash": hashToken(rawToken), "purpose": purposeMemberMergeConfirm}).
+ FOR UPDATE OF t`, mergeLinkArgs(rawToken)).
 			Scan(&tokenID, &userID, &counterpart)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
