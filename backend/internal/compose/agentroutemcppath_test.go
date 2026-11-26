@@ -309,6 +309,8 @@ var answeredByAnotherVerb = gatekit.Waive(map[string]string{
 		"through read_record (gates/seamfilters_test.go rules it out of list_records)",
 	"GET /v1/activities#collapse_copies": "list_records collapses mailbox copies itself whenever it lists one record's " +
 		"timeline (activities/provider.go); an unscoped list keeps every copy, as export and sync do",
+	"GET /v1/companies#status_any": "list_records narrows by one stage through status, a call per stage " +
+		"(gates/seamfilters_test.go keeps this second spelling out of every run's tool listing)",
 })
 
 // parameterGapsPendingParity are the route parameters no verb takes yet, as
