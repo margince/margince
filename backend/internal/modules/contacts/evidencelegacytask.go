@@ -53,9 +53,9 @@ func LegacyEvidenceDataTask() datatask.Task {
 		})
 	}
 	return datatask.Task{
-		ID: "core/1795661270_evidence_rows_move_to_field_provenance", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795661270_evidence_rows_move_to_field_provenance"),
-		Requires: []string{"core/1795661267", "core/1795661268", "core/1795661269"},
+		ID: "core/1795672332_evidence_rows_move_to_field_provenance", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795672332_evidence_rows_move_to_field_provenance"),
+		Requires: []string{"core/1795672329", "core/1795672330", "core/1795672331"},
 		Steps:    steps,
 	}
 }

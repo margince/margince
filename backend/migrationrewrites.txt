@@ -263,11 +263,11 @@
 1795639490_a_company_bounds_its_text_by_the_contract.down.sql | * | restores the two text guards on company and on site_read as they stood before; no existing row is changed
 1795589887_the_text_limits_follow_the_signal_source_system.up.sql | * | replaces the two text guards on signal; the guards act on later writes only, and it changes no existing row
 1795589887_the_text_limits_follow_the_signal_source_system.down.sql | * | restores the two earlier text guards on signal; it changes no existing row
-1795661269_the_typed_evidence_tables_read_field_provenance.up.sql | * | the procedural bodies are the fact revision trigger, the meeting citation trigger and the trigger that drops a deleted subject's evidence; the migration renames three tables, drops their row triggers and vocabulary checks and creates three views, and none of it rewrites a row
-1795661269_the_typed_evidence_tables_read_field_provenance.down.sql | *, company_fact_legacy, company_profile_field_legacy, contact_profile_field_legacy, field_provenance | a rollback of this release moves back to the typed tables exactly the company and contact evidence rows its writers and data task moved, so a down loses no fact written since
-1795661271_the_evidence_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795661272_the_text_limits_follow_the_evidence_columns.up.sql | * | replaces the two text guards on field_provenance; the guards act on later writes only, and it changes no existing row
-1795661272_the_text_limits_follow_the_evidence_columns.down.sql | * | restores the two earlier text guards on field_provenance; it changes no existing row
+1795672331_the_typed_evidence_tables_read_field_provenance.up.sql | * | the procedural bodies are the fact revision trigger, the meeting citation trigger and the trigger that drops a deleted subject's evidence; the migration renames three tables, drops their row triggers and vocabulary checks and creates three views, and none of it rewrites a row
+1795672331_the_typed_evidence_tables_read_field_provenance.down.sql | *, company_fact_legacy, company_profile_field_legacy, contact_profile_field_legacy, field_provenance | a rollback of this release moves back to the typed tables exactly the company and contact evidence rows its writers and data task moved, so a down loses no fact written since
+1795672333_the_evidence_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795672334_the_text_limits_follow_the_evidence_columns.up.sql | * | replaces the two text guards on field_provenance; the guards act on later writes only, and it changes no existing row
+1795672334_the_text_limits_follow_the_evidence_columns.down.sql | * | restores the two earlier text guards on field_provenance; it changes no existing row
 1795639491_a_chat_connection_can_ride_a_bot_and_name_its_account.down.sql | channel_connection | channel_connection holds a handful of rows, one per bot and business account, and the dev-only rollback drops the account rows
 1795639492_the_connection_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795639493_the_new_connection_columns_check_their_text_limits.up.sql | * | the file only replaces trigger definitions and writes no row
