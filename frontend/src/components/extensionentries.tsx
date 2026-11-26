@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Plug,
 } from "lucide-react";
+import { createElement } from "react";
 import { ActionRow } from "../design-system/actionrow";
 import { Badge, Button } from "../design-system/atoms";
 import { translate, useLocale } from "../i18n";
@@ -152,7 +153,9 @@ function EntryButton({
       title={label}
       onClick={() => navigate(entryRoute(entry), entryParams(record))}
     >
-      {Icon && <Icon aria-hidden="true" />}{" "}
+      {/* createElement, because a component the compiler sees picked during
+          render reads as one made there; the table holds fixed icons. */}
+      {Icon && createElement(Icon, { "aria-hidden": "true" })}{" "}
       <span className="verb-label">{label}</span>
     </Button>
   );

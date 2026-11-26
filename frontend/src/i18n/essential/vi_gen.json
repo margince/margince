@@ -3027,6 +3027,7 @@
   "compose.scopedToCounted": "Giới hạn trong {key} · {inScope} trên {total} hoạt động",
   "compose.scopedTo": "Giới hạn trong {key}",
   "compose.body": "Nội dung",
+  "compose.transportEmail": "Email",
   "compose.bcc": "Bcc",
   "compose.fileRemove": "Gỡ {filename}",
   "calendar.previousMonth": "Tháng trước",
