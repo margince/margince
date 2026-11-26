@@ -57,7 +57,9 @@ const (
 	// card and the company page withhold the same billing contacts.
 	// Raised by 2 test files for the seat-bound deal reads and the stored-object
 	// count, whose cases drive the unexported seat and ledger wiring.
-	composeRootTestFiles = 1923
+	// Raised by 3 test files for the agent-for-a-colleague cases of the converted
+	// jobs, which drive the unexported job and effect wiring.
+	composeRootTestFiles = 1926
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -127,8 +129,10 @@ const (
 	// company route and a quiet reason carry, and their cases.
 	// Raised by 259 production and 267 test lines for the seat-bound deal reads
 	// and the stored-object ledger wiring, and the cases that drive them.
-	composeRootProductionLines = 231_874
-	composeRootTestLines       = 362_656
+	// Raised by 25 production and 350 test lines for the jobs that run as an agent
+	// for a named colleague, and their cases.
+	composeRootProductionLines = 231_899
+	composeRootTestLines       = 363_006
 )
 
 // A read under these floors stopped early or read the wrong place, and would
