@@ -18,10 +18,10 @@ func TestToolCopyRendersTheWrittenPartsInOrder(t *testing.T) {
 	full := toolCopy{
 		Purpose: "Does the thing.",
 		Limits:  "Not the other thing.",
-		Instead: "Use the neighbour for that.",
+		Instead: "Use the neighbor for that.",
 		Retain:  "Keep the id.",
 	}
-	want := "Does the thing. Not the other thing. Use the neighbour for that. Keep the id."
+	want := "Does the thing. Not the other thing. Use the neighbor for that. Keep the id."
 	if got := full.render(); got != want {
 		t.Errorf("render() = %q, want %q", got, want)
 	}
