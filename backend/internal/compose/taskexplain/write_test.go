@@ -4,14 +4,18 @@
 package taskexplain
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 const (
@@ -136,5 +140,53 @@ func TestAWithheldSourceIsNotQuoted(t *testing.T) {
 	in.Relationship.Recent = nil
 	if got := Floor(in, string(textlang.English)); len(got) != 0 {
 		t.Fatalf("floor = %v, want nothing from a message the reader may not read", got)
+	}
+}
+
+// scriptedLane answers every request with one fixed reply, or fails.
+type scriptedLane struct {
+	reply string
+	err   error
+	asked model.Request
+}
+
+func (s *scriptedLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
+	s.asked = req
+	return model.Response{Text: s.reply}, s.err
+}
+
+func TestTheModelWritesTheExplanationFromTheSourceItWasShown(t *testing.T) {
+	in := promiseInput()
+	lane := &scriptedLane{reply: reply(t, in,
+		sentence(natureFact, "Jonas Keller promised the signed acceptance once his shift leads sign off on the rota export.", sourceID),
+	)}
+	got, by, failed := Write(context.Background(), lane, in, string(textlang.English))
+	if failed || by != crmcontracts.WrittenByModel || len(got) != 1 {
+		t.Fatalf("Write = %v by %s (failed %v), want the model's one sentence", got, by, failed)
+	}
+	if !strings.Contains(lane.asked.Messages[0].Content, "rota export") {
+		t.Error("the request never showed the source message's words")
+	}
+	if lane.asked.Subjects == nil {
+		t.Error("the request names no subjects, so a withheld record could reach the model")
+	}
+}
+
+func TestAFailedOrEmptyAnswerFallsBackToTheFloor(t *testing.T) {
+	in := promiseInput()
+	floor := Floor(in, string(textlang.English))
+	for name, lane := range map[string]*scriptedLane{
+		"lane error": {err: errors.New("provider down")},
+		"stock only": {reply: reply(t, in, sentence(natureRecommendation, "Finish the task and mark it done.", taskID))},
+		"not json":   {reply: "I cannot help with that."},
+	} {
+		got, by, failed := Write(context.Background(), lane, in, string(textlang.English))
+		if !failed || by != crmcontracts.WrittenByDeterministic || len(got) != len(floor) {
+			t.Errorf("%s: Write = %v by %s (failed %v), want the floor marked failed", name, got, by, failed)
+		}
+	}
+	if got, by, failed := Write(context.Background(), nil, in, string(textlang.English)); failed ||
+		by != crmcontracts.WrittenByDeterministic || len(got) != len(floor) {
+		t.Errorf("without a lane Write = %v by %s (failed %v), want the floor, not a failure", got, by, failed)
 	}
 }

@@ -4,7 +4,9 @@
 package standingline
 
 import (
+	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -12,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 const (
@@ -129,5 +132,46 @@ func TestTheFingerprintIgnoresTheShownLine(t *testing.T) {
 	in.Recent = in.Recent[1:]
 	if third, _ := Fingerprint(in, "r1", "en"); third == first {
 		t.Fatal("other activities read as the same input")
+	}
+}
+
+// scriptedLane answers every request with one fixed reply.
+type scriptedLane struct {
+	reply string
+	asked model.Request
+}
+
+func (s *scriptedLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
+	s.asked = req
+	return model.Response{Text: s.reply}, nil
+}
+
+func TestTheModelIsShownTheNewestMailAndOnlyThoseActivities(t *testing.T) {
+	in := offerInput()
+	want := "Sebastian Sachsinger accepted the revised offer and asked for the contract draft by Friday."
+	lane := &scriptedLane{reply: reply(t, in, false, cited(want, acceptedID))}
+	got, err := Write(context.Background(), lane, in, "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Text != want {
+		t.Fatalf("Write = %+v, want the model's line", got)
+	}
+	if !strings.Contains(lane.asked.Messages[0].Content, "contract draft by Friday") {
+		t.Error("the request never showed the newest mail's words")
+	}
+	if lane.asked.Subjects == nil || len(lane.asked.Subjects.Activities) != len(in.Recent) {
+		t.Errorf("the request names %+v as its subjects, want the %d activities shown", lane.asked.Subjects, len(in.Recent))
+	}
+}
+
+func TestNoLineIsAskedForWithoutALaneOrAnActivity(t *testing.T) {
+	if _, err := Write(context.Background(), nil, offerInput(), "en"); err == nil {
+		t.Error("wrote a line with no model lane")
+	}
+	empty := offerInput()
+	empty.Recent = nil
+	if _, err := Write(context.Background(), &scriptedLane{}, empty, "en"); err == nil {
+		t.Error("asked for a line about a record with nothing to read")
 	}
 }
