@@ -1575,6 +1575,14 @@ judges "$c112" case112 nothing-overdue-is-not-no-plan 1 "never said anything mat
 judges "$c112" case112 doesnt-have-a-plan-and-a-stub-dossier 0
 judges "$c112" case112 invents-dossier-research 1
 
+# CASE 78 — the stop recorded, or offered for the user's yes, both hold; a
+# marketing opt-out standing in for it, or a claim that no stop exists, does not.
+c78="case78-she-asked-us-to-stop.yaml"
+judges "$c78" case78 records-the-stop 0 "!the judge says NO"
+judges "$c78" case78 asks-before-recording 0 "!the judge says NO"
+judges "$c78" case78 opts-her-out-of-marketing 1 "the judge says NO to: Criterion 1."
+judges "$c78" case78 says-it-cannot 1 "the judge says NO to: Criterion 1."
+
 # CASE 79 — a legal hold placed, or offered for the user's yes, both hold; a tag
 # standing in for it, or a claim that the CRM cannot hold a record, does not.
 c79="case79-put-it-on-hold.yaml"
