@@ -12,6 +12,7 @@ package compose
 import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 )
@@ -56,5 +57,6 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 	c.NextSyncDueAt = v.NextSyncDueAt
 	bf := backfillStatusPayload(v.Backfill)
 	c.Backfill = &bf
+	c.UnreadPeriod = capturehealth.UnreadPeriodOf(v.UnreadFrom, v.UnreadTo)
 	return c
 }
