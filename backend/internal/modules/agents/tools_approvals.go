@@ -203,7 +203,7 @@ func (t listApprovalsTool) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","properties":{
 			"include_muted":{"type":"boolean","description":"Include your muted proposals for explicit review; visibility rules still apply."},
 			"status":{"type":"string","enum":["pending","approved","rejected"],"description":"Defaults to pending: what is still waiting."},
-			"kind":{"type":"string","description":"One staged action's kind, e.g. advance_deal."},
+			"kind":{"type":"string","description":"One staged action's kind, for example advance_deal."},
 			"target_entity_type":{"type":"string","description":"With target_entity_id, the approvals staged against one record."},
 			"target_entity_id":{"type":"string","format":"uuid"},
 			"targets":{"type":"array","maxItems":25,"description":"The approvals staged against any of these records.",
@@ -269,7 +269,7 @@ func checkTargets(args listApprovalsArgs) error {
 	for i, target := range args.Targets {
 		if target.Type == "" || target.ID.IsZero() {
 			return &BadArgsError{Field: fmt.Sprintf("targets[%d]", i), Cause: errors.New(
-				"each target needs both type and id, e.g. {\"type\":\"contact\",\"id\":\"<uuid>\"}")}
+				"each target needs both type and id, for example {\"type\":\"contact\",\"id\":\"<uuid>\"}")}
 		}
 	}
 	return nil
