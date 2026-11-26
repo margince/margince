@@ -2,10 +2,14 @@
 jurisdiction: mt
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Processing of Personal Data (Electronic Communications Sector) Regulations, S.L. 586.01"
     provision: "regulation 9"
     source-url: https://legislation.mt/eli/sl/586.1/eng
+    text-url: https://legislation.mt/eli/sl/586.1/eng/pdf
+    text-digest: bb29e66a55acde395e49b626e9bc2b300ef0051bf9691564100a69cacb7aaefc
+    text-fetched: 2026-11-25
 fixtures:
   - finding: objection_route
     triggers: mt/fixtures/advertising-without-objection-route.md

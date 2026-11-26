@@ -2,10 +2,14 @@
 jurisdiction: fi
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Laki sähköisen viestinnän palveluista (917/2014)"
     provision: "200–202 §"
     source-url: https://www.finlex.fi/fi/lainsaadanto/2014/917
+    text-url: "https://opendata.finlex.fi/finlex/avoindata/v1/akn/fi/act/statute-consolidated/2014/917/fin@20250126"
+    text-digest: 90478fd1457a0d3a6bdb4bf05fc3205fda9cd9764ae9668ba9ec9218cdf359d1
+    text-fetched: 2026-11-25
 fixtures:
   - finding: objection_route
     triggers: fi/fixtures/advertising-without-objection-route.md

@@ -2,9 +2,12 @@
 jurisdiction: hr
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Zakon o elektroničkim komunikacijama (NN 76/22)"
     source-url: https://narodne-novine.nn.hr/clanci/sluzbeni/2022_07_76_1116.html
+    text-digest: e6f24f7456bd908f89a9f088f3c038379b94d81473c3f7c9e6725f928fcc3379
+    text-fetched: 2026-11-25
 fixtures:
   - finding: objection_route
     triggers: hr/fixtures/advertising-without-objection-route.md

@@ -2,19 +2,26 @@
 jurisdiction: cn
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
     effective: 2006-03-30
     provision: "arts. 13 and 14"
     source-url: https://www.gov.cn/zhengce/2022-08/23/content_5722728.htm
+    text-digest: b58d6462eac5f6f8d9599ad8d75451d429437bd176ae50269c292f31bf4ba770
+    text-fetched: 2026-11-25
   - name: Advertising Law of the PRC
     effective: 2015-09-01
     provision: "art. 43"
     source-url: https://scjgj.beijing.gov.cn/cxfw/flfgcxfw/ggl/202204/t20220401_2646388.html
+    text-digest: f79fdabce09cc7ac6f46c1f8526a83cc42c6e5c16ae9d7d74205ee2d35bba4f0
+    text-fetched: 2026-11-25
   - name: Personal Information Protection Law of the PRC (PIPL)
     effective: 2021-11-01
     provision: "arts. 13 and 17"
     source-url: https://www.cac.gov.cn/2021-08/20/c_1631050028355286.htm
+    text-digest: b003ad1a08795d192844ef7ca3147384996513924d965f8b0e48985e4aa5a006
+    text-fetched: 2026-11-25
 reply-window: 8760h
 deal-follow-up-window: 4368h
 marketing-exceptions: []
