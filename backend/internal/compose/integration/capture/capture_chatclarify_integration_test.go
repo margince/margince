@@ -230,6 +230,10 @@ func clarifyNetworks(t *testing.T, e *integration.SearchEnv) []clarifyNetwork {
 	return networks
 }
 
+// senderWrap, when set, wraps every network's sender in the sweep. A test acts
+// with it between a provider accepting a send and the sweep recording it.
+var senderWrap func(connector.MessageSender) connector.MessageSender
+
 // sweepWith is the production sweep with one network's sender pointed at a fake.
 func sweepWith(e *integration.SearchEnv, vault keyvault.Vault, now func() time.Time, point func(*capturemod.ChatSenders)) chatclarify.Sweep {
 	return chatclarify.Sweep{
@@ -237,6 +241,9 @@ func sweepWith(e *integration.SearchEnv, vault keyvault.Vault, now func() time.T
 		Senders: func(db *database.DB) capturemod.ChatSenders {
 			senders := capturemod.NewChatSenders(db, vault, nil)
 			point(&senders)
+			if senderWrap != nil {
+				senders.WhatsApp, senders.Zalo, senders.TelegramBusiness = senderWrap(senders.WhatsApp), senderWrap(senders.Zalo), senderWrap(senders.TelegramBusiness)
+			}
 			return senders
 		},
 	}
@@ -675,4 +682,154 @@ func TestAColleagueWhoAnswersWithNothingUsableIsHintedOncePerBatchAndNothingIsFi
 			t.Fatalf("History holds %d messages, want the one forward", n)
 		}
 	})
+}
+
+// cancelAfterSend cancels the sweep once the provider accepted the send, so the
+// write that records it fails.
+type cancelAfterSend struct {
+	inner  connector.MessageSender
+	cancel func()
+}
+
+func (c cancelAfterSend) SendMessage(ctx context.Context, auth connector.Auth, msg connector.ChannelMessage) (connector.SendReceipt, error) {
+	receipt, err := c.inner.SendMessage(ctx, auth, msg)
+	c.cancel()
+	return receipt, err
+}
+
+func TestAnAnswerIsStillRecognisedWhenTheRecordOfASuccessfulSendWasLost(t *testing.T) {
+	eachClarifyNetwork(t, func(t *testing.T, c *clarifyCase) {
+		a := c.forward("f1", "price?")
+		c.settle(a)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		senderWrap = func(inner connector.MessageSender) connector.MessageSender { return cancelAfterSend{inner, cancel} }
+		t.Cleanup(func() { senderWrap = nil })
+		if err := c.n.sweep(c.e, c.n.vault).Workspace(ctx, c.e.WS); err == nil {
+			t.Fatal("the sweep recorded a send after its context ended")
+		}
+		senderWrap = nil
+		c.sweep()
+		c.sweep()
+		if n := len(c.n.provider2.messages()); n != 1 {
+			t.Fatalf("questions sent = %d, want the one whose record was lost and no second", n)
+		}
+		if err := c.reply("r1", "", "[contacts]", c.n.card); !errors.Is(err, capturemod.ErrChatMessageConsumed) {
+			t.Fatalf("filing the answer = %v, want it consumed", err)
+		}
+		if !c.filedOnCustomer(a) {
+			t.Fatal("a valid answer to a question that was sent was not used")
+		}
+	})
+}
+
+// archivingEnsurer notes each activity it is asked to file, and archives the
+// others of the batch on the first, as an expiry running meanwhile would.
+type archivingEnsurer struct {
+	t      *testing.T
+	e      *integration.SearchEnv
+	others []ids.UUID
+	filed  []ids.UUID
+}
+
+func (r *archivingEnsurer) EnsureChannelCounterparty(_ context.Context, req capturemod.EnsureChannelRequest) (capturemod.EnsureOutcome, error) {
+	r.filed = append(r.filed, req.ActivityID)
+	if len(r.filed) == 1 {
+		for _, id := range r.others {
+			if id != req.ActivityID {
+				wsExec(r.t, r.e, `UPDATE activity SET archived_at = now() WHERE id = $1`, id)
+			}
+		}
+	}
+	return capturemod.EnsureOutcome{}, nil
+}
+
+func TestAHeldForwardThatWentAwayWhileTheAnswerWasFilingIsLeftAlone(t *testing.T) {
+	eachClarifyNetwork(t, func(t *testing.T, c *clarifyCase) {
+		a, b := c.forward("f1", "one"), c.forward("f2", "two")
+		c.settle(a, b)
+		c.sweep()
+		ensurer := &archivingEnsurer{t: t, e: c.e, others: []ids.UUID{a, b}}
+		sink, ok := c.sink.(*capturemod.Sink)
+		if !ok {
+			t.Fatalf("the sink is a %T", c.sink)
+		}
+		c.sink = sink.WithChannelEnsurer(ensurer)
+		if err := c.reply("r1", c.n.askID(1), "[contacts]", c.n.card); !errors.Is(err, capturemod.ErrChatMessageConsumed) {
+			t.Fatalf("filing the answer = %v, want it consumed", err)
+		}
+		if len(ensurer.filed) != 1 {
+			t.Fatalf("held forwards filed = %d, want the one still held", len(ensurer.filed))
+		}
+	})
+}
+
+func TestAnAnswerThatNamesAColleagueIsRefusedWithOneHintAndNothingIsFiled(t *testing.T) {
+	eachClarifyNetwork(t, func(t *testing.T, c *clarifyCase) {
+		other := newClarifyOther(t, c)
+		a := c.forward("f1", "price?")
+		c.settle(a)
+		c.sweep()
+		own := &connector.ChatSharedContact{DisplayName: "Rep", UserID: c.n.colleague, Phones: []string{c.n.colleague}}
+		answers := []struct {
+			name string
+			body string
+			card *connector.ChatSharedContact
+		}{{"own card", "[contacts]", own}, {"another colleague's card", "[contacts]", c.n.card}}
+		if c.n.provider == "whatsapp" {
+			answers = append(answers, struct {
+				name string
+				body string
+				card *connector.ChatSharedContact
+			}{"a colleague's number", "+" + c.n.colleague, nil})
+		}
+		for i, answer := range answers {
+			if err := c.reply(fmt.Sprintf("c%d", i), c.n.askID(1), answer.body, answer.card); !errors.Is(err, capturemod.ErrChatMessageConsumed) {
+				t.Fatalf("%s: filing the answer = %v, want it consumed", answer.name, err)
+			}
+			c.sweep()
+		}
+		sent := c.n.provider2.messages()
+		if len(sent) != 2 || !strings.Contains(sent[1].text, "not a colleague's") {
+			t.Fatalf("messages sent = %+v, want the question and one hint that names colleagues", sent)
+		}
+		if !c.held(a) {
+			t.Fatal("the forward was filed on a colleague")
+		}
+		c.requireNoColleagueContact()
+		if n := wsCount(t, c.e, `SELECT count(*) FROM contact_channel_identity WHERE channel_user_id = $1`, other); n != 0 {
+			t.Fatalf("another colleague got %d channel identities, want none", n)
+		}
+	})
+}
+
+// newClarifyOther confirms the customer card's account as a second colleague's.
+func newClarifyOther(t *testing.T, c *clarifyCase) string {
+	t.Helper()
+	extra := ""
+	if c.n.provider == "zalo_oa" {
+		extra = ", chat_zalo_oa_id = '88'"
+	}
+	wsExec(t, c.e, `UPDATE app_user SET `+c.n.verify+` = $2, `+c.n.verifiedAt+` = now()`+extra+` WHERE id = $1`, c.e.Rep3, c.n.customerID)
+	return c.n.customerID
+}
+
+func TestARateLimitedQuestionWaitsAsLongAsTheProviderSaid(t *testing.T) {
+	e := newCaptureEnv(t).e
+	sink := compose.NewCaptureSink(e.Pool, compose.CaptureConfig{})
+	n := clarifyNetworks(t, e)[1]
+	c := newClarifyCase(t, n, e, sink)
+	n.provider2.fail = func(int) (int, string) {
+		return http.StatusTooManyRequests, `{"ok":false,"error_code":429,"description":"Too Many Requests","parameters":{"retry_after":300}}`
+	}
+	a := c.forward("f1", "price?")
+	c.settle(a)
+	c.sweep()
+	c.sweep()
+	if calls := n.provider2.callCount(); calls != 1 {
+		t.Fatalf("provider calls = %d, want one while the provider says to wait", calls)
+	}
+	if got := wsScalar(t, e, `SELECT (ask_next_at > now() + interval '290 seconds')::text || '/' || ask_attempts FROM raw_capture WHERE ask_batch_id IS NOT NULL`); got != "true/1" {
+		t.Fatalf("next try later than the provider said and attempts = %s, want true/1", got)
+	}
 }

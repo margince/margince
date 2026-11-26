@@ -163,9 +163,20 @@ func TestChatOnePathGateFailsOnAForkedPath(t *testing.T) {
 			files: map[string]string{"a.go": "package forkresolver\n" + imp + "func pick() connector.MessageSender { return nil }\n"},
 		},
 		{
-			name: "a provider's sender built outside the resolver", want: "constructs a provider's sender", path: modulePath + "/internal/compose/forkbuilder",
-			files: map[string]string{"a.go": "package forkbuilder\nimport \"" + modulePath + "/internal/modules/capture/whatsapp\"\n" +
-				"func build() { _ = whatsapp.NewSender(nil) }\n"},
+			name: "a provider's sender built by a constructor of any name", want: "builds a provider's sender", path: modulePath + "/internal/compose/forkbuilder",
+			files: map[string]string{"a.go": "package forkbuilder\nimport \"" + modulePath + "/internal/modules/capture/telegram\"\n" +
+				"func build() { _ = telegram.New(nil) }\n"},
+		},
+		{
+			name: "a sender built by a struct literal", want: "literal builds a provider's sender", path: modulePath + "/internal/compose/forkliteral",
+			files: map[string]string{"a.go": "package forkliteral\nimport (\n\"context\"\n\"" + modulePath + "/internal/shared/ports/connector\"\n)\n" +
+				"type mine struct{}\nfunc (mine) SendMessage(context.Context, connector.Auth, connector.ChannelMessage) (connector.SendReceipt, error) { return connector.SendReceipt{}, nil }\n" +
+				"var _ = mine{}\n"},
+		},
+		{
+			name: "a factory of a concrete sender", want: "resolves a connector.MessageSender", path: modulePath + "/internal/compose/forkfactory",
+			files: map[string]string{"a.go": "package forkfactory\nimport \"" + modulePath + "/internal/modules/capture/whatsapp\"\n" +
+				"func factory() *whatsapp.Sender { return nil }\n"},
 		},
 	}
 	for _, tc := range cases {
@@ -238,6 +249,15 @@ func (p plantImporter) Import(importPath string) (*types.Package, error) {
 	for _, pkg := range p.module {
 		if pkg.path == importPath {
 			return pkg.types, nil
+		}
+	}
+	// A standard package a module package already imported is that one, so a
+	// planted type that names context.Context is identical to the module's.
+	for _, pkg := range p.module {
+		for _, imported := range pkg.types.Imports() {
+			if imported.Path() == importPath {
+				return imported, nil
+			}
 		}
 	}
 	return p.std.Import(importPath)
@@ -756,16 +776,48 @@ func chatLiterals(p typedPackage, f *ast.File) []string {
 	return out
 }
 
-// isMessageSender reports the connector's MessageSender interface.
-func isMessageSender(t types.Type) bool {
-	n, ok := types.Unalias(t).(*types.Named)
-	return ok && n.Obj().Name() == "MessageSender" && n.Obj().Pkg() != nil && n.Obj().Pkg().Path() == modulePath+"/"+connectorDir
+// senderInterface is the connector's MessageSender interface.
+func (c *chatPackages) senderInterface() *types.Interface {
+	p := c.pkgAt(connectorDir)
+	if p == nil {
+		return nil
+	}
+	obj, ok := p.types.Scope().Lookup("MessageSender").(*types.TypeName)
+	if !ok {
+		return nil
+	}
+	iface, _ := obj.Type().Underlying().(*types.Interface)
+	return iface
 }
 
-// resolverFindings fails a second place that resolves a connector.MessageSender.
-// A function that returns one is a second resolver, unless it sits in the
-// resolver, a listed seam or a provider package. So is a call to a provider's
-// sender constructor from anywhere but the resolver.
+// isSenderType reports a type that is a connector.MessageSender or implements it,
+// itself or through a pointer.
+func (c *chatPackages) isSenderType(t types.Type) bool {
+	iface := c.senderInterface()
+	if iface == nil || t == nil {
+		return false
+	}
+	return types.Implements(t, iface) || types.Implements(types.NewPointer(t), iface)
+}
+
+// isConcreteSender reports a built value of a type that implements MessageSender.
+// An interface value is a sender somebody resolved, which the other rule judges.
+func (c *chatPackages) isConcreteSender(t types.Type) bool {
+	if tuple, ok := t.(*types.Tuple); ok {
+		if tuple.Len() == 0 {
+			return false
+		}
+		t = tuple.At(0).Type()
+	}
+	return t != nil && !types.IsInterface(t) && c.isSenderType(t)
+}
+
+// resolverFindings fails a second place that resolves or builds a
+// connector.MessageSender. It judges by type, so a constructor of any name, a
+// struct literal and a factory all count. A function that returns a sender is a
+// second resolver, and so is an expression that builds one. Neither counts in
+// the resolver, a listed seam or a provider package. A call to a function the
+// resolver file declares is the resolver answering.
 func (c *chatPackages) resolverFindings(p typedPackage) []string {
 	if _, provider := c.providers[pkgDir(p)]; provider {
 		return nil
@@ -773,57 +825,57 @@ func (c *chatPackages) resolverFindings(p typedPackage) []string {
 	var out []string
 	for _, f := range p.files {
 		name := c.file(f)
-		if name == senderResolver {
+		if name == senderResolver || isSenderResolveSeam(name) {
 			continue
 		}
-		seam := isSenderResolveSeam(name)
 		for _, d := range f.Decls {
-			fd, ok := d.(*ast.FuncDecl)
-			if !ok {
-				continue
-			}
-			if !seam && c.returnsMessageSender(p, fd) {
+			if fd, ok := d.(*ast.FuncDecl); ok && c.returnsSender(p, fd) {
 				out = append(out, name+": "+fd.Name.Name+" resolves a connector.MessageSender; resolve it through capture.ChatSenders.For")
 			}
-			ast.Inspect(fd, func(n ast.Node) bool {
-				if id, ok := n.(*ast.Ident); ok && c.isSenderConstructor(funcOf(p.info.Uses[id])) {
-					out = append(out, name+": "+fd.Name.Name+" constructs a provider's sender, which only capture.ChatSenders.For may do")
-				}
-				return true
-			})
 		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			switch x := n.(type) {
+			case *ast.CompositeLit:
+				if c.isConcreteSender(p.info.Types[x].Type) {
+					out = append(out, name+": a literal builds a provider's sender, which only capture.ChatSenders may do")
+				}
+			case *ast.CallExpr:
+				if c.isConcreteSender(p.info.Types[x].Type) && !c.callsResolverFile(p, x) {
+					out = append(out, name+": a call builds a provider's sender, which only capture.ChatSenders may do")
+				}
+			}
+			return true
+		})
 	}
 	return out
 }
 
-func (c *chatPackages) returnsMessageSender(p typedPackage, fd *ast.FuncDecl) bool {
+// callsResolverFile reports a call to a function the resolver file declares.
+func (c *chatPackages) callsResolverFile(p typedPackage, call *ast.CallExpr) bool {
+	var id *ast.Ident
+	switch fun := call.Fun.(type) {
+	case *ast.Ident:
+		id = fun
+	case *ast.SelectorExpr:
+		id = fun.Sel
+	}
+	if id == nil {
+		return false
+	}
+	fn := funcOf(p.info.Uses[id])
+	return fn != nil && c.fset.Position(fn.Pos()).Filename == senderResolver
+}
+
+func (c *chatPackages) returnsSender(p typedPackage, fd *ast.FuncDecl) bool {
 	obj, ok := p.info.Defs[fd.Name].(*types.Func)
 	if !ok {
 		return false
 	}
 	results := obj.Type().(*types.Signature).Results()
 	for i := 0; i < results.Len(); i++ {
-		if isMessageSender(results.At(i).Type()) {
+		if c.isSenderType(results.At(i).Type()) {
 			return true
 		}
 	}
 	return false
-}
-
-// isSenderConstructor reports a provider package's NewSender, which returns a
-// type with a SendMessage method. Telegram's sender is its registered connector,
-// which compose registers and the resolver reaches through the registry.
-func (c *chatPackages) isSenderConstructor(fn *types.Func) bool {
-	if fn == nil || fn.Pkg() == nil || fn.Name() != "NewSender" {
-		return false
-	}
-	if _, provider := c.providers[strings.TrimPrefix(fn.Pkg().Path(), modulePath+"/")]; !provider {
-		return false
-	}
-	sig := fn.Type().(*types.Signature)
-	if sig.Recv() != nil || sig.Results().Len() == 0 {
-		return false
-	}
-	method, _, _ := types.LookupFieldOrMethod(sig.Results().At(0).Type(), true, fn.Pkg(), "SendMessage")
-	return method != nil
 }

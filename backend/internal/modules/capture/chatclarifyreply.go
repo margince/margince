@@ -79,17 +79,49 @@ func (s *Sink) consumeOwnMessage(ctx context.Context, binding connector.ChatBind
 			return err
 		}
 		member = true
-		if _, err := tx.Exec(ctx, `
-			UPDATE raw_capture r SET ask_hint_due_at = now()
-			  FROM activity a
-			 WHERE a.raw_capture_id = r.id AND r.held_by = $1 AND r.held_connection IS NOT DISTINCT FROM $2
-			   AND r.ask_sent_at IS NOT NULL AND r.ask_hinted_at IS NULL AND `+pendingforward.Predicate("a"),
-			who, nullable(binding.Connection)); err != nil {
-			return fmt.Errorf("capture: noting that a hint is owed: %w", err)
+		if err := noteHintOwedTx(ctx, tx, who, binding.Connection); err != nil {
+			return err
 		}
 		return deleteReply(ctx, tx, msg.StoredOriginal)
 	})
 	return member, err
+}
+
+// noteHintOwedTx flags the asked batches of one colleague on one account, whose
+// hint has not been sent, as owed their one hint.
+func noteHintOwedTx(ctx context.Context, tx pgx.Tx, member, connection ids.UUID) error {
+	if _, err := tx.Exec(ctx, `
+		UPDATE raw_capture r SET ask_hint_due_at = now()
+		  FROM activity a
+		 WHERE a.raw_capture_id = r.id AND r.held_by = $1 AND r.held_connection IS NOT DISTINCT FROM $2
+		   AND (r.ask_sent_at IS NOT NULL OR r.ask_claimed_at IS NOT NULL) AND r.ask_hinted_at IS NULL AND `+pendingforward.Predicate("a"),
+		member, nullable(connection)); err != nil {
+		return fmt.Errorf("capture: noting that a hint is owed: %w", err)
+	}
+	return nil
+}
+
+// namesColleague says the customer an answer names is a verified member of the
+// workspace: the colleague's own card, another colleague's, or a colleague's
+// number. Filing on one would make a colleague a contact.
+func (s *Sink) namesColleague(ctx context.Context, identity connector.ChannelIdentity) (bool, error) {
+	var colleague bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) (err error) {
+		_, colleague, err = s.members.MemberOf(ctx, tx, identity.Provider, identity.AccountScope, identity.ChannelUserID)
+		return err
+	})
+	return colleague, err
+}
+
+// refuseColleagueAnswer uses up an answer that names a colleague. The batch
+// stays held and the sender is owed one hint.
+func (s *Sink) refuseColleagueAnswer(ctx context.Context, member, connection, reply ids.UUID) error {
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := noteHintOwedTx(ctx, tx, member, connection); err != nil {
+			return err
+		}
+		return deleteReply(ctx, tx, reply)
+	})
 }
 
 // consumeEcho uses up the provider's copy of a question this system sent.
@@ -98,7 +130,7 @@ func (s *Sink) consumeEcho(ctx context.Context, binding connector.ChatBinding, m
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM raw_capture
 			 WHERE held_by IS NOT NULL AND held_connection IS NOT DISTINCT FROM $1 AND $2 = ANY(ask_message_ids)
-			   AND ask_sent_at > now() - make_interval(secs => $3))`,
+			   AND coalesce(ask_sent_at, ask_claimed_at) > now() - make_interval(secs => $3))`,
 			nullable(binding.Connection), msg.IdempotencyKey, pendingforward.Window.Seconds()).Scan(&echoed); err != nil {
 			return fmt.Errorf("capture: looking for the question an echo copies: %w", err)
 		}
@@ -159,6 +191,13 @@ func (s *Sink) consumeAnswer(ctx context.Context, binding connector.ChatBinding,
 	case len(target) == 0:
 		return false, nil
 	}
+	colleague, err := s.namesColleague(ctx, identity)
+	if err != nil {
+		return false, err
+	}
+	if colleague {
+		return true, s.refuseColleagueAnswer(ctx, member, binding.Connection, msg.StoredOriginal)
+	}
 	return true, s.fileAnswered(ctx, binding, member, target, identity, name, msg.StoredOriginal)
 }
 
@@ -167,12 +206,12 @@ func (s *Sink) consumeAnswer(ctx context.Context, binding connector.ChatBinding,
 // lives.
 func askedMessagesTx(ctx context.Context, tx pgx.Tx, member, connection ids.UUID) ([]askedMessage, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT r.ask_batch_id, r.ask_message_ids, r.ask_sent_at, a.id, a.captured_by, coalesce(a.source, ''),
+		SELECT r.ask_batch_id, r.ask_message_ids, coalesce(r.ask_sent_at, r.ask_claimed_at), a.id, a.captured_by, coalesce(a.source, ''),
 		       (`+pendingforward.Predicate("a")+`)
 		  FROM raw_capture r JOIN activity a ON a.raw_capture_id = r.id
-		 WHERE r.held_by = $1 AND r.held_connection IS NOT DISTINCT FROM $2 AND r.ask_sent_at IS NOT NULL
-		   AND r.ask_sent_at > now() - make_interval(secs => $3)
-		 ORDER BY r.ask_sent_at DESC, a.id`, member, nullable(connection), pendingforward.Window.Seconds())
+		 WHERE r.held_by = $1 AND r.held_connection IS NOT DISTINCT FROM $2 AND (r.ask_sent_at IS NOT NULL OR r.ask_claimed_at IS NOT NULL)
+		   AND coalesce(r.ask_sent_at, r.ask_claimed_at) > now() - make_interval(secs => $3)
+		 ORDER BY coalesce(r.ask_sent_at, r.ask_claimed_at) DESC, a.id`, member, nullable(connection), pendingforward.Window.Seconds())
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the questions asked about forwards: %w", err)
 	}
@@ -233,7 +272,7 @@ func (s *Sink) askWhichBatch(ctx context.Context, member, connection, reply ids.
 			UPDATE raw_capture r SET ask_followup_at = coalesce(r.ask_followup_at, now())
 			  FROM activity a
 			 WHERE a.raw_capture_id = r.id AND r.held_by = $1 AND r.held_connection IS NOT DISTINCT FROM $2
-			   AND r.ask_sent_at IS NOT NULL AND `+pendingforward.Predicate("a"), member, nullable(connection)); err != nil {
+			   AND (r.ask_sent_at IS NOT NULL OR r.ask_claimed_at IS NOT NULL) AND `+pendingforward.Predicate("a"), member, nullable(connection)); err != nil {
 			return fmt.Errorf("capture: noting that a follow-up question is owed: %w", err)
 		}
 		return deleteReply(ctx, tx, reply)
@@ -242,7 +281,9 @@ func (s *Sink) askWhichBatch(ctx context.Context, member, connection, reply ids.
 
 // fileAnswered files each held message of the batch on the customer the answer
 // names, as the member who forwarded them, then uses up the answer. A message
-// the member filed by hand in the meantime is no longer held and is left alone.
+// that expired or that the member filed by hand since it was read is left alone.
+// An answer with nothing left to file is used up all the same, since the
+// forwards it answers are gone.
 func (s *Sink) fileAnswered(ctx context.Context, binding connector.ChatBinding, member ids.UUID, batch []askedMessage,
 	identity connector.ChannelIdentity, name string, reply ids.UUID,
 ) error {
@@ -251,6 +292,13 @@ func (s *Sink) fileAnswered(ctx context.Context, binding connector.ChatBinding, 
 		return err
 	}
 	for _, m := range batch {
+		// A held forward may have expired or been filed by hand since it was read.
+		if held, err := s.stillHeld(ctx, m.activity); err != nil || !held {
+			if err != nil {
+				return err
+			}
+			continue
+		}
 		if _, err := s.channelEnsurer.EnsureChannelCounterparty(ctx, EnsureChannelRequest{
 			Identity: identity, DisplayName: name, ActivityID: m.activity, Source: m.source, CapturedBy: m.capturedBy,
 		}); err != nil {
@@ -258,6 +306,22 @@ func (s *Sink) fileAnswered(ctx context.Context, binding connector.ChatBinding, 
 		}
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error { return deleteReply(ctx, tx, reply) })
+}
+
+// stillHeld locks one held forward and says it is still held. The lock waits
+// out a purge that has begun on it.
+func (s *Sink) stillHeld(ctx context.Context, activity ids.UUID) (bool, error) {
+	var held bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var id ids.UUID
+		err := tx.QueryRow(ctx, `SELECT a.id FROM activity a WHERE a.id = $1 AND `+pendingforward.Predicate("a")+` FOR UPDATE OF a`, activity).Scan(&id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		held = err == nil
+		return err
+	})
+	return held, err
 }
 
 func deleteReply(ctx context.Context, tx pgx.Tx, reply ids.UUID) error {

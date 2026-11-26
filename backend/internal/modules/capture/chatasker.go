@@ -143,7 +143,11 @@ func (a *ChatAsker) send(ctx context.Context, provider string, connection ids.UU
 // settle records how a claimed send ended. A send that ended in doubt keeps its
 // claim.
 func (a *ChatAsker) settle(ctx context.Context, batch ids.UUID, messageID string, sendErr error) error {
-	retry := true
+	retry, retryAfter := true, time.Duration(0)
+	var limited *connector.RateLimitedError
+	if errors.As(sendErr, &limited) {
+		retryAfter = limited.RetryAfter
+	}
 	switch {
 	case sendErr == nil && messageID == "":
 		messageID = "sent:" + batch.String()
@@ -154,7 +158,7 @@ func (a *ChatAsker) settle(ctx context.Context, batch ids.UUID, messageID string
 	case errors.Is(sendErr, connector.ErrOutsideReplyWindow), errors.Is(sendErr, connector.ErrRecipientUnreachable):
 		retry = false
 	}
-	if err := a.DB.Tx(ctx, func(tx pgx.Tx) error { return SettleClarifyBatchTx(ctx, tx, batch, messageID, retry) }); err != nil {
+	if err := a.DB.Tx(ctx, func(tx pgx.Tx) error { return SettleClarifyBatchTx(ctx, tx, batch, messageID, retry, retryAfter) }); err != nil {
 		return err
 	}
 	if sendErr != nil {
@@ -234,8 +238,8 @@ func followUpsOwedTx(ctx context.Context, tx pgx.Tx) ([]*followUp, error) {
 		SELECT r.id, r.held_by, r.held_connection, r.ask_batch_id, a.channel_provider, a.thread_key, a.occurred_at, a.body
 		  FROM raw_capture r JOIN activity a ON a.raw_capture_id = r.id
 		 WHERE r.held_by IN (SELECT held_by FROM raw_capture WHERE ask_followup_at IS NOT NULL)
-		   AND r.ask_sent_at IS NOT NULL AND `+pendingforward.Predicate("a")+`
-		 ORDER BY r.held_by, r.held_connection NULLS FIRST, r.ask_sent_at, a.occurred_at, r.id`)
+		   AND (r.ask_sent_at IS NOT NULL OR r.ask_claimed_at IS NOT NULL) AND `+pendingforward.Predicate("a")+`
+		 ORDER BY r.held_by, r.held_connection NULLS FIRST, coalesce(r.ask_sent_at, r.ask_claimed_at), a.occurred_at, r.id`)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the follow-up questions owed: %w", err)
 	}

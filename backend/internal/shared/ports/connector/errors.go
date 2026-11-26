@@ -62,6 +62,10 @@ var ErrRecipientUnreachable = errors.New("connector: the provider will not deliv
 // no retry helps until they write again.
 var ErrOutsideReplyWindow = errors.New("connector: the recipient last wrote outside the provider's reply window")
 
+// ErrClarificationRecipient refuses a question to someone who is no verified
+// member of the workspace. A company account asks only its own colleagues.
+var ErrClarificationRecipient = errors.New("a company account asks only a verified colleague who wrote the messages they forwarded")
+
 // ErrCursorGone marks a stored sync watermark the provider no longer honors
 // (e.g. Gmail 404 on an old historyId): the connector recovers with its
 // bounded re-list; the registry records the class, nothing more.

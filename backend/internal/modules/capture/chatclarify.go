@@ -210,8 +210,9 @@ func ClaimClarifyBatchTx(ctx context.Context, tx pgx.Tx, batch ids.UUID) (bool, 
 // provider accepted the question. An empty id with retry true means the provider
 // refused without delivering, and the batch is tried again after a pause. An
 // empty id with retry false is a refusal no retry can cure, and the batch stays
-// held until it expires.
-func SettleClarifyBatchTx(ctx context.Context, tx pgx.Tx, batch ids.UUID, messageID string, retry bool) error {
+// held until it expires. A retry waits at least retryAfter, the provider's own
+// word on when to come back.
+func SettleClarifyBatchTx(ctx context.Context, tx pgx.Tx, batch ids.UUID, messageID string, retry bool, retryAfter time.Duration) error {
 	var err error
 	switch {
 	case messageID != "":
@@ -219,8 +220,8 @@ func SettleClarifyBatchTx(ctx context.Context, tx pgx.Tx, batch ids.UUID, messag
 			 WHERE ask_batch_id = $1 AND ask_claimed_at IS NOT NULL AND ask_sent_at IS NULL`, batch, messageID)
 	case retry:
 		_, err = tx.Exec(ctx, `UPDATE raw_capture SET ask_claimed_at = NULL,
-			ask_next_at = now() + make_interval(secs => least($2::float8, $3::float8 * power(2, ask_attempts - 1)))
-			 WHERE ask_batch_id = $1 AND ask_sent_at IS NULL`, batch, clarifyRetryCap.Seconds(), clarifyRetryBase.Seconds())
+			ask_next_at = now() + make_interval(secs => greatest($4::float8, least($2::float8, $3::float8 * power(2, ask_attempts - 1))))
+			 WHERE ask_batch_id = $1 AND ask_sent_at IS NULL`, batch, clarifyRetryCap.Seconds(), clarifyRetryBase.Seconds(), retryAfter.Seconds())
 	default:
 		_, err = tx.Exec(ctx, `UPDATE raw_capture SET ask_claimed_at = NULL, ask_attempts = $2
 			 WHERE ask_batch_id = $1 AND ask_sent_at IS NULL`, batch, clarifyMaxAttempts)

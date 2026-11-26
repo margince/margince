@@ -25,6 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -67,7 +68,13 @@ func (r *Registry) ChatSenders() ChatSenders {
 	if set {
 		return senders
 	}
-	return NewChatSenders(r.db, r.vault, r.BotSender)
+	senders = NewChatSenders(r.db, r.vault, r.BotSender)
+	if registered, err := r.connector(telegram.ProviderName); err == nil {
+		if sender, sends := registered.(connector.MessageSender); sends {
+			senders.TelegramBusiness = sender
+		}
+	}
+	return senders
 }
 
 // WithChatSenders replaces the resolver, so a test points the networks' senders

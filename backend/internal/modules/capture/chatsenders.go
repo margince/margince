@@ -41,6 +41,17 @@ type ChatSenders struct {
 	Bot func(ctx context.Context, provider string) (connector.MessageSender, connector.Auth, error)
 }
 
+// TelegramConnector builds the Telegram connector, which is also Telegram's
+// sender. Compose registers the one it gets here, and the resolver reuses the
+// registered one, so no second Telegram sender exists with another setup. A nil
+// api is Telegram's own host.
+func TelegramConnector(api telegram.API) *telegram.Connector {
+	if api == nil {
+		api = telegram.NewAPI(nil, "")
+	}
+	return telegram.New(api)
+}
+
 // NewChatSenders builds the resolver over the networks' own API hosts. Compose
 // and tests replace a sender field to point one at another host.
 func NewChatSenders(db *database.DB, vault keyvault.Vault, bot func(ctx context.Context, provider string) (connector.MessageSender, connector.Auth, error)) ChatSenders {
@@ -48,7 +59,7 @@ func NewChatSenders(db *database.DB, vault keyvault.Vault, bot func(ctx context.
 		DB: db, Vault: vault, Bot: bot,
 		WhatsApp:         whatsapp.NewSender(whatsapp.NewClient(nil, "", "")),
 		Zalo:             zalo.NewSender(zalo.NewClient(nil, "", "")),
-		TelegramBusiness: telegram.New(telegram.NewAPI(nil, "")),
+		TelegramBusiness: TelegramConnector(nil),
 	}
 }
 

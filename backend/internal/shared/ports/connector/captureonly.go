@@ -30,21 +30,25 @@ const (
 	PurposeClarification
 )
 
-// AllowChannelSend is the one rule behind every refusal to send into a
-// capture-only conversation. A customer's business conversation is only read
-// here. The one exception is a clarification to a verified member of the
-// workspace, about what that member forwarded.
+// AllowChannelSend is the one rule behind every refusal to send into a chat.
+// A reply into a customer's business conversation is refused, because that
+// conversation is only read here. A clarification is the question a company
+// account asks a colleague about what they forwarded. It goes only to a
+// verified member of the workspace, on any thread.
 //
 // The send path, the agent's staging check and the clarification job all call
 // it, so a message cannot be staged that the send would refuse.
 func AllowChannelSend(purpose SendPurpose, provider, threadKey string, recipientIsVerifiedMember bool) error {
-	if !IsCaptureOnlyThread(provider, threadKey) {
-		return nil
+	if purpose == PurposeClarification {
+		if recipientIsVerifiedMember {
+			return nil
+		}
+		return ErrClarificationRecipient
 	}
-	if purpose == PurposeClarification && recipientIsVerifiedMember {
-		return nil
+	if IsCaptureOnlyThread(provider, threadKey) {
+		return &CaptureOnlyConversationError{Provider: provider}
 	}
-	return &CaptureOnlyConversationError{Provider: provider}
+	return nil
 }
 
 // RefuseCaptureOnlyThread refuses a reply into a capture-only conversation.
