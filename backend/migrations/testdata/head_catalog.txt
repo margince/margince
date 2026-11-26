@@ -6236,8 +6236,6 @@ public.graph_contact_edge.last_precision text gen=- def=-
 public.graph_contact_edge.processed_generation bigint NOT NULL gen=- def=0
 public.graph_contact_edge.read_snapshot pg_snapshot gen=- def=-
 public.graph_contact_edge.requested_generation bigint NOT NULL gen=- def=0
-public.graph_contact_edge.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.graph_contact_edge FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"last_precision": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"last_precision":20000}')
-public.graph_contact_edge.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.graph_contact_edge FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"last_precision": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"last_precision":20000}')
 public.graph_contact_edge_pkey CREATE UNIQUE INDEX graph_contact_edge_pkey ON public.graph_contact_edge USING btree (contact_a, contact_b)
 public.graph_interaction_edge acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.graph_interaction_edge storage=autovacuum_vacuum_scale_factor=0.02,autovacuum_analyze_scale_factor=0.02 toast=-
@@ -6264,8 +6262,6 @@ public.graph_interaction_edge.processed_generation bigint NOT NULL gen=- def=0
 public.graph_interaction_edge.read_snapshot pg_snapshot gen=- def=-
 public.graph_interaction_edge.requested_generation bigint NOT NULL gen=- def=0
 public.graph_interaction_edge.sent_count_90d integer gen=- def=-
-public.graph_interaction_edge.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.graph_interaction_edge FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"last_precision": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"last_precision":20000}')
-public.graph_interaction_edge.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.graph_interaction_edge FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"last_precision": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"last_precision":20000}')
 public.graph_interaction_edge.user_id uuid NOT NULL gen=- def=-
 public.graph_interaction_edge_pkey CREATE UNIQUE INDEX graph_interaction_edge_pkey ON public.graph_interaction_edge USING btree (user_id, contact_id)
 public.guard_instruction_wording_correction() secdef=false cfg=- acl=- BEGIN

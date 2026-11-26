@@ -863,8 +863,8 @@ public.geocode_cache.query document checked: joined from bounded address columns
 public.geocode_country_cache.country_codes document
 public.geocode_country_cache.provider document
 public.geocode_country_cache.query document checked: joined from bounded address columns
-public.graph_contact_edge.last_precision document
-public.graph_interaction_edge.last_precision document
+public.graph_contact_edge.last_precision exempt a CHECK holds it to day or instant
+public.graph_interaction_edge.last_precision exempt a CHECK holds it to day or instant
 public.home_read_cache.read document
 public.home_read_cache.request_key document
 public.home_read_fence_pending.fence document
