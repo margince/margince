@@ -378,7 +378,7 @@ func TestARefusalOwedAReplyOnlyItsParticipantsMaySeeIsNotClosed(t *testing.T) {
 	// The re-check under the row lock runs as the owner's agent, who is not on
 	// the private thread; it must see the open request too.
 	err := database.WithWorkspaceTx(c.Admin(), c.Pool, func(tx pgx.Tx) error {
-		ctx, err := ownersAgentTx(identity.NewService(c.Pool), c.Rep1, marginceActorID)(c.Admin(), tx)
+		ctx, err := agentForTx(identity.NewService(c.Pool), c.Rep1, marginceActorID)(c.Admin(), tx)
 		if err != nil {
 			return err
 		}
