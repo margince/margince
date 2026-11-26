@@ -9,6 +9,7 @@ import { OfferScreen } from "./offers";
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   globalThis.location.hash = "";
 });
@@ -63,6 +64,9 @@ function serveRegenerate(next: Record<string, unknown>) {
 }
 
 async function regenerate() {
+  // The toast leaves on a timer. A fake clock moves only while the loop is idle,
+  // so a slow render cannot use up the toast's life before the test reads it.
+  vi.useFakeTimers({ shouldAdvanceTime: true });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -77,7 +81,9 @@ async function regenerate() {
     </QueryClientProvider>,
   );
   await screen.findByText("ANG-2026-0007");
-  await userEvent.setup().click(screen.getByTestId("regenerate-offer"));
+  await userEvent
+    .setup({ advanceTimers: vi.advanceTimersByTime })
+    .click(screen.getByTestId("regenerate-offer"));
   await waitFor(() => expect(globalThis.location.hash).toBe("#/offers/o-2"));
 }
 
