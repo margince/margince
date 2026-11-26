@@ -149,6 +149,40 @@ describe("record links warm the page they open", () => {
     expect(backend.asked.some((request) => request.signal.aborted)).toBe(false);
   });
 
+  it("lets the reads go when the pointer leaves the page", async () => {
+    const backend = server();
+    const { view } = renderLinks();
+    rest(view.getByText("Alice Müller"));
+    await waitFor(() => expect(backend.asked).toHaveLength(3));
+
+    fireEvent.pointerOut(view.getByText("Alice Müller"), {
+      pointerType: "mouse",
+      relatedTarget: null,
+    });
+
+    await waitFor(() =>
+      expect(backend.asked.every((request) => request.signal.aborted)).toBe(
+        true,
+      ),
+    );
+  });
+
+  it("keeps the reads of a link whose own handler routes the click", async () => {
+    const backend = server();
+    const { view } = renderLinks();
+    const link = view.getByText("Alice Müller");
+    link.closest("a")?.addEventListener("click", () => {
+      window.location.hash = `#/contacts/${ID}`;
+    });
+    rest(link);
+    await waitFor(() => expect(backend.asked).toHaveLength(3));
+    fireEvent.click(link);
+    fireEvent.pointerOver(document.body, { pointerType: "mouse" });
+
+    await act(() => Promise.resolve());
+    expect(backend.asked.some((request) => request.signal.aborted)).toBe(false);
+  });
+
   it("leaves a create form, another record kind and the open page alone", async () => {
     const backend = server();
     const { view } = renderLinks();

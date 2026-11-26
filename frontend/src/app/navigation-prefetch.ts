@@ -97,6 +97,7 @@ export class NavigationPrefetch {
     this.#client = client;
     const sessionHash = hashKey(sessionOptions.queryKey);
     client.getQueryCache().subscribe((event) => {
+      if (event.type === "removed") this.#owned.delete(event.query);
       if (event.query.queryHash !== sessionHash) return;
       const me =
         event.type === "removed"

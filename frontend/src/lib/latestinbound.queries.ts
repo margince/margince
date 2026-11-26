@@ -19,10 +19,11 @@ export function latestInboundKey(
 export function latestInboundQuery(entityType: EntityKind, entityId: string) {
   return queryOptions({
     queryKey: latestInboundKey(entityType, entityId),
-    queryFn: async () =>
+    queryFn: async ({ signal }) =>
       unwrap(
         await api.GET("/activities/latest-inbound", {
           params: { query: { entity_type: entityType, entity_id: entityId } },
+          signal,
         }),
       ),
   });

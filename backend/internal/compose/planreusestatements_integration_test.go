@@ -319,7 +319,7 @@ func readPlannedOnceLanes(ctx context.Context, lanes plannedOnceLanes, deal, tas
 }
 
 // readContactPageLanes runs the reads a contact page sends beside its 360, and
-// fails a read that sent no statement, since the census could not hold it.
+// fails a read that sent no statement under generic plans.
 func readContactPageLanes(ctx context.Context, t *testing.T, sent *sentStatements, pool *pgxpool.Pool, contact ids.UUID) {
 	t.Helper()
 	db := InstallationDB(pool)
@@ -347,10 +347,28 @@ func readContactPageLanes(ctx context.Context, t *testing.T, sent *sentStatement
 		if err := reads[name](); err != nil {
 			t.Fatalf("reading the contact page's %s: %v", name, err)
 		}
-		if len(sent.sql) == before {
-			t.Fatalf("the contact page's %s sent no statement on the traced pool", name)
+		if !ranUnderGenericPlans(sent.sql[before:]) {
+			t.Fatalf("the contact page's %s sent no statement under generic plans", name)
 		}
 	}
+}
+
+// ranUnderGenericPlans reports whether a read's statements include one sent
+// between the switch to generic plans and the bound set_config that restores
+// the mode.
+func ranUnderGenericPlans(window []string) bool {
+	generic := false
+	for _, sql := range window {
+		switch {
+		case strings.Contains(sql, "set_config('plan_cache_mode', 'force_generic_plan'"):
+			generic = true
+		case strings.HasPrefix(sql, "SELECT set_config('plan_cache_mode', $1"):
+			generic = false
+		case generic:
+			return true
+		}
+	}
+	return false
 }
 
 func readSuggestionLanes(ctx context.Context, db *database.DB, positionID ids.UUID) error {

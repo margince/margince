@@ -62,6 +62,10 @@ export function useRecordPrefetch(): void {
         HOVER_INTENT_MS,
       );
     };
+    // A pointer that leaves the page sends no further pointerover.
+    const onOut = (event: PointerEvent) => {
+      if (event.relatedTarget === null) leaveHovered();
+    };
     const onPress = (event: PointerEvent) => {
       const id = contactLinkOf(event);
       if (!id || event.button !== 0) return;
@@ -84,17 +88,21 @@ export function useRecordPrefetch(): void {
         prefetch.follow(contactTarget(id));
     };
     document.addEventListener("pointerover", onOver);
+    document.addEventListener("pointerout", onOut);
     document.addEventListener("pointerdown", onPress);
     document.addEventListener("focusin", onFocus);
     document.addEventListener("focusout", onBlur);
-    document.addEventListener("click", onClick);
+    // Capture runs before the link's own handler routes the click, so the
+    // address read is still the page the reader clicked from.
+    document.addEventListener("click", onClick, true);
     return () => {
       leaveHovered();
       document.removeEventListener("pointerover", onOver);
+      document.removeEventListener("pointerout", onOut);
       document.removeEventListener("pointerdown", onPress);
       document.removeEventListener("focusin", onFocus);
       document.removeEventListener("focusout", onBlur);
-      document.removeEventListener("click", onClick);
+      document.removeEventListener("click", onClick, true);
     };
   }, [client]);
 }
