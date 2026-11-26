@@ -61,7 +61,7 @@ func TestEveryExtensionTableHasAPrivacyDeclaration(t *testing.T) {
 // themselves in prose that names statements.
 func migratedTables(t *testing.T, unitDir string) []string {
 	t.Helper()
-	files, err := filepath.Glob(filepath.Join(unitDir, extension.MigrationsDir, "*.up.sql"))
+	files, err := gatekit.Glob(filepath.Join(unitDir, extension.MigrationsDir, "*.up.sql"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -31,7 +31,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"go/types"
 	"path/filepath"
 	"strings"
@@ -262,16 +261,20 @@ func TestTheToolMinorUnitDetectorSeesWhatItClaimsTo(t *testing.T) {
 	root := t.TempDir()
 	writePromptFixture(t, filepath.Join(root, toolResultDir, "tools.go"), toolFixture)
 	findings, resolved, unresolved := toolMinorUnitFindings(t, root, func(path string) (*ast.File, error) {
-		return parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+		return gatekit.ParseFile(path, parser.SkipObjectResolution)
 	})
 	agents := filepath.Join(root, toolResultDir)
-	want := []string{agents + ".Bare.CostMinor", agents + ".Hidden.AmountMinor", agents + ".Line.NetMinor",
-		agents + ".Numbered.AmountMinor", agents + ".Unspelled.FeeMinor"}
+	want := []string{
+		agents + ".Bare.CostMinor", agents + ".Hidden.AmountMinor", agents + ".Line.NetMinor",
+		agents + ".Numbered.AmountMinor", agents + ".Unspelled.FeeMinor",
+	}
 	if got := fmt.Sprint(findings); got != fmt.Sprint(want) {
 		t.Errorf("findings = %v, want %v", findings, want)
 	}
-	wantRoots := []string{agents + ".Bare", agents + ".Hidden", agents + ".Numbered", agents + ".Readings", agents + ".Row",
-		agents + ".Unspelled"}
+	wantRoots := []string{
+		agents + ".Bare", agents + ".Hidden", agents + ".Numbered", agents + ".Readings", agents + ".Row",
+		agents + ".Unspelled",
+	}
 	if fmt.Sprint(resolved) != fmt.Sprint(wantRoots) || fmt.Sprint(unresolved) != "[Missing]" {
 		t.Errorf("resolved %v and missed %v, want %v and [Missing]", resolved, unresolved, wantRoots)
 	}

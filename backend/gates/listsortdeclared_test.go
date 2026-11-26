@@ -248,7 +248,7 @@ func packageFunctions(t *testing.T, path string) map[string]*ast.FuncDecl {
 	t.Helper()
 	out := map[string]*ast.FuncDecl{}
 	dir := filepath.Dir(path)
-	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	sources, err := gatekit.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s: %v", dir, err)
 	}

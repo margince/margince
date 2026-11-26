@@ -21,8 +21,8 @@ package gates
 // no schema, because the operator was told it was fine.
 
 import (
+	"bytes"
 	"encoding/json"
-	"os"
 	"reflect"
 	"slices"
 	"testing"
@@ -37,16 +37,11 @@ import (
 func compiledRoutingSchema(t *testing.T) *jsonschema.Schema {
 	t.Helper()
 	const path = "../config/margince.schema.json"
-	raw, err := os.Open(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
-		t.Fatalf("open schema: %v", err)
+		t.Fatalf("read schema: %v", err)
 	}
-	defer func() {
-		if cerr := raw.Close(); cerr != nil {
-			t.Errorf("close schema: %v", cerr)
-		}
-	}()
-	doc, err := jsonschema.UnmarshalJSON(raw)
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(raw))
 	if err != nil {
 		t.Fatalf("parse schema: %v", err)
 	}

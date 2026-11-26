@@ -16,8 +16,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -32,7 +30,7 @@ func TestEveryWrittenLiteralCarriesTheSharedLanguageEvidence(t *testing.T) {
 	t.Parallel()
 
 	root := filepath.Join(repoRoot, "backend", "internal", "compose")
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	sites := 0
 	wrapped := map[string]bool{}
 	wrapperOK := map[string]bool{}
@@ -45,7 +43,7 @@ func TestEveryWrittenLiteralCarriesTheSharedLanguageEvidence(t *testing.T) {
 			strings.Contains(path, string(filepath.Separator)+"draftcore"+string(filepath.Separator)) {
 			return nil
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return err
 		}

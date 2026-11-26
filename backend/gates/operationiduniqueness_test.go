@@ -115,7 +115,7 @@ func contractDocuments(t *testing.T) []operationDocument {
 	// already names the core contract, and two gates disagreeing about where
 	// it lives is the shape that leaves one of them censusing nothing.
 	paths := []string{contractFile}
-	overlays, err := filepath.Glob(filepath.Join("..", "extensions", "*", "api", "crm.yaml"))
+	overlays, err := gatekit.Glob(filepath.Join("..", "extensions", "*", "api", "crm.yaml"))
 	if err != nil {
 		t.Fatalf("looking for extension contract overlays: %v", err)
 	}

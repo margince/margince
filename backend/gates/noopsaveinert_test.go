@@ -23,7 +23,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"path/filepath"
 	"sort"
@@ -246,7 +245,7 @@ func TestEveryVersionedSaveRouteIsProbedForANoOp(t *testing.T) {
 // The probes outgrow one file, so any integration test file there may hold one.
 func noOpProbedRoutesFromSource(t *testing.T) map[string]string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), noOpProbeFile, nil, 0)
+	file, err := gatekit.ParseFile(noOpProbeFile, 0)
 	if err != nil {
 		t.Fatalf("reading the probe table: %v", err)
 	}

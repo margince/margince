@@ -71,7 +71,6 @@ const companyEvidenceRace = "it writes a company's evidence, never a contact's, 
 
 // unlockedLiveWrites records exceptions to holding an erasure-cleared subject.
 var unlockedLiveWrites = gatekit.Waive(map[string]string{
-
 	"internal/modules/contacts:ApplyMeetingProfileTx":               companyEvidenceRace,
 	"internal/modules/contacts:Store.ApplyColdStartProfile":         companyEvidenceRace,
 	"internal/modules/contacts:Store.ApplyColdStartProfileTx":       companyEvidenceRace,
@@ -161,7 +160,7 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 // the two row-probe spellings, and the standing probe beside it.
 func moduleDirsWith(t *testing.T, identifiers ...string) []string {
 	t.Helper()
-	paths, err := filepath.Glob("internal/modules/*/*.go")
+	paths, err := gatekit.Glob("internal/modules/*/*.go")
 	if err != nil {
 		t.Fatalf("listing the module sources: %v", err)
 	}
