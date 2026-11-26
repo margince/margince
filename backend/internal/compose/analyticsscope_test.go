@@ -3,18 +3,6 @@
 
 package compose
 
-// The scope POLICY, tested without a database.
-//
-// Every case here is a decision the resolver makes before it reads anything:
-// which population an omitted request means, and which requested population is
-// refused. Those are the cases a reviewer has to trust, and they are exactly
-// the ones a fixture would obscure — a test that seeds two teams to prove a rep
-// cannot name one is testing the seed.
-//
-// The paths that DO read (labelling a team, checking a colleague's membership)
-// are covered by the integration test beside this file, which needs Postgres
-// for the same reason they do.
-
 import (
 	"errors"
 	"net/http"
@@ -37,9 +25,6 @@ func actorWithScope(scope principal.RowScope, teams ...ids.UUID) principal.Princ
 	}
 }
 
-// An omitted scope is the case the whole file exists for: it must mean the
-// caller's own lens, never the workspace. The workspace default is what shipped
-// and what a rep saw as somebody else's pipeline.
 func TestAnOmittedScopeResolvesToTheCallersOwnLens(t *testing.T) {
 	team := ids.NewV7()
 	cases := []struct {
@@ -70,9 +55,6 @@ func TestAnOmittedScopeResolvesToTheCallersOwnLens(t *testing.T) {
 	}
 }
 
-// A team-lens principal who manages nothing is the case that decides whether
-// "team" is read as a tier or as a fact. It must narrow to themselves: reading
-// it as a tier would hand somebody managing no team the whole installation.
 func TestATeamLensWithNoTeamsDoesNotWiden(t *testing.T) {
 	actor := actorWithScope(principal.RowScopeTeam)
 	ctx := principal.WithActor(individualPerformanceShown(), actor)
@@ -142,9 +124,7 @@ func TestAScopeOutsideTheCallersLensIsRefused(t *testing.T) {
 	}
 }
 
-// A refusal over a named team or contact says "not found", never "denied": the
-// second sentence confirms the id exists, which is the disclosure the lens was
-// supposed to prevent.
+// A denial must not reveal that the named subject exists.
 func TestARefusalOverANamedSubjectDoesNotConfirmItExists(t *testing.T) {
 	other := ids.NewV7()
 	actor := actorWithScope(principal.RowScopeOwn)
@@ -163,8 +143,6 @@ func TestARefusalOverANamedSubjectDoesNotConfirmItExists(t *testing.T) {
 	}
 }
 
-// Yourself is inside every lens, including a rep's, and asking for it by id
-// must not cost a membership read that would refuse it.
 func TestNamingYourselfIsAlwaysWithinYourOwnLens(t *testing.T) {
 	actor := actorWithScope(principal.RowScopeOwn)
 	ctx := principal.WithActor(individualPerformanceShown(), actor)
@@ -179,14 +157,7 @@ func TestNamingYourselfIsAlwaysWithinYourOwnLens(t *testing.T) {
 	}
 }
 
-// A manager's default population clause must also admit a row nobody owns
-// yet: an unrouted lead or an unassigned deal is on the SAME worklist row
-// scope already hands a team manager, so a population clause that excludes it
-// would disagree with the manager's own list about a row that is in both.
-//
-// arg is a no-op collector here: the assertion is on the rendered SQL shape.
-// labelScope reads no database for ManagedTeams, unlike for an owner or a team.
-// So this stays a pure policy test like its neighbours.
+// Unowned rows must appear in both the manager's list and its population.
 func TestManagedTeamsPopulationTreatsAnUnownedRowAsShared(t *testing.T) {
 	team := ids.NewV7()
 	actor := actorWithScope(principal.RowScopeTeam, team)
@@ -206,15 +177,7 @@ func TestManagedTeamsPopulationTreatsAnUnownedRowAsShared(t *testing.T) {
 	}
 }
 
-// A manager's default is its own population and must not be reported as the
-// workspace.
-//
-// The standing forecast call is looked up BY the scope, so flattening this to
-// "workspace" — which an earlier spelling did — handed a team manager
-// management's own call: its amount, its author and its note, printed beside
-// totals covering only the manager's teams. Asking for the workspace explicitly
-// would have been refused, which is what makes the flattened answer a
-// disclosure rather than a mislabel.
+// Forecast calls are keyed by population; widening it exposes another call.
 func TestAManagersDefaultIsNotReportedAsTheWorkspace(t *testing.T) {
 	resolved := ResolvedScope{Kind: ScopeKindManagedTeams, Label: managedTeamsLabel}
 
@@ -231,8 +194,6 @@ func TestAManagersDefaultIsNotReportedAsTheWorkspace(t *testing.T) {
 	}
 }
 
-// Totals are open to every seat that reads deals. The whole company and any
-// team resolve for a rep, while a named colleague still does not.
 func TestEverySeatMayMeasureTotalsForTheWorkspaceAndAnyTeam(t *testing.T) {
 	team := ids.NewV7()
 	for _, scope := range []principal.RowScope{principal.RowScopeOwn, principal.RowScopeTeam, principal.RowScopeAll} {
@@ -303,8 +264,6 @@ func TestAssertingAboutAPopulationKeepsTheTierRules(t *testing.T) {
 	}
 }
 
-// The owner chart narrows for every request except an owner scope, which is
-// already inside the lens.
 func TestOnlyAnOwnerScopeIsExemptFromTheOwnerBreakdownNarrowing(t *testing.T) {
 	id := ids.NewV7()
 	for kind, want := range map[string]bool{
