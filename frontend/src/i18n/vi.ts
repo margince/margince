@@ -14226,7 +14226,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "threads.unanswered_other": "{count} chưa trả lời",
   "threads.cancel": "Hủy",
   "threads.empty": "Chưa có tin nhắn nào.",
-  "threads.hiddenFromBuyer": "Người mua không còn thấy cuộc trao đổi này",
+  "threads.hiddenFromBuyer": "Bên mua không còn thấy cuộc trao đổi này",
   "threads.requiredChange": "Cần thay đổi",
   "threads.resolved": "Đã giải quyết",
   "threads.sideBuyer": "bên mua",
