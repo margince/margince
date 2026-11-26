@@ -5894,6 +5894,7 @@ export const en = {
   "lead.project": "Project",
 
   "lead.source.manual": "Created manually",
+  "lead.source.siteread": "From company website",
   "lead.source.webform": "Web form",
   "lead.source.webformNamed": "Web form “{name}”",
   "lead.source.import": "Import",

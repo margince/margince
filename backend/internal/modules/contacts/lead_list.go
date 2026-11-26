@@ -64,7 +64,8 @@ var leadListFields = map[string]storekit.SortField{
 	// renamed so a cursor from the alphabetical order is refused.
 	leadStatusColumn: {Kind: fieldcatalog.TypeNumber, CursorField: "status_rung", Expr: orderByLeadStatusRung},
 	leadScoreColumn:  storekit.Column(fieldcatalog.TypeNumber),
-	leadSourceColumn: storekit.Column(fieldcatalog.TypeText),
+	// Renamed so a cursor from the retired label order is refused.
+	leadSourceColumn: {Kind: fieldcatalog.TypeText, CursorField: "source_channel"},
 	ownerIDColumn:    storekit.OwnerNameSort(leadEntity),
 	// The three the list draws and does not store. Each reads the same
 	// expression the row is PRINTED from (lead_read.go), so a reader sees the

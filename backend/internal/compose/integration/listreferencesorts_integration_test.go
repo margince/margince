@@ -61,13 +61,13 @@ func TestTheProjectsListSortsByTheCompanyItDraws(t *testing.T) {
 		"company ascending — Alma Werke before Zeta Holding")
 }
 
-// A lead's source orders by the channel it holds. The leads are created in the
-// reverse order, so the newest-first tie-breaker cannot give the answer.
+// A lead's source orders by the channel it holds. The api lead is created
+// first, so the newest-first tie-breaker alone would put it last.
 func TestTheLeadsListSortsByItsSourceChannel(t *testing.T) {
 	e := Setup(t)
 	ctx := e.Admin()
-	fromForm := seedLeadOn(t, e, "First lead", "webform")
-	fromAPI := seedLeadOn(t, e, "Second lead", "api")
+	fromAPI := seedLeadOn(t, e, "First lead", "api")
+	fromForm := seedLeadOn(t, e, "Second lead", "webform")
 
 	assertIDOrder(t, leadIDsIn(ctx, t, e, "source"), []ids.UUID{fromAPI, fromForm},
 		"source ascending, api before webform")

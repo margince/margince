@@ -99,11 +99,13 @@ export function originFilterOptions(
   }));
 }
 
-// The channels a record's `source` holds.
+// The channels a record's `source` holds, and a website read's older word,
+// which a lead keeps until the background correction reaches it.
 const WRITTEN_BY: Readonly<
   Record<string, Parameters<ReturnType<typeof useT>>[0]>
 > = {
   manual: "lead.source.manual",
+  siteread: "lead.source.siteread",
   webform: "lead.source.webform",
   import: "lead.source.import",
   api: "lead.source.api",
