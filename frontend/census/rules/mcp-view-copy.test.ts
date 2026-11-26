@@ -142,26 +142,22 @@ describe("the mcp-view-copy rule, over planted views", () => {
       '  stop" /></body></html>',
     ].join("\n");
     expect(findingsOver({ "card/index.html": page })).toEqual([
-      quoted(
-        CURLY,
-        "src/mcp-apps/card/index.html:1 <title>",
-        "The card's page",
-      ),
-      quoted(CURLY, "src/mcp-apps/card/index.html:4 <meta content>", 'A "b"'),
-      quoted(CURLY, "src/mcp-apps/card/index.html:7 <img alt>", "A's"),
+      quoted(CURLY, "src/mcp-apps/card/index.html <title>", "The card's page"),
+      quoted(CURLY, "src/mcp-apps/card/index.html <meta content>", 'A "b"'),
+      quoted(CURLY, "src/mcp-apps/card/index.html <img alt>", "A's"),
       quoted(
         "uses no contraction",
-        "src/mcp-apps/card/index.html:7 <input title>",
+        "src/mcp-apps/card/index.html <input title>",
         "Don’t stop",
       ),
       quoted(
         "never speaks as we",
-        "src/mcp-apps/card/index.html:6 <p>",
+        "src/mcp-apps/card/index.html <p>",
         "We know it",
       ),
       quoted(
         "never speaks as we",
-        "src/mcp-apps/card/index.html:7 <input aria-describedby>",
+        "src/mcp-apps/card/index.html <input aria-describedby>",
         "Us",
       ),
     ]);

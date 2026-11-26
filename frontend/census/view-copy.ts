@@ -4,7 +4,7 @@
 // What an MCP app view shows in English, read for the mcp-view-copy rule.
 
 import { basename } from "node:path";
-import { JSDOM } from "jsdom";
+import { type Document, Element, type Node, Window } from "happy-dom";
 import ts from "typescript";
 import { declaredValues, rulesOfText } from "../scripts/lib/css-rules";
 import type { CensusFile } from "./tree";
@@ -28,14 +28,16 @@ const QUOTED = /"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'/g;
 
 const collapsed = (text: string) => text.replace(/\s+/g, " ").trim();
 
-let entityDocument: Document | undefined;
+let sharedWindow: Window | undefined;
+
+function parsed(html: string): Document {
+  const window = sharedWindow ?? new Window();
+  sharedWindow = window;
+  return new window.DOMParser().parseFromString(html, "text/html");
+}
 
 function decoded(text: string): string {
-  if (!text.includes("&")) return text;
-  entityDocument ??= new JSDOM("").window.document;
-  const holder = entityDocument.createElement("template");
-  holder.innerHTML = text;
-  return holder.content.textContent ?? "";
+  return text.includes("&") ? (parsed(text).body.textContent ?? "") : text;
 }
 
 // A literal compared against, matched by a case, or written as a type is a
@@ -127,36 +129,28 @@ export function jsonImports(file: CensusFile): string[] {
 }
 
 function pageCopy(file: CensusFile): Copy[] {
-  const dom = new JSDOM(file.text, { includeNodeLocations: true });
-  const { document, Node, NodeFilter } = dom.window;
-  const lineOf = (node: globalThis.Node) =>
-    dom.nodeLocation(node)?.startLine ?? 0;
   const found: Copy[] = [];
-  const walker = document.createTreeWalker(
-    document,
-    NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
-  );
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+  const visit = (node: Node): void => {
     const parent = node.parentElement;
-    if (node.nodeType === Node.TEXT_NODE) {
+    if (node.nodeType === node.TEXT_NODE && parent) {
       const text = collapsed(node.textContent ?? "");
-      if (text !== "" && parent && !NOT_READ.has(parent.tagName)) {
-        const tag = parent.localName;
-        found.push({ at: `${file.rel}:${lineOf(node)} <${tag}>`, text });
-      }
-      continue;
-    }
-    if (!(node instanceof dom.window.Element)) continue;
-    const element = node;
-    for (const attribute of element.attributes) {
-      if (PAGE_ATTRIBUTE.test(attribute.name)) {
-        found.push({
-          at: `${file.rel}:${lineOf(element)} <${element.localName} ${attribute.name}>`,
-          text: collapsed(attribute.value),
-        });
+      if (text !== "" && !NOT_READ.has(parent.tagName)) {
+        found.push({ at: `${file.rel} <${parent.localName}>`, text });
       }
     }
-  }
+    if (node instanceof Element) {
+      for (const attribute of node.attributes) {
+        if (PAGE_ATTRIBUTE.test(attribute.name)) {
+          found.push({
+            at: `${file.rel} <${node.localName} ${attribute.name}>`,
+            text: collapsed(attribute.value ?? ""),
+          });
+        }
+      }
+    }
+    node.childNodes.forEach(visit);
+  };
+  visit(parsed(file.text));
   return found;
 }
 
