@@ -288,7 +288,7 @@ func TestEveryForbiddenPatternIsAskedOfTheLinesItMatches(t *testing.T) {
 		"private specification path":     "read specs/billing first",
 		"private pull-request reference": "as foundation PR #12 decided",
 		"private GitHub owner path":      "cloned from gradionhq/tools",
-		"private specification document": "per formulas.md § 3",
+		"private specification document": "as business/12-pricing says",
 	}
 	for i, f := range forbidden {
 		if forbiddenWords[i] == nil {
