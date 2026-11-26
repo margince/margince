@@ -2680,7 +2680,7 @@
   "brief.view.morning": "Hôm nay",
   "brief.view.weekly": "Tuần",
   "brief.updating": "Đang cập nhật…",
-  "brief.briefedAt": "Margince tóm tắt lúc {time}",
+  "brief.briefedAt": "Margince chuẩn bị lúc {time}",
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",
   "brief.first.title": "Cần bạn xử lý",
