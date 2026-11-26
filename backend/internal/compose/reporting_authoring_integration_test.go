@@ -120,7 +120,7 @@ func TestReportingSharedManagersCanReviseOnlyVisibleReports(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	first, err := f.service.ListReports(f.human, nil, 1, false)
+	first, err := f.service.ListReports(f.human, nil, 1, false, false)
 	if err != nil || len(first.Data) != 1 || first.NextCursor == nil {
 		t.Fatalf("first page: %+v %v", first, err)
 	}
@@ -128,7 +128,7 @@ func TestReportingSharedManagersCanReviseOnlyVisibleReports(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	next, err := f.service.ListReports(f.human, &cursor, 1, false)
+	next, err := f.service.ListReports(f.human, &cursor, 1, false, false)
 	if err != nil || len(next.Data) != 1 || next.Data[0].Id == first.Data[0].Id {
 		t.Fatalf("next page: %+v %v", next, err)
 	}

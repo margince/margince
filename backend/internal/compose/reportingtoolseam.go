@@ -53,7 +53,7 @@ func readReportingResult(ctx context.Context, s *reporting.Service, in agents.Re
 		out, err := s.Evaluate(ctx, in.Selection)
 		return agents.ReportingAnswer{Evaluation: &out}, err
 	case reportingReports:
-		out, err := s.ListReports(ctx, cursor, limit, in.Scheduled)
+		out, err := s.ListReports(ctx, cursor, limit, in.Scheduled, false)
 		return agents.ReportingAnswer{Reports: &out}, err
 	case "report":
 		out, err := s.GetReport(ctx, in.ID)

@@ -1236,6 +1236,13 @@ export const en = {
   "reporting.freeze": "Save snapshot",
   "reporting.all": "All reports",
   "reporting.scheduled": "Scheduled",
+  "reporting.filterArchived": "Archived",
+  "reporting.archivedOn": "Archived on {date}",
+  "reporting.archivedBody":
+    "This report takes no new snapshots or schedules. Its saved snapshots stay here.",
+  "reporting.archiveDone": "Report archived",
+  "reporting.archivedRefused":
+    "This report is archived, so it takes no new snapshots or schedules.",
   "reporting.frequency": "Frequency",
   "reporting.weekly": "Weekly",
   "reporting.monthly": "Monthly",

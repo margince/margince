@@ -97,7 +97,7 @@ func (h Handlers) ListReportingReports(w http.ResponseWriter, r *http.Request, p
 		httperr.Write(w, r, err)
 		return
 	}
-	out, err := h.service.ListReports(r.Context(), after, pageLimit(params.Limit), params.Scheduled != nil && *params.Scheduled)
+	out, err := h.service.ListReports(r.Context(), after, pageLimit(params.Limit), params.Scheduled != nil && *params.Scheduled, params.Archived != nil && *params.Archived)
 	respond(w, r, out, err)
 }
 

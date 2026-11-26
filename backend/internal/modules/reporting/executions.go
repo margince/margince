@@ -110,6 +110,9 @@ func (s *Service) Freeze(ctx context.Context, reportID ids.UUID, revision int64,
 		if err := s.canEditReport(ctx, tx, report); err != nil {
 			return err
 		}
+		if err := refuseArchived(report); err != nil {
+			return err
+		}
 		if revision == 0 {
 			revision = report.Revision
 		}

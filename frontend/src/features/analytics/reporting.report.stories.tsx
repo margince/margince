@@ -49,6 +49,26 @@ export const LongName: Story = {
   },
 };
 
+// An archived report opened by its address: a notice in place of the verbs
+// that would give it new snapshots or schedules.
+export const Archived: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/reports/report": () =>
+        jsonResponse({
+          ...reportingStoryReport,
+          archived_at: "2026-11-02T09:00:00Z",
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ReportingReportDetail reportId="report" />
+      </StoryProviders>
+    );
+  },
+};
+
 export const FrozenHistory: Story = {
   render: () => {
     installFetchStub({

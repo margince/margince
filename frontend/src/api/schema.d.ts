@@ -11292,7 +11292,10 @@ export interface paths {
         /** List reporting schedules */
         get: operations["listReportingSchedules"];
         put?: never;
-        /** Create reporting schedule */
+        /**
+         * Create reporting schedule
+         * @description An archived report refuses with 409 and the code `report_archived`.
+         */
         post: operations["createReportingSchedule"];
         delete?: never;
         options?: never;
@@ -11336,7 +11339,10 @@ export interface paths {
          */
         get: operations["listReportingEditions"];
         put?: never;
-        /** Freeze reporting edition */
+        /**
+         * Freeze reporting edition
+         * @description An archived report refuses with 409 and the code `report_archived`.
+         */
         post: operations["freezeReportingEdition"];
         delete?: never;
         options?: never;
@@ -84005,6 +84011,8 @@ export interface operations {
                 limit?: number;
                 /** @description Return only reports with an enabled schedule. */
                 scheduled?: boolean;
+                /** @description Return only archived reports instead of the live ones. An archived report takes no new snapshots or schedules; its saved snapshots stay readable. */
+                archived?: boolean;
             };
             header?: never;
             path?: never;
@@ -85068,6 +85076,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

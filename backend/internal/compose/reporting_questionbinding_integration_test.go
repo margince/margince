@@ -215,7 +215,7 @@ func TestAReaderDeniedAFilteredRecordLearnsNothingOfIt(t *testing.T) {
 	}
 	for _, reader := range []context.Context{b.admin(), b.rep3()} {
 		got, err := b.service.GetReport(reader, ids.UUID(report.Id))
-		listed, listErr := b.service.ListReports(reader, nil, 50, false)
+		listed, listErr := b.service.ListReports(reader, nil, 50, false, false)
 		revisions, revisionErr := b.service.ListReportRevisions(reader, ids.UUID(report.Id))
 		if err != nil || listErr != nil || revisionErr != nil {
 			t.Fatalf("reading the definition: %v %v %v", err, listErr, revisionErr)

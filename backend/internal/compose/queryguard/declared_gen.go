@@ -162,7 +162,7 @@ var Declared = map[string][]string{
 	"GET /v1/analytics/metrics":                                                {},
 	"GET /v1/analytics/progress":                                               {"month", "period", "scope_id", "scope_kind", "year"},
 	"GET /v1/analytics/progress/deals":                                         {"cursor", "limit", "scope_id", "scope_kind"},
-	"GET /v1/analytics/reports":                                                {"cursor", "limit", "scheduled"},
+	"GET /v1/analytics/reports":                                                {"archived", "cursor", "limit", "scheduled"},
 	"GET /v1/analytics/reports/blocks":                                         {},
 	"GET /v1/analytics/reports/vocabulary":                                     {},
 	"GET /v1/analytics/reports/{id}":                                           {},

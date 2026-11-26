@@ -11480,6 +11480,11 @@ paths:
           name: scheduled
           schema: {type: boolean}
           description: Return only reports with an enabled schedule.
+        - in: query
+          name: archived
+          schema: {type: boolean}
+          description: >-
+            Return only archived reports instead of the live ones. An archived report takes no new snapshots or schedules; its saved snapshots stay readable.
       description: List reporting reports
     post:
       tags:
@@ -12270,6 +12275,12 @@ paths:
         - Reports
       operationId: createReportingSchedule
       summary: Create reporting schedule
+      description: |-
+        An archived report refuses with 409 and the code `report_archived`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       responses:
         '201':
           description: Reporting result.
@@ -12283,6 +12294,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
       security: [{bearerAuth: []}]
@@ -12292,12 +12305,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ReportingScheduleInput'
-      description: |-
-        Create reporting schedule
-
-        Needs the passport permission Change records.
-
-        Runs at once.
   /analytics/schedules/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -12383,6 +12390,12 @@ paths:
         - Reports
       operationId: freezeReportingEdition
       summary: Freeze reporting edition
+      description: |-
+        An archived report refuses with 409 and the code `report_archived`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       responses:
         '202':
           description: Reporting result.
@@ -12409,12 +12422,6 @@ paths:
             minLength: 1
             maxLength: 128
       security: [{bearerAuth: []}]
-      description: |-
-        Freeze reporting edition
-
-        Needs the passport permission Change records.
-
-        Runs at once.
   /analytics/editions/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'

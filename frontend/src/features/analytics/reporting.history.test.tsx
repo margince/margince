@@ -74,6 +74,28 @@ it("filters saved reports by schedules and opens the persisted layout", async ()
   expect(window.location.hash).toContain("report");
 });
 
+it("lists the archived reports on their own, so their snapshots stay in reach", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub(reportingStoryRoutes());
+  const fetch = vi.spyOn(globalThis, "fetch");
+  render(
+    <StoryProviders>
+      <ReportingLibrary />
+    </StoryProviders>,
+  );
+  await user.click(await screen.findByRole("button", { name: "Archived" }));
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(
+        ([input]) =>
+          input instanceof Request &&
+          input.url.includes("archived=true") &&
+          !input.url.includes("scheduled="),
+      ),
+    ).toBe(true),
+  );
+});
+
 it("compares frozen editions and opens evidence from the selected side", async () => {
   const user = userEvent.setup({ delay: null });
   installFetchStub({

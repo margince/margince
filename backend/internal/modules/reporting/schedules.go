@@ -80,8 +80,8 @@ func (s *Service) validateSchedule(ctx context.Context, tx pgx.Tx, report crmcon
 			return refuse("enabled", "retention_unconfigured", "configure report edition retention before enabling a schedule")
 		}
 	}
-	if report.ArchivedAt != nil {
-		return apperrors.ErrNotFound
+	if err := refuseArchived(report); err != nil {
+		return err
 	}
 	if err := s.canEditReport(ctx, tx, report); err != nil {
 		return err

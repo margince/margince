@@ -16353,6 +16353,12 @@ paths:
         name: scheduled
         schema: { type: boolean }
         description: Return only reports with an enabled schedule.
+      - in: query
+        name: archived
+        schema: { type: boolean }
+        description: >-
+          Return only archived reports instead of the live ones. An archived report takes no new
+          snapshots or schedules; its saved snapshots stay readable.
     post:
       tags:
       - Reports
@@ -17321,6 +17327,7 @@ paths:
       - Reports
       operationId: createReportingSchedule
       summary: Create reporting schedule
+      description: An archived report refuses with 409 and the code `report_archived`.
       responses:
         '201':
           description: Reporting result.
@@ -17334,6 +17341,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationError'
       x-mcp-tool: { verb: create_reporting_schedule, router: change_reports, action: create_schedule, tier: auto_execute, scope: write, served_by: route }
@@ -17409,6 +17418,7 @@ paths:
       - Reports
       operationId: freezeReportingEdition
       summary: Freeze reporting edition
+      description: An archived report refuses with 409 and the code `report_archived`.
       responses:
         '202':
           description: Reporting result.

@@ -5,17 +5,16 @@ import { Button, Disclosure, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
-import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
+import { useToast } from "../../design-system/toast";
 import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { useCan, useCanWrite } from "../../lib/capability";
+import { useCan } from "../../lib/capability";
 import { type Departure, fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { scopeName } from "./analytics.context";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingComparison } from "./reporting.comparison";
 import { useCreateReport } from "./reporting.create";
@@ -32,6 +31,11 @@ import {
 import { useReportDetailQueries } from "./reporting.queries";
 import { PreviewAsSelect } from "./reporting.readerpreview";
 import { ReportGate } from "./reporting.reportgate";
+import {
+  ArchivedReportNotice,
+  ReportTitle,
+  useReportVerbs,
+} from "./reporting.reporthead";
 import { ReportResults } from "./reporting.results";
 import { SaveReportingDialog } from "./reporting.save";
 import { ReportingScheduleDialog } from "./reporting.schedule";
@@ -62,6 +66,7 @@ export function ReportingReportDetail({
   const t = useT();
   const { locale } = useLocale();
   const client = useQueryClient();
+  const toast = useToast();
   const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const [scheduleId, setScheduleId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -76,13 +81,8 @@ export function ReportingReportDetail({
     undefined,
   );
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
-  const canEdit = useCanWrite("report_definition", "update");
-  const canCreate = useCanWrite("report_definition", "create");
-  const canArchive = useCanWrite("report_definition", "delete");
-  const canFreeze = useCanWrite("report_edition", "create");
   const canReadSchedules = useCan("report_schedule", "read");
   const canReadEditions = useCan("report_edition", "read");
-  const canSchedule = useCanWrite("report_schedule", "create");
   const {
     report,
     live,
@@ -97,6 +97,16 @@ export function ReportingReportDetail({
     chosenPreview,
   );
   const previewDraft = previewRevision !== undefined;
+  const {
+    canEdit,
+    canCreate,
+    canFreeze,
+    canSchedule,
+    canEditReport,
+    canArchiveReport,
+    canScheduleReport,
+    canFreezeReport,
+  } = useReportVerbs(report.data, canReadEditions);
   const draftEditing = useDraftEditing(reportId, report.data, canEdit);
   const createReport = useCreateReport();
   const write = useMutation({
@@ -135,6 +145,7 @@ export function ReportingReportDetail({
     onMutate: fromHere,
     onSuccess: async (result, action, from) => {
       if (action.kind === "freeze") setCapturePending(true);
+      if (action.kind === "archive") toast.show(t("reporting.archiveDone"));
       await client.invalidateQueries({ queryKey: ["reporting-reports"] });
       await client.invalidateQueries({
         queryKey: ["reporting-executions", reportId],
@@ -144,11 +155,6 @@ export function ReportingReportDetail({
     },
   });
   const allEditions = editions.data?.pages.flatMap((page) => page.data) ?? [];
-  const canManage = report.data?.can_manage === true;
-  const canEditReport = canEdit && canManage;
-  const canArchiveReport = canArchive && canManage;
-  const canScheduleReport = canSchedule && canManage;
-  const canFreezeReport = canFreeze && canReadEditions && canManage;
   const showDraftBar = canEditReport && !editionId;
   const canCompare = allEditions.length >= 2;
   const evaluation = editionId ? edition.data?.evaluation : live.data;
@@ -302,6 +308,7 @@ export function ReportingReportDetail({
             <ErrorLine error={write.error} />
           </ConfirmModal>
           <ErrorLine error={write.error} />
+          <ArchivedReportNotice report={report} />
           <ReportDraftBar
             report={report}
             editable={showDraftBar}
@@ -338,7 +345,7 @@ export function ReportingReportDetail({
                         <Button
                           variant="link"
                           onClick={() => setScheduleId(schedule.id)}
-                          disabled={!canSchedule}
+                          disabled={!canSchedule || !!report.archived_at}
                         >
                           {t(`reporting.${schedule.definition.frequency}`)} ·{" "}
                           {t("reporting.revision", {
@@ -436,7 +443,7 @@ export function ReportingReportDetail({
                 <PanelBody>
                   <ReportingExecutions
                     reportId={reportId}
-                    canRetry={canFreeze}
+                    canRetry={canFreeze && !report.archived_at}
                     key={requestKey}
                     onPendingChange={setCapturePending}
                   />
@@ -475,25 +482,5 @@ export function ReportingReportDetail({
         </>
       )}
     </ReportGate>
-  );
-}
-
-// The report's name, its purpose when it has one, and what it covers.
-function ReportTitle({ report }: Readonly<{ report: ReportingReport }>) {
-  const t = useT();
-  return (
-    <div className="reporting-title">
-      <Heading as="h2" size="large">
-        {report.name}
-      </Heading>
-      {report.description && (
-        <p className="reporting-description">{report.description}</p>
-      )}
-      <p className="t-caption">
-        {scopeName(report.selection.scope, t)} ·{" "}
-        {t(`reporting.${report.selection.period}`)} ·{" "}
-        {t(`reporting.${report.audience}`)}
-      </p>
-    </div>
   );
 }

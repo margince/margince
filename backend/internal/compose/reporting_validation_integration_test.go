@@ -59,7 +59,7 @@ func TestReportingRejectsInvalidDefinitionsWithoutSavingPartialReports(t *testin
 			requireRefusedField(t, err, test.field)
 		})
 	}
-	reports, err := f.service.ListReports(f.human, nil, 100, false)
+	reports, err := f.service.ListReports(f.human, nil, 100, false, false)
 	if err != nil || len(reports.Data) != 0 {
 		t.Fatalf("invalid reports persisted: %+v %v", reports, err)
 	}

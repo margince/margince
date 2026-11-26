@@ -1265,6 +1265,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.freeze": "Lưu ảnh chụp",
   "reporting.all": "Tất cả báo cáo",
   "reporting.scheduled": "Đã lên lịch",
+  "reporting.filterArchived": "Đã lưu trữ",
+  "reporting.archivedOn": "Đã lưu trữ ngày {date}",
+  "reporting.archivedBody":
+    "Báo cáo này không nhận ảnh chụp hay lịch chạy mới. Các ảnh chụp đã lưu vẫn ở đây.",
+  "reporting.archiveDone": "Đã chuyển báo cáo vào kho lưu trữ",
+  "reporting.archivedRefused":
+    "Báo cáo này đã được lưu trữ nên không nhận ảnh chụp hay lịch chạy mới.",
   "reporting.frequency": "Tần suất",
   "reporting.weekly": "Hằng tuần",
   "reporting.monthly": "Hằng tháng",

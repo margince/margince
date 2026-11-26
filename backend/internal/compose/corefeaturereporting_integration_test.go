@@ -37,7 +37,7 @@ func TestDisabledReportSelectionsHideKeptEditionsUntilReenabled(t *testing.T) {
 	disabled := corefeatures.New([]string{"deals"}).Context(f.human)
 	reportingRequest(disabled, t, handler, http.MethodGet, path, nil, -1, http.StatusNotFound)
 	reportingRequest(disabled, t, handler, http.MethodGet, editionPath, nil, -1, http.StatusNotFound)
-	library, err := f.service.ListReports(disabled, nil, 100, false)
+	library, err := f.service.ListReports(disabled, nil, 100, false, false)
 	if err != nil || len(library.Data) != 0 {
 		t.Fatalf("disabled report library: %+v, %v", library, err)
 	}

@@ -133,6 +133,12 @@ func TestReportingHTTPRevisionsSchedulesAndFrozenHistory(t *testing.T) {
 	if len(library.Data) != 0 {
 		t.Fatal("archived report remained in library")
 	}
+	archived := reportingResponse[crmcontracts.ReportingReportList](t, reportingRequest(f.human, t, handler, http.MethodGet, "reports?archived=true", nil, -1, http.StatusOK))
+	if len(archived.Data) != 1 || archived.Data[0].Id != report.Id || archived.Data[0].ArchivedAt == nil {
+		t.Fatalf("archived library: %+v", archived)
+	}
+	reportingRequest(f.human, t, handler, http.MethodPost, path+"/editions", nil, -1, http.StatusConflict)
+	reportingRequest(f.human, t, handler, http.MethodPost, path+"/schedules", reportingPayload(t, scheduleInput), -1, http.StatusConflict)
 }
 
 func reportingAssertLibrary(t *testing.T, f *reportingBusinessFixture, handler http.Handler, id string) {

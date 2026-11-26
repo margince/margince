@@ -51,6 +51,7 @@ export function ReportingLibrary({
               cursor,
               limit: 30,
               scheduled: filter === "scheduled" || undefined,
+              archived: filter === "archived" || undefined,
             },
           },
         }),
@@ -115,21 +116,25 @@ export function ReportingLibrary({
               />
             )}
             <PanelBody className="reporting-library-body">
-              {canSeeSchedules && (
-                <SegmentedControl
-                  options={["all", "scheduled"]}
-                  value={filter}
-                  labels={{
-                    all: t("reporting.all"),
-                    scheduled: t("reporting.scheduled"),
-                  }}
-                  onChange={(next) => {
-                    setFilter(next);
-                    setCursor(undefined);
-                  }}
-                  label={t("reporting.reports")}
-                />
-              )}
+              {/* Archived reports keep their snapshots, so they stay one press away. */}
+              <SegmentedControl
+                options={
+                  canSeeSchedules
+                    ? ["all", "scheduled", "archived"]
+                    : ["all", "archived"]
+                }
+                value={filter}
+                labels={{
+                  all: t("reporting.all"),
+                  scheduled: t("reporting.scheduled"),
+                  archived: t("reporting.filterArchived"),
+                }}
+                onChange={(next) => {
+                  setFilter(next);
+                  setCursor(undefined);
+                }}
+                label={t("reporting.reports")}
+              />
               <QueryGate
                 query={query}
                 pendingLabel={t("reporting.reports")}

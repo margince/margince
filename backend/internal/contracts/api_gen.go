@@ -77869,6 +77869,9 @@ type ListReportingReportsParams struct {
 
 	// Scheduled Return only reports with an enabled schedule.
 	Scheduled *bool `form:"scheduled,omitempty" json:"scheduled,omitempty"`
+
+	// Archived Return only archived reports instead of the live ones. An archived report takes no new snapshots or schedules; its saved snapshots stay readable.
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
 }
 
 // CreateReportingReportParams defines parameters for CreateReportingReport.
@@ -117990,6 +117993,19 @@ func (siw *ServerInterfaceWrapper) ListReportingReports(w http.ResponseWriter, r
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scheduled"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scheduled", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "archived", r.URL.Query(), &params.Archived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "archived", Err: err})
 		}
 		return
 	}

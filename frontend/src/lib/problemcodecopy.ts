@@ -119,6 +119,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["fx_rate_currency", "settings.rates.fromNotCurrency"],
   ["fx_rate_positive", "settings.rates.rateNotPositive"],
   ["fx_rate_past", "settings.rates.pastDate"],
+  // An archived report's refusal of a snapshot or schedule; the detail is English.
+  ["report_archived", "reporting.archivedRefused"],
   // A member's own profile that is not a LinkedIn profile.
   ["linkedin_profile_url_invalid", "common.linkedinProfileInvalid"],
 ]);

@@ -11,7 +11,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { downloadBytes } from "../../lib/download";
+import { reportingStoryReport } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -175,7 +177,10 @@ it("puts the reports list in an archived report's place", async () => {
   const entries = window.history.length;
   render(
     <StoryProviders>
-      <ReportingReportDetail reportId="report" />
+      <ToastProvider>
+        <ReportingReportDetail reportId="report" />
+        <ToastRegion />
+      </ToastProvider>
     </StoryProviders>,
   );
   await user.click(
@@ -189,6 +194,40 @@ it("puts the reports list in an archived report's place", async () => {
   );
   await waitFor(() => expect(window.location.hash).toBe("#/analytics/reports"));
   expect(window.history.length).toBe(entries);
+  expect(await screen.findByText("Report archived")).toBeInTheDocument();
+});
+
+it("says an archived report is archived and offers it no new snapshot or schedule", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/reports/report": () =>
+      jsonResponse({
+        ...reportingStoryReport,
+        archived_at: "2026-11-02T09:00:00Z",
+      }),
+  });
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  expect(await screen.findByText("Archived on 02/11/2026")).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "This report takes no new snapshots or schedules. Its saved snapshots stay here.",
+    ),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Save snapshot" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Schedule" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Report actions" }));
+  expect(
+    screen.queryByRole("button", { name: "Archive report" }),
+  ).not.toBeInTheDocument();
 });
 
 it("creates a fiscal-quarter count target on every pipeline and pages the target list", async () => {

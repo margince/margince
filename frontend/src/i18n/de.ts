@@ -1293,6 +1293,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.freeze": "Snapshot speichern",
   "reporting.all": "Alle Berichte",
   "reporting.scheduled": "Geplant",
+  "reporting.filterArchived": "Archiviert",
+  "reporting.archivedOn": "Archiviert am {date}",
+  "reporting.archivedBody":
+    "Dieser Bericht nimmt keine neuen Snapshots oder Zeitpläne an. Seine gespeicherten Snapshots bleiben hier.",
+  "reporting.archiveDone": "Bericht archiviert",
+  "reporting.archivedRefused":
+    "Dieser Bericht ist archiviert und nimmt keine neuen Snapshots oder Zeitpläne an.",
   "reporting.frequency": "Häufigkeit",
   "reporting.weekly": "Wöchentlich",
   "reporting.monthly": "Monatlich",

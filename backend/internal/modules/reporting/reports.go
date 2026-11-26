@@ -96,8 +96,9 @@ func (s *Service) GetReport(ctx context.Context, id ids.UUID) (crmcontracts.Repo
 	return out, err
 }
 
-// ListReports filters the library by current audience and schedule state.
-func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, scheduled bool) (crmcontracts.ReportingReportList, error) {
+// ListReports filters the library by current audience and schedule state. It
+// lists either the live reports or, with archived, only the archived ones.
+func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, scheduled, archived bool) (crmcontracts.ReportingReportList, error) {
 	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
 		return crmcontracts.ReportingReportList{}, err
 	}
@@ -114,7 +115,11 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 		if err != nil {
 			return err
 		}
-		where += " AND d.archived_at IS NULL"
+		if archived {
+			where += " AND d.archived_at IS NOT NULL"
+		} else {
+			where += " AND d.archived_at IS NULL"
+		}
 		if scheduled {
 			where += " AND EXISTS(SELECT 1 FROM report_schedule scheduled WHERE scheduled.report_id=d.id)"
 		}

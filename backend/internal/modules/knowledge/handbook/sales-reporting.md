@@ -194,6 +194,8 @@ To schedule a report, it needs a retention rule for editions and a fixed scope y
 
 Open **History and schedules** for past runs. It tells apart runs that are waiting, running, complete, partial, failed, skipped and suspended. Use the reason shown to fix a failed run and try it again. A schedule stops when its owner loses the access it needs. Fix the access, then start the schedule again. A paused schedule stays paused until someone starts it again.
 
+**Archive report** under **Report actions** pauses the report's schedules and takes it off the list. Its saved snapshots stay: choose **Archived** on **Analytics → Reports** to find it again. An archived report says when it was archived, and it takes no new snapshots or schedules.
+
 Select an edition in the history to see the values, targets, graphs and records it held at that time. Later edits to the records do not work it out again. Privacy erasure and retention can remove records or end the edition; those states stay in view. Compare two complete editions that come one after the other to see their values side by side. When the two cannot be compared, no difference is shown. That happens when definitions changed, the group counted changed, records were held back or a time span is not complete.
 
 ## How do I set targets or export figures?

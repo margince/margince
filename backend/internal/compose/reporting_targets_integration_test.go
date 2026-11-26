@@ -154,7 +154,7 @@ func TestReportingPausedSchedulesRemainDiscoverableWithoutExposingSetupToReaders
 	if err != nil {
 		t.Fatal(err)
 	}
-	reports, err := f.service.ListReports(f.human, nil, 100, true)
+	reports, err := f.service.ListReports(f.human, nil, 100, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
