@@ -15,7 +15,7 @@ workflow is outside the gate:
 | `closing-declaration.yml` | pull request events | No |
 | `docs-describing.yml` | pull request events | No |
 | `mcp-e2e-stale.yml` | pull request events that touch the MCP catalog or the e2e lane | No |
-| `ai-records-stale.yml` | pull request events that touch `backend/` or `config/presets/`; it comments which AI records the change makes stale, and never fails | No |
+| `ai-records-stale.yml` | pull request events that touch `backend/`, `config/presets/`, this workflow or `.github/actions/go-build-cache/`; it comments which AI records the change makes stale, and never fails | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
 | `main-health.yml` | `pace.yml`, `main` every six hours, manual dispatch | No |
 | `pace.yml` | every push to `main` or `develop` | No (runs after the merge) |
