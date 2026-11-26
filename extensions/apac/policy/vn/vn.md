@@ -2,18 +2,25 @@
 jurisdiction: vn
 version: 5
 created: 2026-09-04
+source-checked: 2026-11-25
 instruments:
   - name: Decree 91/2020/ND-CP
     effective: 2020-10-01
     source-url: https://vanban.chinhphu.vn/default.aspx?pageid=27160&docid=200773
+    text-digest: 7e247f256c0f2ca7b1830e9c6672a7401c527500e9e959015beac831ef58fd8c
+    text-fetched: 2026-11-25
   - name: Law 91/2025/QH15
     effective: 2026-01-01
     source-url: https://congbaocdn.chinhphu.vn/CongBaoCP/VanBan/2025/6/45578/57730-1-2025971-97291-2025-qh15.pdf
+    text-digest: 226dd6da66a6eea348e04db0f8c496d884021b730298991c6f6683720a0dfa2e
+    text-fetched: 2026-11-25
   - name: Decree 356/2025/ND-CP
     effective: 2026-01-01
   - name: "Advertising Law 16/2012/QH13, as amended by Law 75/2025/QH15"
     effective: 2013-01-01
     source-url: https://vanban.chinhphu.vn/default.aspx?pageid=27160&docid=163008
+    text-digest: 8c6d5303f751c38f87b1e3c7c4beb31ece80c4f80621b45ba3162acb075e5e4a
+    text-fetched: 2026-11-25
 reply-window: 8760h
 deal-follow-up-window: 4368h
 marketing-exceptions: []

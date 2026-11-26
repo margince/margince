@@ -2,10 +2,13 @@
 jurisdiction: gr
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Νόμος 3471/2006"
     provision: "άρθρο 11"
     source-url: https://www.dpa.gr/sites/default/files/2019-09/%CE%9D3471_06.PDF
+    text-digest: 1685eb936dd5aa249acd2fa25c3d41f57fdbb3325ab36826514236b50fc3571d
+    text-fetched: 2026-11-25
 fixtures:
   - finding: objection_route
     triggers: gr/fixtures/advertising-without-objection-route.md

@@ -118,9 +118,42 @@ export const formatFixture: ImportFormat = {
   size_limit_mb: 10,
 };
 
-// Two runs as the list answers them, newest first: one complete ZIP that may
-// still be undone, and one CSV that already was.
+// The runs as the list answers them, newest first. A draft no test has read
+// and a tested run that waits for its reader come first. Then a complete ZIP
+// that may still be undone, and a CSV that already was.
 export const recentRunsFixture: ImportRun[] = [
+  {
+    id: "019ff-run-draft",
+    connector: "csv",
+    object: "contact",
+    file_name: "contacts-fair.csv",
+    status: "pending",
+    checkpoint: 0,
+    version: 1,
+    source_released: false,
+    source: "import_api",
+    captured_by: "u-ada",
+    row_count: 212,
+    parts: [{ file: "contacts-fair.csv", object: "contact", row_count: 0 }],
+    created_at: "2026-10-12T11:20:00Z",
+    updated_at: "2026-10-12T11:20:00Z",
+  },
+  {
+    id: "019ff-run-tested",
+    connector: "csv",
+    object: "company",
+    file_name: "companies-fair.csv",
+    status: "awaiting_approval",
+    checkpoint: 0,
+    version: 3,
+    source_released: false,
+    source: "import_api",
+    captured_by: "u-ada",
+    row_count: 36,
+    parts: [{ file: "companies-fair.csv", object: "company", row_count: 36 }],
+    created_at: "2026-10-12T10:45:00Z",
+    updated_at: "2026-10-12T10:46:00Z",
+  },
   {
     id: "019ff-run-zip",
     connector: "csv",
@@ -133,9 +166,19 @@ export const recentRunsFixture: ImportRun[] = [
     source: "import_api",
     captured_by: "u-ada",
     parts: [
-      { file: "companies.csv", object: "company", row_count: 140 },
-      { file: "contacts.csv", object: "contact", row_count: 1020 },
-      { file: "leads.csv", object: "lead", row_count: 80 },
+      {
+        file: "companies.csv",
+        object: "company",
+        row_count: 140,
+        rows_written: 132,
+      },
+      {
+        file: "contacts.csv",
+        object: "contact",
+        row_count: 1020,
+        rows_written: 1004,
+      },
+      { file: "leads.csv", object: "lead", row_count: 80, rows_written: 80 },
     ],
     created_at: "2026-10-12T09:30:00Z",
     updated_at: "2026-10-12T09:32:00Z",
