@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // fieldDecision is the request field a sender-decision refusal points at, and
@@ -191,11 +192,17 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 		if err := refuseAgentOverAUsersDecisionTx(ctx, tx, actor, folded); err != nil {
 			return err
 		}
-		restored, err := restorePrivateStandingTx(ctx, tx, actor.UserID, folded)
+		lifted, err := liftPrivateStandingTx(ctx, tx, actor.UserID, folded)
 		if err != nil {
 			return err
 		}
-		if !restored {
+		restored := false
+		if !lifted {
+			if restored, err = restorePrivateStandingTx(ctx, tx, actor.UserID, folded); err != nil {
+				return err
+			}
+		}
+		if !lifted && !restored {
 			tag, err := tx.Exec(ctx, `
 				DELETE FROM capture_sender_override WHERE user_id = $1 AND address = $2`,
 				actor.UserID, folded)
@@ -216,8 +223,8 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 }
 
 // refuseAgentOverPrivateTx keeps a private sender's standing from an agent,
-// whatever stamp the row carries: the classifier writes it as an agent, and
-// changing it can put a private sender back in the CRM. Only the user's own
+// whatever stamp the row carries. The classifier writes the row as an agent.
+// Changing it can put a private sender back in the CRM. Only the user's own
 // session does. The caller holds the sender's write lock.
 func refuseAgentOverPrivateTx(ctx context.Context, tx pgx.Tx, actor principal.Principal, folded string) error {
 	if actor.Type != principal.PrincipalAgent {
@@ -231,6 +238,26 @@ func refuseAgentOverPrivateTx(ctx context.Context, tx pgx.Tx, actor principal.Pr
 		return fmt.Errorf("a private sender's decision is the user's, so the user changes it in the app: %w", apperrors.ErrPermissionDenied)
 	}
 	return nil
+}
+
+// liftPrivateStandingTx turns a private standing into the seat's own `business`
+// answer instead of deleting it. A deleted row would leave a settled `personal`
+// verdict and no decision, and readers cannot tell that from a verdict nobody
+// has lifted. The seat's answer is the record that they chose it.
+func liftPrivateStandingTx(ctx context.Context, tx pgx.Tx, user ids.UUID, folded string) (bool, error) {
+	capturedBy, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return false, err
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE capture_sender_override
+		   SET decision = $3, overruled_kind = $4, captured_by = $5
+		 WHERE user_id = $1 AND address = $2 AND decision = $6`,
+		user, folded, OverrideBusiness, KindPersonal, capturedBy, OverridePersonal)
+	if err != nil {
+		return false, fmt.Errorf("capture: lifting a private sender's decision: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 // restorePrivateStandingTx answers a withdrawn correction of a private sender
@@ -255,9 +282,9 @@ func restorePrivateStandingTx(ctx context.Context, tx pgx.Tx, user ids.UUID, fol
 	return tag.RowsAffected() > 0, nil
 }
 
-// standingAddress is the spelling a standing decision is stored and read under:
-// the one the contact identity layer uses, so two spellings of one address are
-// one sender.
+// standingAddress is the spelling a standing decision is stored and read under.
+// It is the one the contact identity layer uses, so two spellings of one
+// address are one sender.
 func standingAddress(address string) string { return mailidentity.FoldAddress(address) }
 
 // refuseAgentOverAUsersDecisionTx keeps a decision the user made about a sender
@@ -347,8 +374,11 @@ func OverrideForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address string
 // triggering activity and email the ledger row's address.
 func verdictMayStandSQL(alias, email string) string {
 	return `(` + alias + `.counterparty_email = ` + email + ` AND (` + alias + `.inbound_sender_authenticated
-	          OR (` + alias + `.direction = 'outbound' AND ` + alias + `.counterparty_outbound_attested)))`
+	          OR (` + relstrength.WeWroteSQL(alias) + ` AND ` + alias + `.counterparty_outbound_attested)))`
 }
+
+const personalStandingSQL = `SELECT EXISTS (SELECT 1 FROM capture_sender_override
+	WHERE user_id = $1 AND address = $2 AND decision = $3)`
 
 // PersonalStandingTx answers whether this seat holds a standing private
 // decision for the address. One plain read with no lock. The capture ladder
@@ -360,20 +390,36 @@ func PersonalStandingTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address s
 		return false, nil
 	}
 	var standing bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM capture_sender_override
-		                WHERE user_id = $1 AND address = $2 AND decision = $3)`,
-		user, folded, OverridePersonal).Scan(&standing); err != nil {
+	if err := tx.QueryRow(ctx, personalStandingSQL, user, folded, OverridePersonal).Scan(&standing); err != nil {
 		return false, fmt.Errorf("capture: reading a seat's private sender: %w", err)
 	}
 	return standing, nil
 }
 
 // PersonalStandingLockedTx is PersonalStandingTx under the sender-decision lock,
-// which the caller then holds until its transaction ends.
+// which the caller then holds until its transaction ends. The lock and the read
+// go in one exchange, and the read takes its own snapshot after the lock.
 func PersonalStandingLockedTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address string) (bool, error) {
-	decision, err := OverrideForTx(ctx, tx, user, standingAddress(address))
-	return decision == OverridePersonal, err
+	folded := standingAddress(address)
+	if user == ids.Nil || folded == "" {
+		return false, nil
+	}
+	batch := &pgx.Batch{}
+	storekit.QueueWriteIdentityLock(batch, senderOverrideEntity, senderOverrideIdentity(user, folded))
+	batch.Queue(personalStandingSQL, user, folded, OverridePersonal)
+	results := tx.SendBatch(ctx, batch)
+	var standing bool
+	_, lockErr := results.Exec()
+	if lockErr == nil {
+		lockErr = results.QueryRow().Scan(&standing)
+	}
+	if closeErr := results.Close(); lockErr == nil {
+		lockErr = closeErr
+	}
+	if lockErr != nil {
+		return false, fmt.Errorf("capture: reading a seat's private sender under its lock: %w", lockErr)
+	}
+	return standing, nil
 }
 
 // RecordPersonalStandingTx makes a `personal` verdict a standing decision for

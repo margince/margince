@@ -47,9 +47,11 @@ import (
 // are NOT business, and a new kind must be judged rather than silently
 // inherited — TestEveryVerdictKindIsJudgedByTheReconnectLane holds it.
 //
-// `personal` is read from the seat's standing decision alone (so.decision), never
-// from the ledger kind: lifting the standing makes the sender not private here
-// and in the sender list, which read the same row.
+// A settled `personal` verdict hides the sender whether or not a standing
+// decision backs it. Authentication governs only the lasting decision that
+// stops new contacts, never what a reader is shown. Lifting a standing records
+// the seat's own `business` answer. That is the one thing that shows the
+// sender again here and in the sender list.
 func PrivateSenderClause(alias, readerPos string) string {
 	return fmt.Sprintf(`(NOT EXISTS (
 		SELECT 1 FROM contact_email pe
@@ -61,7 +63,7 @@ func PrivateSenderClause(alias, readerPos string) string {
 		   AND pe.archived_at IS NULL
 		   AND (so.decision IN ('%[4]s', '%[6]s')
 		     OR (so.decision IS DISTINCT FROM '%[3]s'
-		         AND cp.kind IN ('advisor', 'newsletter', 'transactional', 'spam'))))
+		         AND cp.kind IN ('personal', 'advisor', 'newsletter', 'transactional', 'spam'))))
 	  AND NOT EXISTS (SELECT 1 FROM contact mk
 	                   WHERE mk.id = %[1]s.contact_id AND NOT (%[5]s)))`,
 		alias, readerPos, OverrideBusiness, OverrideKeepOut, relationshipmark.NotMarkedSQL("mk"), OverridePersonal)

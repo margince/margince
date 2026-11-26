@@ -250,14 +250,21 @@ func TestLiftingTheStandingDecisionLetsCorrespondenceMakeTheContact(t *testing.T
 	}
 }
 
+// agentOf is the classifier's agent acting for the seat on its passport.
+func agentOf(e *integration.SearchEnv) context.Context {
+	return principal.WithActor(ownerDeskCtx(e), principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:counterparty-verdict", UserID: e.Rep1,
+		PassportID: ids.NewV7(), OnBehalfOf: e.Rep1, SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true, Update: true, Delete: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
 func TestAnAgentCannotLiftAPrivateSendersStanding(t *testing.T) {
 	env := mintedThenJudgedPersonal(t)
-	ctx := principal.WithActor(ownerDeskCtx(env.e), principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:" + env.e.Rep1.String(), UserID: env.e.Rep1,
-		SeatType: principal.SeatFull,
-	})
-
-	err := capturemod.NewSenderOverrideStore(env.e.DB()).Remove(ctx, privateCorrespondent)
+	err := capturemod.NewSenderOverrideStore(env.e.DB()).Remove(agentOf(env.e), privateCorrespondent)
 
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an agent lifting a private sender got %v, want permission denied", err)
@@ -347,6 +354,9 @@ func TestAForgedPrivateVerdictLeavesNoStandingAndTheNextSendMakesTheContact(t *t
 	if n := liveContactsFor(t, env.e, privateCorrespondent); n != 1 {
 		t.Fatalf("%d contacts after the seat wrote to a sender whose verdict rested on a forgeable From, want 1", n)
 	}
+	if shown := reconnectLaneRows(t, env.e); shown != 0 {
+		t.Fatalf("the reconnect lane shows %d rows for a sender judged personal on forgeable mail, want 0: authentication governs the lasting decision, never what a reader sees", shown)
+	}
 }
 
 // The seat writing to an address cannot be forged, so a verdict that the seat's
@@ -410,16 +420,7 @@ func TestTheBackfillWritesOnlyForVerdictsThatMayStand(t *testing.T) {
 // from the user. Neither a PUT nor a DELETE by an agent may change it.
 func TestAnAgentCannotReplaceAPrivateSendersStandingWithBusiness(t *testing.T) {
 	env := mintedThenJudgedPersonal(t)
-	ctx := principal.WithActor(ownerDeskCtx(env.e), principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:counterparty-verdict", UserID: env.e.Rep1,
-		SeatType: principal.SeatFull,
-		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true, Update: true, Delete: true}},
-			RowScope: principal.RowScopeAll,
-		},
-	})
-
-	_, err := capturemod.NewSenderOverrideStore(env.e.DB()).Set(ctx, privateCorrespondent, capturemod.OverrideBusiness)
+	_, err := capturemod.NewSenderOverrideStore(env.e.DB()).Set(agentOf(env.e), privateCorrespondent, capturemod.OverrideBusiness)
 
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an agent PUT over a private sender got %v, want permission denied", err)
@@ -461,7 +462,7 @@ func TestAStandingIsKeyedOnTheIdentityLayersSpelling(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return capturemod.RecordPersonalStandingTx(principal.SystemActing(e.Admin(), "private-standing"), tx, e.Rep1, "Person@Bücher.Example")
+		return capturemod.RecordPersonalStandingTx(principal.SystemActing(e.Admin(), "private-standing"), tx, e.Rep1, "Keller@Bücher.Example")
 	}); err != nil {
 		t.Fatalf("recording the standing: %v", err)
 	}
@@ -476,14 +477,29 @@ func TestAStandingIsKeyedOnTheIdentityLayersSpelling(t *testing.T) {
 		}
 		return standing
 	}
-	for _, spelling := range []string{"person@xn--bcher-kva.example", "PERSON@Bücher.example", " person@bücher.example "} {
+	for _, spelling := range []string{"keller@xn--bcher-kva.example", "KELLER@Bücher.example", " keller@bücher.example "} {
 		if !read(spelling) {
 			t.Errorf("no standing under the spelling %q of the same address", spelling)
 		}
 	}
-	if read("person+tag@xn--bcher-kva.example") {
+	if read("keller+tag@xn--bcher-kva.example") {
 		t.Error("a plus-tagged address read as the standing's address, but the identity layer keeps it a different one")
 	}
+}
+
+// reconnectLaneRows counts the rows the reconnect lane's private-sender clause
+// lets through for the seat's contact at the private correspondent's address.
+func reconnectLaneRows(t *testing.T, e *integration.SearchEnv) int {
+	t.Helper()
+	var shown int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT count(*) FROM contact_email e
+			WHERE e.email = $1 AND e.archived_at IS NULL AND `+capturemod.PrivateSenderClause("e", "$2"),
+			privateCorrespondent, e.Rep1).Scan(&shown)
+	}); err != nil {
+		t.Fatalf("asking the reconnect lane: %v", err)
+	}
+	return shown
 }
 
 // Lifting a standing makes the sender not private everywhere. The reconnect
@@ -500,14 +516,7 @@ func TestALiftedPrivateSenderReachesTheReconnectLane(t *testing.T) {
 		t.Fatalf("%d contacts after the lift, want 1: the case is not set up", n)
 	}
 
-	var shown int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT count(*) FROM contact_email e
-			WHERE e.email = $1 AND e.archived_at IS NULL AND `+capturemod.PrivateSenderClause("e", "$2"),
-			privateCorrespondent, e.Rep1).Scan(&shown)
-	}); err != nil {
-		t.Fatalf("asking the reconnect lane: %v", err)
-	}
+	shown := reconnectLaneRows(t, e)
 	if shown != 1 {
 		t.Fatalf("the reconnect lane shows %d rows for a lifted sender, want 1", shown)
 	}

@@ -234,9 +234,9 @@ func (s *Sink) decideMailSubject(ctx context.Context, tx pgx.Tx, rec connector.N
 	// The standing was read without a lock, and a `personal` verdict commits it
 	// under the sender-decision lock. Where a question about this address is
 	// open or judged personal and the ladder would create, take that lock and
-	// read again. This transaction then holds it until commit, so a verdict
-	// either committed first and is seen here, or waits, and its retraction
-	// runs after the contact this message creates and withdraws it.
+	// read again. This transaction then holds it until commit. A verdict either
+	// committed first and is seen here, or waits. Its retraction then runs
+	// after the contact this message creates and withdraws it.
 	standing, err := PersonalStandingLockedTx(ctx, tx, row.OwnerID, cp.Email)
 	if err != nil {
 		return counterpartyDecision{}, err
@@ -344,33 +344,33 @@ func (s *Sink) alreadyDecided(
 		return false, false, false, false, "", err
 	}
 	if private {
-		return false, true, true, false, TraceReasonPrivateThread, nil
+		return false, true, true, contested, TraceReasonPrivateThread, nil
 	}
 	switch prior {
 	case PendingStatusReal:
-		return true, false, false, false, "", nil
+		return true, false, false, contested, "", nil
 	case priorKnownNonContact:
 		// Decided, and decided to be nobody. Settled so the question is not
 		// re-asked and re-billed on every later message, and NOT `known`, so no
 		// contact is minted from a mailbox the verdict already judged has none.
-		return false, true, false, false, TraceReasonDecidedPrior, nil
+		return false, true, false, contested, TraceReasonDecidedPrior, nil
 	case PendingStatusNoise:
 		// Google's meeting mail is asked again rather than filed under a noise
 		// answer, which judgeOne then replaces with one that keeps it visible.
 		spared, err := googleMeetingMailTx(ctx, tx, activityID, email)
 		if err != nil || spared {
-			return false, false, false, false, "", err
+			return false, false, false, contested, "", err
 		}
-		return false, true, false, false, TraceReasonNoisePrior, s.logBreadcrumbTx(ctx, tx, "capture_noise_sender", rec,
+		return false, true, false, contested, TraceReasonNoisePrior, s.logBreadcrumbTx(ctx, tx, "capture_noise_sender", rec,
 			"a prior verdict already judged this sender noise")
 	case PendingStatusRejected, PendingStatusSuppressed:
 		// A human's decline and a registry suppression are answers too. Without
 		// this the next message re-raises the same question, buys another model
 		// call, and offers the human the decision they already made.
-		return false, true, false, false, TraceReasonDecidedPrior, s.logBreadcrumbTx(ctx, tx, "capture_decided_sender", rec,
+		return false, true, false, contested, TraceReasonDecidedPrior, s.logBreadcrumbTx(ctx, tx, "capture_decided_sender", rec,
 			"this sender was already decided: "+prior)
 	default:
-		return false, false, false, false, "", nil
+		return false, false, false, contested, "", nil
 	}
 }
 

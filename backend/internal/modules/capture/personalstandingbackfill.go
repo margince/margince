@@ -22,7 +22,7 @@ import (
 var settledPrivateVerdictSQL = `
 	FROM capture_pending_counterparty p
 	JOIN activity a ON a.id = p.activity_id
-	WHERE ` + verdictMayStandSQL("a", "p.email") + ` AND p.status = '` + PendingStatusNoise + `' AND p.kind = '` + KindPersonal + `'
+	WHERE a.restricted_at IS NULL AND ` + verdictMayStandSQL("a", "p.email") + ` AND p.status = '` + PendingStatusNoise + `' AND p.kind = '` + KindPersonal + `'
 	  AND p.owner_id IS NOT NULL AND ` + latestResolvedSenderVerdict("p")
 
 // personalWithoutStandingSQL adds the seats with no decision of any kind.
