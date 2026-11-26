@@ -8648,6 +8648,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.movedTo": "Đã chuyển sang {when}",
   "tasks.moveUndoFailed": "Không thể chuyển việc cần làm về hạn cũ. Thử lại.",
   "tasks.remind.menu": "Nhắc tôi",
+  "tasks.remind.chipName": "Nhắc tôi (đã đặt lúc {when})",
   "tasks.remind.inAnHour": "Sau 1 giờ",
   "tasks.remind.tomorrowMorning": "Sáng mai",
   "tasks.remind.beforeDue": "1 giờ trước hạn",

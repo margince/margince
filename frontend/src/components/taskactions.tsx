@@ -1,5 +1,11 @@
 import { ChevronDown } from "lucide-react";
-import { type ReactNode, useId, useRef, useState } from "react";
+import {
+  type ReactNode,
+  type RefCallback,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import type { components } from "../api/schema";
 import {
   Button,
@@ -146,6 +152,16 @@ export function TaskDetailDialog({
     (own.current && focusableWithin(own.current)[0]) ??
     body.current?.closest<HTMLElement>('[role="dialog"]') ??
     null;
+  // Opening the log form unmounts the verbs that held focus, and closing it
+  // unmounts the form. Each move puts focus where the reader now is; the
+  // microtask waits for the verbs the close brings back.
+  const closeLog = () => setLogging(false);
+  const formMounted: RefCallback<HTMLDivElement> = (el) => {
+    if (el) {
+      const controls = focusableWithin(el);
+      (controls.find((c) => c.tagName !== "BUTTON") ?? controls[0])?.focus();
+    } else queueMicrotask(() => firstFocus()?.focus());
+  };
   return (
     <Modal
       open
@@ -183,11 +199,13 @@ export function TaskDetailDialog({
           {task && (
             <div className="form-stack task-detail-sections">
               {logging && (
-                <TaskOutcomeForm
-                  task={task}
-                  onLogged={() => setLogging(false)}
-                  onBack={() => setLogging(false)}
-                />
+                <div ref={formMounted}>
+                  <TaskOutcomeForm
+                    task={task}
+                    onLogged={closeLog}
+                    onBack={closeLog}
+                  />
+                </div>
               )}
               {callLog.call && (
                 <CallLogInline

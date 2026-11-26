@@ -65,15 +65,16 @@ export function TaskRemindMenu({
   const { locale } = useLocale();
   const zone = useViewerZone();
   if (!useRemindsReader(task.assignee_id)) return null;
-  const text = task.remind_at
-    ? t("tasks.remind.current", {
-        when: formatDue(task.remind_at, true, locale, zone, task.remind_intent),
-      })
-    : t("tasks.remind.menu");
+  const when = task.remind_at
+    ? formatDue(task.remind_at, true, locale, zone, task.remind_intent)
+    : undefined;
+  // The chip reads the reminder, so its name carries the verb and that reading.
   return (
     <OverflowMenu
-      label={t("tasks.remind.menu")}
-      text={text}
+      label={
+        when ? t("tasks.remind.chipName", { when }) : t("tasks.remind.menu")
+      }
+      text={when ? t("tasks.remind.current", { when }) : t("tasks.remind.menu")}
       face="chip"
       icon={<Bell size={12} aria-hidden="true" />}
       align="start"

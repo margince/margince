@@ -8862,6 +8862,7 @@ export const en = {
   "tasks.movedTo": "Moved to {when}",
   "tasks.moveUndoFailed": "Task was not moved back. Retry.",
   "tasks.remind.menu": "Remind me",
+  "tasks.remind.chipName": "Remind me (reminder set for {when})",
   "tasks.remind.inAnHour": "In 1 hour",
   "tasks.remind.tomorrowMorning": "Tomorrow morning",
   "tasks.remind.beforeDue": "1 hour before it is due",

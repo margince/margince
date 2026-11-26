@@ -68,10 +68,12 @@ export function WorklistWhy({
   // A row asking whether our later mail kept its promise has no ask to say.
   const open = saysOpen(item);
   const headingId = useId();
+  // Plain, the title is an h3 of its own, so each part sits a level under it.
+  const subLevel = plain ? "h4" : "h3";
   const sections = (
     <div className="worklist-why">
       {(happened.length > 0 || detail) && (
-        <WhySection heading={t("worklist.why.happened")}>
+        <WhySection level={subLevel} heading={t("worklist.why.happened")}>
           {happened.length > 0 && (
             <ul className="worklist-why-happened">
               {happened.map((line) => (
@@ -98,7 +100,7 @@ export function WorklistWhy({
         <WebsiteInquiryFacts facts={item.website_inquiry} />
       )}
       {reasons.length > 0 && (
-        <WhySection heading={t("worklist.why.now")}>
+        <WhySection level={subLevel} heading={t("worklist.why.now")}>
           <ol
             className="worklist-why-reasons"
             aria-label={t("worklist.why.reasons")}
@@ -110,12 +112,12 @@ export function WorklistWhy({
         </WhySection>
       )}
       {consequence && (
-        <WhySection heading={t("worklist.why.consequence")}>
+        <WhySection level={subLevel} heading={t("worklist.why.consequence")}>
           <p>{consequence}</p>
         </WhySection>
       )}
       {(open || answer) && (
-        <WhySection heading={t("worklist.why.todo")}>
+        <WhySection level={subLevel} heading={t("worklist.why.todo")}>
           {open && <p>{todoLine(item, t, told)}</p>}
           <OurLastReply item={item} />
           {answer && <RowVerbs item={item} />}
@@ -142,11 +144,12 @@ export function WorklistWhy({
 
 function WhySection({
   heading,
+  level,
   children,
-}: Readonly<{ heading: string; children: ReactNode }>) {
+}: Readonly<{ heading: string; level: "h3" | "h4"; children: ReactNode }>) {
   return (
     <section className="worklist-why-section">
-      <Eyebrow as="h3" size="xsmall">
+      <Eyebrow as={level} size="xsmall">
         {heading}
       </Eyebrow>
       {children}

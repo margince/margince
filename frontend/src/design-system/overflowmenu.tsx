@@ -366,11 +366,13 @@ export function OverflowMenu({
 }
 
 /** A chip that opens the menu: a fact in a line of chips that is also a verb,
- *  such as a task's reminder. While a write it started is out, it refuses. */
+ *  such as a task's reminder. While a write it started is out, it refuses the
+ *  press but keeps focus, which a chosen item hands back to it. */
 function ChipTrigger({
   icon,
   pending,
   children,
+  onClick,
   ...button
 }: Omit<ComponentPropsWithRef<"button">, "children"> &
   Readonly<{ icon: ReactNode; pending: boolean; children: ReactNode }>) {
@@ -379,8 +381,9 @@ function ChipTrigger({
       type="button"
       {...button}
       className={`${chipClass({ "chip-dense": true })} chip-link`}
-      disabled={pending}
+      aria-disabled={pending || undefined}
       aria-busy={pending || undefined}
+      onClick={pending ? undefined : onClick}
     >
       <ChipFace mark={icon}>{children}</ChipFace>
     </button>

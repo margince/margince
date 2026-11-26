@@ -70,7 +70,7 @@ export const AlreadySet: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Remind me" }),
+      await canvas.findByRole("button", { name: /^Remind me \(reminder set/ }),
     );
     const page = within(canvasElement.ownerDocument.body);
     // The chip names the reminder, and the menu says it again over its lines.

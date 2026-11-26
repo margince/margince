@@ -912,3 +912,27 @@ test("Call logs the call inside the dialog, on the task's contact, and leaves th
   expect(document.activeElement).toBe(dial);
   expect(patched).toHaveLength(0);
 });
+
+test("Log what happened takes focus into its form, and Back brings it to Done", async () => {
+  const user = userEvent.setup();
+  stubNextSteps();
+  openTaskWith();
+
+  await openMore(user);
+  await user.click(
+    await screen.findByRole("button", { name: en["tasks.log.action"] }),
+  );
+  const back = await screen.findByRole("button", {
+    name: en["tasks.log.back"],
+  });
+  const form = back.closest(".form-stack");
+  await waitFor(() =>
+    expect(form?.contains(document.activeElement)).toBe(true),
+  );
+
+  await user.click(back);
+  const done = await screen.findByRole("button", {
+    name: en["tasks.complete"],
+  });
+  await waitFor(() => expect(document.activeElement).toBe(done));
+});
