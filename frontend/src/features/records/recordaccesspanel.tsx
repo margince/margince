@@ -168,7 +168,7 @@ function MemberRow({
         </span>
       </div>
       {member.roles?.map((role) => (
-        <RoleBadge key={role} roleKey={role} />
+        <RoleBadge key={role} roleKey={role} name={member.role_names?.[role]} />
       ))}
       {member.can_change && (
         <Badge tone="accent">{t("whoCanSee.canChange")}</Badge>

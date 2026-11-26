@@ -72,16 +72,16 @@ func suggestionCopyFor(lang textlang.Lang) suggestionCopy {
 }
 
 func (said suggestionCopy) lifecycle(value string) string {
-	switch crmcontracts.CompanyLifecycle(value) {
-	case crmcontracts.CompanyLifecycleProspect:
+	switch crmcontracts.CompanyStatus(value) {
+	case crmcontracts.CompanyStatusProspect:
 		return said.Say(suggestionWords.Prospect)
-	case crmcontracts.CompanyLifecycleOpportunity:
+	case crmcontracts.CompanyStatusOpportunity:
 		return said.Say(suggestionWords.Opportunity)
-	case crmcontracts.CompanyLifecycleOnboarding:
+	case crmcontracts.CompanyStatusOnboarding:
 		return said.Say(suggestionWords.Onboarding)
-	case crmcontracts.CompanyLifecycleLive:
+	case crmcontracts.CompanyStatusLive:
 		return said.Say(suggestionWords.Live)
-	case crmcontracts.CompanyLifecycleCustomer:
+	case crmcontracts.CompanyStatusCustomer:
 		return said.Say(suggestionWords.Customer)
 	default:
 		return value

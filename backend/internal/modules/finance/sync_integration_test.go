@@ -51,7 +51,7 @@ type financeEnv struct {
 // out from under a card that has already been read once.
 func (e *financeEnv) setLifecycle(t *testing.T, state string) {
 	t.Helper()
-	e.ownerExec(t, `UPDATE company SET lifecycle = $2 WHERE id = $1`, e.company, state)
+	e.ownerExec(t, `UPDATE company SET status = $2 WHERE id = $1`, e.company, state)
 }
 
 // ownerExec runs one statement as the database owner, for the fixture rows the
@@ -109,15 +109,15 @@ func setupFinance(t *testing.T) *financeEnv {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO company (id, display_name, lifecycle, source, captured_by)
+		`INSERT INTO company (id, display_name, status, source, captured_by)
 		 VALUES ($1, 'Ledger GmbH', 'customer', 'manual', 'human:test')`,
 		e.company); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO finance_connection
-		       (id, provider, status, credential_ref, source, captured_by)
-		VALUES ($1, $2, 'active', 'offline://test', 'system', 'system:test')`,
+		       (id, provider, status, captured_by)
+		VALUES ($1, $2, 'active', 'system:test')`,
 		connID, fixtureProviderName); err != nil {
 		t.Fatal(err)
 	}
@@ -129,9 +129,8 @@ func setupFinance(t *testing.T) *financeEnv {
 	}
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO finance_customer_link
-		       (connection_id, company_id, external_customer_id,
-		        sync_hash, source, captured_by)
-		VALUES ($1, $2, $3, 'seed', 'system', 'system:test')`,
+		       (connection_id, company_id, external_customer_id, captured_by)
+		VALUES ($1, $2, $3, 'system:test')`,
 		connID, e.company, e.external); err != nil {
 		t.Fatal(err)
 	}
@@ -763,8 +762,8 @@ func (e *financeEnv) plantSecondConnection(t *testing.T) ids.UUID {
 	if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.ctx, `
 			INSERT INTO finance_connection
-			       (id, provider, status, credential_ref, source, captured_by, created_at)
-			VALUES ($1, $2, 'active', 'offline://bystander', 'system', 'system:test', now() - interval '1 day')`,
+			       (id, provider, status, captured_by, created_at)
+			VALUES ($1, $2, 'active', 'system:test', now() - interval '1 day')`,
 			id, fixtureProviderName)
 		return err
 	}); err != nil {

@@ -79,8 +79,8 @@ func (a *assembly) readStateStrip() error {
 		return err
 	}
 	strip := crmcontracts.Company360StateStrip{}
-	if lc := a.out.Company.Lifecycle; lc != nil {
-		strip.Account.Lifecycle = crmcontracts.Company360StateStripAccountLifecycle(*lc)
+	if lc := a.out.Company.Status; lc != nil {
+		strip.Account.Status = crmcontracts.Company360StateStripAccountStatus(*lc)
 	}
 	strip.Account.RelationshipTypes = accountRelationshipTypes(a.out.Company.RelationshipTypes)
 	strip.Dormancy = in.dormancy.wire()

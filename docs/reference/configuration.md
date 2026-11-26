@@ -491,6 +491,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
+| `mcp.call_log` | `MARGINCE_MCP_CALL_LOG` | — | `string` | — | api | Dev and debugging only, refused in production: a file the api adds one JSON line to for each `/mcp` call, with caller, tool, arguments, outcome and answer, secrets stripped. It holds personal data, and nothing caps or ages it; unset writes none. |
 | `mcp.client_registration.dynamic` | `MARGINCE_MCP_CLIENT_REGISTRATION_DYNAMIC` | — | `bool` | `true` | api | Let AI tools register their own OAuth client at `/oauth/register` (DCR); false keeps it off whatever the admin's switch in Settings > AI tool access says. |
 | `mcp.client_registration.metadata_document` | `MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT` | — | `bool` | `true` | api | Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > AI tool access says. |
 | `mcp.client_registration.unused_limit` | `MARGINCE_MCP_CLIENT_REGISTRATION_UNUSED_LIMIT` | — | `int` | `1000` | api | Most clients that AI tools made themselves (at `/oauth/register` or by a metadata document) and that no sign-in has used yet; a new one past it removes the oldest such client. |

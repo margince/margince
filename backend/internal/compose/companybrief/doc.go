@@ -4,8 +4,7 @@
 // Package companybrief writes the standing account brief on the company view:
 // what this account is, where it stands, and what changed.
 //
-// Tables owned: docs/reference/entity-model/compose.md. company_brief is the
-// per-user brief cache.
+// The per-user brief cache is a kind of row in the generatedsummary store.
 //
 // Three rules shape it.
 //

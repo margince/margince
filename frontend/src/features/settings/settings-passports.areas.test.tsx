@@ -307,7 +307,7 @@ describe("PassportCard: minting with areas", () => {
       within(dialog).getByRole("radio", { name: /All areas/ }),
     ).toBeChecked();
     await user.click(
-      within(dialog).getByRole("button", { name: "Mint passport" }),
+      within(dialog).getByRole("button", { name: "Create passport" }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
     expect(sent[0]?.body).toMatchObject({ areas: { mode: "all", areas: [] } });
@@ -329,7 +329,7 @@ describe("PassportCard: minting with areas", () => {
       await user.click(within(dialog).getByRole("checkbox", { name: area }));
     }
     await user.click(
-      within(dialog).getByRole("button", { name: "Mint passport" }),
+      within(dialog).getByRole("button", { name: "Create passport" }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
     expect(sent[0]?.body).toMatchObject({

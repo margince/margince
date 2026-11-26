@@ -69,9 +69,40 @@ class AgentParityCasesTest(unittest.TestCase):
     def test_research_during_a_read_of_the_plan_fails(self):
         name = "case112-my-plan-and-the-dossier.yaml"
         reads = [("read_details", {"action": "weekly_plan"}), ("read_details", {"action": "dossier", "id": "c"})]
-        answer = "You have no plan open this week, and the Nordholz dossier lists 40 plants."
+        answer = "You have no plan open this week, and the Nordholz dossier holds only the industry from the record."
         self.assertEqual(self.problems(name, reads, answer), [])
         self.assertTrue(self.problems(name, reads + [("run_research", {"action": "morning_brief"})], answer))
+
+    def test_a_dossier_built_from_the_record_alone_may_be_called_thin(self):
+        name = "case112-my-plan-and-the-dossier.yaml"
+        reads = [("read_details", {"action": "weekly_plan"}), ("read_details", {"action": "dossier", "id": "c"})]
+        for answer in (
+            "No weekly plan is saved. The Nordholz dossier is very thin: one section, Industry: Manufacturing, "
+            "generated from the record's own fields, not by a research run.",
+            "You have no plan this week. The Nordholz dossier is empty: no research has been run yet, so it has "
+            "no products or competitors.",
+            "You have no plan open this week. The dossier for Nordholz is very thin: it was generated from the "
+            "record's own fields, not by a research run.",
+            "Weekly plan: nothing is saved.\n\n**Nordholz dossier**\nVery thin. It holds one section, Industry: "
+            "Manufacturing, generated from the record's own fields rather than a research run.",
+            "No plan is saved. The Nordholz dossier holds only the industry from the record and doesn't list "
+            "plants or customers.",
+        ):
+            with self.subTest(answer=answer):
+                self.assertEqual(self.problems(name, reads, answer), [])
+
+    def test_a_dossier_reported_with_research_it_does_not_hold_fails(self):
+        name = "case112-my-plan-and-the-dossier.yaml"
+        reads = [("read_details", {"action": "weekly_plan"}), ("read_details", {"action": "dossier", "id": "c"})]
+        for answer in (
+            "You have no plan open this week, and the Nordholz dossier lists 40 plants.",
+            "No plan is saved. The Nordholz dossier is thin, but it says they have 250 employees and sell to "
+            "automotive customers.",
+            "No plan this week. The Nordholz dossier has no research yet, but says it has 40 plants.",
+        ):
+            with self.subTest(answer=answer):
+                problems = self.problems(name, reads, answer)
+                self.assertTrue(any("forbids" in p for p in problems), problems)
 
     def test_a_plan_the_workspace_does_not_hold_is_not_reported(self):
         name = "case112-my-plan-and-the-dossier.yaml"

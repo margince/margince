@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { Button } from "../../design-system/atoms";
 import { formatDateTime } from "../../format/format";
 import { useT } from "../../i18n";
 import { historyLine } from "../../lib/historyline";
@@ -72,11 +73,18 @@ function MemberRow({ entry }: Readonly<{ entry: AuditHistoryEntry }>) {
   );
 }
 
+// A plain button stands in for the panel's Redo: the real one needs a record
+// version and a restore write, which history.stories.tsx has.
+function RedoStandIn() {
+  const t = useT();
+  return <Button variant="ghost">{t("history.undo.redo")}</Button>;
+}
+
 function Row({ row }: Readonly<{ row: PairRow }>) {
   return (
     <StoryProviders>
       <ul className="timeline timeline-plain" style={{ maxWidth: 640 }}>
-        <ReversalPairRow row={row} currency="EUR">
+        <ReversalPairRow row={row} currency="EUR" redo={<RedoStandIn />}>
           <MemberRow entry={row.reversal} />
           <MemberRow entry={row.reversed} />
         </ReversalPairRow>
@@ -92,11 +100,15 @@ const meta: Meta<typeof Row> = {
 export default meta;
 type Story = StoryObj<typeof Row>;
 
-// Closed: one line, the field's settled value, and the net caption, neither
-// audit row shown yet.
+// Closed: one line, the field's settled value, the net caption, and Redo
+// beside the disclosure; neither audit row shown yet.
 export const Collapsed: Story = {
   render: () => <Row row={pair} />,
-  play: ({ canvasElement }) => expectNameAndValueApart(canvasElement),
+  play: async ({ canvasElement }) => {
+    await expectNameAndValueApart(canvasElement);
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("button", { name: "Redo" })).toBeVisible();
+  },
 };
 
 // The same closed row in dark: the net caption and the settled value sit on

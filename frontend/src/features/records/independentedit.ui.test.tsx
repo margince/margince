@@ -191,9 +191,11 @@ it("saves a contact's title across an unrelated update without resending their e
     return jsonResponse(current);
   });
   render(<ContactDetails contact={anna} />);
-  fireEvent.click(await screen.findByRole("button", { name: /^Change Title/ }));
-  const dialog = await screen.findByRole("dialog", { name: "Title" });
-  fireEvent.change(within(dialog).getByLabelText("Title"), {
+  fireEvent.click(
+    await screen.findByRole("button", { name: /^Change Job title/ }),
+  );
+  const dialog = await screen.findByRole("dialog", { name: "Job title" });
+  fireEvent.change(within(dialog).getByLabelText("Job title"), {
     target: { value: "New title" },
   });
   current = { ...anna, version: 2, full_name: "Updated name" };

@@ -46,6 +46,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
+const privateProjectName = "constel" + "lation"
+
+// registryPullTarget is the one literal path allowed to carry the private
+// project's name: the image the release workflow pulls. It is matched
+// case-sensitively and whole, so a URL, a link target or a capitalised form
+// of the name still fails.
+const registryPullTarget = "ghcr.io/gradionhq/margince-" + privateProjectName + "/release-management"
+
 // forbidden is what a private reference looks like in this tree's history.
 // Each pattern carries the plain-language reason it fails, because a gate that
 // only says "no match allowed" leaves the reader guessing what to write.
@@ -57,9 +65,12 @@ var forbidden = []struct {
 	// workflow name these sources functionally, while a page only cites them.
 	docsOnly bool
 }{
+	// The private project's name, bare or as a repository, in any case. It is
+	// built from parts so this file does not spell it out. The one registry pull
+	// target the release workflow needs is removed from a line before matching.
 	{
 		name:    "private repository name",
-		pattern: regexp.MustCompile(`margince-(foundation|principles|business)`),
+		pattern: regexp.MustCompile(`(?i)margince-(foundation|principles|business)|` + privateProjectName),
 		why:     "name the thing, not the repository — a reader here cannot open it",
 	},
 	{
@@ -106,8 +117,9 @@ func TestPublicTreeCitesNothingPrivate(t *testing.T) {
 		t.Fatalf("listing tracked files: %v (this test must run inside the git worktree)", err)
 	}
 
+	census, named := 0, 0
 	for _, rel := range strings.Split(strings.TrimRight(string(out), "\x00"), "\x00") {
-		if rel == "" || !scanned[filepath.Ext(rel)] {
+		if rel == "" || !isScanned(rel) {
 			continue
 		}
 		// This file names the patterns it bans, so scanning it would fail on
@@ -118,7 +130,26 @@ func TestPublicTreeCitesNothingPrivate(t *testing.T) {
 			continue
 		}
 		assertFileCitesNothingPrivate(t, rel)
+		census++
+		if rel == "Makefile" || rel == "docker-bake.hcl" {
+			named++
+		}
 	}
+	if census < publicTreeFloor || named != 2 {
+		t.Errorf("the gate read %d files (floor %d) and %d of the Makefile and docker-bake.hcl: "+
+			"its census has shrunk and a private name could hide in what it no longer reads", census, publicTreeFloor, named)
+	}
+}
+
+// publicTreeFloor is below the real count so ordinary deletions pass, and far above
+// what a broken file filter would leave.
+const publicTreeFloor = 15000
+
+// isScanned also takes files with no extension and the .hcl build files.
+// The Makefile and the bake configs carry prose in comments like any source.
+func isScanned(rel string) bool {
+	ext := filepath.Ext(rel)
+	return ext == "" || ext == ".hcl" || scanned[ext]
 }
 
 // assertFileCitesNothingPrivate reports every offending line in one file, so a
@@ -139,13 +170,15 @@ func assertFileCitesNothingPrivate(t *testing.T, rel string) {
 	}
 
 	for i, line := range strings.Split(string(body), "\n") {
+		shown := line
+		line = strings.ReplaceAll(line, registryPullTarget, "")
 		for _, f := range forbidden {
 			if f.docsOnly && filepath.Ext(rel) != ".md" {
 				continue
 			}
 			if f.pattern.MatchString(line) {
 				t.Errorf("%s:%d carries a %s — %s\n\t%s",
-					rel, i+1, f.name, f.why, strings.TrimSpace(line))
+					rel, i+1, f.name, f.why, strings.TrimSpace(shown))
 			}
 		}
 	}

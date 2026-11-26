@@ -124,8 +124,8 @@ export const PrivateWithShares: Story = {
   ),
 };
 
-/** What an administrator reads: roles beside each name, and the team behind
- *  a team share named. */
+/** What an administrator reads: roles beside each name, a custom role by the
+ *  name its admin gave it, and the team behind a team share named. */
 export const AsAnAdministrator: Story = {
   render: () => (
     <Panel
@@ -135,7 +135,11 @@ export const AsAnAdministrator: Story = {
           { ...owner, roles: ["rep"] },
           member("0a06", "Mor Adler", {
             group: "team_shared",
-            roles: ["manager"],
+            roles: ["manager", "custom_sales_assistant"],
+            role_names: {
+              manager: "Manager",
+              custom_sales_assistant: "Sales assistant",
+            },
             read_reasons: [
               { code: "team_share", access: "read", team_name: "Deal Desk" },
             ],

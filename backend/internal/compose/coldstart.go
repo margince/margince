@@ -184,6 +184,7 @@ func (e *coldStartEngine) stage(ctx context.Context, proposal crmcontracts.ColdS
 	}
 	digest := sha256.Sum256(proposedChange)
 	approvalID, err := e.approvals.Stage(ctx, approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           "coldstart",
 		ProposedChange: proposedChange,
 		DiffHash:       hex.EncodeToString(digest[:]),

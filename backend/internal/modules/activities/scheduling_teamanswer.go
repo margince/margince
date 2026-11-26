@@ -32,19 +32,25 @@ func (s *Store) AnswerSchedulingTeamRequest(ctx context.Context, page ids.UUID, 
 }
 
 // AnswerHostTeamRequests records the acting colleague's answer on every live
-// team link of host that names them and that the answer changes. Confirming
-// answers each pending one, and leaving each one not yet left. It serves
-// clients that answer a host rather than a link.
+// team link of host that names them and that the answer changes. It serves
+// clients that answer a host rather than a link. A repeat succeeds, as on one
+// link. It is not found when no live link holds the caller in a state this
+// answer moves or repeats. So a confirm on a link they left is not found.
 func (s *Store) AnswerHostTeamRequests(ctx context.Context, host ids.UserID, answer crmcontracts.SchedulingTeamAnswerState) error {
 	me, err := s.admitTeamAnswer(ctx, answer)
 	if err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
+		// The host lock comes before the read, so the links are judged as they
+		// stand once no other answer on them can commit.
+		if err := storekit.LockWriteIdentity(ctx, tx, "booking_page", host.String()); err != nil {
+			return err
+		}
 		args := schedulingArgs{}
 		rows, err := tx.Query(ctx, `SELECT id, scheduling_policy FROM booking_page WHERE host_user_id=`+args.add(host)+` AND revoked_at IS NULL
  AND scheduling_policy->'team_members' @> jsonb_build_array(jsonb_build_object('user_id', `+args.add(me.String())+`::text))
- ORDER BY created_at, id`, args...)
+ ORDER BY created_at, id FOR UPDATE`, args...)
 		if err != nil {
 			return err
 		}
@@ -56,40 +62,33 @@ func (s *Store) AnswerHostTeamRequests(ctx context.Context, host ids.UserID, ans
 		if err != nil {
 			return err
 		}
-		answered := 0
+		reached := 0
 		for _, page := range pages {
-			if !answerChanges(page.Policy.SchedulingProfile, me, answer) {
-				continue
-			}
-			written, err := s.answerTeamLinkIfItChangesTx(ctx, tx, page.ID, me, answer)
-			if err != nil {
-				return err
-			}
-			if written {
-				answered++
+			switch {
+			case answerChanges(page.Policy.SchedulingProfile, me, answer):
+				if err := s.writeTeamAnswerTx(ctx, tx, page.ID, &page.Policy, me, answer); err != nil {
+					return err
+				}
+				reached++
+			case answerRepeats(page.Policy.SchedulingProfile, me, answer):
+				reached++
 			}
 		}
-		if answered == 0 {
+		if reached == 0 {
 			return apperrors.ErrNotFound
 		}
 		return nil
 	})
 }
 
-// answerTeamLinkIfItChangesTx is answerTeamLinkTx for the host-wide answer. It
-// asks answerChanges again under the lock, since an answer on that one link
-// may have committed after the pages were read.
-func (s *Store) answerTeamLinkIfItChangesTx(
-	ctx context.Context, tx pgx.Tx, page ids.UUID, me ids.UserID, answer crmcontracts.SchedulingTeamAnswerState,
-) (bool, error) {
-	stored, err := lockLivePageTx(ctx, tx, page)
-	if errors.Is(err, apperrors.ErrNotFound) || (err == nil && (stored == nil || !answerChanges(stored.SchedulingProfile, me, answer))) {
-		return false, nil
+// answerRepeats is whether member already stands where answer would put them.
+func answerRepeats(profile crmcontracts.SchedulingProfile, member ids.UserID, answer crmcontracts.SchedulingTeamAnswerState) bool {
+	for _, m := range teamMembers(profile) {
+		if memberUser(m) == member {
+			return memberState(m) == crmcontracts.SchedulingTeamMemberState(answer)
+		}
 	}
-	if err != nil {
-		return false, err
-	}
-	return true, s.writeTeamAnswerTx(ctx, tx, page, stored, me, answer)
+	return false
 }
 
 // answerChanges is whether answer moves member on a page: confirming a pending

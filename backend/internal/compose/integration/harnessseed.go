@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -377,4 +378,16 @@ func holdsSystemRole(admin context.Context, t *testing.T, pool *pgxpool.Pool, us
 		t.Fatalf("reading %s's roles: %v", user, err)
 	}
 	return held
+}
+
+// OfferDeskPerms is the deal-desk grant this suite drives the offer
+// store under; row scope all keeps visibility out of the frame here.
+var OfferDeskPerms = principal.Permissions{
+	RoleKeys: []string{"deal_desk"},
+	Objects: map[string]principal.ObjectGrant{
+		"deal":                  {Create: true, Read: true, Update: true},
+		"offer":                 {Create: true, Read: true, Update: true},
+		"installation_settings": {Read: true},
+	},
+	RowScope: principal.RowScopeAll,
 }

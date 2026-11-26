@@ -36,7 +36,7 @@ func TestAToolWriteNamesTheSeatsAndRecordsItChanged(t *testing.T) {
 		"company_id":  json.RawMessage(`"` + company.String() + `"`),
 	}
 
-	named, err := agentChangeWords(e.DB())(e.Admin(), current, changes)
+	named, err := agentChangeWords(e.DB())(e.Admin(), "activity", current, changes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestAToolWriteNamesAnAmountInItsCurrency(t *testing.T) {
 	current := map[string]json.RawMessage{"currency": json.RawMessage(`"EUR"`), "amount_minor": json.RawMessage(`null`)}
 	changes := map[string]json.RawMessage{"amount_minor": json.RawMessage(`120000`)}
 
-	named, err := agentChangeWords(e.DB())(e.Admin(), current, changes)
+	named, err := agentChangeWords(e.DB())(e.Admin(), "deal", current, changes)
 	if err != nil {
 		t.Fatal(err)
 	}

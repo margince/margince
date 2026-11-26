@@ -95,7 +95,7 @@ func insertOriginalRowTx(
 		ON CONFLICT (source_system, source_id) DO NOTHING
 		RETURNING id`, pgx.NamedArgs{
 		sqlArgSystem: key.SourceSystem, sqlArgSource: key.SourceID, sqlArgPayload: inline,
-		sqlArgObject: ref, "outcome": string(slimmed),
+		sqlArgObject: ref, fieldOutcome: string(slimmed),
 	}).Scan(&id)
 	if err == nil {
 		return id, originalstore.Adopt(ctx, tx, ref)

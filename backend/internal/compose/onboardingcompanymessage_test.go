@@ -158,7 +158,7 @@ func TestOnboardingCompanyStatusOffersConfirmationOnlyWhenComplete(t *testing.T)
 		t.Fatalf("decode reply: %v", err)
 	}
 	if reply.AvailableAction == nil || *reply.AvailableAction != crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionConfirmCompany ||
-		reply.NextRequiredField != nil || len(reply.RemainingRequiredFields) != 0 || !strings.Contains(reply.Message, "0 Pflichtangaben") {
+		reply.NextRequiredField != nil || len(reply.RemainingRequiredFields) != 0 || !strings.Contains(reply.Message, "Fehlende Pflichtangaben: 0") {
 		t.Fatalf("complete status reply = %+v", reply)
 	}
 }
@@ -363,7 +363,7 @@ func TestOnboardingStatusMessagesCoverBothLocalesAndResearchStates(t *testing.T)
 		{locale: "en", readReady: false, want: "still researching"},
 		{locale: "en", readReady: true, want: "2 required details"},
 		{locale: "de", readReady: false, want: "recherchiere noch"},
-		{locale: "de", readReady: true, want: "2 Pflichtangaben"},
+		{locale: "de", readReady: true, want: "Fehlende Pflichtangaben: 2"},
 	} {
 		if got := onboardingStatusMessage(tc.locale, onboardingResearchState{ready: tc.readReady}, 2); !strings.Contains(got, tc.want) {
 			t.Fatalf("onboardingStatusMessage(%q, %v) = %q", tc.locale, tc.readReady, got)

@@ -193,3 +193,36 @@ func TestHealthMeasurementsKeepEachChecksSampleCountAndNote(t *testing.T) {
 		}
 	}
 }
+
+func TestALongHistoryRowShowsItsTimeWithoutAPromise(t *testing.T) {
+	row := func(seat, name string, p95 float64) measurement {
+		return measurement{Name: name, Flow: "history_search_to_deal", Seat: seat, P95Ms: p95, BudgetMs: 100, Samples: 30, Verdict: storedNotGated}
+	}
+	failed := row("manager", "history_search_to_deal_page", 900)
+	failed.Status5xx = 2
+	page := renderPlain(map[string]record{dailyTarget: {Target: dailyTarget, Corpus: &corpus{Scale: 1}, Budgets: []measurement{
+		row("rep", "history_search_to_deal_search", 80), row("rep", "history_search_to_deal_page", 3900),
+		row("rep", "history_search_to_deal_total", 3980), failed,
+	}}})
+	want := "| Search, then open the deal | ⚪ About 4 seconds | 🔴 Some tries failed | Failed: some tries got no answer, so no time can be trusted. |"
+	if !strings.Contains(page, "## How fast does a record with a long history open?\n") || !strings.Contains(page, want) {
+		t.Errorf("a recorded row shows its slowest time with no colour, and a failed try still fails; want\n%s\nin\n%s", want, page)
+	}
+	if got := recordedAnswer([]measurement{row("rep", "history_thread", 40)}).words(); got != "Measured only: no promise covers a history this long yet." {
+		t.Errorf("a recorded row's words %q must say no promise covers it", got)
+	}
+}
+
+func TestTheTestCompanyStatesItsLongestHistories(t *testing.T) {
+	var b strings.Builder
+	renderCorpusFacts(&b, &corpus{Scale: 1, LargestCompany: 20000, LargestDeal: 10000, LargestContact: 5000, LargestThread: 2000})
+	want := "Its longest histories are a company with 20,000 activities, a deal with 10,000, a contact with 5,000\nand a mail conversation of 2,000 messages.\n"
+	if !strings.Contains(b.String(), want) {
+		t.Errorf("got\n%s\nwant the longest histories stated:\n%s", b.String(), want)
+	}
+	b.Reset()
+	renderCorpusFacts(&b, &corpus{Scale: 1})
+	if strings.Contains(b.String(), "longest histories") {
+		t.Errorf("a record from before the long histories must render as it did: %s", b.String())
+	}
+}

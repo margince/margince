@@ -32,7 +32,7 @@ import { type CensusRule, extensionsDir, frontendRoot, srcDir } from "../tree";
 const ruleHome = join(srcDir, "i18n");
 const pluralModule = join(srcDir, "format", "plural.ts");
 
-const BUDGETED_CORPUS_FILES = 6_500;
+const BUDGETED_CORPUS_FILES = 7_000;
 
 const CATALOG_KEYS: ReadonlySet<string> = new Set(Object.keys(en));
 

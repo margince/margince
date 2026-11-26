@@ -57,7 +57,7 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	if err != nil {
 		return Counts{}, err
 	}
-	dealScope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	dealScope, err := standingDealScope(ctx, arg)
 	if err != nil {
 		return Counts{}, err
 	}
@@ -336,7 +336,7 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos, capPos := arg(start), arg(end), arg(userID), arg(dealLineCap)
-	dealScope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	dealScope, err := standingDealScope(ctx, arg)
 	if err != nil {
 		return nil, err
 	}

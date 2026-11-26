@@ -97,6 +97,8 @@ describe("the account's projects panel", () => {
       ],
     });
     expect(screen.getByText("Depot fit-out")).toBeTruthy();
+    // The key is drawn as the project pages draw it: a chip, not plain text.
+    expect(screen.getByText("DEP-12").closest(".chip")).not.toBeNull();
   });
 });
 

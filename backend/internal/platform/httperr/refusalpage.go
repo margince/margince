@@ -39,7 +39,7 @@ var refusalPageHTML = template.Must(template.New("refusal-page").Parse(`<!doctyp
 
 func writeRefusalPage(w http.ResponseWriter, r *http.Request, status int) bool {
 	page, ok := r.Context().Value(refusalPageKey{}).(RefusalPage)
-	if !ok || (status != http.StatusNotFound && status != http.StatusForbidden) || !prefersHTML(r.Header.Get("Accept")) {
+	if !ok || (status != http.StatusNotFound && status != http.StatusForbidden) || !PrefersHTML(r.Header.Get("Accept")) {
 		return false
 	}
 	var body bytes.Buffer
@@ -55,9 +55,9 @@ func writeRefusalPage(w http.ResponseWriter, r *http.Request, status int) bool {
 	return true
 }
 
-// prefersHTML matches a browser opening a link in a tab: text/html ranked at
+// PrefersHTML matches a browser opening a link in a tab: text/html ranked at
 // least as high as any JSON type. A script's bare */* names neither.
-func prefersHTML(accept string) bool {
+func PrefersHTML(accept string) bool {
 	html, json := 0.0, 0.0
 	for mediaRange := range strings.SplitSeq(accept, ",") {
 		mediaType, params, err := mime.ParseMediaType(strings.TrimSpace(mediaRange))

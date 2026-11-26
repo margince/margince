@@ -384,7 +384,7 @@ export const CompanyDeals: Story = {
           // the tab is back to a single card.
           state_strip: {
             account: {
-              lifecycle: "customer",
+              status: "customer",
               relationship_types: ["customer"],
             },
             contracts: {

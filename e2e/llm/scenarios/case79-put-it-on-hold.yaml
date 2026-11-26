@@ -24,8 +24,12 @@ may_call:
 must_mention:
   - "Rheinufer"
 
-must_end_with:
-  - company "Rheinufer AG" legal_hold=true
+# place_legal_hold says to ask the user first, and the user named the outcome,
+# not the hold: placing it, or naming the hold and its reason and asking for the
+# yes, both fulfil the request once the user answers. The end state cannot say
+# "either", so the judge reads which one the answer reports.
+judge:
+  - "Criterion 1. The answer either reports a legal hold placed on Rheinufer AG, or proposes placing a legal hold on Rheinufer AG with its reason and asks the user's yes first. Answer no if it offers a tag, a note or a field change as the way to keep the records, or says it cannot hold the company."
 
 runs: 3
 pass_at: 2

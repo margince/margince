@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/imap-send-fields.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx frontend/src/features/capture/connection-stop.tsx backend/internal/modules/capture/gdocs backend/internal/modules/capture/meetingnotes.go backend/internal/modules/capture/meetingnotesread.go backend/internal/modules/capture/meetingnotesmail.go backend/internal/modules/activities/meetingnotes.go backend/internal/modules/activities/meetingnotesmail.go backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/imap-send-fields.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/connectors.telegrambusiness.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx frontend/src/features/capture/connection-stop.tsx backend/internal/modules/capture/gdocs backend/internal/modules/capture/meetingnotes.go backend/internal/modules/capture/meetingnotesread.go backend/internal/modules/capture/meetingnotesmail.go backend/internal/modules/activities/meetingnotes.go backend/internal/modules/activities/meetingnotesmail.go backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -258,6 +258,37 @@ Also called: remove the Telegram bot, stop Telegram capture, unlink Telegram.
 Find that program and stop it. It may be a second Margince, a test installation, or another tool using the same token.
 Margince does not try again on its own. Once the other reader is gone, press **Disconnect**, then connect the bot again.
 Also called: Telegram not syncing, bot stopped capturing.
+
+### How do I link a Telegram Business account?
+To capture a company's Telegram Business account, its owner links the company's bot inside the Telegram app, and an administrator then approves it in Margince. The **Telegram Business** card appears on **Settings → Integrations** once the Telegram bot is connected. Only an administrator or operations user sees it.
+1. The account owner opens Telegram, then **Settings**, then **Telegram Business**, then **Chatbots**.
+2. The owner enters the bot's name from the **Telegram Business** card and chooses which chats the bot may see.
+3. In Margince, open **Settings**, then **Integrations**. The account appears in the **Telegram Business** card as **Waiting for approval**.
+4. Press **Approve as company account**, choose the team that reads the account's messages, and confirm.
+Nothing from the account is captured until you approve it. After that, customer messages and the owner's replies from the Telegram app appear in the customer's **History**. Staff keep replying in Telegram, because Margince has no reply box for these chats.
+
+A new account starts as **Held**: only the team you chose can read its messages. Check with the owner which chats they selected before you approve. The team is required the first time. An account that comes back to the seat it had keeps that team.
+Also called: Telegram Business bot, approve a Telegram account, connect a business account.
+
+### Who reads a Telegram Business account's messages?
+Each approved account shows **Read by** its team and either **Held** or **Shared** on its row in the **Telegram Business** card.
+- **Held** means only the reader team can read the messages.
+- **Shared** means a message follows the sharing of the contact it is filed on.
+
+To change it, press **Change who reads** on the row, pick **Held** or **Shared**, and confirm with **Change visibility**. The change applies to messages the account captures after it. Messages held before stay held. It works the same way as for a shared mailbox.
+
+**Shared** needs the company's opt-in. Without it the dialog says so and nothing changes. An account that belongs to a single member shows **each chat is held** and has no team to change.
+Also called: Telegram Business visibility, who sees business chats, reader team.
+
+### What does Switched off in Telegram mean?
+**Switched off in Telegram** means the owner removed the bot from their Telegram Business settings. Margince captures nothing new from that account, and what it already captured stays.
+The account cannot be approved while it is switched off, and pressing **Approve as company account** then says so. To use it again, the owner links the bot once more, and the account waits for approval again.
+Also called: Telegram Business account disconnected, owner removed the bot.
+
+### How do I disconnect a Telegram Business account?
+To stop capturing a Telegram Business account, open the **…** (**Actions**) menu on its row in the **Telegram Business** card, choose **Disconnect**, and confirm.
+Margince stops capturing from the account at once. Everything it already captured stays in the CRM. If the owner links the bot again, the account waits for approval again.
+Also called: remove a business account, stop Telegram Business capture.
 
 ### How do I import my old emails?
 To import your old emails into Margince, pick a window under **Import past email** when you connect. Or choose **Import older email** in the account's menu in **Settings → Connections**.

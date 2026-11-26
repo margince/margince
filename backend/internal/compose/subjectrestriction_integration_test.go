@@ -83,7 +83,7 @@ func liftRestrictionDirectly(t *testing.T, e *integration.Env, contact ids.UUID)
 func TestTheClassifierSkipsMailOfARestrictedContactUntilTheLift(t *testing.T) {
 	e := integration.Setup(t)
 	anna := restrictContact(t, e)
-	restricted := mailFromAddress(t, e, "about my disputed address", "Anna.Weber@restricted.example")
+	restricted := mailFromAddress(t, e, "about my disputed address", "anna.weber@restricted.example")
 	ordinary := mailFromAddress(t, e, "please send the offer", "bob@elsewhere.example")
 	brain := &scriptedClassifyBrain{}
 	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))

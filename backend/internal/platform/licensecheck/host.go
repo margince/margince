@@ -5,7 +5,7 @@ package licensecheck
 
 // The wazero host that runs the bundled validation module in this process.
 //
-// Vendored from margince-constellation's tools/licensecheckwasm/host/host.go at
+// Vendored from the publisher's tooling (tools/licensecheckwasm/host/host.go) at
 // 885471640ea89785c69942816984953257c83d62, and kept in step with it by hand. It
 // is a copy rather than an import because that package lives in a private
 // module: a public source installation could not resolve the import path, so

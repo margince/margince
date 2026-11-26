@@ -17,7 +17,7 @@ func withRefusedMove(ctx context.Context, card crmcontracts.DealStatusCard) crmc
 		return card
 	}
 	next := *card.Next
-	next.BlockedReason = momentaction.MoveRefusal(ctx, crmcontracts.WorklistMoveAction(next.Action))
+	next.BlockedReason = momentaction.MoveRefusal(ctx, "deal", crmcontracts.WorklistMoveAction(next.Action))
 	card.Next = &next
 	return card
 }

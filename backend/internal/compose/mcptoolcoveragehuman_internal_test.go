@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -176,5 +177,30 @@ func TestTheSummaryTableShowsCallsAndTurnsPerJob(t *testing.T) {
 		if !strings.Contains(page, want) {
 			t.Errorf("the summary table lacks %q:\n%s", want, page)
 		}
+	}
+}
+
+// A run the staleness check finds out of date is still shown. The job table and
+// the assistant's summary mark it as measured on an earlier listing.
+func TestARunOnAnEarlierListingIsShownAndMarked(t *testing.T) {
+	lines, err := mcpe2e.Report(repoRoot)
+	cases, readErr := readE2ELLMCases(e2eLLMScenarioDir, e2eLLMRecordDir)
+	if err != nil || readErr != nil {
+		t.Fatal(err, readErr)
+	}
+	marked := map[verdictKey]bool{}
+	for _, c := range cases {
+		for _, run := range c.ByModel {
+			marked[verdictKey{model: run.Model, scenario: c.Name}] = len(run.EarlierListing) > 0
+		}
+	}
+	for _, line := range lines {
+		if got := marked[verdictKey{line.Folder, line.Scenario}]; line.Tree == filepath.Base(e2eLLMRecordDir) && got != (len(line.Why) > 0) {
+			t.Errorf("%s %s: the report says %v, the page marks it %t", line.Folder, line.Scenario, line.Why, got)
+		}
+	}
+	earlier := caseRow{Name: "a", ByModel: []caseModelRun{{Model: "m", Held: true, EarlierListing: []string{"tool copy"}}}}
+	if mark, n := jobMark(earlier, "m"), summariseModel([]caseRow{earlier}, "m").CasesOnEarlierListing; mark != "✅ earlier listing" || n != 1 {
+		t.Errorf("the job reads %q and the summary counts %d, want it marked and counted once", mark, n)
 	}
 }

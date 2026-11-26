@@ -1,12 +1,12 @@
 # Which MCP end-to-end verdicts does this pull request make stale?
 #
 # Each committed verdict under backend/internal/compose/aicert/records/mcp_e2e*/
-# carries a stamp of what it measured. This holds every verdict against the
-# stamps of the base tree and of this change, and names the ones that were
-# current before and are not now: the change moved a scenario, the copy of a
-# tool it names, the server instructions, the judge or the harness. The list
-# comes from the stamps (backend/internal/compose/mcpe2e), never from a list
-# kept by hand.
+# carries a stamp of what it measured. The base tree judges its own verdicts
+# with its own code, then this change's code judges this change's tree, and
+# the job names the ones that were current before and are not now: the change
+# moved a scenario, the copy of a tool it names, the server instructions, the
+# judge, the harness or how a stamp is computed. The list comes from the
+# stamps (backend/internal/compose/mcpe2e), never from a list kept by hand.
 #
 # IT REPORTS AND NEVER BLOCKS, for the reason docs-describing.yml gives: `ci` is
 # the one required check, and a paid run is never what a pull request waits on.
@@ -65,10 +65,17 @@ jobs:
             echo "could not check out the base; saying nothing rather than guessing" >&2
             exit 0
           fi
+          # The base's own code judges the base, so a change to how a stamp is
+          # computed cannot move both sides at once and hide what it staled.
+          current="$RUNNER_TEMP/base-current.json"
+          if ! (cd "$base/backend" && go run ./internal/compose/mcpe2e/mcpe2ecmd current -out "$current"); then
+            echo "the base could not judge its own verdicts; saying nothing rather than guessing" >&2
+            exit 0
+          fi
           status=0
-          list="$(cd backend && go run ./internal/compose/mcpe2e/mcpe2ecmd newly-stale -base "$base")" || status=$?
+          list="$(cd backend && go run ./internal/compose/mcpe2e/mcpe2ecmd newly-stale -base-current "$current")" || status=$?
           if [ "$status" -ne 0 ]; then
-            echo "could not stamp one of the two trees; saying nothing rather than guessing" >&2
+            echo "could not judge this change's verdicts; saying nothing rather than guessing" >&2
             exit 0
           fi
           printf '%s\n' "${list:-This change makes no MCP end-to-end verdict stale.}" | tee -a "$GITHUB_STEP_SUMMARY"

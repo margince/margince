@@ -31,6 +31,8 @@ type RuleList struct {
 	Version    int64
 	// Invalid says the latest check could not evaluate the filter.
 	Invalid bool
+	// Unavailable says no unit declares the list's kind any more.
+	Unavailable bool
 }
 
 // ObservedChange is one entered or left event a check recorded.
@@ -50,7 +52,7 @@ func (s *Store) ListForRule(ctx context.Context, id ids.ListID) (RuleList, error
 	}
 	out := RuleList{
 		ID: l.ID, Name: l.Name, EntityType: l.EntityType, Live: l.ListType == listTypeDynamic,
-		Archived: l.ArchivedAt != nil, Version: l.Version,
+		Archived: l.ArchivedAt != nil, Version: l.Version, Unavailable: kindRemoved(l.EntityType),
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var outcome string

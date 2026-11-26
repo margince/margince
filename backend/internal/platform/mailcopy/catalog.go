@@ -76,7 +76,7 @@ func resetLines(line writeLine) {
 		"Đặt lại mật khẩu Margince")
 	line(func(c *Copy) *string { return &c.ResetIntro },
 		"Use the link below to choose a new password for your Margince account. The link is valid for one hour.",
-		"Mit diesem Link kannst du ein neues Passwort für dein Margince-Konto festlegen. Der Link ist eine Stunde gültig.",
+		"Mit diesem Link kannst du ein neues Passwort für dein Nutzerkonto in Margince festlegen. Der Link ist eine Stunde gültig.",
 		"Dùng liên kết dưới đây để đặt mật khẩu mới cho tài khoản Margince. Liên kết có hiệu lực trong một giờ.")
 	line(func(c *Copy) *string { return &c.ResetAction },
 		"Choose a new password",

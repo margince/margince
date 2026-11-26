@@ -15,6 +15,7 @@ export function NamePrompt({
   pending = false,
   problem,
   nameProblem,
+  maxLength,
   onSave,
 }: Readonly<{
   /** The button that opens it, already translated. */
@@ -26,9 +27,11 @@ export function NamePrompt({
   confirmLabel: string;
   pending?: boolean;
   /** The failure, already read into the reader's language. */
-  problem?: string;
-  /** Why the name last sent was refused; see `NameDialog`'s `nameProblem`. */
+  problem?: string | null;
+  /** The refused name itself, drawn on the field until it changes. */
   nameProblem?: string | null;
+  /** The server's bound on the name. */
+  maxLength?: number;
   /** Run `done` once the write has landed; a refused write keeps the dialog open. */
   onSave: (name: string, done: () => void) => void;
 }>) {
@@ -49,6 +52,7 @@ export function NamePrompt({
         pending={pending}
         problem={problem}
         nameProblem={nameProblem}
+        maxLength={maxLength}
         onSave={(name) => onSave(name, close)}
       />
     </>

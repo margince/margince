@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -35,4 +37,35 @@ func stagePositionTaken(position int) error {
 		Status: http.StatusConflict, Code: "stage_position_taken",
 		Detail: fmt.Sprintf("position %d is already taken in this pipeline; choose a free position, or reorder the stages to put this one there", position),
 	}
+}
+
+// stageNameTaken names the stage name the pipeline already holds.
+func stageNameTaken(name string) error {
+	return &httperr.DetailedError{
+		Status: http.StatusConflict, Code: "stage_name_taken",
+		Detail: fmt.Sprintf("this pipeline already has a stage called %q; choose a different name", name),
+	}
+}
+
+// The indexes holding one live stage per position and per name in a pipeline,
+// the name compared trimmed and case-folded.
+const (
+	stagePositionIndex = "uq_stage_position"
+	stageNameIndex     = "stage_name_once"
+)
+
+// stageUniqueRefusal answers a unique violation on a stage write by the index
+// that fired, or nil when err is none. A nil name or position is one the write
+// left alone.
+func stageUniqueRefusal(err error, name *string, position *int) error {
+	constraint, ok := storekit.UniqueViolation(err)
+	switch {
+	case !ok:
+		return nil
+	case constraint == stageNameIndex && name != nil:
+		return stageNameTaken(*name)
+	case constraint == stagePositionIndex && position != nil:
+		return stagePositionTaken(*position)
+	}
+	return apperrors.ErrConflict
 }

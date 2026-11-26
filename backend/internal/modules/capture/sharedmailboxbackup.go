@@ -140,7 +140,7 @@ func changeBackupOwnerTx(ctx context.Context, tx pgx.Tx, next SharedMailboxView,
 		return next, nil
 	}
 	tag, err := tx.Exec(ctx, `UPDATE capture_connection SET backup_owner_id = $2
-	  WHERE id = $1 AND user_id IS NULL AND archived_at IS NULL`, next.ID, want)
+	  WHERE id = $1 AND `+mailSeatSQL+` AND archived_at IS NULL`, next.ID, want)
 	if err != nil {
 		return next, fmt.Errorf("capture: naming the shared mailbox's backup owner: %w", err)
 	}

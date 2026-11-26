@@ -12,6 +12,8 @@ import (
 
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/module"
+
+	"github.com/margince/margince/backend/internal/platform/unitset"
 )
 
 // An instance outside this repository requires core's modules by version and
@@ -32,29 +34,19 @@ import (
 // Then it puts the core tree together and composes it. The client fetches
 // nothing by hand.
 const (
-	coreRootModule  = "github.com/margince/margince"
-	coreToolsModule = "github.com/margince/margince/backend/tools"
+	coreRootModule  = unitset.RootModule
+	coreToolsModule = unitset.ToolsModule
 	// treeMarkerFile records which core commit a fetched tree holds, so an
 	// unchanged require does not fetch and copy the tree again.
 	treeMarkerFile = ".margince-core"
 )
 
-// isCoreModule reports whether path is one of core's own modules, which an
-// instance requires but never composes as an extension.
-func isCoreModule(path string) bool {
-	switch path {
-	case coreRootModule, backendModule, coreToolsModule, compositionModule:
-		return true
-	}
-	return false
-}
-
 // replacementPath is the module path a versioned replace points the unit at,
 // or "" when none does. Go accepts a replacement whose go.mod declares that
 // path, such as a fork.
-func (u unitSource) replacementPath() string {
-	path, _, _ := strings.Cut(u.download, "@")
-	if path == u.modulePath {
+func replacementPath(u unitset.Unit) string {
+	path, _, _ := strings.Cut(u.Download, "@")
+	if path == u.ModulePath {
 		return ""
 	}
 	return path

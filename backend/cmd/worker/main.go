@@ -33,6 +33,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/extensionegress"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -283,7 +284,7 @@ func configureWorker(ctx context.Context, args []string, stdout io.Writer) (work
 	if err != nil {
 		return workerBoot{}, err
 	}
-	compose.BindExtensionEgress(cfg.posture)
+	extensionegress.Bind(cfg.posture)
 	bootstrap, err := loadBootstrap(cfg)
 	if err != nil {
 		return workerBoot{}, err

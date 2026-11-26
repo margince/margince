@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -383,15 +384,18 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	// is a fact about the read, so the report is installed here and read once
 	// the handler has made its reads.
 	ctx, withheld := auth.WithWithheldReport(ctx)
+	if why := statedWhy(args); why != "" {
+		ctx = storekit.WithStatedReason(ctx, why)
+	}
 	out, err := t.Handle(ctx, args)
 	if err != nil {
 		return nil, 0, sealShown(err, func(answer json.RawMessage) (json.RawMessage, error) {
-			return sealEnvelope(spec, trace, recordLinkOrigin(ctx), facts, answer)
+			return sealEnvelope(spec, trace, RecordLinkOrigin(ctx), facts, answer)
 		})
 	}
 	noteCaptureWithheld(ctx, withheld)
 	r.noteCostShare(ctx)
-	sealed, err := sealEnvelope(spec, trace, recordLinkOrigin(ctx), facts, out)
+	sealed, err := sealEnvelope(spec, trace, RecordLinkOrigin(ctx), facts, out)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -472,6 +476,7 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 		CoTargetID:     info.CoTargetID,
 		Summary:        info.Summary,
 		SystemText:     info.SystemText,
+		Why:            statedWhy(args),
 	}
 	id, alreadyApproved, err := r.approvals.StageCall(ctx, req)
 	if err != nil {

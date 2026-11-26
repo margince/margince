@@ -227,7 +227,7 @@ func (r *Registry) liveChannelBindings(ctx context.Context, provider string) ([]
 		// that ever stops being true.
 		rows, err := tx.Query(ctx, `
 			SELECT id, version, credential_ref FROM channel_connection
-			 WHERE provider = $1 AND status = $2 AND archived_at IS NULL`,
+			 WHERE provider = $1 AND status = $2 AND archived_at IS NULL AND `+botConnectionRow,
 			provider, channelStatusConnected)
 		if err != nil {
 			return err

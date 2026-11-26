@@ -24,6 +24,7 @@ import (
 func TestEveryShippedLanguageWritesTheContactFloor(t *testing.T) {
 	t.Parallel()
 	langcopytest.Census(t, floor)
+	langcopytest.GermanStyle(t, floor)
 }
 
 // A count of one gets its own sentence. "1 days" and "1 Tagen" both read as a

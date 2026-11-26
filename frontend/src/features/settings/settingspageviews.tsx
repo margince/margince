@@ -90,7 +90,7 @@ export function PageLoading({
 export const FOLDER_PAGE_VIEWS = {
   agents: page(
     () => import("./settings.aiaccess"),
-    ({ AiAccessTab }) => <AiAccessTab />,
+    ({ AiAccessTab }, { route }) => <AiAccessTab subpage={route?.id2} />,
   ),
 
   // ---- members, teams, roles and seats ----
