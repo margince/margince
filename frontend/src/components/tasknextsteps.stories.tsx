@@ -13,6 +13,7 @@ import {
   StoryProviders,
 } from "../testing/story-utils";
 import { TaskNextSteps } from "./tasknextsteps";
+import { EmailVerb } from "./tasknextsteps.verbs";
 
 // Check: each type shows its one step. A call shows the number to copy and a
 // filled Call; a mail task drafts, and a refused Email says why beside it.
@@ -192,5 +193,41 @@ export const OnAClosedLead: Story = {
   ),
   play: async () => {
     await within(document.body).findByText(en["lead.terminalReadOnly"]);
+  },
+};
+
+const ALICE_CONTACT: components["schemas"]["Contact"] = {
+  ...ALICE,
+  phones: [],
+  source: "manual",
+  captured_by: "human:u-1",
+  created_at: "2026-09-08T09:00:00Z",
+  updated_at: "2026-09-08T09:00:00Z",
+};
+
+/** Email as a line of a menu (`bare`) beside the verb it is in a row. */
+export const EmailAsMenuLine: Story = {
+  render: () => (
+    <StoryProviders>
+      <div className="form-actions">
+        <EmailVerb
+          contact={ALICE_CONTACT}
+          intent="Renewal"
+          reasonId={undefined}
+        />
+        <EmailVerb
+          contact={ALICE_CONTACT}
+          intent="Renewal"
+          reasonId={undefined}
+          bare
+        />
+      </div>
+    </StoryProviders>
+  ),
+  play: async () => {
+    const links = await within(document.body).findAllByRole("link", {
+      name: en["record.verb.email"],
+    });
+    if (links.length !== 2) throw new Error("both Email verbs draw");
   },
 };
