@@ -14197,6 +14197,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "buyer.closedNote": "Deal Room này hiện chỉ đọc.",
   "buyer.readOnly": "Quý khách chỉ có quyền đọc Deal Room này.",
   "buyer.stewardUnknown": "người liên hệ",
+  "buyer.engagementNoticeUnnamed":
+    "Công ty đã mời quý khách có thể thấy khi nào quý khách đăng nhập và tải xuống những tài liệu nào.",
+  "buyer.engagementNotice":
+    "{company} có thể thấy khi nào quý khách đăng nhập và tải xuống những tài liệu nào.",
   "buyer.signOut": "Đăng xuất",
   "buyer.signedInAs": "Đã đăng nhập với tên {name}.",
   "buyer.contactEyebrow": "Người liên hệ",

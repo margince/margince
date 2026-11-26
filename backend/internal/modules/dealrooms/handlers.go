@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -20,7 +21,9 @@ import (
 type Handlers struct {
 	store         *Store
 	mailLanguage  func(context.Context) string
-	inviteContext func(context.Context) (string, string, error)
+	inviteContext func(context.Context) (string, error)
+	// companyName is the seller's company as the buyer's room notice names it.
+	companyName func(context.Context, pgx.Tx) (string, error)
 	// inviteMailer carries a buyer's invitation to a relay. Nil means the
 	// installation has no outbound mail configured: invitations are still
 	// recorded and their credential still returned, and the response reports

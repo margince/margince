@@ -177,7 +177,9 @@ func TestReaderClassesEveryFailureAndReturnsNoGroups(t *testing.T) {
 			google := newFakeGoogle(t, []string{"sales@example.test"})
 			tc.arm(google)
 			reader := google.reader(t)
-			reader.timeout = 100 * time.Millisecond
+			if tc.reason == DirectoryTimeout {
+				reader.timeout = 100 * time.Millisecond
+			}
 
 			groups, err := reader.Groups(context.Background(), testDirectoryCredential(t), "member@example.test")
 			var failed DirectoryError

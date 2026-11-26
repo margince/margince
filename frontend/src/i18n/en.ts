@@ -14527,6 +14527,10 @@ export const en = {
   "buyer.closedNote": "This room is now read-only.",
   "buyer.readOnly": "Your access to this room is read-only.",
   "buyer.stewardUnknown": "your contact",
+  "buyer.engagementNoticeUnnamed":
+    "The company that invited you can see when you sign in and which documents you download.",
+  "buyer.engagementNotice":
+    "{company} can see when you sign in and which documents you download.",
   "buyer.signOut": "Sign out",
   "buyer.signedInAs": "Signed in as {name}.",
   "buyer.contactEyebrow": "Your contact",

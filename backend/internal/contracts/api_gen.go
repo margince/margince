@@ -40652,6 +40652,12 @@ type BulkUndoRequest struct {
 // `settleConversationClaim` with `outcome: done` does.
 type BulkVerb string
 
+// BuyerEngagementNotice defines model for BuyerEngagementNotice.
+type BuyerEngagementNotice struct {
+	// Company The seller's company, as the invitation mail names it.
+	Company string `json:"company"`
+}
+
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room
 // is open and the list can be worked. `closed` — the deal is done; everything
 // reads, nothing writes. `paused` — the seller has paused access; the link
@@ -40728,6 +40734,9 @@ type BuyerRoomView struct {
 	// siblings give: the same four words generated as package-scope constants
 	// would collide with the lifecycle's.
 	Access BuyerRoomAccess `json:"access"`
+
+	// EngagementNotice Present on a seat's first sign-in, and on a seller preview so the seller sees what the buyer will see. Tells the buyer that the seller's company can see the sign-in and the downloads. It has no action.
+	EngagementNotice *BuyerEngagementNotice `json:"engagement_notice,omitempty"`
 
 	// Participant The caller, as the room knows them. Nothing about anyone else in the room.
 	Participant BuyerRoomParticipant `json:"participant"`

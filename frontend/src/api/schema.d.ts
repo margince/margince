@@ -60775,6 +60775,12 @@ export interface components {
             steward_name?: string | null;
             /** @description Omitted while access is `paused` or `expired`, and when nothing has been published yet. */
             room?: components["schemas"]["BuyerRoomContent"];
+            /** @description Present on a seat's first sign-in, and on a seller preview so the seller sees what the buyer will see. Tells the buyer that the seller's company can see the sign-in and the downloads. It has no action. */
+            engagement_notice?: components["schemas"]["BuyerEngagementNotice"];
+        };
+        BuyerEngagementNotice: {
+            /** @description The seller's company, as the invitation mail names it. */
+            company: string;
         };
         /** @description A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema. */
         OfferTemplate: {

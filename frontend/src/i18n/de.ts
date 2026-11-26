@@ -14587,6 +14587,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "buyer.closedNote": "Dieser Raum ist jetzt schreibgeschützt.",
   "buyer.readOnly": "Sie haben für diesen Raum nur Lesezugriff.",
   "buyer.stewardUnknown": "Ihre Ansprechperson",
+  "buyer.engagementNoticeUnnamed":
+    "Das Unternehmen, das Sie eingeladen hat, sieht, wann Sie sich anmelden und welche Dokumente Sie herunterladen.",
+  "buyer.engagementNotice":
+    "{company} sieht, wann Sie sich anmelden und welche Dokumente Sie herunterladen.",
   "buyer.signOut": "Abmelden",
   "buyer.signedInAs": "Angemeldet als {name}.",
   "buyer.contactEyebrow": "Ihre Ansprechperson",
