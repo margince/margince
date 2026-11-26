@@ -543,4 +543,29 @@ describe("confirming a bulk change", () => {
       expect(request.body).not.toHaveProperty("owner_id");
     }
   });
+
+  it("counts the tasks a task change created, not the records it changed", async () => {
+    stubBulk(
+      { ...REASSIGN_PREVIEW, verb: "create_task" },
+      { batch_id: "b-3", changed: 2, skipped: [] },
+    );
+    const user = userEvent.setup();
+    render(
+      <BulkChangeDialog
+        request={{
+          ...REASSIGN,
+          verb: "create_task",
+          task: { subject: "Call back" },
+        }}
+        onClose={() => {}}
+        onDone={() => {}}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: en["bulk.confirmCreateTask"] }),
+    );
+
+    expect(await screen.findByText("2 tasks created.")).toBeInTheDocument();
+  });
 });

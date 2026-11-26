@@ -29,13 +29,23 @@ func DataTask() datatask.Task {
 		ID: "core/1795269930_contact_strength_dates", Version: 1,
 		Title:    systemtext.Literal("datatask.title.core.1795269930_contact_strength_dates"),
 		Requires: []string{"core/1795299767"},
-		Steps:    []datatask.Step{foldStep()},
+		Steps:    []datatask.Step{refoldStep(unfoldedPage)},
 	}
 }
 
-// foldStep walks contacts by id in bounded pages and folds the unfolded ones.
-// A folded contact leaves the selection, so a second run changes nothing.
-func foldStep() datatask.Step {
+// contactPage reads the next limit contacts after `after`, in id order. It
+// answers every id it inspected, for the cursor, and the ones to refold.
+type contactPage func(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (inspected, selected []ids.UUID, err error)
+
+// unfoldedPage selects the contacts whose dates were never folded. A folded
+// contact leaves the selection, so a second run changes nothing.
+func unfoldedPage(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (inspected, selected []ids.UUID, err error) {
+	return storekit.ClockPage(ctx, tx, storekit.ClockContacts, storekit.ClockStrengthUnfolded, after, limit)
+}
+
+// refoldStep walks contacts by id in bounded pages and refolds the stored
+// dates of the ones page selects.
+func refoldStep(page contactPage) datatask.Step {
 	return datatask.Step{
 		Name: "contacts", Limit: 200, MinLimit: 10,
 		Audit: datatask.AuditPolicy{Reason: "the strength-date triggers write the same derived columns without an audit"},
@@ -54,7 +64,7 @@ func foldStep() datatask.Step {
 			if err != nil {
 				return datatask.BatchOut{}, err
 			}
-			inspected, selected, err := storekit.ClockPage(ctx, tx, storekit.ClockContacts, storekit.ClockStrengthUnfolded, after, in.Limit)
+			inspected, selected, err := page(ctx, tx, after, in.Limit)
 			if err != nil {
 				return datatask.BatchOut{}, err
 			}

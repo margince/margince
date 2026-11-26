@@ -127,7 +127,7 @@ func Write(ctx context.Context, lane Completer, in Input, lang string) ([]Senten
 	if lane == nil || len(floor) == 0 {
 		return floor, crmcontracts.WrittenByDeterministic
 	}
-	written, err := writeWithModel(ctx, lane, in, lang)
+	written, err := writeWithModel(ai.WithFloor(ctx), lane, in, lang)
 	if err != nil {
 		// The declared degrade posture: the reader gets the floor, and
 		// generated_by says so.

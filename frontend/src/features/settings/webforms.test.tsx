@@ -141,7 +141,7 @@ function backendFor(
       return jsonResponse({ data: forms, secrets_available: true });
     }
     if (req.method === "GET" && req.url.includes("/v1/custom-fields")) {
-      return jsonResponse({ data: [budgetField] });
+      return jsonResponse({ page: { has_more: false }, data: [budgetField] });
     }
     if (req.method === "GET" && new URL(req.url).pathname === "/v1/users") {
       return jsonResponse(roster);
