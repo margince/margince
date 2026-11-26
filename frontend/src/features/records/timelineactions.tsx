@@ -431,8 +431,8 @@ export function AudienceAction({
 }
 
 // ThreadAudienceAction shares or holds back the whole conversation a captured
-// chat message belongs to. It shows exactly when the server's thread write
-// would find the row: the caller imported it (`thread_audience_yours`).
+// chat message belongs to. It shows when the server's thread write
+// finds the row: the caller imported it (`thread_audience_yours`).
 function ThreadAudienceAction({
   activity,
   entityType,
