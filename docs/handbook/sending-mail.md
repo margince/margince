@@ -363,7 +363,7 @@ An email that did not arrive shows on your Worklist under its subject. The row n
 
 The email is the one you wrote, with the same subject, text, files and copies. It is filed under the same records and sent for the same reason, so the consent check asks the same question about the new address. If the contact has since withdrawn consent or asked you to stop, the email is refused and the row says why. The contact keeps the address it had before.
 
-An email can be sent again once. If the corrected address also refuses it, the row offers **Open** only: fix the address on the contact. **Send again** is not offered for emails sent before Margince kept the text you wrote, nor for emails that someone else or an agent sent. Only a person can press it.
+An email can be sent again once. If the corrected address also refuses it, the row offers **Open** only: fix the address on the contact. **Send again** is not offered for emails sent before Margince kept the text you wrote, nor for emails that someone else or an agent sent. Only a colleague can press it, never an agent.
 Also called: resend an email, fix a wrong address, email did not arrive.
 
 ### Which mailbox does Margince send from?
