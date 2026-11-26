@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "8fa45ae6db4509d01e500fb70049f6e12799de9c421d9641bf64f55cd665d38e"
+const jobContractHash = "3385630dd54cc347b5d775ee4204c69c312a0842f2283c9ac34f0c033bf7985b"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -134,6 +134,8 @@ func (WaitingHorizonRefreshArgs) declaredJobType(WaitingHorizonRefreshArgs)     
 func (WebhookRetryArgs) declaredJobType(WebhookRetryArgs)                             {}
 func (WeeklyReviewGenerateArgs) declaredJobType(WeeklyReviewGenerateArgs)             {}
 func (WhatsAppIngestArgs) declaredJobType(WhatsAppIngestArgs)                         {}
+func (ZaloOAIngestArgs) declaredJobType(ZaloOAIngestArgs)                             {}
+func (ZaloTokenRenewArgs) declaredJobType(ZaloTokenRenewArgs)                         {}
 
 // addDeclaredWorker is the sanctioned registration path. Its type parameter
 // is constrained to the declared set, so a kind absent from api/jobs.yaml
@@ -206,6 +208,7 @@ var (
 	_ jobs.FleetWide = TranscriptAudienceSweepArgs{}
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
 	_ jobs.FleetWide = WeeklyReviewGenerateArgs{}
+	_ jobs.FleetWide = ZaloTokenRenewArgs{}
 )
 
 // The declared tenant-scoped kinds: each says which workspace it is for
@@ -245,4 +248,5 @@ var (
 	_ jobs.WorkspaceScoped = VCardIngestArgs{}
 	_ jobs.WorkspaceScoped = VoiceBuildArgs{}
 	_ jobs.WorkspaceScoped = WhatsAppIngestArgs{}
+	_ jobs.WorkspaceScoped = ZaloOAIngestArgs{}
 )

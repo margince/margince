@@ -31,6 +31,9 @@ import (
 // maps and writes.
 type ChannelHandlers struct {
 	store *ChannelStore
+	// ZaloEventHandlers is Zalo's webhook, promoted so one transport serves every
+	// channel route. It stays zero, and answers 503, until composed.
+	ZaloEventHandlers
 }
 
 // NewChannelHandlers wires the transport over a channel store.

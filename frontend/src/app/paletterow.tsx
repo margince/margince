@@ -4,6 +4,7 @@
 import {
   ChevronRight,
   CornerDownLeft,
+  DoorOpen,
   FileText,
   type LucideIcon,
   Mail,
@@ -195,6 +196,7 @@ export function PaletteRow({
 // The glyph of each kind a hit can be, beside the record chips' own.
 const KIND_ICON: Partial<Record<SearchHitGroup, LucideIcon>> = {
   ...RECORD_CHIP_ICONS,
+  deal_room: DoorOpen,
   product: Package,
   offer_template: FileText,
   email: Mail,

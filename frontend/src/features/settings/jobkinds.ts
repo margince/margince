@@ -107,6 +107,8 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   technical_enrich_company: "jobs.kind.technical_enrich_company",
   telegram_ingest: "jobs.kind.telegram_ingest",
   whatsapp_ingest: "jobs.kind.whatsapp_ingest",
+  zalo_oa_ingest: "jobs.kind.zalo_oa_ingest",
+  zalo_token_renew: "jobs.kind.zalo_token_renew",
   telegram_poll: "jobs.kind.telegram_poll",
   chat_link_flush: "jobs.kind.chat_link_flush",
   chat_pull: "jobs.kind.chat_pull",

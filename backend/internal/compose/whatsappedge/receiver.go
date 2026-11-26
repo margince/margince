@@ -10,21 +10,19 @@ package whatsappedge
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/chatedge"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/whatsapp"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // Endpoints answers the live numbers with the secrets their calls are checked by.
@@ -33,9 +31,7 @@ type Endpoints interface {
 }
 
 // TxInserter queues a job in the caller's transaction.
-type TxInserter interface {
-	EnqueueTx(ctx context.Context, tx pgx.Tx, args river.JobArgs, opts *river.InsertOpts) error
-}
+type TxInserter = chatedge.TxInserter
 
 // Receiver implements capture.WhatsAppEventReceiver.
 type Receiver struct {
@@ -136,112 +132,24 @@ func partition(items []whatsapp.Item, trusted map[string]number) ([]whatsapp.Ite
 	return keep, len(items) - len(keep)
 }
 
-// store writes every item's raw row and its ingest job in one transaction.
-// A 200 means all of them are durable, and a failure leaves none for Meta's
-// retry to double. A redelivered item refreshes its row and finds its job queued.
-//
-// Each connection is locked and checked live inside the transaction, because the
-// read that verified the delivery came before it. A connection disconnected
-// since then stores nothing. An item of an erased customer is dropped before
-// anything is written, the way the Telegram poll drops one. The identities are
-// locked first, in the order the eraser takes them, so an erasure cannot commit
-// between the check and the insert. It returns the counts stored and dropped.
+// store hands the items to the shared inbox. It writes each item's raw row and
+// ingest job in one transaction, and returns the counts stored and dropped.
 func (r *Receiver) store(ctx context.Context, items []whatsapp.Item, trusted map[string]number) (stored, dropped int, err error) {
-	if len(items) == 0 {
-		return 0, 0, nil
-	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return 0, 0, errors.New("whatsapp: a delivery outside a workspace context")
-	}
-	err = r.DB.Tx(ctx, func(tx pgx.Tx) error {
-		stored, dropped = 0, 0
-		live := map[ids.UUID]bool{}
-		for _, item := range items {
-			connection := trusted[item.PhoneNumberID].connection
-			if _, seen := live[connection]; !seen {
-				_, isLive, err := capture.LockLiveChatLinkTx(ctx, tx, connection)
-				if err != nil {
-					return err
-				}
-				live[connection] = isLive
-			}
-		}
-		if err := storekit.LockChannelIdentities(ctx, tx, lockKeys(items)); err != nil {
-			return err
-		}
-		for _, item := range items {
-			connection := trusted[item.PhoneNumberID].connection
-			if !live[connection] {
-				dropped++
-				continue
-			}
-			erased, err := suppressed(ctx, tx, item)
-			if err != nil {
-				return err
-			}
-			if erased {
-				dropped++
-				continue
-			}
-			raw, err := capture.InsertRawCaptureTx(ctx, tx, capture.RawRecord{
-				SourceSystem: whatsapp.Provider,
-				SourceID:     whatsapp.RawSourceID(item.PhoneNumberID, item.Key),
-				Payload:      item.Body,
-				Subjects:     subjectKeys(item),
-			})
-			if err != nil {
-				return err
-			}
-			args := r.Job(ws, connection, raw)
-			if err := r.Inserter.EnqueueTx(ctx, tx, args, &river.InsertOpts{
-				MaxAttempts: r.MaxAttempts,
-				UniqueOpts:  river.UniqueOpts{ByArgs: true},
-			}); err != nil {
-				return err
-			}
-			stored++
-		}
-		return nil
-	})
-	return stored, dropped, err
-}
-
-// suppressionKeys names the identities of an item as the suppression list keys them.
-func suppressionKeys(item whatsapp.Item) []storekit.ChannelIdentityKey {
-	keys := make([]storekit.ChannelIdentityKey, 0, len(item.Identities))
-	for _, id := range item.Identities {
-		keys = append(keys, storekit.ChannelIdentityKey{
-			Provider: whatsapp.Provider, ChannelUserID: storekit.ChannelSuppressionAccount(id.Scope, id.UserID),
+	messages := make([]chatedge.Message, 0, len(items))
+	for _, item := range items {
+		messages = append(messages, chatedge.Message{
+			Connection: trusted[item.PhoneNumberID].connection, Customers: customers(item),
+			SourceSystem: whatsapp.Provider, SourceID: whatsapp.RawSourceID(item.PhoneNumberID, item.Key), Payload: item.Body,
 		})
 	}
-	return keys
+	inbox := chatedge.Inbox{DB: r.DB, Inserter: r.Inserter, Job: r.Job, MaxAttempts: r.MaxAttempts}
+	return inbox.Store(ctx, messages)
 }
 
-func lockKeys(items []whatsapp.Item) []storekit.ChannelIdentityKey {
-	var keys []storekit.ChannelIdentityKey
-	for _, item := range items {
-		keys = append(keys, suppressionKeys(item)...)
-	}
-	return keys
-}
-
-// subjectKeys is what the raw row records about whose message it is. An erasure
-// or access request finds the row by these identities and never reads its payload.
-func subjectKeys(item whatsapp.Item) []string {
-	var out []string
+func customers(item whatsapp.Item) []connector.ChannelIdentity {
+	out := make([]connector.ChannelIdentity, 0, len(item.Identities))
 	for _, id := range item.Identities {
-		out = append(out, storekit.ChannelRawSubjectKey(whatsapp.Provider, id.Scope, id.UserID))
+		out = append(out, connector.ChannelIdentity{Provider: whatsapp.Provider, AccountScope: id.Scope, ChannelUserID: id.UserID})
 	}
 	return out
-}
-
-func suppressed(ctx context.Context, tx pgx.Tx, item whatsapp.Item) (bool, error) {
-	for _, key := range suppressionKeys(item) {
-		erased, err := storekit.ChannelIdentitySuppressed(ctx, tx, key.Provider, key.ChannelUserID)
-		if err != nil || erased {
-			return erased, err
-		}
-	}
-	return false, nil
 }

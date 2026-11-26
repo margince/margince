@@ -2243,6 +2243,38 @@ kinds:
       One raw payload read back, normalized, and put through the capture sink —
       database-only, one update at a time, with no provider call in it at all.
 
+  zalo_oa_ingest:
+    role: worker
+    go_type: ZaloOAIngestArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    args:
+      Workspace: id
+      ConnectionID: id
+      RawCaptureID: id
+    reason: >-
+      One webhook message the Zalo edge stored, read back and filed through the
+      shared chat entry — database-only, one message at a time, with no Zalo
+      call in it.
+
+  zalo_token_renew:
+    role: worker
+    fleet: true
+    go_type: ZaloTokenRenewArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 30m
+    registration: {when: [ChannelVault], absent: registers_nothing}
+    reason: >-
+      Zalo's access token lives 25 hours and the renewal replaces it once it has
+      under six hours left, so a failed pass has about a dozen half-hour retries
+      before a token dies. The refresh token is single use, so the pass holds
+      each connection's row lock from the Zalo call until the new pair is
+      committed. A pass that fails is retried by River and by the next tick; the
+      row lock keeps the two from spending one refresh token twice.
+
   whatsapp_ingest:
     role: worker
     go_type: WhatsAppIngestArgs

@@ -11809,6 +11809,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/channel-connections/zalo-oa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the Zalo Official Accounts connected to the workspace.
+         * @description Newest first. No secret is returned.
+         */
+        get: operations["listZaloOAConnections"];
+        put?: never;
+        /**
+         * Connect a Zalo Official Account to the workspace.
+         * @description Seals the access and refresh tokens, the app secret and the OA secret key in the credential
+         *     store and makes a live connection for the Official Account, with a team seat that the team in
+         *     `readerTeamId` reads. The seat starts `held`. No call to Zalo is made. Set the webhook URL of
+         *     the Zalo app to `<public_base_url>/v1/channel-events/zalo-oa`. A background job replaces the
+         *     token pair before the access token expires.
+         *
+         *     One live connection exists per Official Account: connecting one that is already connected
+         *     is a `409`.
+         */
+        post: operations["createZaloOAConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-connections/zalo-oa/{id}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change who may read a Zalo Official Account's messages.
+         * @description Sets the mail visibility of the account's seat, as `PATCH /shared-mailboxes/{id}` does for a
+         *     shared mailbox and the WhatsApp route does for its numbers: the next message follows it.
+         *     `shared` needs `capture.shared_posture_allowed` and `classified` is refused, both with `422`.
+         *     The request must carry `confirm: true`. Admin only, in a signed-in session.
+         */
+        patch: operations["updateZaloOAConnectionVisibility"];
+        trace?: never;
+    };
+    "/channel-connections/zalo-oa/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect a Zalo Official Account from the workspace.
+         * @description Archives the connection and destroys the sealed secrets. From then on the webhook route
+         *     stores nothing for the Official Account. What its chats already filed stays.
+         */
+        delete: operations["disconnectZaloOAConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channel-links/{record_type}/{id}": {
         parameters: {
             query?: never;
@@ -11995,6 +12076,34 @@ export interface paths {
          *     once.
          */
         post: operations["receiveWhatsAppWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/zalo-oa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take a signed Zalo Official Account webhook event (anonymous).
+         * @description Zalo posts one event per call, signed in `X-ZEvent-Signature` (`mac=<hex SHA-256 of app_id,
+         *     raw body, timestamp and the OA secret key>`). The signature is checked against every
+         *     connected Official Account's secret key before any field but the two it covers is read.
+         *     A message event for an Official Account whose own secret verified, and that is still live, is
+         *     stored once and queued for filing, in one transaction. Follow, unfollow, seen and reaction events, a message for
+         *     an Official Account that is not connected, and a message of an erased customer are
+         *     acknowledged with `200` and stored nowhere, so Zalo does not retry them. A retried
+         *     delivery is stored once. The call makes no request to Zalo, because Zalo expects the
+         *     answer within two seconds.
+         */
+        post: operations["receiveZaloOAWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -33895,6 +34004,73 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        /** @description One Zalo Official Account connected to the workspace. No secret is part of it. */
+        ZaloOAConnection: {
+            /** Format: uuid */
+            id: string;
+            /** @description Zalo's id of the Official Account, the key a webhook event is matched to its connection by. */
+            oaId: string;
+            /** @description The Zalo app that serves the Official Account. */
+            appId: string;
+            displayName: string;
+            /**
+             * @description `reauth_required` when Zalo refused the refresh token, so the Official Account must be disconnected and connected again with fresh tokens.
+             * @enum {string}
+             */
+            status: "connected" | "reauth_required" | "disconnected";
+            /** Format: date-time */
+            connectedAt: string;
+            /**
+             * Format: uuid
+             * @description The seat the account's messages file through.
+             */
+            seatId?: string | null;
+            /**
+             * Format: uuid
+             * @description The team that reads the account's messages.
+             */
+            readerTeamId?: string | null;
+            /**
+             * @description What the seat asks of the account's messages. Changed with `PATCH /channel-connections/zalo-oa/{id}/visibility`.
+             * @enum {string|null}
+             */
+            mailVisibility?: "held" | "shared" | null;
+        };
+        ZaloOAConnectionListResponse: {
+            data: components["schemas"]["ZaloOAConnection"][];
+        };
+        CreateZaloOAConnectionRequest: {
+            /**
+             * Format: uuid
+             * @description The team that reads the account's messages. The account's seat starts `held`: only this team reads them until an admin shares them.
+             */
+            readerTeamId: string;
+            oaId: string;
+            appId: string;
+            displayName: string;
+            /** @description The Zalo app's secret key, used to renew the tokens. Sealed into the credential store on arrival and never echoed back. */
+            appSecret: string;
+            /** @description The OA secret key that signs each webhook event. Sealed into the credential store on arrival and never echoed back. */
+            oaSecretKey: string;
+            /** @description The Official Account's access token. Sealed into the credential store on arrival and never echoed back. */
+            accessToken: string;
+            /** @description The Official Account's refresh token. It is single use; the renewal job replaces it. Sealed into the credential store on arrival and never echoed back. */
+            refreshToken: string;
+        };
+        /** @description One event from Zalo, as the signature covers it. The route reads the raw body and the server decodes it, so only the fields every event carries are named here. */
+        ZaloWebhookEvent: {
+            app_id?: string;
+            /** @description For example `user_send_text` or `oa_send_text`. */
+            event_name: string;
+            /** @description Milliseconds since the epoch, as the text the signature covers. */
+            timestamp: string;
+        };
+        ZaloWebhookReceipt: {
+            /** @description Messages kept and queued for filing. A retried delivery counts again and is stored once. */
+            stored: number;
+            /** @description Events not kept: a follow, unfollow, seen or reaction event, an Official Account that is not connected, an erased customer, or an event that could not be decoded. */
+            skipped: number;
+        };
         /** @description One Telegram Business account the owner linked to the workspace's bot. Nothing from the account is stored until an admin approves it. */
         TelegramBusinessConnection: {
             /** Format: uuid */
@@ -54872,6 +55048,11 @@ export interface components {
             carried_by?: number | null;
             /** @description On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included. */
             readonly works_at?: components["schemas"]["SearchHitEmployer"] | null;
+            /**
+             * Format: uuid
+             * @description For a `deal_room` hit only: the deal the room belongs to, which is the record a client opens to reach the room. Absent on every other hit type.
+             */
+            readonly deal_id?: string | null;
             /** @description For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type. */
             readonly logo_url?: string | null;
             /** @description Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type. */
@@ -86419,6 +86600,149 @@ export interface operations {
             };
         };
     };
+    listZaloOAConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Zalo Official Account connections. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZaloOAConnectionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createZaloOAConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateZaloOAConnectionRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZaloOAConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal the secrets in (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateZaloOAConnectionVisibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTelegramBusinessConnectionVisibilityRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZaloOAConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnectZaloOAConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getChannelLink: {
         parameters: {
             query?: never;
@@ -86901,6 +87225,66 @@ export interface operations {
                 };
             };
             /** @description This deployment takes no WhatsApp events, or could not store the delivery (`code: channel_events_unavailable`); Meta retries. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveZaloOAWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZaloWebhookEvent"];
+            };
+        };
+        responses: {
+            /** @description The event was taken. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZaloWebhookReceipt"];
+                };
+            };
+            /** @description The body is signed by no connected Official Account (`code: channel_event_rejected`). The answer is the same for each cause. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The body is larger than an event can be (`code: channel_event_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate-limited; Zalo retries. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment takes no Zalo events, or could not store the event (`code: channel_events_unavailable`); Zalo retries. */
             503: {
                 headers: {
                     [name: string]: unknown;
