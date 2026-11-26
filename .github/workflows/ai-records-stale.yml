@@ -16,6 +16,10 @@ on:
     paths:
       - backend/**
       - config/presets/**
+      # The job's own definition and the cache it restores, so an edit to
+      # either runs the job that shows it working.
+      - .github/workflows/ai-records-stale.yml
+      - .github/actions/go-build-cache/**
 
 permissions:
   contents: read
@@ -46,6 +50,13 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
+      # reportcmd imports most of the backend, and setup-go's build cache is a
+      # near-empty snapshot (see the action). The shared entry cache-warm.yml
+      # writes on main lets both builds below compile only what changed.
+      - name: Restore the Go build cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: plain
       - name: List the records this change makes stale
         env:
           GH_TOKEN: ${{ github.token }}
