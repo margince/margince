@@ -15,3 +15,8 @@
 # so the gate only warns about it; remove it with the next edit here.
 # Package removals are never allowlistable (deprecate-then-major cycle,
 # ADR-0120 §3).
+github.com/margince/margince/backend/pkg/extension: Deals.GetAs: added # the read runs as the unit's service member under its own grants; only the core implements this interface, so no outside code breaks (#13347)
+github.com/margince/margince/backend/pkg/extension: Deals.ResponsibleAs: added # the read runs as the unit's service member under its own grants; only the core implements this interface, so no outside code breaks (#13347)
+github.com/margince/margince/backend/pkg/extension: Authority.CanReadAs: added # the read runs as the unit's service member under its own grants; only the core implements this interface, so no outside code breaks (#13347)
+github.com/margince/margince/backend/pkg/extension: Authority.CanWriteAs: added # the read runs as the unit's service member under its own grants; only the core implements this interface, so no outside code breaks (#13347)
+github.com/margince/margince/backend/pkg/extension: Directory.EmailsAs: added # the read runs as the unit's service member under its own grants; only the core implements this interface, so no outside code breaks (#13347)

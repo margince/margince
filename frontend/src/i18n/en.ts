@@ -15122,6 +15122,7 @@ export const en = {
   "audit.kind.deal_suggestion": "Deal suggestion",
   "audit.kind.dedupe_candidate": "Possible duplicate",
   "audit.kind.existing_customer_notice": "Existing customer notice",
+  "audit.kind.extension_object_usage": "Extension storage",
   "audit.kind.field_provenance": "Field source",
   "audit.kind.finance_connection": "Accounting connection",
   "audit.kind.finance_customer_link": "Accounting customer link",
@@ -23691,6 +23692,8 @@ export const en = {
   "aiServing.previewFailed":
     "The server could not check this value: {reason} Save stays off until it can.",
   "dealDecline.action": "Not about this deal",
+  "dealFiling.byUnit": "Filed here by {unit}: {reason}",
+  "dealFiling.byUnitNoReason": "Filed here by {unit}",
   "dealDecline.done":
     "Marked as not about this deal. It no longer keeps the deal active.",
   "dealDecline.doneProjectKept":

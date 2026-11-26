@@ -246,9 +246,28 @@ describe("the figures and the axis", () => {
       );
     expect(at("2026-08-06T09:00:00Z")).toEqual({
       at: "2026-08-06T09:00:00Z",
+      occurredAt: "2026-08-06T09:00:00Z",
       daysAgo: 7,
+      precision: "instant",
     });
     expect(at("2026-08-08T09:00:00Z")).toBeUndefined();
+  });
+
+  it("counts a date-only last update from its own date far east of UTC", () => {
+    const at = (precision: "day" | "instant") =>
+      quietStretch(
+        project360({
+          as_of: "2026-08-13T10:30:00Z",
+          rollups: undefined,
+          project: project({
+            last_activity_at: "2026-08-06T12:00:00Z",
+            last_activity_precision: precision,
+          }),
+        }),
+        "Pacific/Kiritimati",
+      )?.daysAgo;
+    expect(at("day")).toBe(8);
+    expect(at("instant")).toBeUndefined();
   });
 
   it("dates the phase moves, the won deal, the late task and the end", () => {

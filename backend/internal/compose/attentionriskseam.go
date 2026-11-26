@@ -13,9 +13,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/dayrule"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // Home and the team board share the tool's risk engine and its scan-depth signal.
@@ -103,6 +103,12 @@ func (a attentionAtRisk) risky(ctx context.Context, candidates []agents.Slipping
 	return risky, nil
 }
 
+// idleDaysOf counts a date-only newest activity from its own date. Counted from
+// the stored noon UTC, a reader far east of UTC saw the deal a day less quiet.
 func idleDaysOf(deal agents.SlippingDeal, now time.Time, zone *time.Location) int {
-	return max(elapsed.Days(idlebase.Since(deal.CreatedAt, deal.LastActivityAt), now, zone), 0)
+	since := occurredday.Moment{
+		At:       idlebase.Since(deal.CreatedAt, deal.LastActivityAt),
+		DateOnly: deal.LastActivityAt != nil && deal.LastActivityDateOnly,
+	}
+	return max(occurredday.DaysSince(since, now, zone), 0)
 }
