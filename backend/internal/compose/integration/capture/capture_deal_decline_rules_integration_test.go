@@ -228,16 +228,17 @@ func TestAThreadMarkedNotAboutADealFilesNoReplyThere(t *testing.T) {
 	wantDeals(t, e, "mk2@acme.example")
 }
 
-// "None of them" marks a linked deal only when the caller may change it. A
-// colleague who may only read the deal answers the question and leaves the
-// link unmarked.
-func TestNoneOfThemMarksNoLinkedDealTheCallerMayNotChange(t *testing.T) {
+// An automatic filing of a reply on a deal answers the question asked about
+// our earlier mail. That deal's row is accepted, the other deal's rejected.
+// "None of them" then finds no open question, and the reply's link stays
+// unmarked.
+func TestAnAutomaticFilingOfAReplyAnswersTheQuestion(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
 	w.employee(t, "alice@acme.example", w.customer)
 	operations := w.deal(t, "Acme operations")
-	w.deal(t, "Acme reporting")
+	reporting := w.deal(t, "Acme reporting")
 	env.syncSent(t, map[string]bool{"nm1@myco.example": true},
 		email(captureOwner, "", "alice@acme.example", "nm1@myco.example", ""))
 	env.sync(t, authenticated(mailFrom("alice@acme.example", "nm2@acme.example", "nm1@myco.example", "Re: project"), "acme.example"))
@@ -253,11 +254,15 @@ func TestNoneOfThemMarksNoLinkedDealTheCallerMayNotChange(t *testing.T) {
 		t.Fatalf("filing the reply on a deal as the system: %v", err)
 	}
 
-	readsDeals := asColleague(w, principal.PrincipalHuman, map[string]principal.ObjectGrant{
-		"activity": {Read: true, Update: true}, "deal": {Read: true},
-	})
-	if status, _ := decline(readsDeals, t, e, reply.UUID, `{}`); status != http.StatusOK {
-		t.Fatalf("none of them answered %d, want 200", status)
+	asked := activityOf(t, e, "nm1@myco.example").String()
+	for deal, want := range map[ids.UUID]string{operations: "accepted", reporting: "rejected"} {
+		if n := countRows(t, e, `SELECT count(*) FROM activity_link_suggestion WHERE for_user IS NOT NULL
+			 AND activity_id = '`+asked+`' AND entity_id = '`+deal.String()+`' AND status = '`+want+`'`); n != 1 {
+			t.Fatalf("the asked mail's row for deal %s is not %s after the reply was filed", deal, want)
+		}
+	}
+	if status, _ := decline(w.ctx, t, e, reply.UUID, `{}`); status != http.StatusUnprocessableEntity {
+		t.Fatalf("none of them after the answer answered %d, want 422", status)
 	}
 	wantMark(t, e, "nm2@acme.example", operations, "")
 }

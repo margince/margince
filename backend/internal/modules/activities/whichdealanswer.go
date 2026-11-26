@@ -229,9 +229,9 @@ func unfiledConversationSiblings(ctx context.Context, tx pgx.Tx, mail ids.Activi
 }
 
 // closeWhichDealQuestions closes the questions and answers on how many
-// messages it closed one. A suggestion of the chosen deal whose message is now
-// on it is accepted; every other one is rejected. Each change has its audit
-// row and event, as a decision in the queue does.
+// messages it closed one. The chosen deal's suggestion is accepted, whichever
+// mail of the conversation went on it; every other one is rejected. Each
+// change has its audit row and event, as a decision in the queue does.
 func closeWhichDealQuestions(ctx context.Context, tx pgx.Tx, questions []whichDealQuestion, chosen *ids.UUID) (int, error) {
 	decidedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -245,12 +245,9 @@ func closeWhichDealQuestions(ctx context.Context, tx pgx.Tx, questions []whichDe
 		}
 		var status string
 		err := tx.QueryRow(ctx, `
-			UPDATE activity_link_suggestion s SET decided_by = $3, decided_at = now(),
-			       status = CASE WHEN $2::text = 'accepted' AND EXISTS (SELECT 1 FROM activity_link l
-			                  WHERE l.activity_id = s.activity_id AND l.entity_type = 'deal' AND l.deal_id = s.entity_id)
-			                THEN 'accepted' ELSE 'rejected' END
-			 WHERE s.id = $1 AND s.status = 'pending'
-			 RETURNING s.status`, q.id, answer, decidedBy).Scan(&status)
+			UPDATE activity_link_suggestion SET status = $2, decided_by = $3, decided_at = now()
+			 WHERE id = $1 AND status = 'pending'
+			 RETURNING status`, q.id, answer, decidedBy).Scan(&status)
 		if errors.Is(err, pgx.ErrNoRows) {
 			continue
 		}
