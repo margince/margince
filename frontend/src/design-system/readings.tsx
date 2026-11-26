@@ -4,6 +4,7 @@ import "./readings.css";
 import { webUrl } from "../format/weburl";
 import { AppLink } from "./applink";
 import { Button } from "./atoms";
+import { ChipFace, chipClass } from "./chipface";
 
 // Three ways to draw a reading that is not a number in a box: a proportion as
 // a bar, a series as a line, and a labelled attribute as a pill. Copy always
@@ -240,25 +241,25 @@ export function Chip({
     | { icon?: never; lead: ReactNode }
   )
 >) {
-  const shape = [
-    "chip",
-    dense ? "chip-dense" : "",
-    Icon ? "" : "chip-lead",
-    wrap ? "chip-wrap" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const shape = chipClass({
+    "chip-dense": dense,
+    "chip-lead": !Icon,
+    "chip-wrap": wrap,
+  });
   const body = (
-    <>
-      {Icon ? (
-        <Icon size={dense ? 12 : 14} aria-hidden="true" />
-      ) : (
-        <span className="chip-mark" aria-hidden="true">
-          {lead}
-        </span>
-      )}
-      <span className="chip-label">{children}</span>
-    </>
+    <ChipFace
+      mark={
+        Icon ? (
+          <Icon size={dense ? 12 : 14} aria-hidden="true" />
+        ) : (
+          <span className="chip-mark" aria-hidden="true">
+            {lead}
+          </span>
+        )
+      }
+    >
+      {children}
+    </ChipFace>
   );
   if (appHref) {
     return (

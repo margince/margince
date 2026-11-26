@@ -37,7 +37,7 @@ func TestARevocationEndsACodeIssuedAfterItBegan(t *testing.T) {
 		var created time.Time
 		if err := e.owner.QueryRow(context.Background(), `INSERT INTO oauth_authorization_code
 			(id, client_id, code_hash, code_challenge, redirect_uri, scopes, user_id, expires_at)
-			VALUES ($1, 'client-under-test', $2, 'challenge', 'https://client.test/cb', '{}', $3,
+			VALUES ($1, 'client-under-test', $2, 'challenge', 'https://client.test/cb', '{read}', $3,
 			        now() + interval '10 minutes')
 			RETURNING created_at`,
 			codeID, storekit.TokenHash(codeID.String()), e.member.UserID).Scan(&created); err != nil {
