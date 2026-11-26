@@ -10,7 +10,6 @@ package capture
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -21,23 +20,15 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture/whatsapp"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The refusals of a WhatsApp webhook call, each with its own answer. The
-// rejection names no reason: which check failed, or that no number is connected,
-// would tell a stranger how near a forgery came.
+// The refusals of a WhatsApp webhook call are the shared ones.
 var (
-	ErrWhatsAppEventRejected     = errors.New("capture: the whatsapp call is signed by no connected number")
-	ErrWhatsAppEventsUnavailable = errors.New("capture: the whatsapp call could not be recorded")
+	ErrWhatsAppEventRejected     = ErrChannelEventRejected
+	ErrWhatsAppEventsUnavailable = ErrChannelEventsUnavailable
 )
-
-// whatsAppCallsPerMinute is one sender's budget. Each call costs a secret
-// decrypt per connected number and a body hash, so an anonymous caller is
-// always metered.
-const whatsAppCallsPerMinute = 600
 
 // WhatsAppEventReceiver checks and stores what Meta sends. compose implements
 // it, because storing an item and queuing its filing cross into the job queue.
@@ -54,7 +45,7 @@ type WhatsAppEventReceiver interface {
 // receiver leaves it zero, and the route answers 503.
 type WhatsAppEventHandlers struct {
 	receiver WhatsAppEventReceiver
-	perPeer  *ratelimit.Limiter
+	gate     webhookGate
 }
 
 // NewWhatsAppEventHandlers wires the transport over the receiver.
@@ -65,35 +56,19 @@ func NewWhatsAppEventHandlers(receiver WhatsAppEventReceiver) WhatsAppEventHandl
 func whatsAppEventHandlersOn(receiver WhatsAppEventReceiver, newLimiter func(string, ratelimit.Kind, int, time.Duration) *ratelimit.Limiter) WhatsAppEventHandlers {
 	return WhatsAppEventHandlers{
 		receiver: receiver,
-		perPeer:  newLimiter("channel-events/whatsapp", ratelimit.FailClosed, whatsAppCallsPerMinute, time.Minute),
+		gate:     newWebhookGate("whatsapp", "WhatsApp number", receiver != nil, newLimiter),
 	}
-}
-
-// allow answers whether this call may go on, and writes the refusal when not.
-func (h WhatsAppEventHandlers) allow(w http.ResponseWriter, r *http.Request) bool {
-	if h.receiver == nil {
-		writeWhatsAppEventErr(w, r, ErrWhatsAppEventsUnavailable)
-		return false
-	}
-	if !h.perPeer.Allow(httpserver.ClientIP(r)) {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusTooManyRequests, Code: "rate_limited",
-			RetryAfterSeconds: h.perPeer.RetryAfterSeconds(), Detail: "Too many calls. Send it again after the wait.",
-		})
-		return false
-	}
-	return true
 }
 
 // VerifyWhatsAppWebhook answers Meta's subscription check with the challenge as
 // plain text.
 func (h WhatsAppEventHandlers) VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Request, _ crmcontracts.VerifyWhatsAppWebhookParams) {
-	if !h.allow(w, r) {
+	if !h.gate.allow(w, r) {
 		return
 	}
 	challenge, err := h.receiver.Challenge(r.Context(), r.URL.Query())
 	if err != nil {
-		writeWhatsAppEventErr(w, r, err)
+		h.gate.fail(w, r, err)
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -106,44 +81,19 @@ func (h WhatsAppEventHandlers) VerifyWhatsAppWebhook(w http.ResponseWriter, r *h
 
 // ReceiveWhatsAppWebhook takes one signed delivery from Meta.
 func (h WhatsAppEventHandlers) ReceiveWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
-	if !h.allow(w, r) {
+	if !h.gate.allow(w, r) {
 		return
 	}
-	body, err := whatsapp.ReadBody(w, r)
-	switch {
-	case errors.Is(err, whatsapp.ErrBodyTooLarge):
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusRequestEntityTooLarge, Code: "channel_event_too_large",
-			Detail: "The body is larger than a delivery can be.",
-		})
-		return
-	case err != nil:
-		writeWhatsAppEventErr(w, r, ErrWhatsAppEventRejected)
+	body, ok := h.gate.body(w, r, func() ([]byte, error) { return whatsapp.ReadBody(w, r) }, whatsapp.ErrBodyTooLarge)
+	if !ok {
 		return
 	}
 	receipt, err := h.receiver.Receive(r.Context(), body, r.Header.Get("X-Hub-Signature-256"))
 	if err != nil {
-		writeWhatsAppEventErr(w, r, err)
+		h.gate.fail(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, receipt)
-}
-
-func writeWhatsAppEventErr(w http.ResponseWriter, r *http.Request, err error) {
-	switch {
-	case errors.Is(err, ErrWhatsAppEventRejected):
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusForbidden, Code: "channel_event_rejected",
-			Detail: "The call is not from a connected WhatsApp number.",
-		})
-	case errors.Is(err, ErrWhatsAppEventsUnavailable):
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusServiceUnavailable, Code: "channel_events_unavailable",
-			Detail: "The call could not be taken now. Send it again later.",
-		})
-	default:
-		httperr.Write(w, r, err)
-	}
 }
 
 // CreateWhatsAppConnection connects a WhatsApp Business number and returns its

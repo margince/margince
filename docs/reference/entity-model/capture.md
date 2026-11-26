@@ -389,13 +389,14 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_import
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `bcc_only` | `boolean` |  |  |
+| `burst_id` | `uuid` |  |  |
 | `connection_id` | `uuid` |  | Points at `capture_connection.id`. |
 | `delivered_by` | `text[]`, default `'{}'::text[]` | yes |  |
 | `imported_at` | `timestamp with time zone`, default `now()` | yes |  |
@@ -428,6 +429,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_import_activity_user_key`: `unique, btree (activity_id, user_id)`
+- `capture_import_burst_idx`: `btree (user_id, burst_id) WHERE (burst_id IS NOT NULL)`
 - `capture_import_connection_activity_key`: `unique, btree (connection_id, activity_id) WHERE (connection_id IS NOT NULL)`
 - `capture_import_pkey`: `unique, btree (id)`
 - `capture_import_user_idx`: `btree (user_id, activity_id)`

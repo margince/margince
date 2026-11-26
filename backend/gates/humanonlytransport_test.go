@@ -77,7 +77,9 @@ var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
 	// A connected chat's push, which the chat itself sends.
 	"receiveDispactChannelEvent": "Dispact's signed notice: the Standard Webhooks signature with the events secret sealed on the connected bot authenticates it, and the chat itself sends it",
 	// Meta's webhook for a connected WhatsApp number.
-	"verifyWhatsAppWebhook":  "Meta's subscription check: the verify token sealed on a connected number authenticates it, and Meta itself sends it",
+	"verifyWhatsAppWebhook": "Meta's subscription check: the verify token sealed on a connected number authenticates it, and Meta itself sends it",
+	// Zalo's webhook for a connected Official Account.
+	"receiveZaloOAWebhook":   "Zalo's event: the X-ZEvent-Signature MAC with the OA secret key sealed on a connected Official Account authenticates it, and Zalo itself sends it",
 	"receiveWhatsAppWebhook": "Meta's delivery: the X-Hub-Signature-256 HMAC with the app secret sealed on a connected number authenticates it, and Meta itself sends it",
 
 	// Pages a buyer opens from a link, holding no seat here. The token in the
