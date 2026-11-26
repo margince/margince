@@ -3,7 +3,13 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -242,7 +248,7 @@ describe("saved views", () => {
     );
     wrap(<SaveViewAction resource="companies" state={{ query: narrowed }} />);
 
-    await user.click(screen.getByRole("button", { name: "Save view" }));
+    await user.click(await screen.findByRole("button", { name: "Save view" }));
     await user.type(screen.getByRole("textbox", { name: "Name" }), "Customers");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
@@ -367,7 +373,7 @@ describe("saved views", () => {
     expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
   });
 
-  it("does not offer to save the order and filters the list opened with", () => {
+  it("does not offer to save the order and filters the list opened with", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => jsonResponse({ data: [] })),
@@ -376,21 +382,32 @@ describe("saved views", () => {
       initialSort: narrowed.sort,
       initialFilters: narrowed.filters,
     };
-    const opened = wrap(
-      <SaveViewAction
-        resource="companies"
-        state={{ ...opening, query: narrowed }}
-      />,
-    );
-    expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
-
-    opened.unmount();
+    // Side by side, so the changed list's Save says the views have been read.
     wrap(
-      <SaveViewAction
-        resource="companies"
-        state={{ ...opening, query: { ...narrowed, sort: "-created_at" } }}
-      />,
+      <>
+        <section aria-label="as opened">
+          <SaveViewAction
+            resource="companies"
+            state={{ ...opening, query: narrowed }}
+          />
+        </section>
+        <section aria-label="changed">
+          <SaveViewAction
+            resource="companies"
+            state={{ ...opening, query: { ...narrowed, sort: "-created_at" } }}
+          />
+        </section>
+      </>,
     );
-    expect(screen.getByRole("button", { name: "Save view" })).toBeTruthy();
+    const changed = screen.getByRole("region", { name: "changed" });
+    expect(
+      await within(changed).findByRole("button", { name: "Save view" }),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByRole("region", { name: "as opened" })).queryByRole(
+        "button",
+        { name: "Save view" },
+      ),
+    ).toBeNull();
   });
 });

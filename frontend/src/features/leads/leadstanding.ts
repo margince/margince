@@ -6,8 +6,8 @@ import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 import type { LeadDisqualifyReason } from "../../lib/leaddisqualifyreasons";
+import { leadIdentityName } from "../../lib/leadname";
 import { disqualifyReasonLabel } from "./leadhandling";
-import { leadIdentityName } from "./leadname";
 
 type Lead = components["schemas"]["Lead"];
 

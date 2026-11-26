@@ -110,8 +110,7 @@ table below. Every later job gates on the output it needs.
 
 **This applies to `pull_request` only.** On `merge_group` every scope is set to `true`, so the queue lane
 covers the full tree and nothing can be skipped there. Scoping to the diff is good for what the author learns,
-and wrong for a merge verdict. A skip on the PR side is safe only while the queue lane covers the ground it
-skipped.
+and wrong for a merge verdict. A skip on the PR side is safe only while the queue lane covers that ground.
 
 With the queue off, the PR run is the verdict, so a skip on a PR is a gap. The override sits in the
 outputs of the `changes` job, where nobody can forget it. It is not in the `if:` of each reader.
@@ -214,6 +213,8 @@ What follows from this:
   - The **image pin gate runs in `secret-scan`** for the same reason: what the build pulls in from outside is not a
     scope. Renovate moves `uses:` to new versions across every workflow, and merges on its own on green.
     So the pin check runs on every change, not only on the scopes that happen to cover the file it edits.
+  - A Renovate Go update fails `go-work-sum` until someone commits the checksums that `make install`
+    writes: [finish-a-renovate-go-update.md](../how-to/finish-a-renovate-go-update.md).
 
 ## Job graph
 
@@ -269,8 +270,7 @@ pass, one level down.
 without that, every step would run from the repository root.
 
 Check names inside a lane are reported as `<caller-job> / <lane-job>`, for example
-`integration / integration shard (3/8)`. No check inside a lane is required, so no ruleset depends on those
-names.
+`integration / integration shard (3/8)`. No check inside a lane is required, so no ruleset names one.
 
 The pipeline stays **one caller**, and does not split into `pr.yml` and `merge-queue.yml`. The `ci`
 aggregate is the single required build check. Two callers would mean two copies of it that must stay the same

@@ -115,6 +115,7 @@ it("saves Customer tier when a background logo update changed the company versio
   stubFetch(async (url, method, request) => {
     if (url.includes("/custom-fields"))
       return jsonResponse({
+        page: { has_more: false },
         data: [
           {
             id: "tier",
@@ -187,7 +188,7 @@ it("saves a contact's title across an unrelated update without resending their e
         meFixture({ allow: { contact: ["read", "update"] } }),
       );
     if (url.includes("/custom-fields") || url.includes("/activities"))
-      return jsonResponse({ data: [] });
+      return jsonResponse({ page: { has_more: false }, data: [] });
     return jsonResponse(current);
   });
   render(<ContactDetails contact={anna} />);
