@@ -14,7 +14,8 @@ import (
 )
 
 func TestQuestionLanguageKeepsGapsAndEvidence(t *testing.T) {
-	langcopytest.Census(t, questionWords)
+	langcopytest.Census(t, questionWords,
+		langcopytest.OwnVoice("a question is what the rep asks the buyer aloud, so I and our side are the rep's"))
 	empty := Input{ActivityID: meetingID, Company: "Original Company"}
 	typ := MeetingType{Value: crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown}
 	english := unknownsFor(empty, typ, nil)

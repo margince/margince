@@ -45,6 +45,8 @@ items and most help text are statements that address no one.
   plans or feelings. `We could not save` becomes `Changes were not saved`. In the
   voice of the product, the one exception is the privacy notice. There the data
   controller addresses the data subject and, in law, speaks as `we`.
+- Team voice is `we` too. Where `we` means the reader's team, write `your team`
+  or drop the pronoun: `We owe them a reply` becomes `Your team owes them a reply`.
 - Never `I` in the voice of the product. An agent is the exception, on a
   conversation surface where it speaks in a message bubble (the onboarding
   conversation). There it says `I` in short, factual sentences, and nowhere else. Status lines, notices and activity
@@ -217,6 +219,41 @@ sentence case, articles, periods, tense, voice, a spaced hyphen, `w/`, numbers
 and ranges, and list form. They also judge length
 limits, vocabulary past the retired words, message shapes, and a contraction
 outside its list. And `you` used where no one needed it.
+
+### Copy the server writes
+
+The Go copy tables answer to part of this page. `langcopytest.Census` checks the
+English of every `langcopy.Phrase` table, and `langcopytest.EnglishText` checks a
+table of another shape from its own test. Both live in
+`backend/internal/shared/kernel/langcopy/langcopytest/`. They fail a dash as
+punctuation: an em dash, an en dash, `--` or a spaced hyphen. They also fail a
+contraction, `we`, `I`, a British spelling and `&`. The patterns for a contraction, a British
+spelling, `we` and `I` are read from `copy-style.test.ts` when the test runs, so
+both gates hold one list.
+
+A table is the product speaking to a member unless its test names another
+register, with a reason. An agent in a chat bubble may say `I`. The data
+controller may say `we`. A sentence someone says as their own keeps only the
+dash, spelling and `&` rules. Text a program matches, or a reader copies as it
+stands, keeps none of them.
+
+What was wrong when the check started is listed in `stylebaseline.txt` in that
+folder, one rule and sentence a line. The list can only get shorter: a test fails
+a line whose sentence now passes, or that no Go string spells. To cut it again
+after a rewrite, run this from `backend/`:
+
+```sh
+go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut -timeout 30m
+```
+
+The check does not reach:
+
+- the voice of a draft the member sends as themselves (`draftfloor`, introduction notes);
+- the demo mail of `capture/offlinedemo`;
+- word lists a matcher reads (`draftcheck`, `salutation`, `searchplan`);
+- text a function returns from a `switch` and not from a table;
+- strings outside a table: problem details, `crm.yaml` and the copy of MCP tools,
+  which issues #13561 and #13562 track.
 
 ## Sources
 

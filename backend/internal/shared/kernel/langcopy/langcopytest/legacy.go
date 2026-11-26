@@ -50,6 +50,8 @@ func Sentences(t reporter, record any, excluded ...string) map[string]string {
 
 // CensusByLanguage holds legacy language-keyed tables to their call sites'
 // placeholders, while also requiring every translation to differ from English.
+// Like Census, it holds the English and Vietnamese sentences to their style
+// pages as member copy.
 func CensusByLanguage[T any](t reporter, table map[textlang.Lang]T, holes map[string][]string, excluded ...string) {
 	t.Helper()
 	english, ok := table[textlang.English]
@@ -84,6 +86,7 @@ func CensusByLanguage[T any](t reporter, table map[textlang.Lang]T, holes map[st
 			if lang != textlang.English && sentence == baseline[name] {
 				t.Errorf("%s.%s repeats English", lang, name)
 			}
+			judge(t, member, lang, name, sentence, baseline[name])
 		}
 	}
 }

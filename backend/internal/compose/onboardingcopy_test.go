@@ -148,3 +148,13 @@ func TestTheGermanOnboardingFollowsTheGermanStylePage(t *testing.T) {
 		langcopytest.GermanText(t, field.name, field.text)
 	}
 }
+
+func TestTheOnboardingCopyFollowsTheEnglishAndVietnameseStylePages(t *testing.T) {
+	agent := langcopytest.Agent("the onboarding conversation is an agent speaking in a chat bubble, which may say I")
+	for name, text := range langcopytest.Sentences(t, onboardingCopyByLang[textlang.English]) {
+		agent.EnglishText(t, name, text)
+	}
+	for name, text := range langcopytest.Sentences(t, onboardingCopyByLang[textlang.Vietnamese]) {
+		agent.VietnameseText(t, name, text)
+	}
+}

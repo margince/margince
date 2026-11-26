@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -54,6 +55,15 @@ func TestEveryShippedLanguageWritesItsOwnAutomationSummaries(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestTheSummariesFollowTheEnglishAndVietnameseStylePages(t *testing.T) {
+	for name, text := range langcopytest.Sentences(t, summaryByLang[textlang.English]) {
+		langcopytest.EnglishText(t, name, text)
+	}
+	for name, text := range langcopytest.Sentences(t, summaryByLang[textlang.Vietnamese]) {
+		langcopytest.VietnameseText(t, name, text)
 	}
 }
 

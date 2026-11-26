@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -36,6 +37,15 @@ func TestEveryShippedLanguageWritesItsOwnDuplicateLeadSummary(t *testing.T) {
 				t.Error("duplicateLead is the English sentence verbatim; the entry exists and the reader still gets English")
 			}
 		})
+	}
+}
+
+func TestTheSummariesFollowTheEnglishAndVietnameseStylePages(t *testing.T) {
+	for name, text := range langcopytest.Sentences(t, summaryByLang[textlang.English]) {
+		langcopytest.EnglishText(t, name, text)
+	}
+	for name, text := range langcopytest.Sentences(t, summaryByLang[textlang.Vietnamese]) {
+		langcopytest.VietnameseText(t, name, text)
 	}
 }
 
