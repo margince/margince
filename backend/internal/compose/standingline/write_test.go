@@ -21,10 +21,14 @@ const (
 
 func offerInput() Input {
 	return Input{Kind: KindContact, Previous: "Sebastian asked for a revised offer.", Recent: []Act{
-		{ID: acceptedID, Kind: "email", At: "2026-11-25", Author: "Sebastian Sachsinger", Side: sideCustomer,
-			Subject: "Re: Revised offer", Text: "The revised offer works for us. Please send the contract draft by Friday."},
-		{ID: offerID, Kind: "email", At: "2026-11-23", Author: "Lena Hoffmann", Side: sideOurs,
-			Subject: "Revised offer", Text: "Attached is the revised offer."},
+		{
+			ID: acceptedID, Kind: "email", At: "2026-11-25", Author: "Sebastian Sachsinger", Side: sideCustomer,
+			Subject: "Re: Revised offer", Text: "The revised offer works for us. Please send the contract draft by Friday.",
+		},
+		{
+			ID: offerID, Kind: "email", At: "2026-11-23", Author: "Lena Hoffmann", Side: sideOurs,
+			Subject: "Revised offer", Text: "Attached is the revised offer.",
+		},
 	}}
 }
 

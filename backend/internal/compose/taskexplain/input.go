@@ -124,7 +124,7 @@ func deref(s *string) string {
 func knownRecords(in Input) map[claims.Evidence]string {
 	known := map[claims.Evidence]string{}
 	if in.Relationship != nil {
-		known = contactbrief.KnownRecords(*in.Relationship)
+		known = contactbrief.CitableRecords(*in.Relationship)
 	}
 	task := claims.Evidence{EntityType: citeActivity, EntityID: in.Task.ID}
 	known[task] += claims.Source(in.Task)

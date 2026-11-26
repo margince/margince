@@ -308,8 +308,8 @@ func contactThemselves(in Input) string {
 	return claims.Source(in)
 }
 
-// KnownRecords is what a brief written from in may cite. The task explanation
+// CitableRecords is what a brief written from in may cite. The task explanation
 // cites through it, so the two ground one relationship by one rule.
-func KnownRecords(in Input) map[Evidence]string {
+func CitableRecords(in Input) map[Evidence]string {
 	return knownRecords(in.ID, in)
 }

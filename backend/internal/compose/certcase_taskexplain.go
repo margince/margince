@@ -90,8 +90,10 @@ func (taskExplainCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 			}
 		}
 	}
-	return &taskExplainCase{in: in, mustCite: byLabel[want.CitesLabel], citeLabel: want.CitesLabel,
-		mustName: want.NamesToken, mustAvoid: want.Avoids}, nil
+	return &taskExplainCase{
+		in: in, mustCite: byLabel[want.CitesLabel], citeLabel: want.CitesLabel,
+		mustName: want.NamesToken, mustAvoid: want.Avoids,
+	}, nil
 }
 
 type taskExplainCase struct {

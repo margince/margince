@@ -24,8 +24,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
+// CertCases certifies the status line against the summarize corpus.
 type CertCases struct{}
 
+// Site names the site this case certifies.
 func (CertCases) Site() aitasks.Site {
 	return aitasks.Site{Task: ai.TaskSummarize, Variant: "standing_line", Kind: ai.SiteKindOneShot}
 }
