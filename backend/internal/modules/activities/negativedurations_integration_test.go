@@ -22,7 +22,7 @@ import (
 
 // seedDurations stores one call per duration, each as an older writer stored
 // it, before the floor refused a negative one.
-func seedDurations(t *testing.T, e *sendEnv, durations ...int64) []ids.UUID {
+func seedDurations(t *testing.T, durations ...int64) []ids.UUID {
 	t.Helper()
 	calls := make([]ids.UUID, len(durations))
 	for i := range calls {
@@ -75,7 +75,7 @@ func clearDurations(t *testing.T, e *sendEnv) int {
 
 func TestANegativeDurationBecomesUnknownAndOtherDurationsStay(t *testing.T) {
 	e := setupSend(t)
-	calls := seedDurations(t, e, -60, -1, 0, 300)
+	calls := seedDurations(t, -60, -1, 0, 300)
 	negative, alsoNegative, zero, measured := calls[0], calls[1], calls[2], calls[3]
 
 	if changed := clearDurations(t, e); changed != 2 {
@@ -107,7 +107,7 @@ func TestANegativeDurationBecomesUnknownAndOtherDurationsStay(t *testing.T) {
 // clears the duration it carries. A new negative duration is still refused.
 func TestAnEditClearsAnOldNegativeDurationAndANewOneIsRefused(t *testing.T) {
 	e := setupSend(t)
-	calls := seedDurations(t, e, -60, 120)
+	calls := seedDurations(t, -60, 120)
 	negative, measured := calls[0], calls[1]
 	ctx := context.Background()
 
@@ -138,7 +138,7 @@ func TestARestrictedNegativeDurationWaitsForItsLift(t *testing.T) {
 			  'commercial_correspondence', now(), now(), now(), 'statutory retention', now() + interval '6 years')`, held)
 		return err
 	})
-	measured := seedDurations(t, e, -30)[0]
+	measured := seedDurations(t, -30)[0]
 
 	if changed := clearDurations(t, e); changed != 1 {
 		t.Errorf("the task changed %d rows, want only the unrestricted one", changed)
