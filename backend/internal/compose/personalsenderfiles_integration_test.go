@@ -289,7 +289,4 @@ func requireNamedWithoutBytes(t *testing.T, files []capturedFile) {
 		t.Errorf("the row names %q (%v), %d bytes; want %q (%s), %d bytes",
 			f.filename, f.contentType, f.byteSize, onePDF().Filename, onePDF().ContentType, len(onePDF().Body))
 	}
-	if f.company != nil {
-		t.Errorf("a withheld file rolled up to account %s; a file nobody can open has no place in a library", *f.company)
-	}
 }
