@@ -18977,7 +18977,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                entity_type: "contact" | "company" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity";
+                entity_type: "contact" | "company" | "deal" | "lead" | "project" | "product" | "offer_template" | "deal_room" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };
@@ -54932,7 +54932,7 @@ export interface components {
              *     response echoes the anchor back as one of these refs.
              * @enum {string}
              */
-            type: "contact" | "company" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity" | "user";
+            type: "contact" | "company" | "deal" | "lead" | "project" | "product" | "offer_template" | "deal_room" | "activity" | "user";
             /** Format: uuid */
             id: string;
         };
@@ -95655,7 +95655,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                entity_type: "contact" | "company" | "deal" | "lead" | "project" | "product" | "offer_template" | "activity";
+                entity_type: "contact" | "company" | "deal" | "lead" | "project" | "product" | "offer_template" | "deal_room" | "activity";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
             };

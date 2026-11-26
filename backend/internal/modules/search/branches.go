@@ -41,6 +41,10 @@ type searchBranch struct {
 	// render. Asking ScopeClauseFor for one would be an error rather than an
 	// empty clause, which is why the branch says so rather than passing "".
 	workspaceWide bool
+	// dealChild marks a branch whose rows carry no owner and are seen when
+	// their deal is: a Deal Room. Its scope is the room list's
+	// (auth.DealChildScopeClause), so search and the list show the same rooms.
+	dealChild bool
 	// textOnly marks a branch that answers the name search and NOTHING else.
 	// A tag is a word, not a record: it has no fields to plan a structured
 	// query over, no neighbours to walk in the graph, and no prose to embed.
@@ -99,6 +103,9 @@ func snippetIsEvidence(entity string) bool {
 // and scored before the per-type limit. Sampling is acceptable because, on the
 // corpus this was measured on, the top mail hit was kept for every prefix.
 const activityRankSample = 2000
+
+// dealRoomSnippetRunes is how much of a room's welcome message a hit shows.
+const dealRoomSnippetRunes = 160
 
 // rowSource renders the `FROM` the ranked branch reads its matches from.
 //
@@ -352,6 +359,8 @@ func branchScope(ctx context.Context, branch searchBranch, alias string, arg fun
 		scope = ""
 	case branch.activityWalk:
 		scope, err = auth.ActivityContentClause(ctx, alias, arg)
+	case branch.dealChild:
+		scope, err = auth.DealChildScopeClause(ctx, alias, arg)
 	default:
 		scope, err = auth.ScopeClauseFor(ctx, branch.entity, alias, arg)
 	}
@@ -411,6 +420,10 @@ var searchBranches = []searchBranch{
 	// rather than prose anybody would search for — so there is no excerpt to
 	// draw and the branch says NULL rather than inventing one.
 	{entity: "offer_template", table: entityOfferTemplate, title: columnName, snippet: noSnippet, workspaceWide: true},
+	// A Deal Room is found by its title or its welcome message, by the seats the
+	// room list shows it to. A buyer is never one of them: mayRead refuses the
+	// principal kind, and the room is the buyer's whole product already.
+	{entity: "deal_room", table: entityDealRoom, title: "title", snippet: fmt.Sprintf("left(coalesce(t.welcome_message, ''), %d)", dealRoomSnippetRunes), dealChild: true},
 	// `entity` stays a literal and `table` takes the constant, which looks
 	// inconsistent and is not: TestContextAnchorEnumMatchesTheSearchableEntities
 	// AST-parses the `entity` values and can only read literals, while goconst

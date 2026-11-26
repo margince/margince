@@ -13,7 +13,7 @@ import (
 // employer arm included, stays within the largest ranked page, so a grouped
 // answer never costs more than a ranked one
 // (TestAGroupedPageFitsInTheLargestRankedPage).
-const maxPerType = 20
+const maxPerType = 16
 
 // groupedShape is a few hits of EVERY type that matched, each type's best
 // first. ts_rank_cd does not compare across types (see Hit), so a short ranked

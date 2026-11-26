@@ -176,7 +176,7 @@ That table means one row per entity search can find, to the vector lane, the pla
 AST gates. The employer arm is a second way to reach the contact type. The arm:
 
 - **starts from the companies the company branch finds**: the same match, `archived_at`,
-  `NOT is_anchor` and company row scope, capped to the top `maxPerType` (20) matches. Every
+  `NOT is_anchor` and company row scope, capped to the top `maxPerType` (16) matches. Every
   company a grouped page can show adds the contacts who work there. But a two-letter prefix, or a
   word for a line of business, cannot fan out to every contact at every company in the workspace.
   The installation's own company adds no one, because all its contacts work there;

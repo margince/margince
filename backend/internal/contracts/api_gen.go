@@ -9781,6 +9781,7 @@ const (
 	ContextEntityRefTypeCompany       ContextEntityRefType = "company"
 	ContextEntityRefTypeContact       ContextEntityRefType = "contact"
 	ContextEntityRefTypeDeal          ContextEntityRefType = "deal"
+	ContextEntityRefTypeDealRoom      ContextEntityRefType = "deal_room"
 	ContextEntityRefTypeLead          ContextEntityRefType = "lead"
 	ContextEntityRefTypeOfferTemplate ContextEntityRefType = "offer_template"
 	ContextEntityRefTypeProduct       ContextEntityRefType = "product"
@@ -9798,6 +9799,8 @@ func (e ContextEntityRefType) Valid() bool {
 	case ContextEntityRefTypeContact:
 		return true
 	case ContextEntityRefTypeDeal:
+		return true
+	case ContextEntityRefTypeDealRoom:
 		return true
 	case ContextEntityRefTypeLead:
 		return true
@@ -85501,7 +85504,7 @@ type SearchParams struct {
 	ExcludeIds *[]openapi_types.UUID `form:"exclude_ids,omitempty" json:"exclude_ids,omitempty"`
 
 	// PerType Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. A type the time budget stopped is left out of `data` and named in `types_timed_out`.
-	PerType *int `form:"per_type,omitempty" json:"per_type,omitempty" maximum:"20" minimum:"1"`
+	PerType *int `form:"per_type,omitempty" json:"per_type,omitempty" maximum:"16" minimum:"1"`
 
 	// WithEmployees Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`.
 	WithEmployees *bool `form:"with_employees,omitempty" json:"with_employees,omitempty"`

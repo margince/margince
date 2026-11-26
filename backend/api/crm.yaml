@@ -19942,7 +19942,7 @@ paths:
           in: query
           schema:
             type: array
-            items: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
+            items: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, deal_room, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|deal_room|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
           style: form
           explode: false
           description: >
@@ -19962,7 +19962,7 @@ paths:
             keep a record's own author out of the matches suggested for that record.
         - name: per_type
           in: query
-          schema: { type: integer, minimum: 1, maximum: 20 }
+          schema: { type: integer, minimum: 1, maximum: 16 }
           description: >
             Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each
             type's best first. Relevance is not comparable across types — a message naming an
@@ -27901,7 +27901,7 @@ paths:
       - name: entity_type
         in: path
         required: true
-        schema: { type: string, enum: [contact, company, deal, lead, project, product, offer_template, activity] }
+        schema: { type: string, enum: [contact, company, deal, lead, project, product, offer_template, deal_room, activity] }
       - $ref: '#/components/parameters/Id'
     get:
       tags: [Search]
@@ -75368,7 +75368,7 @@ components:
         # `tag` is a WORD, not a record: finding it is the step before finding
         # the records that carry it, and without it a reader has to know the
         # vocabulary already.
-        type: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
+        type: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, deal_room, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|deal_room|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
         id: { type: string, format: uuid }
         title: { type: [string, 'null'], description: 'Display label (name/subject). An activity Margince wrote is titled in the reader''s language, as its History row names it.' }
         snippet: { type: [string, 'null'] }
@@ -75505,14 +75505,14 @@ components:
         page: { $ref: '#/components/schemas/PageInfo' }
         types_with_more:
           type: array
-          items: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
+          items: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, deal_room, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|deal_room|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
           description: >
             On a `per_type` answer only: the types that matched more hits than the page carries
             for them. Absent on a ranked answer, whose `page.has_more` says the same thing for
             the list as a whole.
         types_timed_out:
           type: array
-          items: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
+          items: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, deal_room, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|deal_room|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
           description: >
             On a `per_type` answer only: the types whose search did not finish within the time
             budget. `data` holds no hits of these types, and none of them is in `types_with_more`.
@@ -75543,7 +75543,7 @@ components:
       properties:
         type:
           type: string
-          enum: [contact, company, deal, lead, project, product, offer_template, activity, user]
+          enum: [contact, company, deal, lead, project, product, offer_template, deal_room, activity, user]
           x-extensible-enum: true
           description: |
             `user` is a workspace MEMBER, not a record — it appears only in the

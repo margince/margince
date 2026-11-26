@@ -81,7 +81,7 @@ func TestAGroupedPageNeverReadsBackMoreThanAPage(t *testing.T) {
 	}{
 		{`{"q":"Acme","per_type":5}`, true},
 		{`{"q":"Acme","per_type":6}`, false},
-		{`{"q":"Acme","record_type":"deal","per_type":20}`, true},
+		{`{"q":"Acme","record_type":"deal","per_type":16}`, true},
 		{`{"q":"Acme","record_types":["contact","company","deal","lead","project","product","offer_template","activity"],"per_type":3}`, true},
 		{`{"q":"Acme","record_types":["contact","company","deal","lead","project","product","offer_template","activity"],"per_type":4}`, false},
 	} {

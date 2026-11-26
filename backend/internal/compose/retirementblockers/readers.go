@@ -47,14 +47,7 @@ var readers = map[string]reader{
 
 // dealRoomRows is the Deal Room list's rule: the room's deal is in the reader's scope.
 func dealRoomRows(ctx context.Context, arg func(any) int) (string, error) {
-	scope, err := auth.ScopeClauseFor(ctx, dealPage, "d", arg)
-	if err != nil {
-		return "", err
-	}
-	if scope == "" {
-		scope = sqlTrue
-	}
-	return "EXISTS (SELECT 1 FROM deal d WHERE d.id = b.deal_id AND " + scope + ")", nil
+	return auth.DealChildScopeClause(ctx, "b", arg)
 }
 
 func initiativeRows(ctx context.Context, arg func(any) int) (string, error) {

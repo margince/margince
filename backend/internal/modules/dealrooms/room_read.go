@@ -56,14 +56,13 @@ func readRoom(ctx context.Context, tx pgx.Tx, id ids.DealRoomID) (crmcontracts.D
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(id)
 
-	scope, err := dealScopeClause(ctx, arg)
+	scope, err := auth.DealChildScopeClause(ctx, "r", arg)
 	if err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
 
 	row := tx.QueryRow(ctx, storekit.SQLf(
 		`SELECT %s FROM deal_room r
-		   JOIN deal d ON d.id = r.deal_id
 		  WHERE r.id = $%d AND %s`,
 		roomColumns, idPos, scope), args...)
 
@@ -75,20 +74,6 @@ func readRoom(ctx context.Context, tx pgx.Tx, id ids.DealRoomID) (crmcontracts.D
 		return crmcontracts.DealRoom{}, fmt.Errorf("read deal room: %w", err)
 	}
 	return out, nil
-}
-
-// dealScopeClause is the row-scope predicate for the parent deal, already
-// aliased to the join above. It returns "TRUE" rather than "" for an unbounded
-// caller so the clause always composes into valid SQL.
-func dealScopeClause(ctx context.Context, arg func(any) int) (string, error) {
-	scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
-	if err != nil {
-		return "", err
-	}
-	if scope == "" {
-		return "TRUE", nil
-	}
-	return scope, nil
 }
 
 // rowScanner is the one method pgx.Row and pgx.Rows agree on, so a single
