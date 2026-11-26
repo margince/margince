@@ -451,6 +451,55 @@ func TestTheProvidersEchoOfAQuestionIsNeverFiled(t *testing.T) {
 	})
 }
 
+func TestAQuestionIDInAnotherChatNeverDeletesItsStoredOriginal(t *testing.T) {
+	eachClarifyNetwork(t, func(t *testing.T, c *clarifyCase) {
+		a := c.forward("f1", "price?")
+		c.settle(a)
+		c.sweep()
+		for _, legacy := range []bool{false, true} {
+			if legacy {
+				wsExec(t, c.e, `UPDATE raw_capture SET ask_message_ids = ARRAY[$1::text]
+					WHERE id = (SELECT raw_capture_id FROM activity WHERE id = $2)`, c.n.askID(1), a)
+			}
+			msg := c.n.message(c.n.askID(1), "A colleague's own message", clocktest.Now(t))
+			msg.ConversationID, msg.Direction = "another-chat", connector.DirectionOutbound
+			msg.StoredOriginal = storeOriginal(t, c.e, fmt.Sprintf("%s-other-chat-%t", c.n.name, legacy))
+			sink := compose.NewCaptureSink(c.e.Pool, compose.CaptureConfig{})
+			consumed, err := sink.HandleClarification(c.ctx, c.n.bindingOf(), msg)
+			if err != nil || consumed {
+				t.Fatalf("other chat, legacy=%v: consumed=%v, err=%v", legacy, consumed, err)
+			}
+			if wsCount(t, c.e, `SELECT count(*) FROM raw_capture WHERE id = $1`, msg.StoredOriginal) != 1 {
+				t.Fatal("a message in another chat lost its stored original")
+			}
+		}
+	})
+}
+
+func TestAReplyQuotingAFollowUpDoesNotFileEitherBatch(t *testing.T) {
+	eachClarifyNetwork(t, func(t *testing.T, c *clarifyCase) {
+		first := c.forward("first", "first customer's price?")
+		c.settle(first)
+		c.sweep()
+		second := c.forward("second", "second customer's delivery?")
+		c.settle(second)
+		c.sweep()
+		if err := c.reply("unquoted", "", "[contacts]", c.n.card); !errors.Is(err, capturemod.ErrChatMessageConsumed) {
+			t.Fatal(err)
+		}
+		c.sweep()
+		if len(c.n.provider2.messages()) != 3 {
+			t.Fatal("the two questions and their follow-up were not sent")
+		}
+		if err := c.reply("quoted-follow-up", c.n.askID(3), "[contacts]", c.n.card); !errors.Is(err, capturemod.ErrChatMessageConsumed) {
+			t.Fatal(err)
+		}
+		if !c.held(first) || !c.held(second) {
+			t.Fatal("an ambiguous follow-up filed a batch on a guess")
+		}
+	})
+}
+
 func TestAPhoneNumberInTextAnswersAWhatsAppQuestion(t *testing.T) {
 	e := newCaptureEnv(t).e
 	sink := compose.NewCaptureSink(e.Pool, compose.CaptureConfig{})

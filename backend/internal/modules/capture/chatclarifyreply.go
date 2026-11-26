@@ -133,10 +133,17 @@ func (s *Sink) refuseColleagueAnswer(ctx context.Context, member, connection, re
 func (s *Sink) consumeEcho(ctx context.Context, binding connector.ChatBinding, msg connector.ChatMessage) (bool, error) {
 	var echoed bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM raw_capture
-			 WHERE held_by IS NOT NULL AND held_connection IS NOT DISTINCT FROM $1 AND $2 = ANY(ask_message_ids)
-			   AND coalesce(ask_sent_at, ask_claimed_at) > now() - make_interval(secs => $3))`,
-			nullable(binding.Connection), msg.IdempotencyKey, pendingforward.Window.Seconds()).Scan(&echoed); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM raw_capture r
+			 JOIN activity a ON a.raw_capture_id = r.id
+			 WHERE r.held_by IS NOT NULL AND r.held_connection IS NOT DISTINCT FROM @connection
+			   AND (@question = ANY(r.ask_message_ids) OR (@legacy = ANY(r.ask_message_ids) AND a.thread_key = @thread))
+			   AND coalesce(r.ask_sent_at, r.ask_claimed_at) > now() - make_interval(secs => @window))`,
+			pgx.StrictNamedArgs{
+				"connection": nullable(binding.Connection),
+				"question":   clarifyMessageKey(binding.Provider, msg.ConversationID, msg.IdempotencyKey),
+				"window":     pendingforward.Window.Seconds(), "legacy": msg.IdempotencyKey,
+				"thread": clarificationThread(binding, msg),
+			}).Scan(&echoed); err != nil {
 			return fmt.Errorf("capture: looking for the question an echo copies: %w", err)
 		}
 		if !echoed || msg.StoredOriginal.IsZero() {
@@ -145,6 +152,18 @@ func (s *Sink) consumeEcho(ctx context.Context, binding connector.ChatBinding, m
 		return DeleteRawCaptureTx(ctx, tx, msg.StoredOriginal)
 	})
 	return echoed, err
+}
+
+func clarifyMessageKey(provider, conversation, message string) string {
+	if provider == zalo.Provider {
+		conversation = strings.ReplaceAll(conversation, ":", "_")
+		message = strings.ReplaceAll(message, ":", "_")
+	}
+	return conversation + ":" + message
+}
+
+func clarificationThread(binding connector.ChatBinding, msg connector.ChatMessage) string {
+	return binding.Provider + ":" + binding.ThreadScope + ":" + msg.ConversationID
 }
 
 func nullable(id ids.UUID) *ids.UUID {
@@ -180,13 +199,17 @@ func (s *Sink) consumeAnswer(ctx context.Context, binding connector.ChatBinding,
 		if err != nil || !isMember {
 			return err
 		}
-		asked, err = askedMessagesTx(ctx, tx, member, binding.Connection)
+		asked, err = askedMessagesTx(ctx, tx, member, binding.Connection, clarificationThread(binding, msg))
 		return err
 	})
 	if err != nil || member.IsZero() || len(asked) == 0 {
 		return false, err
 	}
-	target, quotesAsked, ambiguous := answeredBatch(asked, msg.ReplyToID)
+	quoted := msg.ReplyToID
+	if quoted != "" {
+		quoted = clarifyMessageKey(binding.Provider, msg.ConversationID, quoted)
+	}
+	target, quotesAsked, ambiguous := answeredBatch(asked, quoted)
 	switch {
 	case ambiguous:
 		return true, s.askWhichBatch(ctx, member, binding.Connection, msg.StoredOriginal)
@@ -209,14 +232,17 @@ func (s *Sink) consumeAnswer(ctx context.Context, binding connector.ChatBinding,
 // askedMessagesTx lists the forwards of one member on one account that a
 // question was sent about, newest first. It reads back as far as a held forward
 // lives.
-func askedMessagesTx(ctx context.Context, tx pgx.Tx, member, connection ids.UUID) ([]askedMessage, error) {
+func askedMessagesTx(ctx context.Context, tx pgx.Tx, member, connection ids.UUID, thread string) ([]askedMessage, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT r.ask_batch_id, r.ask_message_ids, coalesce(r.ask_sent_at, r.ask_claimed_at), a.id, a.captured_by, coalesce(a.source, ''),
 		       (`+pendingforward.Predicate("a")+`)
 		  FROM raw_capture r JOIN activity a ON a.raw_capture_id = r.id
-		 WHERE r.held_by = $1 AND r.held_connection IS NOT DISTINCT FROM $2 AND (r.ask_sent_at IS NOT NULL OR r.ask_claimed_at IS NOT NULL)
-		   AND coalesce(r.ask_sent_at, r.ask_claimed_at) > now() - make_interval(secs => $3)
-		 ORDER BY coalesce(r.ask_sent_at, r.ask_claimed_at) DESC, a.id`, member, nullable(connection), pendingforward.Window.Seconds())
+		 WHERE r.held_by = @member AND r.held_connection IS NOT DISTINCT FROM @connection AND (r.ask_sent_at IS NOT NULL OR r.ask_claimed_at IS NOT NULL)
+		   AND a.thread_key = @thread
+		   AND coalesce(r.ask_sent_at, r.ask_claimed_at) > now() - make_interval(secs => @window)
+		 ORDER BY coalesce(r.ask_sent_at, r.ask_claimed_at) DESC, a.id`, pgx.StrictNamedArgs{
+		"member": member, "connection": nullable(connection), "thread": thread, "window": pendingforward.Window.Seconds(),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the questions asked about forwards: %w", err)
 	}
@@ -235,10 +261,18 @@ func askedMessagesTx(ctx context.Context, tx pgx.Tx, member, connection ids.UUID
 // of ours, so an empty target means the batch was filed already.
 func answeredBatch(asked []askedMessage, quoted string) (target []askedMessage, quotesAsked, ambiguous bool) {
 	if quoted != "" {
+		var matched ids.UUID
+		found := false
 		for _, m := range asked {
-			if slices.Contains(m.askIDs, quoted) {
-				return pendingOf(asked, m.batch), true, false
+			if hasClarifyQuote(m.askIDs, quoted) {
+				if found && matched != m.batch {
+					return nil, true, true
+				}
+				matched, found = m.batch, true
 			}
+		}
+		if found {
+			return pendingOf(asked, matched), true, false
 		}
 	}
 	waiting := map[ids.UUID]bool{}
@@ -256,6 +290,15 @@ func answeredBatch(asked []askedMessage, quoted string) (target []askedMessage, 
 		return pendingOf(asked, only), false, false
 	}
 	return nil, false, true
+}
+
+// Legacy ids have no chat prefix; their caller reads only the current chat.
+func hasClarifyQuote(questions []string, quoted string) bool {
+	if slices.Contains(questions, quoted) {
+		return true
+	}
+	_, legacy, namespaced := strings.Cut(quoted, ":")
+	return namespaced && slices.Contains(questions, legacy)
 }
 
 func pendingOf(asked []askedMessage, batch ids.UUID) []askedMessage {

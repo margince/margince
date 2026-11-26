@@ -123,7 +123,11 @@ func (a *ChatAsker) ask(ctx context.Context, batch ClarifyBatch) error {
 	}
 	attempt := batch.Attempts
 	receipt, sendErr := a.send(ctx, batch.Provider, batch.Connection, account, clarifyQuestion(account.Locale, batch.Provider), "ask:"+batch.ID.String(), attempt)
-	return a.settle(ctx, batch.ID, receipt.ProviderMessageID, sendErr)
+	messageID := receipt.ProviderMessageID
+	if messageID != "" {
+		messageID = clarifyMessageKey(batch.Provider, account.ID, messageID)
+	}
+	return a.settle(ctx, batch.ID, messageID, sendErr)
 }
 
 // send transmits one text to a verified colleague through the account's sender.
@@ -225,7 +229,7 @@ func (a *ChatAsker) sendFollowUp(ctx context.Context, f *followUp) error {
 	}
 	return a.DB.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE raw_capture SET ask_message_ids = array_append(ask_message_ids, $2) WHERE id = ANY($1)`,
-			f.raws, receipt.ProviderMessageID)
+			f.raws, clarifyMessageKey(f.provider, account.ID, receipt.ProviderMessageID))
 		return err
 	})
 }

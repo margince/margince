@@ -101,3 +101,31 @@ func TestTheQuestionIsPutInTheColleaguesLanguageAndAsksForAPhoneOnlyWhereOneWork
 		}
 	}
 }
+
+func TestAQuoteSharedByTwoBatchesNeverSelectsOne(t *testing.T) {
+	first, second := ids.NewV7(), ids.NewV7()
+	for _, question := range []string{"42", "chat:42"} {
+		asked := []askedMessage{
+			{batch: first, askIDs: []string{question}, pending: true},
+			{batch: second, askIDs: []string{question}, pending: true},
+		}
+		if target, quoted, ambiguous := answeredBatch(asked, "chat:42"); len(target) != 0 || !quoted || !ambiguous {
+			t.Errorf("shared question %q returned %d messages, quoted=%v, ambiguous=%v", question, len(target), quoted, ambiguous)
+		}
+	}
+}
+
+func TestQuestionKeysDistinguishChatsAndKeepLegacyQuestionsReadable(t *testing.T) {
+	if clarifyMessageKey("telegram", "chat-a", "42") == clarifyMessageKey("telegram", "chat-b", "42") {
+		t.Fatal("two Telegram chats share a question key")
+	}
+	if !hasClarifyQuote([]string{"42"}, "chat-a:42") {
+		t.Fatal("a legacy question in the current chat cannot be answered")
+	}
+	if hasClarifyQuote([]string{"chat-b:42"}, "chat-a:42") {
+		t.Fatal("a question in another chat matched")
+	}
+	if got := clarifyMessageKey("zalo_oa", "user:1", "msg:2"); got != "user_1:msg_2" {
+		t.Fatalf("Zalo question key = %q", got)
+	}
+}
