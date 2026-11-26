@@ -92,7 +92,6 @@ var predicateLeadReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleLeadReads = gatekit.Waive(map[string]string{
-	"internal/modules/contacts/leadarrivalorigin.go:CountArrivalOriginBackfills":     "the arrival-origin data task counts the leads it has yet to fill, reading at most one more than its limit; only that count leaves, and no reader is served",
 	"internal/modules/activities/duplicatesystemtasks.go:RetireDuplicateLeadTasksTx": "System-only duplicate repair locks lead identities before tasks in the qualification writer order. IDs remain inside the repair transaction.",
 
 	"internal/modules/initiatives/enrolment.go:estimatedJoin":                        "the upgrade task's estimate reads only the created_at of a lead or deal the membership evaluation already admitted, to date its enrolment row. It runs under the system data task, and no field of the record leaves the statement",

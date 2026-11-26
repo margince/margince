@@ -304,7 +304,7 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 	// provenance on what this read writes is the row's answer too.
 	ctx, err = readPrincipals(ctx, identity.NewService(w.pool), claim.RequestedBy, args.SiteReadID)
 	if workRefused(err) {
-		return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: the person who asked for it can no longer act: %w", args.SiteReadID, err))
+		return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: the colleague who asked for it can no longer act: %w", args.SiteReadID, err))
 	}
 	if err != nil {
 		return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: %w", args.SiteReadID, err))

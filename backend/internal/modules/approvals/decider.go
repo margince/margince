@@ -46,10 +46,10 @@ func resolveDecider(ctx context.Context, tx pgx.Tx, p principal.Principal, in St
 	if approvalsubject.PayloadOwned(in.Kind) {
 		return firstAskable(ctx, tx, []deciderCandidate{{approvalsubject.Owner(in.Kind, in.ProposedChange), deciderPayloadOwner}})
 	}
-	if p.Type == principal.PrincipalAgent && actsForItsOwnPerson(p) {
-		// The product's own job answers to the person it acts for, and to
-		// nobody else: a person who left makes no proposal.
-		return passportlessAgentsPerson(ctx, tx, p)
+	if p.Type == principal.PrincipalAgent && actsForItsOwnColleague(p) {
+		// The product's own job answers to the colleague it acts for, and to
+		// nobody else: a colleague who left makes no proposal.
+		return passportlessAgentsColleague(ctx, tx, p)
 	}
 	candidates := []deciderCandidate{{p.OnBehalfOf, deciderOnBehalfOf}}
 	if p.Type == principal.PrincipalHuman {
@@ -63,15 +63,15 @@ func resolveDecider(ctx context.Context, tx pgx.Tx, p principal.Principal, in St
 	return firstAskable(ctx, tx, candidates)
 }
 
-// passportlessAgentsPerson is the decider of a job agent's proposal: the person
-// it acts for, while that person is still a member.
-func passportlessAgentsPerson(ctx context.Context, tx pgx.Tx, p principal.Principal) (deciderCandidate, error) {
+// passportlessAgentsColleague is the decider of a job agent's proposal: the colleague
+// it acts for, while that colleague is still a member.
+func passportlessAgentsColleague(ctx context.Context, tx pgx.Tx, p principal.Principal) (deciderCandidate, error) {
 	askable, err := CanBeAsked(ctx, tx, p.OnBehalfOf)
 	if err != nil {
 		return deciderCandidate{}, err
 	}
 	if !askable {
-		return deciderCandidate{}, fmt.Errorf("approvals: the person this job acts for is no longer a member: %w",
+		return deciderCandidate{}, fmt.Errorf("approvals: the colleague this job acts for is no longer a member: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	return deciderCandidate{p.OnBehalfOf, deciderOnBehalfOf}, nil

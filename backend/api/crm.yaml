@@ -40231,6 +40231,7 @@ paths:
               schema: { $ref: '#/components/schemas/KnowledgeCorpusList' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Knowledge]
       operationId: createCorpus
