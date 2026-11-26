@@ -87230,7 +87230,7 @@ export interface operations {
                 };
             };
             /** @description The body is signed by no connected number (`code: channel_event_rejected`). The answer is the same for each cause. */
-            401: {
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

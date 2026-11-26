@@ -208,6 +208,54 @@ a log or an audit row.
 | No such connection | `not_found` (404) | This keeps it secret whether the row exists: an archived binding reads the same. Open the card again. |
 | (no warning box) | `conflict` (409) | This binary has no code for that provider, or some unique index other than the rule on live rows refused the write. Margince has code only for `telegram`. This is the last answer, and adds no second rule for bindings. |
 
+## Telegram Business accounts
+
+A company can also link a Telegram Business account to the bot. The owner of the account picks the bot in the
+Telegram app, and the bot then sees the private chats of that account. The steps for an admin on the screen are in
+the handbook page. This section is for the operator.
+
+- Customers write to the account, not to the bot. Messages in both directions file in the history of the customer,
+  including the replies the owner types in the Telegram app.
+- The poller asks Telegram for the business updates that `AllowedUpdates` lists
+  (`backend/internal/modules/capture/telegram/subject.go`). No webhook and no extra credential is needed.
+- The link of the owner comes in as a `business_connection` update. It makes a `channel_connection` row with
+  `provider = telegram_business` and the status `pending_approval`. Nothing the account says is stored until an
+  admin approves the row.
+- `POST /v1/channel-connections/telegram-business/{id}/approve` approves it and makes the team seat of the account.
+  The first approval needs `readerTeamId`, or the answer is `422` with `reader_team_required`. The seat starts
+  `held`. A `409` means the owner switched the link off in Telegram.
+- `PATCH /v1/channel-connections/telegram-business/{id}/visibility` with `mail_visibility: shared` and
+  `confirm: true` makes the next message follow the sharing of its contact. It needs the workspace setting
+  `capture.shared_posture_allowed`. Messages filed before the change keep their audience.
+- A thread is capture-only. A reply from Margince into it answers `422` with `conversation_capture_only`, so the
+  team answers in Telegram. The staging check of an agent refuses it in the same way.
+- An edit changes the text of the filed message. A delete in Telegram removes nothing on a company account, because
+  every member of that team may delete there. A delete that comes in before the message is noted, so a copy that
+  comes in after it is not filed.
+- `DELETE /v1/channel-connections/telegram-business/{id}` archives the link. It holds no credential, so nothing is
+  destroyed, and what it filed stays.
+- A message from an erased customer is accepted and stores nothing.
+- The limits of the bot hold here too: one reader per bot, private chats only, and no history from before the link.
+
+### What the tests prove, and what needs a live account
+
+The tests use the real routes, the real poller, the real ingest job and the real filing path. Only the Bot API is
+a fake. They cover these cases:
+
+- approval and the reader team, and changes to who reads;
+- one thread on one contact, and a reply that comes in before the customer message;
+- a refused reply, edits, and deletes;
+- links that are off, and a link switched off between the poll and the filing;
+- two accounts that use the same chat and message ids;
+- a job that fails in the middle of its work, and then runs again in several workers at once.
+
+These need a live Telegram Business account and a bot before you trust them:
+
+- The bot shows in the Telegram Business settings of the account, and Business Mode is on for it in BotFather.
+- The real shape of each business update, because the tests use the one the Bot API documents.
+- Telegram sends the replies the owner types in the Telegram app to the bot.
+- What Telegram does when an owner links the bot twice, or removes it while updates wait.
+
 ## Limits
 
 - **No backfill, ever.** The Bot API has no history endpoint. Telegram keeps updates that no one has read
