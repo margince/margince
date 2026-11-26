@@ -314,7 +314,10 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
           return jsonResponse(meFixture({ allow: AUTOMATION_OPERATOR }));
         }
         if (url.includes("/automations/catalog")) {
-          return jsonResponse({ data: [renewalCatalogEntry] });
+          return jsonResponse({
+            page: { has_more: false },
+            data: [renewalCatalogEntry],
+          });
         }
         if (url.includes("/custom-fields")) {
           return jsonResponse(

@@ -173,7 +173,6 @@ it("shows an admin a further entity that names no jurisdiction, and not the defa
   ).toBeNull();
   const vienna = screen.getByTestId("legal-entity-le-vienna");
   expect(within(vienna).queryByText(gap)).toBeNull();
-  expect(within(vienna).getByText("AT")).toBeInTheDocument();
 });
 
 it("flags a jurisdiction the build offers no pack for, as a copied address country can be", async () => {
@@ -206,13 +205,62 @@ it("lists each entity's jurisdiction beside its country, the default's being the
     }),
   ).toBeInTheDocument();
   const vienna = await screen.findByTestId("legal-entity-le-vienna");
-  expect(within(vienna).getByText("FR")).toBeInTheDocument();
+  expect(within(vienna).getByText("France")).toBeInTheDocument();
   expect(within(vienna).getByText("Austria")).toBeInTheDocument();
+  expect(within(vienna).queryByText("FR")).toBeNull();
   expect(
     await within(screen.getByTestId("legal-entity-le-default")).findByText(
       "Germany",
     ),
   ).toBeInTheDocument();
+});
+
+it("names an entity's country, not its code", async () => {
+  vi.stubGlobal(
+    "fetch",
+    backend(READER, [
+      ...DEFAULT_ONLY,
+      entity("le-saigon", { display_name: "Saigon Branch", country: "vn" }),
+    ]),
+  );
+  render(<LegalEntitiesCard />);
+  const saigon = await screen.findByTestId("legal-entity-le-saigon");
+  expect(within(saigon).getByText("Vietnam")).toBeInTheDocument();
+  expect(within(saigon).queryByText("VN")).toBeNull();
+});
+
+it("says where the default's legal name and country are set while it has none", async () => {
+  vi.stubGlobal("fetch", backend(READER, [...DEFAULT_ONLY, VIENNA]));
+  render(<LegalEntitiesCard />);
+  const source = en["legalEntities.fromCompanyProfile"];
+  const row = await screen.findByTestId("legal-entity-le-default");
+  expect(within(row).getAllByText(source)).toHaveLength(2);
+  // A further entity keeps its own values, and the note is not on its row.
+  const vienna = screen.getByTestId("legal-entity-le-vienna");
+  expect(within(vienna).queryByText(source)).toBeNull();
+  // The sentence above the list points to the same place as the cells.
+  expect(screen.getByText(en["legalEntities.sub"])).toHaveTextContent(
+    /from the company profile\.$/,
+  );
+});
+
+it("shows the default's legal name once the company profile holds one", async () => {
+  vi.stubGlobal(
+    "fetch",
+    backend(READER, [
+      entity("le-default", {
+        is_default: true,
+        display_name: "Acme",
+        legal_name: "Acme GmbH",
+      }),
+    ]),
+  );
+  render(<LegalEntitiesCard />);
+  const row = await screen.findByTestId("legal-entity-le-default");
+  expect(within(row).getByText("Acme GmbH")).toBeInTheDocument();
+  expect(
+    within(row).getAllByText(en["legalEntities.fromCompanyProfile"]),
+  ).toHaveLength(1);
 });
 
 it("names the default entity of an undescribed company in words", async () => {

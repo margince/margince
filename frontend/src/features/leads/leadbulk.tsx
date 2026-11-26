@@ -14,6 +14,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useLeadDisqualifyReasons } from "../../lib/leaddisqualifyreasons";
 import { leadWriteKeys } from "../../lib/leadkeys";
+import { leadIdentityName } from "../../lib/leadname";
 import {
   ProblemError,
   problemMessageOf,
@@ -21,7 +22,6 @@ import {
   unwrap,
 } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
-import { leadIdentityName } from "./leadname";
 
 type Lead = components["schemas"]["Lead"];
 

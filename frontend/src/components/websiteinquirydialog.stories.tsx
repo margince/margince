@@ -37,7 +37,10 @@ function setup(policy: Automation | null, failure?: number) {
       [`POST /web-forms/${INQUIRY_FORM.id}/handling/preview`]: () =>
         jsonResponse(INQUIRY_DEADLINE_PREVIEW),
       "GET /custom-fields": () =>
-        jsonResponse({ data: [INQUIRY_REQUEST_FIELD] }),
+        jsonResponse({
+          page: { has_more: false },
+          data: [INQUIRY_REQUEST_FIELD],
+        }),
       "GET /users": () => jsonResponse({ data: INQUIRY_MEMBERS }),
       "GET /users/names": () => jsonResponse({ data: INQUIRY_MEMBERS }),
       [`GET /automations/${INQUIRY_AUTOMATION.id}`]: () =>
@@ -118,7 +121,10 @@ export const Fields: Story = {
       [`POST /web-forms/${INQUIRY_FORM.id}/handling/preview`]: () =>
         jsonResponse(INQUIRY_DEADLINE_PREVIEW),
       "GET /custom-fields": () =>
-        jsonResponse({ data: [INQUIRY_REQUEST_FIELD] }),
+        jsonResponse({
+          page: { has_more: false },
+          data: [INQUIRY_REQUEST_FIELD],
+        }),
       "GET /users": () => jsonResponse({ data: INQUIRY_MEMBERS }),
       "GET /users/names": () => jsonResponse({ data: INQUIRY_MEMBERS }),
     });
