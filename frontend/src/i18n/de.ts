@@ -21740,6 +21740,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.why.now": "Warum jetzt",
   "worklist.why.consequence": "Wenn nichts passiert",
   "worklist.why.todo": "Was zu tun ist",
+  "worklist.why.writing": "Aufgabe und Nachrichten werden gelesen…",
   "worklist.title.deal_at_risk": "Bei {name} tut sich nichts mehr",
   "worklist.title.deal_at_risk.close_overdue":
     "{name} ist über das Abschlussdatum",
@@ -21754,8 +21755,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.title.bounce": "Unzustellbar: {name}",
   "worklist.title.lead_response": "Neuen Lead {name} kontaktieren",
   "worklist.title.customer_waiting": "{name} wartet auf deine Antwort",
-  "worklist.todo.task.named":
-    "Erledige die Aufgabe mit {name} und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
   "worklist.todo.deal_at_risk.named":
     "Öffne {name} und plane den nächsten Schritt.",
   "worklist.todo.customer_waiting.named": "Antworte {name}.",
@@ -21785,8 +21784,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Prüfe die Verbindung des Kalenders, damit seine Termine wieder erfasst werden.",
   "worklist.todo.capture_health.calendar.named":
     "Prüfe die Verbindung von {name}, damit seine Termine wieder erfasst werden.",
-  "worklist.consequence.task_slips.named":
-    "Die Aufgabe mit {name} bleibt unerledigt.",
   "worklist.happened.customer_waiting":
     "{name} hat am {when} geschrieben, und noch niemand hat geantwortet.",
   "worklist.happened.customer_waiting.bare":
@@ -21872,7 +21869,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.task": "Die Aufgabe ist am {due} fällig.",
   "worklist.happened.task.overdue":
     "Die Aufgabe war am {due} fällig und ist noch offen.",
-  "worklist.happened.task.undated": "Die Aufgabe hat kein Fälligkeitsdatum.",
   "worklist.happened.deal": "{deal}: {figures}.",
   "worklist.happened.lastFrom": "Letzter Kontakt von {name}: {when}",
   "worklist.happened.lastTo": "Letzter Kontakt an {name}: {when}",
@@ -21897,7 +21893,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{name} rutscht über das erwartete Abschlussdatum.",
   "worklist.consequence.meeting_unprepared":
     "Du gehst unvorbereitet in den Termin.",
-  "worklist.consequence.task_slips": "Die Aufgabe bleibt unerledigt.",
   "worklist.consequence.work_blocked":
     "Arbeit, die an dieser Entscheidung hängt, bleibt blockiert.",
   "worklist.consequence.customer_never_received": "Die Nachricht kommt nie an.",
@@ -21913,8 +21908,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Datensätze laufen weiter auseinander.",
   "worklist.todo.deal_at_risk":
     "Öffne den Deal und plane den nächsten Schritt.",
-  "worklist.todo.task":
-    "Erledige sie und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
   "worklist.todo.customer_waiting": "Beantworte die Nachricht.",
   "worklist.todo.awaiting_reply": "Sende eine Nachfrage.",
   "worklist.todo.lead_response":

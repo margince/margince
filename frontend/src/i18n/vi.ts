@@ -21168,6 +21168,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.why.now": "Vì sao là bây giờ",
   "worklist.why.consequence": "Nếu không làm gì",
   "worklist.why.todo": "Việc cần làm",
+  "worklist.why.writing": "Đang đọc việc cần làm và các tin nhắn…",
   "worklist.title.deal_at_risk": "{name} đang chững lại",
   "worklist.title.deal_at_risk.close_overdue":
     "{name} đã quá ngày dự kiến chốt",
@@ -21182,8 +21183,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.title.bounce": "Bị trả về: {name}",
   "worklist.title.lead_response": "Liên hệ lead mới {name}",
   "worklist.title.customer_waiting": "{name} đang chờ bạn trả lời",
-  "worklist.todo.task.named":
-    "Làm xong việc với {name} và đánh dấu là xong, hoặc chuyển sang ngày khác.",
   "worklist.todo.deal_at_risk.named":
     "Mở {name} và lên kế hoạch cho bước tiếp theo.",
   "worklist.todo.customer_waiting.named": "Trả lời {name}.",
@@ -21211,7 +21210,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Kiểm tra kết nối lịch để cuộc họp được thu thập trở lại.",
   "worklist.todo.capture_health.calendar.named":
     "Kiểm tra kết nối của {name} để cuộc họp được thu thập trở lại.",
-  "worklist.consequence.task_slips.named": "Việc với {name} vẫn chưa được làm.",
   "worklist.happened.customer_waiting":
     "{name} đã viết vào {when} và chưa có ai trả lời.",
   "worklist.happened.customer_waiting.bare":
@@ -21293,7 +21291,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.task": "Việc này đến hạn vào {due}.",
   "worklist.happened.task.overdue":
     "Việc này đến hạn vào {due} và vẫn đang mở.",
-  "worklist.happened.task.undated": "Việc này không có ngày đến hạn.",
   "worklist.happened.deal": "{deal}: {figures}.",
   "worklist.happened.lastFrom": "Liên hệ gần nhất từ {name}: {when}.",
   "worklist.happened.lastTo": "Liên hệ gần nhất tới {name}: {when}.",
@@ -21316,7 +21313,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{name} trễ qua ngày chốt dự kiến.",
   "worklist.consequence.meeting_unprepared":
     "Bạn vào cuộc họp mà chưa chuẩn bị.",
-  "worklist.consequence.task_slips": "Việc này vẫn chưa được làm.",
   "worklist.consequence.work_blocked":
     "Công việc phụ thuộc vào quyết định này vẫn bị chặn.",
   "worklist.consequence.customer_never_received":
@@ -21331,8 +21327,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Email trong hộp thư này không vào Margince.",
   "worklist.consequence.data_drifts": "Các bản ghi tiếp tục lệch nhau.",
   "worklist.todo.deal_at_risk": "Mở deal và lên kế hoạch cho bước tiếp theo.",
-  "worklist.todo.task":
-    "Làm xong và đánh dấu là xong, hoặc chuyển sang ngày khác.",
   "worklist.todo.customer_waiting": "Trả lời tin nhắn.",
   "worklist.todo.awaiting_reply": "Gửi thư nhắc lại.",
   "worklist.todo.lead_response": "Liên hệ ngay; lead mới nguội đi rất nhanh.",

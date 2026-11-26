@@ -188,7 +188,6 @@ const TODO: Readonly<
     >
   >
 > = {
-  task: { bare: "worklist.todo.task", named: "worklist.todo.task.named" },
   deal_at_risk: {
     bare: "worklist.todo.deal_at_risk",
     named: "worklist.todo.deal_at_risk.named",
@@ -373,7 +372,8 @@ function taskLine(item: WorklistItem, t: T, clock: Clock): string | null {
   if (item.source !== "task" && item.source !== "weekly_commitment")
     return null;
   const dueAt = deadlineOf(item);
-  if (!dueAt) return t("worklist.happened.task.undated");
+  // A missing date is not something that happened.
+  if (!dueAt) return null;
   const due = formatDayMonthNearYear(
     taskDueOnDay(dueAt, item.due_has_time, item.due_intent, clock.recordZone),
     clock.locale,

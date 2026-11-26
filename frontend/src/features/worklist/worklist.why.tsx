@@ -33,6 +33,7 @@ import { consequenceLine } from "./worklist.consequence";
 import type { WorklistItem } from "./worklist.queries";
 import { codedDetail } from "./worklist.reader";
 import { inlineDecision, rowAnswer } from "./worklist.row.answer";
+import { TaskExplanationSections } from "./worklist.taskexplanation";
 
 import "./worklist.why.css";
 
@@ -49,6 +50,67 @@ export function WorklistWhy({
   // The surface already reads the row's reason out, so it is not said twice.
   groundsShown?: boolean;
 }>) {
+  if (item.source === "task") {
+    return <TaskWhy item={item} answer={answer} />;
+  }
+  return <RowWhy item={item} answer={answer} groundsShown={groundsShown} />;
+}
+
+// A task is explained from its own records, so no template speaks for it.
+function TaskWhy({
+  item,
+  answer,
+}: Readonly<{ item: WorklistItem; answer: boolean }>) {
+  const t = useT();
+  const clock = useHappenedClock();
+  // Nothing else here dates the task, so its due reasons stay.
+  const reasons = whyReasons(item, false, t, clock.locale, clock.zone);
+  const open = saysOpen(item);
+  return (
+    <Panel title={t("worklist.why.title")} tone="accent">
+      <PanelBody>
+        <div className="worklist-why">
+          {item.website_inquiry && (
+            <WebsiteInquiryFacts facts={item.website_inquiry} />
+          )}
+          <TaskExplanationSections
+            taskId={item.id}
+            section={(heading, children) => (
+              <WhySection heading={heading}>{children}</WhySection>
+            )}
+            todo={
+              (open || answer) && (
+                <>
+                  {item.request_check && <p>{todoLine(item, t, false)}</p>}
+                  <OurLastReply item={item} />
+                  {answer && <RowVerbs item={item} />}
+                </>
+              )
+            }
+          />
+          {reasons.length > 0 && (
+            <WhySection heading={t("worklist.why.now")}>
+              <ol
+                className="worklist-why-reasons"
+                aria-label={t("worklist.why.reasons")}
+              >
+                {reasons.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ol>
+            </WhySection>
+          )}
+        </div>
+      </PanelBody>
+    </Panel>
+  );
+}
+
+function RowWhy({
+  item,
+  answer,
+  groundsShown,
+}: Readonly<{ item: WorklistItem; answer: boolean; groundsShown: boolean }>) {
   const t = useT();
   const clock = useHappenedClock();
   const { lines: happened, told } = happenedLines(item, t, clock, groundsShown);

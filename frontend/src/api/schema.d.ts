@@ -6776,6 +6776,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/task-explanation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Why one task is on the reader's list, written from that task's own records.
+         * @description What happened, what it costs if nothing is done, and what to do, for one open task. A
+         *     sentence's `nature` says which: a `fact` is what happened, an `assessment` is what is at
+         *     stake, a `recommendation` is the one next step.
+         *
+         *     Written from the task, the message it came from, and the relationship with its contact
+         *     as the CALLER sees them, so it describes only records that caller could open. Cached per
+         *     reader on a fingerprint of those inputs and rewritten before the answer when they move.
+         *
+         *     Degrades rather than fails: with no model lane, the sentences are the facts alone,
+         *     each citing its message, and `generated_by` says so. It never falls back to a sentence
+         *     that would fit any task.
+         */
+        get: operations["getTaskExplanation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/reader-rendering": {
         parameters: {
             query?: never;
@@ -38751,6 +38784,20 @@ export interface components {
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
             /** @description Two to five sentences: who this contact is in the current commercial context, what they have explicitly cared about, what recently changed, and the unresolved decision or risk. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited. */
+            sentences: components["schemas"]["CompanyBriefSentence"][];
+        };
+        /**
+         * @description Why one task is on the reader's list, from that task's own records. Per reader, cached
+         *     on its inputs, every sentence cited. `generated_by` says whether the model or the
+         *     facts-only floor wrote it.
+         */
+        TaskExplanation: {
+            /** Format: uuid */
+            task_id: string;
+            /** Format: date-time */
+            generated_at: string;
+            generated_by: components["schemas"]["WrittenBy"];
+            /** @description Facts say what happened, an assessment what is at stake if nothing is done, a recommendation the one next step. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited. */
             sentences: components["schemas"]["CompanyBriefSentence"][];
         };
         /**
@@ -76791,6 +76838,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeetingBrief"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getTaskExplanation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The task's explanation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskExplanation"];
                 };
             };
             401: components["responses"]["Unauthorized"];
