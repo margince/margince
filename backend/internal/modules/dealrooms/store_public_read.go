@@ -137,9 +137,9 @@ func (s *Store) BuyerView(ctx context.Context, sess Session, companyName func(co
 }
 
 // engagementNotice is the one line telling a buyer what the room records. A
-// seat sees it on its first sign-in, which has already written its own
-// `signed_in` row by the time the room is read, so one row means first. A
-// seller preview always sees it and writes no row.
+// seat sees it on its first sign-in. That sign-in has already written its own
+// `signed_in` row when the room is read, so one row means first. A seller
+// preview always sees it and writes no row.
 func engagementNotice(ctx context.Context, tx pgx.Tx, sess Session, companyName func(context.Context) (string, error)) (*crmcontracts.BuyerEngagementNotice, error) {
 	if !sess.Preview {
 		var signIns int
