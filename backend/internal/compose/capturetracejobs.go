@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/forwardexpiry"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -44,7 +45,8 @@ func (CaptureTraceSweepArgs) FleetWide() {
 }
 
 type captureTraceSweepWorker struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	purger *CapturePurger
 }
 
 // Work sweeps EVERY workspace, archived ones included — the enumeration the
@@ -89,8 +91,10 @@ func (w *captureTraceSweepWorker) sweepWorkspace(ctx context.Context, workspace 
 	// to 24 hours and the table grew invisibly behind it. Under the payload
 	// posture those rows are addresses and subject lines.
 	db := database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace))
-	_, err := capture.NewTraceStore(db).SweepOlderThan(wsCtx, traceRetention)
-	return err
+	if _, err := capture.NewTraceStore(db).SweepOlderThan(wsCtx, traceRetention); err != nil {
+		return err
+	}
+	return forwardexpiry.Run(wsCtx, w.pool, w.purger)
 }
 
 // traceSweepActorID names the sweep in whatever it touches.

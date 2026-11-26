@@ -134,7 +134,7 @@ const maxRecordDuration = 10 * time.Second
 // extensionRetentionStages adds the one extension policy. aiRetentionStages adds
 // the engine-owned AI stores, which batch the same way, and
 // restrictionExpiryStages the erasure of held records whose window closed.
-var MaxPassDuration = time.Duration(len(retentionSelectors)+extensionRetentionStages+aiRetentionStages+restrictionExpiryStages+heldCommitmentStages+forwardExpiryStages) *
+var MaxPassDuration = time.Duration(len(retentionSelectors)+extensionRetentionStages+aiRetentionStages+restrictionExpiryStages+heldCommitmentStages) *
 	(retentionBatch * maxRecordDuration)
 
 // embedCallRetention and answerCallRetention bound how long an ai_call trace
@@ -300,9 +300,6 @@ func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
 		return err
 	}
 	if err := s.evaluateHeldCommitments(ctx); err != nil {
-		return err
-	}
-	if err := s.evaluateForwardExpiry(ctx); err != nil {
 		return err
 	}
 	if err := s.retryMarkedAuditCopies(ctx); err != nil {

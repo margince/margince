@@ -58,6 +58,8 @@ const (
 	// reading "owner_rule" would look for a rule that was never written, and
 	// the trail would name the wrong decision.
 	PurgeMailboxDeletion PurgeReason = "mailbox_deletion"
+	// PurgeForwardExpired is a held forward nobody filed within its window.
+	PurgeForwardExpired PurgeReason = "forward_expired"
 )
 
 // requireActivityPurge is the authority to destroy captured mail: a contact's

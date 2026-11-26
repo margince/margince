@@ -203,7 +203,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// what makes the 24-hour retention true, and under the trace_payloads
 	// posture that retention is a promise about message content. A deployment
 	// that composed capture at all must expire it.
-	addDeclaredWorker[CaptureTraceSweepArgs](reg, &captureTraceSweepWorker{pool: pool})
+	addDeclaredWorker[CaptureTraceSweepArgs](reg, &captureTraceSweepWorker{pool: pool, purger: capturePurgerFor(pool, cfg.Blobstore, log)})
 }
 
 // GraphWatchConfig configures the Microsoft Graph subscription-renewal pass.

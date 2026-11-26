@@ -197,9 +197,10 @@ type ChatMemberFinder interface {
 }
 
 // ChatCodeRedeemer is implemented by a Sink that verifies a member's chat
-// account from a one-time code sent as a message.
+// account from a one-time code sent as a message. A code that
+// redeems also destroys the stored original named by original.
 type ChatCodeRedeemer interface {
-	RedeemChatCode(ctx context.Context, provider, scope, channelUserID, text string) (bool, error)
+	RedeemChatCode(ctx context.Context, provider, scope, channelUserID, text string, original ids.UUID) (bool, error)
 }
 
 // CaptureOnlyThreadScope is the thread scope of a conversation that is read and

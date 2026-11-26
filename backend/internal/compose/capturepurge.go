@@ -316,6 +316,14 @@ func (p *CapturePurger) carryOut(
 	return anonymised, nil
 }
 
+// DestroyExpiredForwards runs the executor over the forwards past their window.
+func (p *CapturePurger) DestroyExpiredForwards(ctx context.Context, s capture.PurgeSubject) (err error) {
+	if p != nil {
+		_, err = p.carryOut(ctx, s, nil, nil, ids.Nil, privacy.PurgeForwardExpired)
+	}
+	return err
+}
+
 // personalSweepBatch bounds one pass, matching noiseSweepBatch: the backlog is a
 // query, so what a pass does not reach this tick it reaches the next.
 const personalSweepBatch = 500

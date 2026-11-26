@@ -91,3 +91,7 @@ The route then stores nothing for the OA, and what it filed stays. Connecting th
 One Zalo user id can be bound to a contact under only one OA, until the unscoped identity index on
 `contact_channel_identity` is dropped. A second OA that sees the same user id stores and files the message, but cannot
 bind that id to a second contact.
+
+A member confirms one Zalo account, and that account is tied to one OA: Zalo user ids are per OA. A member who forwards
+customer messages through two OAs can have only the account for one of them recognised. A forward through the other is
+filed as the member's own message.

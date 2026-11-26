@@ -17909,6 +17909,20 @@ export const en = {
   "account.pictureEdit": "Edit profile picture",
   "account.pictureSaved": "Picture saved",
   "account.pictureRemoved": "Picture removed",
+  "account.chatWhatsapp": "WhatsApp account",
+  "account.chatTelegram": "Telegram account",
+  "account.chatZalo": "Zalo account",
+  "account.chatHelp":
+    "Confirm your own {network} account. A customer message you forward from it to a company {network} account is then filed for that customer, never for you.",
+  "account.chatCode":
+    "Send this code as a message from your {network} account to a company {network} account within 10 minutes: {code}",
+  "account.chatWaiting":
+    "A code is waiting. Send it from your {network} account to a company {network} account, or start again for a new one.",
+  "account.chatConfirmed": "Confirmed: {account}",
+  "account.chatConfirm": "Confirm {network} account",
+  "account.chatRemove": "Remove",
+  "account.chatRemoved": "Account removed",
+  "account.chatFailed": "That did not work. Try again.",
   "account.pictureWrongType":
     "Picture not uploaded. Use a PNG, JPEG or WebP file.",
   "account.pictureTooLarge": "Picture not uploaded. Use a file up to 5 MB.",

@@ -46,7 +46,7 @@ func (s *Sink) WithChatCodeRedeemer(redeemer ChatCodeRedeemer) *Sink {
 }
 
 // RedeemChatCode satisfies connector.ChatCodeRedeemer.
-func (s *Sink) RedeemChatCode(ctx context.Context, provider, scope, channelUserID, text string) (bool, error) {
+func (s *Sink) RedeemChatCode(ctx context.Context, provider, scope, channelUserID, text string, original ids.UUID) (bool, error) {
 	if s.codes == nil {
 		return false, nil
 	}
@@ -54,7 +54,10 @@ func (s *Sink) RedeemChatCode(ctx context.Context, provider, scope, channelUserI
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		redeemed, err = s.codes.RedeemCodeTx(ctx, tx, provider, scope, channelUserID, text)
-		return err
+		if err != nil || !redeemed || original.IsZero() {
+			return err
+		}
+		return DeleteRawCaptureTx(ctx, tx, original)
 	})
 	return redeemed, err
 }
@@ -141,5 +144,5 @@ func redeemChatCode(ctx context.Context, sink connector.Sink, binding connector.
 	if !ok || msg.Direction != connector.DirectionInbound || msg.Forward != nil {
 		return false, nil
 	}
-	return redeemer.RedeemChatCode(ctx, binding.Provider, binding.AccountScope, msg.Counterparty.UserID, msg.Body)
+	return redeemer.RedeemChatCode(ctx, binding.Provider, binding.AccountScope, msg.Counterparty.UserID, msg.Body, msg.StoredOriginal)
 }

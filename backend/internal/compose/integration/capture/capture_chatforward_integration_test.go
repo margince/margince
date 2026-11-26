@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/forwardexpiry"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -139,8 +140,8 @@ func TestAPendingForwardExpiresWithItsRawRow(t *testing.T) {
 		t.Fatal(err)
 	}
 	wsExec(t, e, `UPDATE activity SET created_at = now() - $2::interval WHERE id = $1`, old.ID, (pendingforward.Window + time.Hour).String())
-	svc := compose.NewRetentionServiceFor(compose.InstallationDB(e.Pool), nil, slog.Default())
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	purger := compose.NewCapturePurger(e.Pool, compose.NewRetentionServiceFor(compose.InstallationDB(e.Pool), nil, slog.Default()))
+	if err := forwardexpiry.Run(principal.SystemActing(workspaceConnectorCtx(e), "system:test-forward-expiry"), e.Pool, purger); err != nil {
 		t.Fatal(err)
 	}
 	if n := wsCount(t, e, `SELECT count(*) FROM activity WHERE id = $1 AND body IS NOT NULL`, fresh.ID); n != 1 {

@@ -46,7 +46,7 @@ const (
 // ChatCodeLifetime is how long a verification code can be sent.
 const ChatCodeLifetime = 10 * time.Minute
 
-// chatCodeAlphabet leaves out the characters people mistake for each other.
+// chatCodeAlphabet leaves out characters that look alike.
 const chatCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 const chatCodeLength = 8
@@ -70,12 +70,15 @@ func columnsOf(n ChatNetwork) (chatColumns, error) {
 	return chatColumns{}, fmt.Errorf("a chat network is whatsapp, telegram or zalo: %w", apperrors.ErrInvalidArgument)
 }
 
-// ChatIdentity is one verified account.
+// ChatIdentity is a network where the member has a verified account or a waiting code.
 type ChatIdentity struct {
-	Network    ChatNetwork
-	Account    string
-	OAID       string
-	VerifiedAt time.Time
+	Network ChatNetwork
+	Account string
+	OAID    string
+	// VerifiedAt is nil while only a code waits.
+	VerifiedAt *time.Time
+	// CodeExpiresAt is nil when no unexpired code waits.
+	CodeExpiresAt *time.Time
 }
 
 func hashChatCode(code string) string {
@@ -160,7 +163,8 @@ func (s *Service) RemoveChatIdentity(ctx context.Context, network ChatNetwork) e
 	})
 }
 
-// MyChatIdentities lists the caller's verified accounts.
+// MyChatIdentities lists the networks where the caller has a verified account
+// or an unexpired code.
 func (s *Service) MyChatIdentities(ctx context.Context) ([]ChatIdentity, error) {
 	self, err := selfScoped(ctx)
 	if err != nil {
@@ -169,24 +173,37 @@ func (s *Service) MyChatIdentities(ctx context.Context) ([]ChatIdentity, error) 
 	var out []ChatIdentity
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var wa, tg, zalo, oa *string
-		var waAt, tgAt, zaloAt *time.Time
-		if err := tx.QueryRow(ctx, `SELECT chat_whatsapp_phone, chat_whatsapp_verified_at, chat_telegram_user_id, chat_telegram_verified_at,
-			chat_zalo_user_id, chat_zalo_oa_id, chat_zalo_verified_at FROM app_user WHERE id = $1`, self).
-			Scan(&wa, &waAt, &tg, &tgAt, &zalo, &oa, &zaloAt); err != nil {
+		var at, codes [3]*time.Time
+		if err := tx.QueryRow(ctx, `SELECT chat_whatsapp_phone, chat_whatsapp_verified_at, chat_whatsapp_code_expires_at,
+			chat_telegram_user_id, chat_telegram_verified_at, chat_telegram_code_expires_at,
+			chat_zalo_user_id, chat_zalo_oa_id, chat_zalo_verified_at, chat_zalo_code_expires_at FROM app_user WHERE id = $1`, self).
+			Scan(&wa, &at[0], &codes[0], &tg, &at[1], &codes[1], &zalo, &oa, &at[2], &codes[2]); err != nil {
 			return fmt.Errorf("identity: reading chat accounts: %w", err)
 		}
-		if wa != nil {
-			out = append(out, ChatIdentity{Network: ChatWhatsApp, Account: *wa, VerifiedAt: *waAt})
-		}
-		if tg != nil {
-			out = append(out, ChatIdentity{Network: ChatTelegram, Account: *tg, VerifiedAt: *tgAt})
-		}
-		if zalo != nil {
-			out = append(out, ChatIdentity{Network: ChatZalo, Account: *zalo, OAID: *oa, VerifiedAt: *zaloAt})
+		now := s.now()
+		for i, row := range []ChatIdentity{
+			{Network: ChatWhatsApp, Account: derefChat(wa)},
+			{Network: ChatTelegram, Account: derefChat(tg)},
+			{Network: ChatZalo, Account: derefChat(zalo), OAID: derefChat(oa)},
+		} {
+			row.VerifiedAt = at[i]
+			if codes[i] != nil && codes[i].After(now) {
+				row.CodeExpiresAt = codes[i]
+			}
+			if row.VerifiedAt != nil || row.CodeExpiresAt != nil {
+				out = append(out, row)
+			}
 		}
 		return nil
 	})
 	return out, err
+}
+
+func derefChat(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 // ChatMemberTx is the active member who verified this account. scope is the
