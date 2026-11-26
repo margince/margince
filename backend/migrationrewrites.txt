@@ -302,3 +302,4 @@
 1795672271_the_partner_text_limits_follow_its_columns.down.sql | * | re-creates partner's two text_bound triggers as they were; it changes no existing row
 1795657803_a_source_id_is_bounded.up.sql | * | replaces the two text-length guards on knowledge_document with ones that also name external_id; it creates triggers and reads or rewrites no row
 1795657803_a_source_id_is_bounded.down.sql | * | runs only on a rollback; restores the earlier guards without external_id and changes no row
+1795675792_the_token_count_and_duration_floors_are_validated.up.sql | ai_usage | ai_usage holds one row per day, task and tier, so the correction reads a few thousand rows at most and changes only those a negative count lowered below zero

@@ -211,15 +211,19 @@ func (m *CallMeter) Record(ctx context.Context, attempts []Call) error {
 	if len(attempts) == 0 {
 		return nil
 	}
+	stored := make([]Call, len(attempts))
+	for i, c := range attempts {
+		stored[i] = withStoredTokenCounts(ctx, m.log, c)
+	}
 	return m.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := m.recordAttempts(ctx, tx, attempts); err != nil {
+		if err := m.recordAttempts(ctx, tx, stored); err != nil {
 			return err
 		}
 		// The occurrence rides the same transaction as the rows it describes,
 		// so the trace and the rail can never disagree about whether the call
 		// happened. Only the terminal attempt is announced: a logical call that
 		// walked three rungs is one piece of work, not three.
-		for _, c := range attempts {
+		for _, c := range stored {
 			if c.IsTerminal {
 				m.announceRailBestEffort(ctx, tx, c)
 			}
@@ -326,7 +330,7 @@ func aiCallBindings(c Call) []boundColumn {
 // ai_call_payload row of whichever attempt carries content.
 func (m *CallMeter) recordAttempts(ctx context.Context, tx pgx.Tx, attempts []Call) error {
 	for _, c := range attempts {
-		bound := aiCallBindings(withStoredTokenCounts(ctx, m.log, c))
+		bound := aiCallBindings(c)
 		args := valuesOf(bound)
 		var callID ids.UUID
 		err := tx.QueryRow(ctx, storekit.SQLf(

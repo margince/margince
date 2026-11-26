@@ -53,9 +53,9 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 **Rules**
 
 - `ai_call_cache_write_tokens_js_safe`: `CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint)))`
-- `ai_call_cache_write_tokens_not_negative`: `CHECK ((cache_write_tokens >= 0))`
+- `ai_call_cache_write_tokens_not_negative`: `CHECK ((cache_write_tokens >= 0)) NOT VALID`
 - `ai_call_cached_tokens_js_safe`: `CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint)))`
-- `ai_call_cached_tokens_not_negative`: `CHECK ((cached_tokens >= 0))`
+- `ai_call_cached_tokens_not_negative`: `CHECK ((cached_tokens >= 0)) NOT VALID`
 - `ai_call_context_fingerprint_check`: `CHECK (((context_fingerprint = '') OR (context_fingerprint ~ '^[0-9a-f]{64}$')))`
 - `ai_call_context_scopes_check`: `CHECK ((context_scopes <@ ARRAY['identity', 'positioning', 'sales', 'offer', 'market', 'proof', 'administrative']))`
 - `ai_call_decision_answer_kind`: `CHECK (((decision_choice IS NULL) OR (kind = 'decision')))`
@@ -64,13 +64,13 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_call_kind_check`: `CHECK ((kind = ANY (ARRAY['completion', 'embedding', 'decision'])))`
 - `ai_call_latency_ms_js_safe`: `CHECK (((latency_ms >= '-9007199254740991'::bigint) AND (latency_ms <= '9007199254740991'::bigint)))`
 - `ai_call_reasoning_tokens_js_safe`: `CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))`
-- `ai_call_reasoning_tokens_not_negative`: `CHECK ((reasoning_tokens >= 0))`
+- `ai_call_reasoning_tokens_not_negative`: `CHECK ((reasoning_tokens >= 0)) NOT VALID`
 - `ai_call_source_check`: `CHECK ((served_identity_source = ANY (ARRAY['response', 'echo', 'configured'])))`
 - `ai_call_subject_shape`: `CHECK (((subject_type IS NULL) = (subject_id IS NULL)))`
 - `ai_call_tokens_in_js_safe`: `CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))`
-- `ai_call_tokens_in_not_negative`: `CHECK ((tokens_in >= 0))`
+- `ai_call_tokens_in_not_negative`: `CHECK ((tokens_in >= 0)) NOT VALID`
 - `ai_call_tokens_out_js_safe`: `CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))`
-- `ai_call_tokens_out_not_negative`: `CHECK ((tokens_out >= 0))`
+- `ai_call_tokens_out_not_negative`: `CHECK ((tokens_out >= 0)) NOT VALID`
 
 **Indexes**
 

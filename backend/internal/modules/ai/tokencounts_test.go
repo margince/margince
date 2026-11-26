@@ -15,7 +15,7 @@ func TestANegativeTokenFigureIsStoredAsZeroAndLogged(t *testing.T) {
 	var logged bytes.Buffer
 	log := slog.New(slog.NewTextHandler(&logged, nil))
 	got := withStoredTokenCounts(context.Background(), log, Call{
-		TokensIn: -3, TokensOut: 7, ReasoningTokens: -1, CachedTokens: 2, CacheWriteTokens: -9,
+		Provider: "anthropic", ModelID: "claude-test", TokensIn: -3, TokensOut: 7, ReasoningTokens: -1, CachedTokens: 2, CacheWriteTokens: -9,
 	})
 	want := Call{TokensIn: 0, TokensOut: 7, ReasoningTokens: 0, CachedTokens: 2, CacheWriteTokens: 0}
 	if got.TokensIn != want.TokensIn || got.TokensOut != want.TokensOut || got.ReasoningTokens != want.ReasoningTokens ||
@@ -26,6 +26,9 @@ func TestANegativeTokenFigureIsStoredAsZeroAndLogged(t *testing.T) {
 		if !strings.Contains(logged.String(), "column="+column) {
 			t.Errorf("no warning names %s, which was negative:\n%s", column, logged.String())
 		}
+	}
+	if !strings.Contains(logged.String(), "provider=anthropic model=claude-test") {
+		t.Errorf("the warning does not name the provider and model that misreported:\n%s", logged.String())
 	}
 	for _, column := range []string{"tokens_out", "cached_tokens"} {
 		if strings.Contains(logged.String(), "column="+column+" ") {
