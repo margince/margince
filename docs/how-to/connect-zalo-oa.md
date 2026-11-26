@@ -62,9 +62,20 @@ message events. Zalo expects a `200` within two seconds and retries a failed del
 
 The `zalo_oa_ingest` job files the message through the same entry as every chat network, while the connection is
 still live. A customer's message and an OA Admin reply are one thread per customer on one contact. The thread is
-capture-only: a reply from Margince into it is refused, so staff answer in Zalo. An attachment files as a placeholder
-naming its type until media is downloaded. A connection disconnected between storing and filing, or a customer erased
+capture-only: a reply from Margince into it is refused, so staff answer in Zalo. The worker keeps the files of a
+message. It downloads them over https, from allowed hosts only, and it checks each redirect. The limits are 25 MiB for
+a file, 20 files and 50 MiB for a message. A file that is too large, is refused, fails its checksum, or stays
+unavailable after retries is not kept. The message is still filed with a note that the file was not kept, as for
+mail. A caption stays the message text. A connection disconnected between storing and filing, or a customer erased
 in that time, leaves nothing behind.
+
+- The thread key names the OA id, so two OAs never share a thread, even when the customer and the message id repeat.
+- A reply that comes in before the customer message files in the same thread on the same contact.
+- A job that runs twice, or at the same moment in two workers, files the message once. A job that fails after part of
+  its work leaves nothing, and its retry files the message once.
+- Erasing a contact destroys the raw originals of its messages.
+- The gate `TestChatNetworksShareOneReceiveFileChangeAndSendPath` (`backend/gates/chatonepath_test.go`) fails when
+  another path builds a chat record, writes its activity row or calls a provider's send API.
 
 ## Token renewal
 
@@ -91,6 +102,31 @@ The route then stores nothing for the OA, and what it filed stays. Connecting th
 One Zalo user id can be bound to a contact under only one OA, until the unscoped identity index on
 `contact_channel_identity` is dropped. A second OA that sees the same user id stores and files the message, but cannot
 bind that id to a second contact.
+
+## What the tests prove, and what needs a live account
+
+The tests use the real routes, the real signature check, the real job worker and the real filing path. Only Zalo is
+simulated, with the event shapes its documents give. They cover these cases:
+
+- connect, visibility change and disconnect, with the secrets staying sealed;
+- a bad signature, a key that covers only its own OA, an unknown OA, and an event that names another app;
+- follow, unfollow, seen and reaction events storing nothing;
+- one thread on one contact for a customer message and an OA Admin reply, in either order;
+- a held seat, and sharing opening the next message;
+- an erased customer, and the same user id under two OAs;
+- a disconnect between storing and filing, and a reconnect that keeps its thread;
+- a job that runs twice or at once, and a job that fails after part of its work;
+- token renewal, including a refused refresh token and a failed vault write.
+
+These need a live OA and a Zalo app before you trust them:
+
+- The real event shapes, and the exact `timestamp` that the signature covers.
+- That Zalo user ids are scoped to one OA, as the keys here assume.
+- What Zalo sends for an OA Admin reply typed in the Zalo app, compared with one sent through the API.
+- The renewal of tokens against the live OAuth service, and its limits.
+- Media download from Zalo, and the real size and host of each file.
+
+## Members who forward messages
 
 A member confirms one Zalo account, and that account is tied to one OA: Zalo user ids are per OA. A member who forwards
 customer messages through two OAs can have only the account for one of them recognised. A forward through the other is

@@ -142,7 +142,8 @@ func MeetingAheadSQL(alias string) string {
 // entry, so days since it count from its own date. The clock holds that row's
 // occurred_at, which is how the row is found.
 func LastActivityDaySQL(deal string) string {
-	return occurredday.ClockIsDaySQL(occurredday.LinkedClockRowsSQL("deal_id", deal+".id"), deal+".last_activity_at")
+	return occurredday.ClockIsDaySQL(occurredday.LinkedClockRowsSQL("deal_id", deal+".id",
+		occurredday.DealClockAdmitsSQL(deal+".id")), deal+".last_activity_at")
 }
 
 // PartnerSourcedSQL is the list-filter spelling of "this deal is

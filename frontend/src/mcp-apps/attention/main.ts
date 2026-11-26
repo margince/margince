@@ -8,6 +8,7 @@
 
 import { monogramOf } from "../../design-system/avatarmesh";
 import { formatDueCompact, isRenderableZone } from "../../format/format.dates";
+import { sumMinor } from "../../format/minorsum";
 import { UTC_ZONE } from "../../format/timezone";
 import { askAssistant } from "../actions";
 import { badge } from "../badge";
@@ -184,10 +185,13 @@ function atStake(deals: Record<string, unknown>[]): {
   ) {
     return { figure: String(deals.length), total: null, parts: [] };
   }
-  const total = priced.reduce(
-    (sum, d) => sum + (asFiniteNumber(d.amount_minor) ?? 0),
-    0,
+  const total = sumMinor(
+    priced.map((d) => asFiniteNumber(d.amount_minor) ?? 0),
   );
+  // A sum past the exact range would draw a wrong figure; the count stands in.
+  if (total === undefined) {
+    return { figure: String(deals.length), total: null, parts: [] };
+  }
   const parts: Part[] = priced.map((d, i) => ({
     label: asText(d.name) || "Unnamed deal",
     value: asFiniteNumber(d.amount_minor) ?? 0,

@@ -4,7 +4,6 @@
 package compose
 
 import (
-	"fmt"
 	"math"
 	"math/big"
 	"slices"
@@ -12,7 +11,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -166,7 +164,7 @@ func metricPercentile(facts []reporting.Fact, fraction float64) *float64 {
 	return &value
 }
 
-func projectReportingCharts(out *reporting.Evaluation) error {
+func projectReportingCharts(out *reporting.Evaluation) {
 	for _, block := range out.Result.Selection.Blocks {
 		for _, metric := range out.Result.Metrics {
 			if block == reportingOwnerAttainment && metric.Id != reportingBookingsWon && slices.Contains(out.Result.Selection.Metrics, crmcontracts.ReportingMetricID(reportingBookingsWon)) {
@@ -183,16 +181,23 @@ func projectReportingCharts(out *reporting.Evaluation) error {
 				out.Result.Charts = append(out.Result.Charts, chart)
 				continue
 			}
-			chart = populateReportingChart(out, chart, metric)
-			for _, point := range chart.Points {
-				if point.Value != nil && math.Abs(*point.Value) > float64(reportingExactInteger) {
-					return fmt.Errorf("chart total exceeds the exact display range: %w", apperrors.ErrInvalidArgument)
-				}
-			}
-			out.Result.Charts = append(out.Result.Charts, chart)
+			out.Result.Charts = append(out.Result.Charts, withholdChartBeyondExactRange(out, populateReportingChart(out, chart, metric)))
 		}
 	}
-	return nil
+}
+
+// withholdChartBeyondExactRange withholds a chart with a point past the exact
+// display range, as a metric past it is withheld. The rest of the evaluation
+// still answers. A point drawn at another value than its own is a wrong figure.
+func withholdChartBeyondExactRange(out *reporting.Evaluation, chart crmcontracts.ReportingChart) crmcontracts.ReportingChart {
+	for _, point := range chart.Points {
+		if point.Value != nil && math.Abs(*point.Value) > float64(reportingExactInteger) {
+			chart.Points = []crmcontracts.ReportingPoint{}
+			chart.Coverage = reportingGap(reportingUnavailable, reporting.ExplanationCopy(out.Result.Context).Say(reportingWords.Range))
+			return chart
+		}
+	}
+	return chart
 }
 
 func populateReportingChart(out *reporting.Evaluation, chart crmcontracts.ReportingChart, metric crmcontracts.ReportingMetric) crmcontracts.ReportingChart {

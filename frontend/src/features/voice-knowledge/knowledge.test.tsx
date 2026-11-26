@@ -1,19 +1,21 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type Locale, LocaleProvider } from "../../i18n";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { KnowledgeCard } from "./knowledge";
+import {
+  ADMIN,
+  ASKER,
+  backendFor,
+  corpus,
+  document,
+  jsonResponse,
+  OUTSIDER,
+  render,
+  SET_ID,
+  shippedProblem,
+} from "./knowledge.testkit";
 
 // Settings → Knowledge → Document sets.
 //
@@ -27,143 +29,6 @@ import { KnowledgeCard } from "./knowledge";
 // leftover, and a file that could not be read at all. Collapsing any two of
 // them is the failure the backend spent a whole design avoiding, and a screen
 // that renders one badge for all three would undo it here.
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-// The server's own detail is English; the screen words each code itself.
-function shippedProblem(code: string) {
-  return jsonResponse(
-    { type: "about:blank", title: "Conflict", status: 409, code, detail: code },
-    409,
-  );
-}
-
-const ADMIN: GrantSpec = {
-  knowledge_corpus: ["create", "read", "update", "delete"],
-  knowledge_document: ["create", "read", "update", "delete"],
-};
-const ASKER: GrantSpec = {
-  knowledge_corpus: ["read"],
-  knowledge_document: ["read"],
-};
-const OUTSIDER: GrantSpec = {};
-
-const SET_ID = "00000000-0000-4000-8000-0000000000a1";
-const DOC_ID = "00000000-0000-4000-8000-0000000000b1";
-
-function corpus(over: Record<string, unknown> = {}) {
-  return {
-    id: SET_ID,
-    name: "How-to",
-    topic_statement: "How this product is operated.",
-    min_similarity: 0.35,
-    default_ask: false,
-    shipped: false,
-    created_at: "2026-08-01T00:00:00Z",
-    coverage: {
-      documents_total: 1,
-      chunks_total: 4,
-      chunks_embedded: 4,
-      embed_state: "complete",
-    },
-    ...over,
-  };
-}
-
-function document(over: Record<string, unknown> = {}) {
-  return {
-    id: DOC_ID,
-    corpus_id: SET_ID,
-    filename: "operating.md",
-    title: null,
-    shipped: false,
-    content_type: "text/markdown",
-    byte_size: 128,
-    ingest_status: "done",
-    chunk_count: 4,
-    chunks_embedded: 4,
-    embed_state: "complete",
-    created_at: "2026-08-01T00:00:00Z",
-    ...over,
-  };
-}
-
-function backendFor(
-  allow: GrantSpec,
-  opts: {
-    sets?: ReturnType<typeof corpus>[];
-    documents?: ReturnType<typeof document>[];
-    refuse?: Partial<
-      Record<"create" | "archive" | "upload" | "delete", () => Response>
-    >;
-    maxDocumentBytes?: number;
-  } = {},
-) {
-  const posts: string[] = [];
-  const deletes: string[] = [];
-  let sets = opts.sets ?? [corpus()];
-  let documents = opts.documents ?? [document()];
-  const fetchMock = vi.fn(
-    async (input: RequestInfo | URL, init?: RequestInit) => {
-      const req =
-        input instanceof Request ? input : new Request(String(input), init);
-      if (req.url.endsWith("/v1/me")) {
-        return jsonResponse(meFixture({ allow }));
-      }
-      if (req.url.endsWith("/installation/settings")) {
-        return jsonResponse({
-          max_knowledge_document_bytes: opts.maxDocumentBytes,
-        });
-      }
-      if (req.url.includes("/knowledge/documents/")) {
-        deletes.push(req.url);
-        if (opts.refuse?.delete) return opts.refuse.delete();
-        documents = documents.filter((doc) => !req.url.endsWith(doc.id));
-        return new Response(null, { status: 204 });
-      }
-      if (req.url.includes("/documents")) {
-        if (req.method === "POST") {
-          posts.push(req.url);
-          if (opts.refuse?.upload) return opts.refuse.upload();
-          return jsonResponse(document({ ingest_status: "queued" }), 202);
-        }
-        return jsonResponse({ items: documents });
-      }
-      if (req.url.includes("/knowledge/corpora")) {
-        if (req.method === "POST") {
-          posts.push(req.url);
-          if (opts.refuse?.create) return opts.refuse.create();
-          return jsonResponse(corpus(), 201);
-        }
-        if (req.method === "DELETE") {
-          deletes.push(req.url);
-          if (opts.refuse?.archive) return opts.refuse.archive();
-          sets = sets.filter((set) => !req.url.endsWith(set.id));
-          return new Response(null, { status: 204 });
-        }
-        return jsonResponse({ items: sets });
-      }
-      throw new Error(`unexpected request: ${req.method} ${req.url}`);
-    },
-  );
-  return { fetchMock, posts, deletes };
-}
-
-const render = (ui: ReactNode, locale: Locale = "en") => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial={locale}>{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-};
 
 afterEach(() => {
   cleanup();
@@ -387,66 +252,6 @@ describe("KnowledgeCard", () => {
         "A document set with this name already exists. Choose another name.",
       ),
     );
-  });
-
-  it("asks before archiving a set, and sends nothing until the reader agrees", async () => {
-    const backend = backendFor(ADMIN);
-    vi.stubGlobal("fetch", backend.fetchMock);
-    render(<KnowledgeCard />);
-
-    const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: "Actions for How-to" }),
-    );
-    await user.click(screen.getByRole("button", { name: /archive set/i }));
-    expect(
-      within(screen.getByRole("dialog")).getByText("Archive How-to?"),
-    ).toBeTruthy();
-    expect(backend.deletes).toHaveLength(0);
-
-    await user.click(
-      within(screen.getByRole("dialog")).getByRole("button", {
-        name: /^archive set$/i,
-      }),
-    );
-    await waitFor(() => expect(backend.deletes.length).toBeGreaterThan(0));
-  });
-
-  // The archived row takes its menu with it, so focus cannot go back there.
-  it("hands focus to the card's title once a set is archived", async () => {
-    vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
-    render(<KnowledgeCard />);
-    const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: "Actions for How-to" }),
-    );
-    await user.click(screen.getByRole("button", { name: /archive set/i }));
-    await user.click(
-      within(screen.getByRole("dialog")).getByRole("button", {
-        name: /^archive set$/i,
-      }),
-    );
-    await waitFor(() => expect(screen.queryByText("How-to")).toBeNull());
-    expect(globalThis.document.activeElement?.textContent).toBe(
-      "Document sets",
-    );
-  });
-
-  it("returns focus to the menu when the archive is called off", async () => {
-    vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
-    render(<KnowledgeCard />);
-    const user = userEvent.setup();
-    const menu = await screen.findByRole("button", {
-      name: "Actions for How-to",
-    });
-    await user.click(menu);
-    await user.click(screen.getByRole("button", { name: /archive set/i }));
-    await user.click(
-      within(screen.getByRole("dialog")).getByRole("button", {
-        name: "Cancel",
-      }),
-    );
-    await waitFor(() => expect(globalThis.document.activeElement).toBe(menu));
   });
 
   it("keeps two files that share a name, because the server dedupes on content", async () => {
@@ -881,74 +686,6 @@ describe("KnowledgeCard documents", () => {
     expect(
       await dialog.findByText(
         "This page ships with Margince, so it cannot be deleted.",
-      ),
-    ).toBeInTheDocument();
-  });
-});
-
-describe("KnowledgeCard, a set Margince ships", () => {
-  it("offers no archive and no upload on it", async () => {
-    vi.stubGlobal(
-      "fetch",
-      backendFor(ADMIN, { sets: [corpus({ shipped: true })] }).fetchMock,
-    );
-    const user = userEvent.setup();
-    render(<KnowledgeCard />);
-
-    await user.click(
-      await screen.findByRole("button", { name: "Documents in How-to" }),
-    );
-    await screen.findByRole("table", { name: "Documents in How-to" });
-    expect(
-      screen.queryByRole("button", { name: "Actions for How-to" }),
-    ).toBeNull();
-    expect(screen.queryByLabelText(/add document/i)).toBeNull();
-  });
-
-  it("says why an archive was refused when the set turned out to ship", async () => {
-    vi.stubGlobal(
-      "fetch",
-      backendFor(ADMIN, {
-        refuse: { archive: () => shippedProblem("corpus_shipped") },
-      }).fetchMock,
-    );
-    const user = userEvent.setup();
-    render(<KnowledgeCard />);
-
-    await user.click(
-      await screen.findByRole("button", { name: "Actions for How-to" }),
-    );
-    await user.click(screen.getByRole("button", { name: /archive set/i }));
-    const dialog = within(screen.getByRole("dialog"));
-    await user.click(dialog.getByRole("button", { name: /^archive set$/i }));
-    expect(
-      await dialog.findByText(
-        "This set ships with Margince, so it cannot be archived.",
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it("says why an upload was refused when the set turned out to ship", async () => {
-    vi.stubGlobal(
-      "fetch",
-      backendFor(ADMIN, {
-        refuse: { upload: () => shippedProblem("corpus_shipped") },
-      }).fetchMock,
-    );
-    const user = userEvent.setup();
-    render(<KnowledgeCard />);
-
-    await user.click(
-      await screen.findByRole("button", { name: "Documents in How-to" }),
-    );
-    await user.upload(
-      await screen.findByLabelText(/add document/i),
-      new File(["notes"], "notes.md", { type: "text/markdown" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Add document" }));
-    expect(
-      await screen.findByText(
-        "notes.md: This set ships with Margince, so only Margince adds documents to it.",
       ),
     ).toBeInTheDocument();
   });

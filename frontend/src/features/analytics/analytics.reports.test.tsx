@@ -167,6 +167,32 @@ describe("reports never sum money across currencies", () => {
     expect(screen.queryByText(formatAnalyticsMoney(0, "EUR", "en"))).toBeNull();
   });
 
+  // The server withholds a total past 2^53. The report says why the cell is
+  // empty instead of leaving a bare dash.
+  it("says a total was too large to show exactly", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        stageRows: [
+          {
+            stage_id: "pl-s1",
+            raw_minor: null,
+            weighted_minor: null,
+            deal_count: 2,
+            _out_of_range: ["raw_minor", "weighted_minor"],
+          },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await openPipeline();
+    expect(
+      await screen.findByText(
+        "Some totals are too large to show exactly, so they are left out.",
+      ),
+    ).toBeTruthy();
+  });
+
   it("renders a probability band with no deals as absent rather than as zero euros", async () => {
     vi.stubGlobal("fetch", reportsStub({ forecastRows: [] }));
     render(<AnalyticsScreen />);

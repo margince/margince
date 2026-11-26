@@ -62,9 +62,7 @@ func (metricEvaluator) ProjectFrozen(before crmcontracts.ReportingEvaluation, fa
 		}
 		out.Result.Metrics = append(out.Result.Metrics, projected)
 	}
-	if err := projectReportingCharts(&out); err != nil {
-		return crmcontracts.ReportingEvaluation{}, err
-	}
+	projectReportingCharts(&out)
 	restrictFrozenCharts(out.Result.Charts)
 	actions := reportingOverviewActions(out.Result, out.Facts)
 	out.Result.OverviewActions = &actions

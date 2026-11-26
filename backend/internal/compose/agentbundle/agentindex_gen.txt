@@ -746,6 +746,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /knowledge/corpora/{id}` | readCorpus | One corpus and how much of it is searchable. | Read records | at once |
 | `PATCH /knowledge/corpora/{id}` | updateCorpus | Edit a corpus — its words, its floor, or which one the palette asks. | Change records | at once |
 | `DELETE /knowledge/corpora/{id}` | archiveCorpus | Archive a corpus and everything filed in it. | Change records | at once |
+| `POST /knowledge/corpora/{id}/restore` | restoreCorpus | Bring an archived corpus back with everything filed in it. | Change records | at once |
 | `POST /knowledge/corpora/{id}/documents` | uploadCorpusDocument | Add a document to this corpus. | Change records | at once |
 | `GET /knowledge/corpora/{id}/documents` | listCorpusDocuments | The documents filed in this corpus, and how far each one's ingest got. | Read records | at once |
 | `GET /knowledge/documents/{id}` | downloadCorpusDocument | Download a document's own bytes. | Read records | at once |
