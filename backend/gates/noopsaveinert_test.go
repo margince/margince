@@ -293,13 +293,13 @@ func noOpProbedRoutesFromSource(t *testing.T) map[string]string {
 // files in dir declare, by name.
 func integrationFuncsBeside(t *testing.T, dir string) map[string]*ast.FuncDecl {
 	t.Helper()
-	paths, err := filepath.Glob(filepath.Join(dir, "*_integration_test.go"))
+	paths, err := gatekit.Glob(filepath.Join(dir, "*_integration_test.go"))
 	if err != nil || len(paths) == 0 {
 		t.Fatalf("finding the integration test files in %s: %v (%d found)", dir, err, len(paths))
 	}
 	declared := map[string]*ast.FuncDecl{}
 	for _, path := range paths {
-		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
