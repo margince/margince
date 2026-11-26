@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/safedownload"
 )
 
 const (
@@ -28,11 +30,30 @@ type Client struct {
 	http    *http.Client
 	oauth   string
 	openapi string
+	// media fetches attachment files. It is a copy of the HTTP client with a
+	// redirect policy, so the API calls above keep the caller's own.
+	media *http.Client
+	cdn   safedownload.Policy
+	hosts []string
+}
+
+// Option adjusts a Client.
+type Option func(*Client)
+
+// WithMediaHosts replaces the hosts an attachment may be downloaded from; tests
+// use it to admit a local server.
+func WithMediaHosts(patterns ...string) Option {
+	return func(c *Client) { c.hosts = patterns }
+}
+
+// WithoutDialGuardForTest lets the client dial a server on the loopback.
+func WithoutDialGuardForTest() Option {
+	return func(c *Client) { c.cdn.Control = safedownload.NoDialGuardForTest }
 }
 
 // NewClient builds a Client. A nil httpClient gets one with a bounded timeout;
 // an empty base takes Zalo's own host.
-func NewClient(httpClient *http.Client, oauthBase, openAPIBase string) *Client {
+func NewClient(httpClient *http.Client, oauthBase, openAPIBase string, opts ...Option) *Client {
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: httpTimeout}
 	}
@@ -42,7 +63,16 @@ func NewClient(httpClient *http.Client, oauthBase, openAPIBase string) *Client {
 	if openAPIBase == "" {
 		openAPIBase = defaultOpenAPIBase
 	}
-	return &Client{http: httpClient, oauth: strings.TrimRight(oauthBase, "/"), openapi: strings.TrimRight(openAPIBase, "/")}
+	c := &Client{
+		http: httpClient, oauth: strings.TrimRight(oauthBase, "/"), openapi: strings.TrimRight(openAPIBase, "/"),
+		hosts: DefaultMediaHosts,
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	c.cdn.Hosts = c.hosts
+	c.media = c.cdn.Client(httpClient)
+	return c
 }
 
 // App is the Zalo application's identity, shared by every OA that authorizes it.
