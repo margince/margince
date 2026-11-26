@@ -105,9 +105,9 @@ export function useActiveView(
       ? pinned
       : matched;
   // The opened view is the tab last lit or pressed, at the version it lit
-  // with. With no tab lit the reader is changing that view, so a refetch that
-  // brings a newer version leaves it alone, until the list is back to how it
-  // opens.
+  // with. With no tab lit the reader is changing that view. A refetch that
+  // brings a newer version then leaves it alone, until the list is back to how
+  // it opens.
   const lit = views[view];
   if ((lit?.id ?? null) !== litId) {
     setLitId(lit?.id ?? null);

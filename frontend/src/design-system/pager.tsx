@@ -15,7 +15,7 @@ import { Select } from "./select";
  * pages them in memory, the way a list's own footer does.
  *
  * The pager: the pages as numbers, prev/next either side, and the page size on
- * the right. While the end is not known it draws Prev and Next alone: the
+ * the right. While the end is not known it draws Prev and Next alone. The
  * pages in hand would read as the whole list, and Next fetches the next one.
  */
 export function Pager({

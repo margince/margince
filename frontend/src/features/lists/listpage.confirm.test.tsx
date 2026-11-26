@@ -93,7 +93,7 @@ function page() {
   );
 }
 
-// The pointer rests on the toast, which holds its clock (WCAG 2.2.1), so it
+// The pointer rests on the toast, which holds its clock (WCAG 2.2.1). It then
 // cannot time out between a check and the next step on a slow machine.
 async function heldToast(
   user: ReturnType<typeof userEvent.setup>,

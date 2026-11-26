@@ -164,8 +164,8 @@ export function useSelectAll<Row>({
     // Rows match that the limit leaves out of the selection.
     capped: atLimit && (canLoad || held.length > count),
     pending: walking,
-    // The server counts every matching row, so a list that leaves some out of
-    // the selection has no known end: its walk shows the count alone.
+    // The server counts every matching row. A list that leaves some out of the
+    // selection has no known end, so its walk shows the count alone.
     progress: walkProgress(
       walking,
       heldCount,

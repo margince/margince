@@ -470,7 +470,7 @@ describe("a saved view another writer changed after the reader opened it", () =>
     expect(screen.queryByText(/^View updated/)).toBeNull();
   });
 
-  // The reader's own update is the version they now hold: once the list shows
+  // The reader's own update is the version they now hold. Once the list shows
   // the view again, a second change and update is held to that version.
   it("holds a second update to the version the reader's own update wrote", async () => {
     const user = userEvent.setup();
