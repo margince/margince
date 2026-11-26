@@ -41,7 +41,7 @@ func (s *scriptedExplanation) Complete(_ context.Context, req model.Request) (mo
 }
 
 // A task filed from a mail is explained from that mail, once per reader and
-// input, and a reader who may not open the task gets no explanation.
+// input. A reader who may not open the task gets no explanation.
 func TestATaskIsExplainedFromTheMailItCameFrom(t *testing.T) {
 	e := Setup(t)
 	contact := seedBareContact(t, e)
