@@ -87,6 +87,11 @@ type searchBranch struct {
 	nearName string
 }
 
+// anchors reports whether a context read can anchor on this branch. A word has
+// no neighbours, and a room is read through its deal with its own gates, so
+// neither is walked from the graph.
+func (b searchBranch) anchors() bool { return !b.textOnly && !b.dealChild }
+
 // snippetIsEvidence reports whether a hit's excerpt may be cited as the text
 // that ranked it.
 func snippetIsEvidence(entity string) bool {

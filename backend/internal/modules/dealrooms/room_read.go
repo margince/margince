@@ -22,7 +22,7 @@ import (
 
 // GetRoom reads one Deal Room.
 func (s *Store) GetRoom(ctx context.Context, id ids.DealRoomID) (crmcontracts.DealRoom, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
+	if err := requireRoomRead(ctx); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
 	var out crmcontracts.DealRoom
@@ -112,4 +112,15 @@ func scanRoom(row rowScanner) (crmcontracts.DealRoom, error) {
 // roomKey is the keyset sort key for a page of rooms.
 func roomKey(r crmcontracts.DealRoom) (time.Time, ids.UUID) {
 	return r.CreatedAt, ids.UUID(r.Id)
+}
+
+// requireRoomRead is the object gate of every room read: the room grant, then
+// the deal grant a room is seen through. The deal grant is asked before any
+// lookup by id, so a seat without it gets one answer for a missing id and for
+// an existing one.
+func requireRoomRead(ctx context.Context) error {
+	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
+		return err
+	}
+	return auth.Require(ctx, dealTable, principal.ActionRead)
 }

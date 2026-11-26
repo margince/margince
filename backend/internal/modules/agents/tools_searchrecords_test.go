@@ -103,6 +103,20 @@ func TestAGroupedPageNeverReadsBackMoreThanAPage(t *testing.T) {
 	}
 }
 
+// A room is found through its deal, so naming deal_room without the deal grant
+// is refused as any ungranted type is, and never answered with an empty page.
+func TestARoomSearchWithoutTheDealGrantIsRefused(t *testing.T) {
+	engine := &rankingProbe{}
+	_, err := searchRecordsOver(nil, engine).Handle(searchReader("deal_room"),
+		json.RawMessage(`{"q":"Harbour","record_type":"deal_room"}`))
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a room search without deal read → %v, want a permission refusal", err)
+	}
+	if engine.asked != nil {
+		t.Error("the engine ran for a room search without deal read")
+	}
+}
+
 func TestOneTypeAndAListOfTypesAreNotBothTaken(t *testing.T) {
 	_, err := searchRecordsOver(nil, &rankingProbe{}).Handle(searchReader("deal", "lead"),
 		json.RawMessage(`{"q":"Acme","record_type":"deal","record_types":["lead"]}`))

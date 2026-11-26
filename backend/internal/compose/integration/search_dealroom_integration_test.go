@@ -9,10 +9,15 @@ import (
 	"context"
 	"errors"
 	"math"
+	"net/http"
+	"net/http/httptest"
 	"slices"
 	"strings"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -268,5 +273,55 @@ func TestARoomOfAnArchivedOrClosedDealIsFoundWhenTheListShowsIt(t *testing.T) {
 		if !slices.Contains(found, room) {
 			t.Errorf("room %v of an archived or closed deal is missing from %v", room, found)
 		}
+	}
+}
+
+// A seat that reads rooms but not deals gets one answer for a room part that
+// exists and one that does not, so the status cannot say which ids are real.
+func TestARoomPartReadWithoutDealReadAnswersTheSameForAMissingAndAnExistingId(t *testing.T) {
+	e := SetupSearch(t)
+	f := seedRooms(t, e)
+	thread := e.SeedID(t, `INSERT INTO deal_room_thread (id, room_id, author_user_id, source, captured_by)
+	                       VALUES ($1, $2, $3, 'manual', 'human:x')`, f.first, e.Rep1)
+	comment := e.SeedID(t, `INSERT INTO deal_room_comment (id, room_id, thread_id, author_user_id, body, source, captured_by)
+	                        VALUES ($1, $2, $3, $4, 'Looks good', 'manual', 'human:x')`, f.first, thread, e.Rep1)
+	participant := e.SeedID(t, `INSERT INTO deal_room_participant (id, room_id, email, full_name, source, captured_by)
+	                            VALUES ($1, $2, 'buyer@room.test', 'Buyer', 'manual', 'human:x')`, f.first)
+	attachment := e.SeedID(t, `INSERT INTO attachment (id, entity_type, entity_id, filename, storage_key, source, captured_by)
+	                           VALUES ($1, 'deal_room', $2, 'terms.pdf', 'k/terms', 'manual', 'human:x')`, f.first)
+	document := e.SeedID(t, `INSERT INTO deal_room_document (id, room_id, attachment_id, group_key, title, source, captured_by)
+	                         VALUES ($1, $2, $3, 'commercial', 'Terms', 'manual', 'human:x')`, f.first, attachment)
+
+	grants := roomSeats(true)
+	delete(grants, "deal")
+	ctx := e.asSeat(e.Rep1, e.Team1, principal.RowScopeAll, grants)
+	store := dealrooms.NewStore(e.DB())
+	missing := ids.NewV7()
+	reads := map[string]func(id ids.UUID) error{
+		"thread":      func(id ids.UUID) error { _, err := store.GetThread(ctx, id); return err },
+		"document":    func(id ids.UUID) error { _, err := store.GetDocument(ctx, id); return err },
+		"participant": func(id ids.UUID) error { _, err := store.GetParticipant(ctx, id); return err },
+		"comment":     func(id ids.UUID) error { _, err := store.GetComment(ctx, id); return err },
+	}
+	existing := map[string]ids.UUID{"thread": thread, "document": document, "participant": participant, "comment": comment}
+	for name, read := range reads {
+		gone, there := read(missing), read(existing[name])
+		if !errors.Is(gone, apperrors.ErrPermissionDenied) || !errors.Is(there, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s: a missing id answers %v and an existing one %v, want the same refusal", name, gone, there)
+		}
+	}
+}
+
+// A context read anchored on a room is refused cleanly: a room is not an anchor.
+func TestAContextReadAnchoredOnARoomIsRefusedWithoutAServerError(t *testing.T) {
+	e := SetupSearch(t)
+	f := seedRooms(t, e)
+	h := search.NewHandlers(e.DB(), nil, nil, nil, nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/records/deal_room/"+f.first.String()+"/context", nil)
+	req = req.WithContext(e.Admin())
+	rec := httptest.NewRecorder()
+	h.GetRecordContext(rec, req, "deal_room", openapi_types.UUID(f.first), crmcontracts.GetRecordContextParams{})
+	if rec.Code >= http.StatusInternalServerError || rec.Code < http.StatusBadRequest {
+		t.Errorf("a context read on a room answered %d, want a client refusal", rec.Code)
 	}
 }

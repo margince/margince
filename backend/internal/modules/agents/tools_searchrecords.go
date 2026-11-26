@@ -278,6 +278,12 @@ func (a searchRecordsArgs) query(ctx context.Context) (RecordSearchQuery, error)
 		if err := auth.Require(ctx, recordType, principal.ActionRead); err != nil {
 			return RecordSearchQuery{}, err
 		}
+		// A room is found through its deal, so the deal grant is asked as well.
+		if recordType == string(datasource.EntityDealRoom) {
+			if err := auth.Require(ctx, string(datasource.EntityDeal), principal.ActionRead); err != nil {
+				return RecordSearchQuery{}, err
+			}
+		}
 	}
 	if len(named) == 0 {
 		named = recordSearchDefaultTypes()

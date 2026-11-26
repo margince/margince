@@ -9781,7 +9781,6 @@ const (
 	ContextEntityRefTypeCompany       ContextEntityRefType = "company"
 	ContextEntityRefTypeContact       ContextEntityRefType = "contact"
 	ContextEntityRefTypeDeal          ContextEntityRefType = "deal"
-	ContextEntityRefTypeDealRoom      ContextEntityRefType = "deal_room"
 	ContextEntityRefTypeLead          ContextEntityRefType = "lead"
 	ContextEntityRefTypeOfferTemplate ContextEntityRefType = "offer_template"
 	ContextEntityRefTypeProduct       ContextEntityRefType = "product"
@@ -9799,8 +9798,6 @@ func (e ContextEntityRefType) Valid() bool {
 	case ContextEntityRefTypeContact:
 		return true
 	case ContextEntityRefTypeDeal:
-		return true
-	case ContextEntityRefTypeDealRoom:
 		return true
 	case ContextEntityRefTypeLead:
 		return true

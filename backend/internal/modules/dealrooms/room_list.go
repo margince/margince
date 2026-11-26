@@ -62,7 +62,7 @@ var roomSortFields = map[string]storekit.SortField{
 
 // ListRooms pages the Deal Rooms whose deals the caller can see.
 func (s *Store) ListRooms(ctx context.Context, in ListRoomsInput) ([]crmcontracts.DealRoom, storekit.Page, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
+	if err := requireRoomRead(ctx); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	var (

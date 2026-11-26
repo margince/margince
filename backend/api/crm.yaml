@@ -27901,7 +27901,7 @@ paths:
       - name: entity_type
         in: path
         required: true
-        schema: { type: string, enum: [contact, company, deal, lead, project, product, offer_template, deal_room, activity] }
+        schema: { type: string, enum: [contact, company, deal, lead, project, product, offer_template, activity] }
       - $ref: '#/components/parameters/Id'
     get:
       tags: [Search]
@@ -75550,7 +75550,7 @@ components:
       properties:
         type:
           type: string
-          enum: [contact, company, deal, lead, project, product, offer_template, deal_room, activity, user]
+          enum: [contact, company, deal, lead, project, product, offer_template, activity, user]
           x-extensible-enum: true
           description: |
             `user` is a workspace MEMBER, not a record — it appears only in the
