@@ -69,8 +69,8 @@ func PartyDataTask() datatask.Task {
 	}
 }
 
-// LeadDataTask corrects leads through the mapping contacts use. The lead
-// source list it once matched against is gone, so every older word moves.
+// LeadDataTask moves every lead whose source is off the fixed channel list onto
+// its channel, through the mapping contacts use.
 func LeadDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1795710028_lead_source_channels", Version: 1,

@@ -61,21 +61,16 @@ func TestTheProjectsListSortsByTheCompanyItDraws(t *testing.T) {
 		"company ascending — Alma Werke before Zeta Holding")
 }
 
-// A lead's source orders by the words the column prints, not by the key stored
-// behind them.
-func TestTheLeadsListSortsBySourceLabelAndNotItsKey(t *testing.T) {
+// A lead's source orders by the channel it holds. The leads are created in the
+// reverse order, so the newest-first tie-breaker cannot give the answer.
+func TestTheLeadsListSortsByItsSourceChannel(t *testing.T) {
 	e := Setup(t)
 	ctx := e.Admin()
+	fromForm := seedLeadOn(t, e, "First lead", "webform")
+	fromAPI := seedLeadOn(t, e, "Second lead", "api")
 
-	// Keys and labels deliberately sort the other way round: read the key and
-	// the page comes back reversed.
-	seedLeadSource(t, e, "aaa_key", "Zeta referral")
-	seedLeadSource(t, e, "zzz_key", "Alma campaign")
-	fromZeta := seedLeadFromSource(t, e, "First lead", "aaa_key")
-	fromAlma := seedLeadFromSource(t, e, "Second lead", "zzz_key")
-
-	assertIDOrder(t, leadIDsIn(ctx, t, e, "source"), []ids.UUID{fromAlma, fromZeta},
-		"source ascending — Alma campaign before Zeta referral")
+	assertIDOrder(t, leadIDsIn(ctx, t, e, "source"), []ids.UUID{fromAPI, fromForm},
+		"source ascending, api before webform")
 }
 
 // A contact's company orders by the employer the row prints, walking the same
@@ -210,11 +205,9 @@ func TestAReaderWhoSeesNoEmployerIsOrderedByNone(t *testing.T) {
 func TestTheLeadsListSortsByTheDerivedColumnsItDraws(t *testing.T) {
 	e := Setup(t)
 	ctx := e.Admin()
-	seedLeadSource(t, e, "manual_key", "Manual")
-
-	soon := seedLeadFromSource(t, e, "Due soon", "manual_key")
-	later := seedLeadFromSource(t, e, "Due later", "manual_key")
-	quiet := seedLeadFromSource(t, e, "Nothing owed", "manual_key")
+	soon := seedLeadOn(t, e, "Due soon", "manual")
+	later := seedLeadOn(t, e, "Due later", "manual")
+	quiet := seedLeadOn(t, e, "Nothing owed", "manual")
 
 	// Task deadlines in the reverse of the leads' creation order.
 	taskOn(t, e, later, "Call them", time.Now().Add(72*time.Hour))
@@ -361,15 +354,8 @@ func leadIDsIn(ctx context.Context, t *testing.T, e *Env, spec string) []ids.UUI
 	return out
 }
 
-func seedLeadSource(t *testing.T, e *Env, key, label string) {
-	t.Helper()
-	e.WsExec(t, `INSERT INTO lead_source (key, label) VALUES ($1, $2)`, key, label)
-	// Reset keeps the source table, so the seeded row would outlive this test.
-	t.Cleanup(func() { e.WsExec(t, `DELETE FROM lead_source WHERE key = $1`, key) })
-}
-
-// seedLeadFromSource creates a lead filed under one catalog source.
-func seedLeadFromSource(t *testing.T, e *Env, name, source string) ids.UUID {
+// seedLeadOn creates a lead that arrived by one channel.
+func seedLeadOn(t *testing.T, e *Env, name, source string) ids.UUID {
 	t.Helper()
 	l, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 		FullName: &name, Source: source, OwnerID: userIDPtr(&e.Rep1),

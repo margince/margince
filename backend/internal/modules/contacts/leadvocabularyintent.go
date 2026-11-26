@@ -9,7 +9,8 @@ import "github.com/margince/margince/backend/internal/shared/kernel/values"
 // custom-field catalog's posture, where everyone reads and admin or ops write.
 const leadVocabularyObject = "custom_field"
 
-// SourceIntent is what the scorer makes of a lead's origin.
+// SourceIntent is what the scorer makes of a lead's origin. It keeps the
+// spelling of the contract's LeadSourceIntent, which lead origins use.
 type SourceIntent string
 
 // The three intents a lead origin carries.
