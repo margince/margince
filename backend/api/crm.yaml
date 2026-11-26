@@ -23589,7 +23589,10 @@ paths:
         conversion rate against it, because changing it would re-mean every roll-up built on
         those rates (ADR-0085 §7). Before that point it is freely changeable, which is the
         case this serves: an installation that chose wrong in its configuration and noticed
-        in week one. Audit-only write (no event stream, EVT-NOEVT-3).
+        in week one. The refusal's field error keeps its English `message` and carries
+        `params` that mirror `BaseCurrencyLock`: `reason`, `count` as a decimal string, and
+        `base_currency` only when the lock names one, so a client words it as it words the
+        read's `base_currency_lock`. Audit-only write (no event stream, EVT-NOEVT-3).
       requestBody:
         required: true
         content:
@@ -42278,7 +42281,8 @@ components:
           type: string
           description: |
             ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
-            rate against the current base.
+            rate against the current base. The refusal's `params` mirror `BaseCurrencyLock`:
+            `reason`, `count` as a decimal string, and `base_currency` when the lock names one.
         base_language:
           type: string
           enum: [en, de, vi]
@@ -62729,17 +62733,17 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The account an upload is filed under: the company it was uploaded on, or the account of the
-            deal it was uploaded on at that time. A file that came with a captured mail carries none; the
-            account's Documents list reaches it through the mail's links as they are now. A read path
-            rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
+            The account a file is filed under, worked out when it is read: the company it is filed on, or
+            the company of the deal it is filed on now. A file on any other record names none;
+            the account's Documents list reaches a mail's file through the mail's links as they are now. A
+            read path rather than a second parent: visibility stays the primary parent's.
         contract_id:
           type: [string, 'null']
           format: uuid
           readOnly: true
           description: >-
-            The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at
-            upload by the contact filing the paper; never inferred from a filename or a date,
+            The agreement this file is about. A read path rather than a second parent: visibility stays
+            the primary parent's. Set at upload by the member filing the paper; never inferred from a filename or a date,
             which is the guess the document state exists to refuse.
         bytes_withheld:
           type: boolean
@@ -75327,7 +75331,7 @@ components:
                     format: { type: string }
               if_version: { type: boolean, description: 'Whether it takes if_version: the version you last read.' }
               ask_user_first: { type: boolean, description: Whether the app asks its user to confirm it first. }
-              uploads_a_file: { type: boolean, description: 'Whether it takes filename, content_type and content_base64.' }
+              uploads_a_file: { type: boolean, description: 'Whether it takes filename, content_type and content_base64 or content_text.' }
               body: { type: object, additionalProperties: true, description: The JSON schema of its body argument. }
 
     AgentAdmissionPolicy:
@@ -77490,9 +77494,6 @@ components:
         activated_by: { type: [string, 'null'], readOnly: true, description: 'Who accepted the lead or recorded the win that activated the partner.' }
         activation_lead_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The accepted lead that activated the partner.' }
         activation_deal_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The won deal that activated the partner.' }
-        partner_fit_score: { type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.' }
-        partner_fit_score_computed: { type: [integer, 'null'], minimum: 0, maximum: 100, readOnly: true, description: 'Retained machine-computed partner-fit value while a Commercial Judgement override is in force.' }
-        partner_fit_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.' }
         relationship_health: { type: [string, 'null'], deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.' }
         last_contact_at: { type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.' }
         next_step: { type: [string, 'null'], deprecated: true, description: 'Deprecated as stored text: a value sent here is written as a task on the partner''s company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.' }

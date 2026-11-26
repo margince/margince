@@ -56,7 +56,7 @@ func TestAttachmentMetadataTellsAnAbsentFieldFromAnExplicitNull(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	doc := seedDocument(t, e, company, "company", company, "msa.pdf", "contract", false)
+	doc := seedDocument(t, e, "company", company, "msa.pdf", "contract", false)
 
 	// Give it a title to have something an absent field could wrongly erase.
 	out := decodeAttachment(t, patchMetadata(t, e, h, doc, `{"title":"Master Services Agreement"}`))
@@ -84,8 +84,8 @@ func TestAttachmentMetadataClearsSupersedesOnlyWhenAsked(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	first := seedDocument(t, e, company, "company", company, "v1.pdf", "contract", false)
-	second := seedDocument(t, e, company, "company", company, "v2.pdf", "contract", false)
+	first := seedDocument(t, e, "company", company, "v1.pdf", "contract", false)
+	second := seedDocument(t, e, "company", company, "v2.pdf", "contract", false)
 
 	out := decodeAttachment(t, patchMetadata(t, e, h, second,
 		`{"supersedes_id":"`+first.String()+`"}`))
@@ -110,8 +110,8 @@ func TestCompanyDocumentsHandlerMapsItsFilters(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	seedDocument(t, e, company, "company", company, "nda.pdf", "legal", false)
-	seedDocument(t, e, company, "company", company, "msa.pdf", "contract", true)
+	seedDocument(t, e, "company", company, "nda.pdf", "legal", false)
+	seedDocument(t, e, "company", company, "msa.pdf", "contract", true)
 
 	list := func(t *testing.T, params crmcontracts.ListCompanyDocumentsParams) crmcontracts.AttachmentListResponse {
 		t.Helper()
@@ -162,7 +162,7 @@ func TestAnUploadedFileCannotClaimItArrivedOnAChannel(t *testing.T) {
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	// seedDocument writes source 'upload' — a file a human handed over.
-	doc := seedDocument(t, e, company, "company", company, "deck.png", "other", false)
+	doc := seedDocument(t, e, "company", company, "deck.png", "other", false)
 
 	rec := patchMetadata(t, e, h, doc, `{"category":"message_attachment"}`)
 	if rec.Code != http.StatusUnprocessableEntity {
