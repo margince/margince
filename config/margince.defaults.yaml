@@ -226,6 +226,7 @@ lists:
   enabled: true
 
 mcp:
+  call_log: null
   client_registration:
     dynamic: true
     metadata_document: true

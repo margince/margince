@@ -80,6 +80,9 @@ For new_opportunity, request_kind is explicit_request only when the buyer asks u
 quotation, proposal, offer, RFI, RFQ or vendor brief; any other need is need. budget_quote copies
 the cited message's words that state their budget, or "". decision_date is the day they say they
 decide or need it by, or "". For other kinds all three are "".
+A message from our own employee that states a need a vendor would fill is a new_opportunity with
+commercial_role supplier and buyer_ref empty. It is an event, and not silence, because a later
+proposal must not read the vendor as the customer.
 A meeting invitation alone establishes no buying intent. Neither does a pitch: a supplier offering
 us its product or price, when no one states a need for it, is no event at all.
 Every field is always present. A text field that does not apply to the kind is "", recipient_refs is [],

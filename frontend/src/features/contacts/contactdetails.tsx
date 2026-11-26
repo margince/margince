@@ -294,8 +294,8 @@ function EmployerCard({ employment }: Readonly<{ employment: Employment }>) {
   const name = company?.display_name ?? employment.company_name ?? "";
   const facts = company
     ? [
-        company.lifecycle && company.lifecycle !== "unknown"
-          ? t(`company.lifecycle.${company.lifecycle}`)
+        company.status && company.status !== "unknown"
+          ? t(`company.lifecycle.${company.status}`)
           : null,
         company.industry ? industryWords(t, company.industry) : null,
         company.address?.city,

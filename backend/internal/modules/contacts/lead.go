@@ -227,7 +227,7 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	// The email is the third bind: lower() holds the dedupe key's spelling at the column, whatever door wrote it.
 	holders[2] = "lower(" + holders[2] + ")"
 	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, fixed)
-	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, active, in.CustomFields, base)
 	if err != nil {
 		return ids.LeadID{}, err
 	}

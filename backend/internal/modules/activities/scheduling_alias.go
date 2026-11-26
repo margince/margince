@@ -193,7 +193,7 @@ func (s *Store) claimBookingAlias(ctx context.Context, tx pgx.Tx, host ids.UserI
 	}
 	args = schedulingArgs{}
 	_, err = tx.Exec(ctx, `UPDATE booking_alias SET booking_page_id=`+args.add(page)+
-		`, created_at=`+args.add(s.now())+`, retired_at=NULL WHERE id=`+args.add(id), args...)
+		`, retired_at=NULL WHERE id=`+args.add(id), args...)
 	return err
 }
 
@@ -202,8 +202,8 @@ func (s *Store) insertBookingAlias(ctx context.Context, tx pgx.Tx, host ids.User
 		return err
 	}
 	args := schedulingArgs{}
-	tag, err := tx.Exec(ctx, `INSERT INTO booking_alias (alias, host_user_id, booking_page_id, created_at) VALUES (`+
-		args.add(alias)+`, `+args.add(host)+`, `+args.add(page)+`, `+args.add(s.now())+`) ON CONFLICT (alias) DO NOTHING`, args...)
+	tag, err := tx.Exec(ctx, `INSERT INTO booking_alias (alias, host_user_id, booking_page_id) VALUES (`+
+		args.add(alias)+`, `+args.add(host)+`, `+args.add(page)+`) ON CONFLICT (alias) DO NOTHING`, args...)
 	if err != nil {
 		return err
 	}

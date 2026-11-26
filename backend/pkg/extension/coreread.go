@@ -61,7 +61,7 @@ type CompanyQuery struct {
 	OwnerID string
 	// Domain finds the company that lists the domain.
 	Domain       string
-	Lifecycle    string
+	Status       string
 	SourceSystem string
 	SourceID     string
 	// CustomFields is as on DealQuery.

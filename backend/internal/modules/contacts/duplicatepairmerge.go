@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -124,4 +125,14 @@ func duplicatePairFiled(ctx context.Context, tx pgx.Tx, kind string, a, b ids.UU
 		return false, fmt.Errorf("contacts: reading whether the pair is a filed duplicate: %w", err)
 	}
 	return true, nil
+}
+
+// screenPairMerge asks, before the pair lock, what recordmerge.Pair asks under
+// it, with the filed-pair admission a dedupe case grants.
+func screenPairMerge(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID) error {
+	admitted, err := admitDuplicatePairMerge(ctx, tx, kind, source, target)
+	if err != nil {
+		return err
+	}
+	return recordmerge.Screen(admitted, tx, kind, source, target)
 }

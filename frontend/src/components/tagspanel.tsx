@@ -11,7 +11,7 @@ import { useFocusHandoff } from "../design-system/focushandoff";
 import { Panel, PanelBody } from "../design-system/panel";
 import { TagPill } from "../design-system/tagpill";
 import { useTooltip } from "../design-system/tooltip";
-import { formatDate, formatNumber } from "../format/format";
+import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { RecordTag, TaggableType, TagRestore } from "../lib/tags.queries";
 import {
@@ -294,7 +294,7 @@ function TagLink({ tag }: Readonly<{ tag: RecordTag }>) {
   // Intl throws on an unparseable date, and a server out of step may send one.
   const stamped = !Number.isNaN(Date.parse(tag.assigned_at));
   const who = tag.assigned_by?.display_name;
-  const when = stamped ? formatDate(tag.assigned_at, locale, zone) : "";
+  const when = stamped ? formatDateAbbrev(tag.assigned_at, locale, zone) : "";
   const added = who
     ? stamped
       ? t("tags.addedBy", { who, when })

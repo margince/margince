@@ -115,12 +115,12 @@ func TestTheTwoCompanyMarksAreWrittenAndClearedIndependently(t *testing.T) {
 // company read, because what this is about is what the statement wrote.
 func assertCompanyMark(t *testing.T, e *anchorEnv, wantKey, wantOrigin string) {
 	t.Helper()
-	assertMarkColumns(t, e, "logo_object_key", "logo_origin", wantKey, wantOrigin)
+	assertMarkColumns(t, e, "logo_object_key", "logo_source", wantKey, wantOrigin)
 }
 
 func assertCompanyIcon(t *testing.T, e *anchorEnv, wantKey, wantOrigin string) {
 	t.Helper()
-	assertMarkColumns(t, e, "logo_icon_object_key", "logo_icon_origin", wantKey, wantOrigin)
+	assertMarkColumns(t, e, "logo_icon_object_key", "logo_icon_source", wantKey, wantOrigin)
 }
 
 func assertMarkColumns(t *testing.T, e *anchorEnv, keyColumn, originColumn, wantKey, wantOrigin string) {

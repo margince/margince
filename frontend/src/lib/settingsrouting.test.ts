@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 import {
+  AGENT_RULES_SUBPAGE,
   SETTINGS_SCREEN,
   settingsHref,
   settingsRouteTarget,
@@ -195,6 +196,23 @@ describe("home and nowhere are different answers", () => {
   ])("reads %s as unknown", (_, below) => {
     expect(
       settingsRouteTarget({ screen: SETTINGS_SCREEN, id: "import", ...below }),
+    ).toEqual({ kind: "unknown" });
+  });
+
+  it("answers Agent rules under AI assistants, and no other segment there", () => {
+    expect(
+      settingsRouteTarget({
+        screen: SETTINGS_SCREEN,
+        id: "agents",
+        id2: AGENT_RULES_SUBPAGE,
+      }),
+    ).toEqual({ kind: "page", page: "agents", legacy: false });
+    expect(
+      settingsRouteTarget({
+        screen: SETTINGS_SCREEN,
+        id: "agents",
+        id2: "junk",
+      }),
     ).toEqual({ kind: "unknown" });
   });
 });

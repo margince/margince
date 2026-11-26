@@ -79,13 +79,15 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
   `Müller`). They also match the parse with apostrophes removed (`oreilly` finds `O'Reilly`). The
   activity branch also matches German and English stems, so `Vertrag` reaches a row that holds
   `Verträge`.
-- **Mail search reads the sender's own text.** Each writer of `activity.body` stores
-  `body_own_end` beside it: the number of characters before the quoted earlier mail
-  (`mailquote.OwnEnd`). A trigger builds `search_tsv` from the subject and that part of the body. It
+- **Mail search reads the sender's own text.** Each writer of `activity.body` or `activity.subject`
+  stores `body_own_end` beside it: the number of characters before the quoted earlier mail
+  (`mailquote.OwnEnd`). It reads the body and the subject. A trigger builds `search_tsv` from the subject and that part of the body. It
   runs on an insert, and on an update that changes `subject`, `body`, `language`, `body_own_end` or
   `search_tsv` itself.
 - **The History tab folds at the same line.** A forward line ends the text as a reply line does, and
-  a reply written between the quoted lines keeps every line. A mail stored before this rule is
+  a reply written between the quoted lines keeps every line. When the subject starts with a forward
+  prefix (`Fwd:`, `FW:`, `WG:`), the first header block opens the forwarded mail, which stays in the
+  text. Outlook writes a forward and a reply with the same block, so only the subject tells them apart. A mail stored before this rule is
   found through its quoted text until the data task `core/1795596207_mail_search_text` has passed it.
 - **A mail is one hit.** A mail that several mailboxes captured is one activity hit, the reader's
   own copy where they have one. The timelines group copies the same way

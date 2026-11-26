@@ -80,6 +80,10 @@ func (a *assembly) readPhaseHistory() error {
 	if err != nil {
 		return err
 	}
+	dealNames, err := a.causeDealNames(history)
+	if err != nil {
+		return err
+	}
 	data := make([]crmcontracts.Project360PhaseTransition, 0, len(history))
 	for _, t := range history {
 		row := crmcontracts.Project360PhaseTransition{
@@ -87,6 +91,7 @@ func (a *assembly) readPhaseHistory() error {
 			FromPhase: t.FromPhase,
 			ToPhase:   t.ToPhase,
 			Reason:    t.Reason,
+			Cause:     phaseCause(t.Cause, dealNames),
 			ChangedAt: t.OccurredAt,
 		}
 		// No link, or an audit row that no longer resolves, leaves ChangedBy
@@ -107,6 +112,40 @@ func (a *assembly) readPhaseHistory() error {
 	}
 	a.out.PhaseHistory = &crmcontracts.Project360PhaseHistory{Data: data, PhaseDurations: folded}
 	return nil
+}
+
+// causeDealNames names the deals behind automatic moves, under the caller's deal
+// grant and row scope. A caller without the deal grant keeps the history, with
+// every such deal unnamed.
+func (a *assembly) causeDealNames(history []projects.PhaseTransition) (map[ids.UUID]string, error) {
+	var want []ids.UUID
+	for _, t := range history {
+		if t.Cause != nil {
+			want = append(want, t.Cause.DealID)
+		}
+	}
+	if len(want) == 0 {
+		return map[ids.UUID]string{}, nil
+	}
+	names, err := a.svc.deals.DealNamesTx(a.ctx, a.tx, want)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return map[ids.UUID]string{}, nil
+	}
+	return names, err
+}
+
+// phaseCause carries a move's cause onto the wire. A deal the caller may not see,
+// or one that is gone, leaves both its id and its name null.
+func phaseCause(cause *projects.PhaseCause, dealNames map[ids.UUID]string) *crmcontracts.Project360PhaseCause {
+	if cause == nil {
+		return nil
+	}
+	out := &crmcontracts.Project360PhaseCause{Kind: crmcontracts.Project360PhaseCauseKind(cause.Kind)}
+	if name, visible := dealNames[cause.DealID]; visible {
+		id := openapi_types.UUID(cause.DealID)
+		out.DealId, out.DealName = &id, &name
+	}
+	return out
 }
 
 // readDeals is the deal list narrowed to the project, every status: which

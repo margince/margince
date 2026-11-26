@@ -363,7 +363,7 @@ func readCompanyHeading(
 	var lifecycle *string
 	out := companyHeading{}
 	if err := tx.QueryRow(ctx,
-		`SELECT lifecycle, display_name, owner_id, last_activity_at FROM company WHERE id = $1`, companyID,
+		`SELECT status, display_name, owner_id, last_activity_at FROM company WHERE id = $1`, companyID,
 	).Scan(&lifecycle, &out.name, &out.owner, &out.lastActivity); err != nil {
 		return companyHeading{}, fmt.Errorf("read the account's stage and name: %w", err)
 	}

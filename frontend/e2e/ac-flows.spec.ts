@@ -412,7 +412,7 @@ test.describe("filters and views", () => {
     expect(await textsOf(page.getByRole("option"))).toEqual([
       "Branche",
       "Lebenszyklus",
-      "Tag",
+      de["filters.field.tag"],
       "Verantwortlich",
       // The custom field sorts after the core ones. A reader scanning for a
       // column they added finds it in one place rather than interleaved.
@@ -503,15 +503,18 @@ test.describe("filters and views", () => {
 
     // A tag leaf is reached through a join, so the engine narrows it to the link
     // operators. `enthält` is gone: a picker that offered it would produce a 422
-    // the reader could not interpret.
+    // the reader could not interpret. A record holds a set of tags, so the
+    // operators read as what the set includes.
     await page.getByRole("combobox", { name: "Feld" }).first().click();
-    await page.getByRole("option", { name: "Tag", exact: true }).click();
+    await page
+      .getByRole("option", { name: de["filters.field.tag"], exact: true })
+      .click();
     await page.getByRole("combobox", { name: "Operator" }).first().click();
     expect(await textsOf(page.getByRole("option"))).toEqual([
-      "ist",
-      "ist nicht",
-      "ist eines von",
-      "hat einen Wert",
+      de["filters.op.include"],
+      de["filters.op.notInclude"],
+      de["filters.op.includeAny"],
+      de["filters.op.includeSomeOrNone"],
     ]);
     await page.keyboard.press("Escape");
 
@@ -563,11 +566,7 @@ test.describe("filters and views", () => {
     await expect(page.getByRole("cell", { name: "logistics" })).toHaveCount(0);
     // The caption says 812 match and two are shown, so the reader knows this
     // is a sample rather than the whole selection.
-    await expect(
-      page.getByText(
-        "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
-      ),
-    ).toBeVisible();
+    await expect(page.getByText(de["filters.resultsCaption"])).toBeVisible();
   });
 
   // The 390px sweep visits the library. A written condition adds a clause row

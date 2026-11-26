@@ -426,9 +426,9 @@ func refreshChannelUsername(ctx context.Context, tx pgx.Tx, ci connector.Channel
 	var previous *string
 	err := tx.QueryRow(ctx, `
 		SELECT id, contact_id, username FROM contact_channel_identity
-		 WHERE provider = $1 AND channel_user_id = $2 AND archived_at IS NULL
+		 WHERE provider = $1 AND channel_user_id = $2 AND account_scope = $3 AND archived_at IS NULL
 		 FOR UPDATE`,
-		ci.Provider, ci.ChannelUserID).Scan(&boundID, &contactID, &previous)
+		ci.Provider, ci.ChannelUserID, ci.AccountScope).Scan(&boundID, &contactID, &previous)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing is bound to this identity yet, which the bind above this call
 		// is what fixes.

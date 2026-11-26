@@ -48,7 +48,7 @@ var dossierLabels = map[crmcontracts.CompanyProfileFieldField]phrase{
 		En: "What they offer", De: "Was sie anbieten", Vi: "Họ cung cấp gì",
 	},
 	crmcontracts.CompanyProfileFieldFieldBuyingCenter: {
-		En: "Buying centre", De: "Entscheidergremium", Vi: "Nhóm ra quyết định mua",
+		En: "Buying centre", De: "Buying Center", Vi: "Nhóm ra quyết định mua",
 	},
 	crmcontracts.CompanyProfileFieldFieldBuyingIntents: {
 		En: "Buying intents", De: "Kaufabsichten", Vi: "Ý định mua",
@@ -66,7 +66,7 @@ var dossierLabels = map[crmcontracts.CompanyProfileFieldField]phrase{
 		En: "Value proposition", De: "Nutzenversprechen", Vi: "Giá trị mang lại",
 	},
 	crmcontracts.CompanyProfileFieldFieldLegalName: {
-		En: "Legal name", De: "Firmenname", Vi: "Tên pháp lý",
+		En: "Legal name", De: "Eingetragener Name", Vi: "Tên pháp lý",
 	},
 	crmcontracts.CompanyProfileFieldFieldRegisterVat: {
 		En: "Registration", De: "Registereintrag", Vi: "Đăng ký kinh doanh",

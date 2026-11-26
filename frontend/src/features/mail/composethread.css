@@ -72,7 +72,6 @@
 /* The way out to a new thread, as the list's first row; tinted while the draft
    starts one. */
 .compose-threadmenu-new {
-  justify-content: flex-start;
   inline-size: 100%;
   font-weight: var(--fontWeightMedium);
 }
@@ -141,7 +140,6 @@
   gap: var(--space-1);
   inline-size: 100%;
   block-size: auto;
-  text-align: start;
   background: none;
   border-color: transparent;
   padding: var(--space-2) var(--space-3);

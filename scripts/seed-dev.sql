@@ -263,8 +263,8 @@ BEGIN
 
   IF conn IS NULL THEN
     INSERT INTO finance_connection
-           (provider, status, credential_ref, source, captured_by)
-    VALUES ('offline_demo', 'active', 'extension:offline_demo', 'system', 'system:seed')
+           (provider, status, captured_by)
+    VALUES ('offline_demo', 'active', 'system:seed')
     RETURNING id INTO conn;
   END IF;
 
@@ -295,12 +295,11 @@ BEGIN
   -- unit's directory (DEMO-0001 to DEMO-0050), so a re-run links only what is
   -- new and never reuses an id another company holds.
   INSERT INTO finance_customer_link
-         (connection_id, company_id, external_customer_id,
-          sync_hash, source, captured_by)
-  SELECT conn, unlinked.id, free.external_id, 'seed', 'system', 'system:seed'
+         (connection_id, company_id, external_customer_id, captured_by)
+  SELECT conn, unlinked.id, free.external_id, 'system:seed'
     FROM (SELECT c.id, row_number() OVER (ORDER BY c.created_at, c.id) AS n
             FROM company c
-           WHERE c.archived_at IS NULL AND c.lifecycle = 'customer'
+           WHERE c.archived_at IS NULL AND c.status = 'customer'
              AND NOT EXISTS (SELECT 1 FROM finance_customer_link l
                               WHERE l.connection_id = conn AND l.company_id = c.id
                                 AND l.archived_at IS NULL)) unlinked
@@ -314,7 +313,7 @@ BEGIN
 
   SELECT count(*) INTO unmatched
     FROM company c
-   WHERE c.archived_at IS NULL AND c.lifecycle = 'customer'
+   WHERE c.archived_at IS NULL AND c.status = 'customer'
      AND NOT EXISTS (SELECT 1 FROM finance_customer_link l
                       WHERE l.connection_id = conn AND l.company_id = c.id
                         AND l.archived_at IS NULL);

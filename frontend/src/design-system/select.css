@@ -68,7 +68,7 @@
    ellipsizes, and the chevron keeps the far edge. */
 .select-button {
   justify-content: space-between;
-  text-align: left;
+  text-align: start;
 }
 
 /* In the top layer (toplayer.ts): a select inside a dialog draws over the

@@ -211,7 +211,15 @@ describe("ContactsScreen (B-EP09.10a)", () => {
                 company_name: "Brandt AG",
               },
             },
-            { ...anna, id: "p-2", full_name: "Bruno Klein" },
+            // Dated, so the row's one empty cell is the employer's: an empty
+            // date cell shows the list's absent mark.
+            {
+              ...anna,
+              id: "p-2",
+              full_name: "Bruno Klein",
+              last_activity_at: "2026-07-01T09:00:00Z",
+              created_at: "2026-06-01T09:00:00Z",
+            },
           ],
           page: { next_cursor: null },
         });
@@ -425,7 +433,7 @@ describe("ContactsScreen — rich create (P-15)", () => {
     stubFetch(async () => emptyPage());
     render(<ContactsScreen />);
     await userEvent.click(screen.getByTestId("new-record"));
-    expect(screen.getByLabelText("Title")).toBeTruthy();
+    expect(screen.getByLabelText("Job title")).toBeTruthy();
     expect(screen.getByLabelText("LinkedIn")).toBeTruthy();
     expect(screen.getByText("Add email")).toBeTruthy();
     expect(screen.getByText("Add phone")).toBeTruthy();
@@ -705,7 +713,9 @@ describe("ContactsScreen — a row on a phone", () => {
     listContacts([employed]);
     const row = await phoneRowOf("Anna Weber");
     expect(row.identity).toHaveTextContent("Anna Weber · Head of Procurement");
-    expect(screen.queryByRole("columnheader", { name: "Title" })).toBeNull();
+    expect(
+      screen.queryByRole("columnheader", { name: "Job title" }),
+    ).toBeNull();
   });
 
   it("draws the contact's monogram before the name at every width", async () => {

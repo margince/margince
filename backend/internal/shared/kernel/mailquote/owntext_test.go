@@ -11,8 +11,10 @@ import (
 // ownTextCase is one mail body and the text the rule must keep as the sender's.
 type ownTextCase struct {
 	name string
-	body string
-	own  string
+	// subject is the mail's own, empty where the case does not turn on it.
+	subject string
+	body    string
+	own     string
 }
 
 func runOwnTextCases(t *testing.T, cases []ownTextCase) {
@@ -20,7 +22,7 @@ func runOwnTextCases(t *testing.T, cases []ownTextCase) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			end := OwnEnd("email", &tc.body)
+			end := OwnEnd("email", tc.subject, &tc.body)
 			if end == nil {
 				t.Fatal("a mail body has no stored end")
 			}
@@ -114,17 +116,58 @@ func TestAForwardLineEndsTheSendersOwnText(t *testing.T) {
 	})
 }
 
+// Search finds a forward by the mail it passes on, and a reply with the same
+// block only by its own words.
+func TestAForwardKeepsTheMailItPassesOn(t *testing.T) {
+	t.Parallel()
+	outlook := "Zur Info.\n\nVon: Max Muster <max@kunde.de>\nGesendet: Dienstag, 12. August 2026 09:14\nAn: Lars\nBetreff: Angebot\n\nPasst Dienstag?"
+	runOwnTextCases(t, []ownTextCase{
+		{name: "a German Outlook forward with no forward line", subject: "WG: Angebot", body: outlook, own: outlook},
+		{name: "the same block under a reply subject", subject: "AW: Angebot", body: outlook, own: "Zur Info.\n\n"},
+		{
+			name:    "an English Outlook forward stops at the history it quotes",
+			subject: "FW: Pricing",
+			body:    "FYI\n\nFrom: Dana Roe\nSent: Monday\nTo: Sales\n\nThirty days net.\n\nFrom: Sales\nSent: Friday\nTo: Dana Roe\n\nTerms?",
+			own:     "FYI\n\nFrom: Dana Roe\nSent: Monday\nTo: Sales\n\nThirty days net.\n\n",
+		},
+		{
+			name:    "a Gmail forward keeps the block under its forward line",
+			subject: "Fwd: Pricing",
+			body:    "FYI\n\n---------- Forwarded message ---------\nFrom: Dana Roe <dana@buyer.example>\nDate: Mon, 3 Mar 2025\nTo: Sales\n\nThirty days net.",
+			own:     "FYI\n\n---------- Forwarded message ---------\nFrom: Dana Roe <dana@buyer.example>\nDate: Mon, 3 Mar 2025\nTo: Sales\n\nThirty days net.",
+		},
+		{
+			name:    "a reply to a forward is a reply",
+			subject: "Re: Fwd: Pricing",
+			body:    "Agreed.\n\nFrom: Dana Roe\nSent: Monday\nTo: Sales\n\nThirty days net.",
+			own:     "Agreed.\n\n",
+		},
+		{
+			name:    "a marked quote right under the forwarded block ends the text",
+			subject: "FW: Pricing",
+			body:    "FYI\n\nFrom: Dana Roe\nSent: Monday\nTo: Sales\nThirty days net.\n> Terms?",
+			own:     "FYI\n\nFrom: Dana Roe\nSent: Monday\nTo: Sales\nThirty days net.\n",
+		},
+		{
+			name:    "a marked quote in a forward still ends the text",
+			subject: "Fwd: Pricing",
+			body:    "Agreed.\n\n> Thirty days net?\n",
+			own:     "Agreed.\n\n",
+		},
+	})
+}
+
 func TestOnlyAMailBodyHasAStoredEnd(t *testing.T) {
 	t.Parallel()
 	body := "Works for us.\n\n> Friday?\n"
-	if end := OwnEnd("note", &body); end != nil {
+	if end := OwnEnd("note", "", &body); end != nil {
 		t.Errorf("a note stores the end %d; a member wrote every line of it", *end)
 	}
-	if end := OwnEnd("email", nil); end != nil {
+	if end := OwnEnd("email", "", nil); end != nil {
 		t.Errorf("a mail with no body stores the end %d", *end)
 	}
 	empty := ""
-	if end := OwnEnd("email", &empty); end == nil || *end != 0 {
+	if end := OwnEnd("email", "", &empty); end == nil || *end != 0 {
 		t.Errorf("an empty mail body stores %v, want 0", end)
 	}
 }
@@ -135,7 +178,7 @@ func TestTheStoredEndCountsCharacters(t *testing.T) {
 	t.Parallel()
 	own := "Bên em đồng ý với điều khoản.\n"
 	body := own + "> Thứ Sáu được không?\n"
-	end := OwnEnd("email", &body)
+	end := OwnEnd("email", "", &body)
 	if end == nil || *end != utf8.RuneCountInString(own) {
 		t.Fatalf("stored end %v, want %d characters", end, utf8.RuneCountInString(own))
 	}

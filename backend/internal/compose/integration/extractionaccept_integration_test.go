@@ -101,7 +101,7 @@ func seededReadingDetail(fields []extraction.ExtractedField) string {
 			return ""
 		}
 	}
-	return "this document states none of the deal fields clearly enough to offer one"
+	return "This document states none of the deal fields clearly enough to offer one."
 }
 
 // acceptEnv is one deal-scoped attachment with the fixture extractor wired

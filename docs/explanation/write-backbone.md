@@ -341,6 +341,16 @@ handler tests its input against the same set. `TestEveryHandlerIgnoresTheTypesIt
 `backend/gates/consumergrouptypes_test.go` feeds each handler every type its group leaves out. A
 group with no list gets every type on its streams.
 
+An event can name a record that is gone by the time a handler reads it. Clearing all data from the
+admin page can leave such an event behind, and so can a delete. A handler that finds its record
+missing returns `events.ErrUnactionable`, never a plain error. The subscriber acks that entry once,
+with one ERROR log. A plain error leaves the entry pending, so it comes back on every pass.
+
+An archived record is not a missing one. Some work is still owed once the record is restored, such
+as commission on a won deal. For that work the handler reads the archived row. A handler never keeps
+an entry pending until a restore, because a record can stay archived for good.
+`events.UnactionableIfGone` turns a store's `ErrNotFound` into `ErrUnactionable`.
+
 ---
 
 ## 6. Correlation & causation (the trace)

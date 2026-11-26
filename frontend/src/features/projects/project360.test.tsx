@@ -25,10 +25,9 @@ import { projectsBackend } from "./projects.testing";
 
 const NOT_YOURS = /You cannot edit this project/;
 
-// The project page: every section drawn from one Project360, a withheld
-// section saying so rather than reading as empty, and the close dialog that
-// holds its Confirm until a reason is given and then posts exactly
-// `{to_phase: "closed", reason}` under the project's version.
+// The project page: every section drawn from one Project360, and a withheld
+// section saying so rather than reading as empty. Phase moves are in
+// project360.phasemove.test.tsx.
 
 afterEach(() => {
   cleanup();
@@ -104,9 +103,10 @@ describe("ProjectScreen", () => {
     expect(
       screen.getAllByRole("button", { name: "Move to Pursuing" }),
     ).toContain(screen.getByTestId("project-step-pursuing"));
-    expect(screen.getByRole("button", { name: "Move to Closed" })).toBe(
+    expect(screen.getByRole("button", { name: "Close project" })).toBe(
       screen.getByTestId("project-step-closed"),
     );
+    expect(screen.queryByText("Closed")).toBeNull();
 
     // The figures: the phase's days, the open tasks, no file attached.
     const figures = screen.getByTestId("project-figures");
@@ -395,109 +395,6 @@ describe("ProjectScreen", () => {
     await screen.findByRole("heading", { name: "CRM rollout" });
     expect(screen.queryByTestId("project-new-deal-needs-company")).toBeNull();
     expect(screen.queryByRole("button", { name: "New deal" })).toBeNull();
-  });
-
-  it("closing asks for a reason, holds Confirm until it is given, and posts the move", async () => {
-    const user = userEvent.setup();
-    let posted: { body: unknown; ifMatch: string | null } | null = null;
-    projectsBackend({
-      respond: async (url, method, request) => {
-        if (method === "POST" && url.endsWith("/projects/pr-1/advance")) {
-          posted = {
-            body: JSON.parse(await request.text()),
-            ifMatch: request.headers.get("If-Match"),
-          };
-          return jsonResponse(project({ phase: "closed" }));
-        }
-        return null;
-      },
-    });
-    render(<ProjectScreen id="pr-1" />);
-    await screen.findByRole("heading", { name: "CRM rollout" });
-
-    await user.click(screen.getByTestId("project-step-closed"));
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Move to Closed")).toBeTruthy();
-    const confirm = within(dialog).getByRole("button", {
-      name: "Close project",
-    });
-    await user.click(confirm);
-    expect(posted).toBeFalsy();
-    expect(within(dialog).getByText("Reason is required.")).toBeTruthy();
-    expect(document.activeElement).toBe(
-      within(dialog).getByLabelText("Reason *"),
-    );
-
-    await user.type(
-      within(dialog).getByLabelText("Reason *"),
-      "Delivered and signed off",
-    );
-    await user.click(confirm);
-
-    await waitFor(() => expect(posted).toBeTruthy());
-    expect(posted).toEqual({
-      body: { to_phase: "closed", reason: "Delivered and signed off" },
-      ifMatch: "3",
-    });
-  });
-
-  it("a move that is not a close needs no reason", async () => {
-    const user = userEvent.setup();
-    let posted: unknown = null;
-    projectsBackend({
-      respond: async (url, method, request) => {
-        if (method === "POST" && url.endsWith("/advance")) {
-          posted = JSON.parse(await request.text());
-          return jsonResponse(project({ phase: "pursuing" }));
-        }
-        return null;
-      },
-    });
-    render(<ProjectScreen id="pr-1" />);
-    await screen.findByRole("heading", { name: "CRM rollout" });
-    await user.click(screen.getByTestId("project-step-pursuing"));
-    const dialog = await screen.findByRole("dialog");
-    await user.click(within(dialog).getByRole("button", { name: "Move" }));
-    await waitFor(() => expect(posted).toBeTruthy());
-    expect(posted).toEqual({ to_phase: "pursuing", reason: null });
-  });
-
-  it("shows the new phase from the move's answer and closes the dialog only once the page is read again", async () => {
-    const user = userEvent.setup();
-    let moved = false;
-    let releaseReread: (response: Response) => void = () => {};
-    projectsBackend({
-      respond: async (url, method) => {
-        if (method === "POST" && url.endsWith("/projects/pr-1/advance")) {
-          moved = true;
-          return jsonResponse(project({ phase: "pursuing" }));
-        }
-        if (moved && method === "GET" && url.endsWith("/projects/pr-1/360")) {
-          return new Promise<Response>((resolve) => {
-            releaseReread = resolve;
-          });
-        }
-        return null;
-      },
-    });
-    render(<ProjectScreen id="pr-1" />);
-    await screen.findByRole("heading", { name: "CRM rollout" });
-    await user.click(screen.getByTestId("project-step-pursuing"));
-    const dialog = await screen.findByRole("dialog");
-    await user.click(within(dialog).getByRole("button", { name: "Move" }));
-
-    await waitFor(() => {
-      const here = [...document.querySelectorAll("[aria-current='step']")];
-      expect(
-        here.some((node) => node.textContent?.startsWith("Pursuing")),
-      ).toBe(true);
-    });
-    expect(screen.queryByRole("dialog")).toBeTruthy();
-
-    releaseReread(
-      jsonResponse(project360({ project: project({ phase: "pursuing" }) })),
-    );
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   // `writable` is what the server's write gate would answer on a mutation. A

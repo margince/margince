@@ -17,6 +17,7 @@ import (
 func TestEveryShippedLanguageWritesEveryRisk(t *testing.T) {
 	t.Parallel()
 	langcopytest.Census(t, riskWords)
+	langcopytest.GermanStyle(t, riskWords)
 }
 
 // The going-cold sentence counts days and never has to count one, because the

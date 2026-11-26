@@ -53,3 +53,17 @@ func TestAnyWriterMaySetEveryStageButLive(t *testing.T) {
 		t.Error("a value outside the vocabulary was accepted")
 	}
 }
+
+func TestACompanyStatusChangeKeepsTheVersionOneKey(t *testing.T) {
+	changed := map[string]any{"status": "customer", "industry": "software"}
+	fields := companyUpdatedEvent(changed).ChangedFields
+	if fields["status"] != "customer" || fields["lifecycle"] != "customer" {
+		t.Errorf("changed_fields = %v, want status and lifecycle both customer", fields)
+	}
+	if _, leaked := changed["lifecycle"]; leaked {
+		t.Error("building the payload wrote the version 1 key into the caller's map")
+	}
+	if fields := companyUpdatedEvent(map[string]any{"industry": "software"}).ChangedFields; fields["lifecycle"] != nil {
+		t.Errorf("a change that leaves the status alone carries lifecycle %v", fields["lifecycle"])
+	}
+}

@@ -51,6 +51,8 @@ seeds:
       agent_loop: [premium, cheap_cloud]
       nl_search: [premium, cheap_cloud]
       voice_build: [premium, cheap_cloud]
+      rewrite: [premium, cheap_cloud]
+      growth_fit: [premium, cheap_cloud]
     # The width is asked of the model as outputDimensionality, as on gemini.
     # The embedder keeps a location of its own, which overrides the provider's
     # for this lane alone.

@@ -95,7 +95,7 @@ func assertOfferMoneyImage(t *testing.T, img *offerMoneyImage, side string, net,
 // FROM, and says separately — in evidence — that a line was what moved it.
 func TestAddOfferLineItemAuditsTheTotalsTheLineMoved(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Line-add audit deal")
 
 	// A second line: 1 × 50.00 @19% → net 5000, tax 950, on top of the
@@ -120,7 +120,7 @@ func TestAddOfferLineItemAuditsTheTotalsTheLineMoved(t *testing.T) {
 // numbers, which is only readable because both images are recorded.
 func TestAddStagedOfferLinesAuditsTheTotalsItLeftStanding(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-audit deal")
 
 	if _, err := e.Deals.AddStagedOfferLines(agentOfferDraftCtx(e), offerID, groundedStagedLines()); err != nil {
@@ -175,7 +175,7 @@ func lineEvidenceSide(t *testing.T, evidence map[string]any, side string) map[st
 // field of the offer — is in evidence.
 func TestUpdateOfferLineItemAuditsTheTotalsTheEditMoved(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Line-edit audit deal")
 	lineID := soleLineID(ctx, t, e, offerID)
 
@@ -203,7 +203,7 @@ func TestUpdateOfferLineItemAuditsTheTotalsTheEditMoved(t *testing.T) {
 // equal on both sides, so the row costs the screen nothing.
 func TestUpdateOfferLineItemAuditsTheTotalsARenameLeftStanding(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Line-rename audit deal")
 	lineID := soleLineID(ctx, t, e, offerID)
 
@@ -226,7 +226,7 @@ func TestUpdateOfferLineItemAuditsTheTotalsARenameLeftStanding(t *testing.T) {
 // field.
 func TestAcceptOfferLineItemAuditsTheTotalsItBrought(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Line-accept audit deal")
 
 	staged, err := e.Deals.AddStagedOfferLines(agentOfferDraftCtx(e), offerID, groundedStagedLines())
@@ -256,7 +256,7 @@ func TestAcceptOfferLineItemAuditsTheTotalsItBrought(t *testing.T) {
 // only place the numbers it took away survive.
 func TestRemoveOfferLineItemAuditsTheTotalsItTookAway(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Line-remove audit deal")
 	lineID := soleLineID(ctx, t, e, offerID)
 

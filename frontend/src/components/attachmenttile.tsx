@@ -10,7 +10,7 @@ import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { attachmentAnchor, attachmentTitle } from "../lib/attachmentlink";
-import { labelFor } from "../lib/labelfor";
+import { labelFor, valueFor } from "../lib/labelfor";
 import { linkKind } from "../lib/linkkind";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { useViewerZone } from "../lib/viewerzone";
@@ -33,6 +33,17 @@ export const CATEGORY_LABELS: Record<DocumentCategory, MessageKey> = {
 };
 
 const CATEGORY_ORDER: readonly string[] = Object.keys(CATEGORY_LABELS);
+
+/** The way in a file arrived that a reader can name. A mail or chat source
+ * system has no label: the file's origin line already says where it came from. */
+const SOURCE_LABELS: Readonly<Record<string, MessageKey>> = {
+  upload: "docs.source.upload",
+  link: "docs.source.link",
+};
+
+function sourceLabel(source: string | undefined): MessageKey | null {
+  return source ? valueFor(SOURCE_LABELS, source, null) : null;
+}
 
 /**
  * The category chips over a list of files. The `steady` ones always show; any
@@ -107,6 +118,7 @@ export function AttachmentTile({
   const view = useContext(DocumentsViewContext);
   const superseded = file.doc_state === "superseded";
   const title = attachmentTitle(file);
+  const source = withSource ? sourceLabel(file.source) : null;
   return (
     <DocumentTile
       filename={file.filename}
@@ -126,7 +138,7 @@ export function AttachmentTile({
         // The name it saves as, when a human gave it another title.
         title === file.filename ? null : file.filename,
         file.category ? t(labelFor(CATEGORY_LABELS, file.category)) : null,
-        withSource ? file.source : null,
+        source ? t(source) : null,
         // A mail's file arrived when the mail did, not when it was filed.
         file.origin
           ? activityDay(

@@ -25,6 +25,12 @@ import (
 // Each change is audited on the record it changed, with the other record named
 // in the evidence.
 func (s *Service) CarryGrantsTx(ctx context.Context, tx pgx.Tx, recordType string, from, to ids.UUID) error {
+	return CarryGrantsTx(ctx, tx, recordType, from, to)
+}
+
+// CarryGrantsTx is the carry for a caller that holds no Service: the merge reads
+// and writes on the transaction it is handed and nothing else.
+func CarryGrantsTx(ctx context.Context, tx pgx.Tx, recordType string, from, to ids.UUID) error {
 	// The merge verb is an update of the record type, and so is a share.
 	if err := admitGrantCarry(ctx, tx, recordType, from, to); err != nil {
 		return err

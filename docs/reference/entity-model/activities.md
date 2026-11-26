@@ -914,14 +914,12 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_sales_state
 
-5 columns · primary key `(thread_key, kind, channel_provider)` · referenced by 0 foreign keys
+3 columns · primary key `(thread_key, kind, channel_provider)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `channel_provider` | `text`, default `''::text` | yes |  |
 | `kind` | `text` | yes |  |
-| `set_at` | `timestamp with time zone`, default `now()` | yes |  |
-| `set_by` | `text` | yes |  |
 | `thread_key` | `text` | yes |  |
 
 **Indexes**
@@ -930,8 +928,8 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "set_by": 20000, "thread_key": 20000, "channel_provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel_provider":20000,"kind":20000,"set_by":20000,"thread_key":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "set_by": 20000, "thread_key": 20000, "channel_provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel_provider":20000,"kind":20000,"set_by":20000,"thread_key":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "thread_key": 20000, "channel_provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel_provider":20000,"kind":20000,"thread_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "thread_key": 20000, "channel_provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel_provider":20000,"kind":20000,"thread_key":20000}')`
 
 ## attachment
 
@@ -952,7 +950,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `declared_type` | `text` |  |  |
 | `doc_state` | `text`, default `'current'::text` | yes | ASSERTED, never inferred. |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes |  |
+| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `activity`, `project` and 11 more. |
 | `external_part_id` | `text` |  |  |
 | `external_source_id` | `text` |  |  |
 | `filename` | `text` | yes |  |
@@ -980,7 +978,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `attachment_byte_size_js_safe`: `CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))`
 - `attachment_category_check`: `CHECK ((category = ANY (ARRAY['contract', 'offer', 'legal', 'email_attachment', 'message_attachment', 'other', 'link'])))`
 - `attachment_doc_state_check`: `CHECK ((doc_state = ANY (ARRAY['draft', 'current', 'final', 'superseded'])))`
-- `attachment_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
+- `attachment_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant'])))`
 - `attachment_external_identity_complete`: `CHECK (((external_source_id IS NULL) = (external_part_id IS NULL)))`
 - `attachment_link_shape`: `CHECK ((((category <> 'link') OR (url IS NOT NULL)) AND ((url IS NULL) OR ((storage_key = '') AND bytes_withheld AND (url ~ '^https?://') AND (length(url) <= 2048)))))`
 - `attachment_supersedes_not_self`: `CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))`
@@ -1053,7 +1051,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## booking_alias
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+5 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1062,7 +1060,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `booking_page_id` | `uuid` |  | Points at `booking_page.id`. |
 | `host_user_id` | `uuid` |  | Points at `app_user.id`. |
 | `retired_at` | `timestamp with time zone` |  |  |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
 
@@ -1128,14 +1125,12 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## deal_document_hide
 
-4 columns · primary key `(deal_id, attachment_id)` · referenced by 0 foreign keys
+2 columns · primary key `(deal_id, attachment_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `attachment_id` | `uuid` | yes | Points at `attachment.id`. |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
-| `hidden_at` | `timestamp with time zone`, default `now()` | yes |  |
-| `hidden_by` | `text` | yes |  |
 
 **Points at**
 
@@ -1148,11 +1143,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `deal_document_hide_pkey`: `unique, btree (deal_id, attachment_id)`
 - `idx_deal_document_hide_attachment`: `btree (attachment_id)`
-
-**Triggers**
-
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"hidden_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"hidden_by":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"hidden_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"hidden_by":20000}')`
 
 ## mail_draft
 
@@ -1348,19 +1338,17 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## meeting_readiness
 
-9 columns · primary key `(attendee_id, activity_id)` · referenced by 0 foreign keys
+7 columns · primary key `(attendee_id, activity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `agenda_fingerprint` | `text` | yes |  |
 | `attendee_id` | `uuid` | yes | Points at `app_user.id`. |
-| `confirmed_at` | `timestamp with time zone` | yes |  |
 | `participants_fingerprint` | `text` | yes |  |
 | `revision` | `text` | yes |  |
 | `starts_at` | `timestamp with time zone` | yes |  |
 | `starts_on_day` | `boolean` | yes |  |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 
 **Points at**
 
@@ -1380,8 +1368,8 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"revision": 20000, "captured_by": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"captured_by":20000,"participants_fingerprint":20000,"revision":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"revision": 20000, "captured_by": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"captured_by":20000,"participants_fingerprint":20000,"revision":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"revision": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"participants_fingerprint":20000,"revision":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"revision": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"participants_fingerprint":20000,"revision":20000}')`
 
 ## scheduled_send
 
@@ -1497,14 +1485,13 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## worklist_done
 
-5 columns · primary key `(reader_id, source, row_id)` · referenced by 0 foreign keys
+4 columns · primary key `(reader_id, source, row_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `done_at` | `timestamp with time zone` | yes |  |
 | `reader_id` | `uuid` | yes | Points at `app_user.id`. |
 | `row_id` | `text` | yes |  |
-| `set_by` | `text` | yes |  |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 
 **Points at**
@@ -1523,19 +1510,18 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"row_id": 20000, "set_by": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"set_by":20000,"source":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"row_id": 20000, "set_by": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"set_by":20000,"source":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"row_id": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"row_id": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"source":20000}')`
 
 ## worklist_pin
 
-5 columns · primary key `(reader_id, source, row_id)` · referenced by 0 foreign keys
+4 columns · primary key `(reader_id, source, row_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `pinned_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `reader_id` | `uuid` | yes | Points at `app_user.id`. |
 | `row_id` | `text` | yes | The row's own id within that lane. |
-| `set_by` | `text` | yes |  |
 | `source` | `text` | yes | The lane the row came from. |
 
 **Points at**
@@ -1554,5 +1540,5 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"row_id": 20000, "set_by": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"set_by":20000,"source":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"row_id": 20000, "set_by": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"set_by":20000,"source":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"row_id": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"row_id": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"source":20000}')`

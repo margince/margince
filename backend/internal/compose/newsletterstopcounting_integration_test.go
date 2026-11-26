@@ -72,7 +72,7 @@ func (f *relationshipFixture) ghosted(t *testing.T, activity ids.UUID) int {
 func TestTheDataTaskArchivesOnlyAGhostedThreadOurNewsletterRaised(t *testing.T) {
 	for left, body := range [][]string{newsletterBody("News from us."), nil} {
 		f := newRelationshipFixture(t)
-		f.e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, f.company)
+		f.e.WsExec(t, `UPDATE company SET status = 'opportunity' WHERE id = $1`, f.company)
 		f.mail(t, "pricing-question", f.contactAddr, f.seatAddr, "", 30)
 		ours := f.mail(t, "our-mail", f.seatAddr, f.contactAddr, "", ghostedThresholdDays+2, body...)
 		if body != nil {
