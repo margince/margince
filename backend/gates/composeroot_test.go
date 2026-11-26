@@ -37,7 +37,9 @@ const (
 	// Raised by 1 for the history-narrowing fleet worker, which binds each
 	// workspace through this package's unexported job helpers. Raised by 1 for
 	// main's managed corpus port, which wraps the unexported call runtime.
-	composeRootProductionFiles = 1386
+	// Raised by 1 production file for agentfor.go, the one seam that binds the
+	// product acting for a named colleague, split out of the deal-owner seam.
+	composeRootProductionFiles = 1387
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -48,7 +50,11 @@ const (
 	// the unit tool coverage cases, which read the unexported tool coverage census.
 	// Raised by 2 test files for the row scope cases of an owned extension kind.
 	// They drive unexported readers of the kind.
-	composeRootTestFiles = 1921
+	// Raised by 2 test files for the agent seam's id check and for the billing case.
+	// That case drives the unexported finance billing adapter, so the finance
+	// card and the company page withhold the same billing contacts. Raised by 1
+	// test file for main's managed corpus port cases, met with develop's in the sync.
+	composeRootTestFiles = 1922
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -113,8 +119,10 @@ const (
 	// History query, boot owner check and filter preview handler.
 	// Raised by 136 production and 56 test lines when main's managed corpus port
 	// and its cases met develop in the sync. The port wraps the unexported call runtime.
-	composeRootProductionLines = 231_595
-	composeRootTestLines       = 362_321
+	// Raised by 44 production and 99 test lines for the agent-for-a-colleague
+	// seam, the finance card's hidden billing count and their cases.
+	composeRootProductionLines = 231_636
+	composeRootTestLines       = 362_420
 )
 
 // A read under these floors stopped early or read the wrong place, and would
