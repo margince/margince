@@ -17,23 +17,25 @@
     {
       "model": "claude-sonnet-5-5@claude-cli",
       "name": "claude-sonnet-5-5",
-      "trust": "🟢 Yes",
+      "trust": "🟡 Mostly",
       "cases_with_a_committed_run": 81,
-      "cases_that_reached_their_bar": 81,
-      "cases_below_their_bar": 0,
-      "cases_measured_on_an_earlier_listing": 81,
-      "runs": 167,
+      "cases_that_reached_their_bar": 80,
+      "cases_below_their_bar": 1,
+      "cases_measured_on_an_earlier_listing": 39,
+      "runs": 169,
       "passed": 163,
-      "reliability": 0.9760479041916168,
-      "cases_below_their_bar_named": [],
+      "reliability": 0.9644970414201184,
+      "cases_below_their_bar_named": [
+        "case74_read_the_file_back"
+      ],
       "route": "Claude Code CLI",
       "self_judged": true,
-      "calls_per_case": "4.5 over 81",
+      "calls_per_case": "4 over 81",
       "slow_cases": [],
-      "median_calls_per_case": "4.5",
-      "median_turns_per_case": "5.5",
+      "median_calls_per_case": "4",
+      "median_turns_per_case": "5",
       "median_refused_per_case": "0.5",
-      "median_retries_per_case": "-"
+      "median_retries_per_case": "0.25"
     },
     {
       "model": "claude-sonnet-5-5@claude-sdk",
@@ -43,17 +45,17 @@
       "cases_that_reached_their_bar": 2,
       "cases_below_their_bar": 0,
       "cases_measured_on_an_earlier_listing": 2,
-      "runs": 5,
+      "runs": 4,
       "passed": 4,
-      "reliability": 0.8,
+      "reliability": 1,
       "cases_below_their_bar_named": [],
       "route": "Claude Agent SDK",
       "self_judged": true,
-      "calls_per_case": "11.5 over 2",
+      "calls_per_case": "13.5 over 2",
       "slow_cases": [],
-      "median_calls_per_case": "11.5",
-      "median_turns_per_case": "12.5",
-      "median_refused_per_case": "3",
+      "median_calls_per_case": "13.5",
+      "median_turns_per_case": "14.5",
+      "median_refused_per_case": "1.75",
       "median_retries_per_case": "-"
     },
     {
@@ -119,10 +121,10 @@
         "cases_below_their_bar": 2,
         "cases_measured_on_an_earlier_listing": 20,
         "runs": 42,
-        "passed": 38,
-        "reliability": 0.9047619047619048,
+        "passed": 36,
+        "reliability": 0.8571428571428571,
         "cases_below_their_bar_named": [
-          "case20_put_it_in_the_board_pack",
+          "case10_finish_the_import",
           "case64_catch_me_up_and_the_brief"
         ],
         "route": "Claude Code CLI",
@@ -131,7 +133,7 @@
         "slow_cases": [],
         "median_calls_per_case": "14",
         "median_turns_per_case": "15",
-        "median_refused_per_case": "0",
+        "median_refused_per_case": "0.25",
         "median_retries_per_case": "-"
       }
     ],
@@ -200,33 +202,32 @@
         "by_model": [
           {
             "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 3,
-            "passed": 3,
+            "runs": 2,
+            "passed": 0,
             "pass_at": 2,
-            "held": true,
+            "held": false,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
-              "runs": 3,
+              "runs": 2,
               "calls": {
-                "median": 15,
-                "min": 15,
+                "median": 14.5,
+                "min": 14,
                 "max": 15
               },
               "turns": {
-                "median": 16,
-                "min": 16,
+                "median": 15.5,
+                "min": 15,
                 "max": 16
               },
               "refused": {
-                "median": 0,
+                "median": 0.5,
                 "min": 0,
-                "max": 0
+                "max": 1
               },
               "retries": null
             },
-            "regraded": true,
             "measured_on_an_earlier_listing": [
               "scenario",
               "tool copy",
@@ -260,14 +261,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 6.5,
+                "median": 7,
                 "min": 6,
-                "max": 7
+                "max": 8
               },
               "turns": {
-                "median": 7.5,
+                "median": 8,
                 "min": 7,
-                "max": 8
+                "max": 9
               },
               "refused": {
                 "median": 0,
@@ -291,437 +292,6 @@
         "criteria": [
           1,
           3
-        ],
-        "requires": [],
-        "requires_one_of": [],
-        "by_model": [
-          {
-            "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 0,
-            "pass_at": 2,
-            "held": false,
-            "driver": "claude:cli",
-            "search": "semantic",
-            "self_judged": true,
-            "efficiency": {
-              "runs": 2,
-              "calls": {
-                "median": 9.5,
-                "min": 8,
-                "max": 11
-              },
-              "turns": {
-                "median": 10.5,
-                "min": 9,
-                "max": 12
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
-            },
-            "measured_on_an_earlier_listing": [
-              "tool copy",
-              "server instructions and resources",
-              "harness"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "case23_find_us_a_slot",
-        "title": "Find us a slot",
-        "file": "case23-find-us-a-slot.yaml",
-        "criteria": [
-          1,
-          2
-        ],
-        "requires": [
-          "check_availability"
-        ],
-        "requires_one_of": [],
-        "by_model": [
-          {
-            "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 2,
-            "pass_at": 2,
-            "held": true,
-            "driver": "claude:cli",
-            "search": "semantic",
-            "self_judged": true,
-            "efficiency": {
-              "runs": 2,
-              "calls": {
-                "median": 9.5,
-                "min": 9,
-                "max": 10
-              },
-              "turns": {
-                "median": 10.5,
-                "min": 10,
-                "max": 11
-              },
-              "refused": {
-                "median": 1,
-                "min": 1,
-                "max": 1
-              },
-              "retries": null
-            },
-            "measured_on_an_earlier_listing": [
-              "tool copy",
-              "server instructions and resources",
-              "harness"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "case31_wrong_word_on_the_record",
-        "title": "The word that should not be on this one",
-        "file": "case31-wrong-word-on-the-record.yaml",
-        "criteria": [
-          1,
-          2
-        ],
-        "requires": [],
-        "requires_one_of": [],
-        "by_model": [
-          {
-            "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 2,
-            "pass_at": 2,
-            "held": true,
-            "driver": "claude:cli",
-            "search": "semantic",
-            "self_judged": true,
-            "efficiency": {
-              "runs": 2,
-              "calls": {
-                "median": 19.5,
-                "min": 19,
-                "max": 20
-              },
-              "turns": {
-                "median": 20.5,
-                "min": 20,
-                "max": 21
-              },
-              "refused": {
-                "median": 1,
-                "min": 1,
-                "max": 1
-              },
-              "retries": null
-            },
-            "measured_on_an_earlier_listing": [
-              "tool copy",
-              "server instructions and resources",
-              "harness"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "case4_use_the_moment",
-        "title": "Use the moment",
-        "file": "case4-use-the-moment.yaml",
-        "criteria": [
-          1,
-          6
-        ],
-        "requires": [],
-        "requires_one_of": [],
-        "by_model": [
-          {
-            "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 2,
-            "pass_at": 2,
-            "held": true,
-            "driver": "claude:cli",
-            "search": "semantic",
-            "self_judged": true,
-            "efficiency": {
-              "runs": 2,
-              "calls": {
-                "median": 9.5,
-                "min": 9,
-                "max": 10
-              },
-              "turns": {
-                "median": 10.5,
-                "min": 10,
-                "max": 11
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
-            },
-            "measured_on_an_earlier_listing": [
-              "tool copy",
-              "server instructions and resources",
-              "harness"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "case40_sort_the_queue",
-        "title": "Sort the lead queue",
-        "file": "case40-sort-the-queue.yaml",
-        "criteria": [
-          1,
-          2,
-          3
-        ],
-        "requires": [],
-        "requires_one_of": [],
-        "by_model": [
-          {
-            "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 2,
-            "pass_at": 2,
-            "held": true,
-            "driver": "claude:cli",
-            "search": "semantic",
-            "self_judged": true,
-            "efficiency": {
-              "runs": 2,
-              "calls": {
-                "median": 26,
-                "min": 24,
-                "max": 28
-              },
-              "turns": {
-                "median": 27,
-                "min": 25,
-                "max": 29
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
-            },
-            "measured_on_an_earlier_listing": [
-              "tool copy",
-              "server instructions and resources",
-              "harness"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "case43_the_fair_leads_are_prospects",
-        "title": "The fair leads are prospects now",
-        "file": "case43-the-fair-leads-are-prospects.yaml",
-        "criteria": [
-          1,
-          2
-        ],
-        "requires": [],
-        "requires_one_of": [],
-        "by_model": [
-          {
-            "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 2,
-            "pass_at": 2,
-            "held": true,
-            "driver": "claude:cli",
-            "search": "semantic",
-            "self_judged": true,
-            "efficiency": {
-              "runs": 2,
-              "calls": {
-                "median": 17.5,
-                "min": 16,
-                "max": 19
-              },
-              "turns": {
-                "median": 18.5,
-                "min": 17,
-                "max": 20
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
-            },
-            "measured_on_an_earlier_listing": [
-              "scenario",
-              "tool copy",
-              "server instructions and resources",
-              "harness"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "case45_move_the_deal_on",
-        "title": "Move the deal on",
-        "file": "case45-move-the-deal-on.yaml",
-        "criteria": [
-          1,
-          2,
-          3,
-          4
-        ],
-        "requires": [],
-        "requires_one_of": [],
-        "by_model": [
-          {
-            "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 2,
-            "pass_at": 2,
-            "held": true,
-            "driver": "claude:cli",
-            "search": "semantic",
-            "self_judged": true,
-            "efficiency": {
-              "runs": 2,
-              "calls": {
-                "median": 14,
-                "min": 14,
-                "max": 14
-              },
-              "turns": {
-                "median": 15,
-                "min": 15,
-                "max": 15
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
-            },
-            "measured_on_an_earlier_listing": [
-              "tool copy",
-              "server instructions and resources",
-              "harness"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "case5_before_the_meeting",
-        "title": "Before the meeting",
-        "file": "case5-before-the-meeting.yaml",
-        "criteria": [
-          1,
-          2,
-          3,
-          5
-        ],
-        "requires": [],
-        "requires_one_of": [],
-        "by_model": [
-          {
-            "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 2,
-            "pass_at": 2,
-            "held": true,
-            "driver": "claude:cli",
-            "search": "semantic",
-            "self_judged": true,
-            "efficiency": {
-              "runs": 2,
-              "calls": {
-                "median": 14,
-                "min": 14,
-                "max": 14
-              },
-              "turns": {
-                "median": 15,
-                "min": 15,
-                "max": 15
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
-            },
-            "measured_on_an_earlier_listing": [
-              "tool copy",
-              "server instructions and resources",
-              "harness"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "case54_a_word_from_the_fair",
-        "title": "A word from the fair, offered and not claimed",
-        "file": "case54-a-word-from-the-fair.yaml",
-        "criteria": [
-          1
-        ],
-        "requires": [],
-        "requires_one_of": [],
-        "by_model": [
-          {
-            "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 2,
-            "pass_at": 2,
-            "held": true,
-            "driver": "claude:cli",
-            "search": "semantic",
-            "self_judged": true,
-            "efficiency": {
-              "runs": 2,
-              "calls": {
-                "median": 17,
-                "min": 16,
-                "max": 18
-              },
-              "turns": {
-                "median": 18,
-                "min": 17,
-                "max": 19
-              },
-              "refused": {
-                "median": 1,
-                "min": 1,
-                "max": 1
-              },
-              "retries": null
-            },
-            "measured_on_an_earlier_listing": [
-              "tool copy",
-              "server instructions and resources",
-              "harness"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "case6_ask_the_company",
-        "title": "Ask the company",
-        "file": "case6-ask-the-company.yaml",
-        "criteria": [
-          1,
-          3,
-          5
         ],
         "requires": [],
         "requires_one_of": [],
@@ -763,11 +333,252 @@
         ]
       },
       {
-        "name": "case61_what_have_i_promised",
-        "title": "What have I promised",
-        "file": "case61-what-have-i-promised.yaml",
+        "name": "case23_find_us_a_slot",
+        "title": "Find us a slot",
+        "file": "case23-find-us-a-slot.yaml",
         "criteria": [
-          1
+          1,
+          2
+        ],
+        "requires": [
+          "check_availability"
+        ],
+        "requires_one_of": [],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 2,
+            "passed": 2,
+            "pass_at": 2,
+            "held": true,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true,
+            "efficiency": {
+              "runs": 2,
+              "calls": {
+                "median": 10.5,
+                "min": 10,
+                "max": 11
+              },
+              "turns": {
+                "median": 11.5,
+                "min": 11,
+                "max": 12
+              },
+              "refused": {
+                "median": 1.5,
+                "min": 1,
+                "max": 2
+              },
+              "retries": null
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "case31_wrong_word_on_the_record",
+        "title": "The word that should not be on this one",
+        "file": "case31-wrong-word-on-the-record.yaml",
+        "criteria": [
+          1,
+          2
+        ],
+        "requires": [],
+        "requires_one_of": [],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 2,
+            "passed": 2,
+            "pass_at": 2,
+            "held": true,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true,
+            "efficiency": {
+              "runs": 2,
+              "calls": {
+                "median": 20,
+                "min": 19,
+                "max": 21
+              },
+              "turns": {
+                "median": 21,
+                "min": 20,
+                "max": 22
+              },
+              "refused": {
+                "median": 1,
+                "min": 0,
+                "max": 2
+              },
+              "retries": null
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "case4_use_the_moment",
+        "title": "Use the moment",
+        "file": "case4-use-the-moment.yaml",
+        "criteria": [
+          1,
+          6
+        ],
+        "requires": [],
+        "requires_one_of": [],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 2,
+            "passed": 2,
+            "pass_at": 2,
+            "held": true,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true,
+            "efficiency": {
+              "runs": 2,
+              "calls": {
+                "median": 10,
+                "min": 10,
+                "max": 10
+              },
+              "turns": {
+                "median": 11,
+                "min": 11,
+                "max": 11
+              },
+              "refused": {
+                "median": 0,
+                "min": 0,
+                "max": 0
+              },
+              "retries": null
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "case40_sort_the_queue",
+        "title": "Sort the lead queue",
+        "file": "case40-sort-the-queue.yaml",
+        "criteria": [
+          1,
+          2,
+          3
+        ],
+        "requires": [],
+        "requires_one_of": [],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 3,
+            "passed": 2,
+            "pass_at": 2,
+            "held": true,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true,
+            "efficiency": {
+              "runs": 3,
+              "calls": {
+                "median": 23,
+                "min": 18,
+                "max": 25
+              },
+              "turns": {
+                "median": 24,
+                "min": 19,
+                "max": 26
+              },
+              "refused": {
+                "median": 0,
+                "min": 0,
+                "max": 0
+              },
+              "retries": null
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "case43_the_fair_leads_are_prospects",
+        "title": "The fair leads are prospects now",
+        "file": "case43-the-fair-leads-are-prospects.yaml",
+        "criteria": [
+          1,
+          2
+        ],
+        "requires": [],
+        "requires_one_of": [],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 2,
+            "passed": 2,
+            "pass_at": 2,
+            "held": true,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true,
+            "efficiency": {
+              "runs": 2,
+              "calls": {
+                "median": 18,
+                "min": 17,
+                "max": 19
+              },
+              "turns": {
+                "median": 19,
+                "min": 18,
+                "max": 20
+              },
+              "refused": {
+                "median": 0.5,
+                "min": 0,
+                "max": 1
+              },
+              "retries": null
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "case45_move_the_deal_on",
+        "title": "Move the deal on",
+        "file": "case45-move-the-deal-on.yaml",
+        "criteria": [
+          1,
+          2,
+          3,
+          4
         ],
         "requires": [],
         "requires_one_of": [],
@@ -809,6 +620,195 @@
         ]
       },
       {
+        "name": "case5_before_the_meeting",
+        "title": "Before the meeting",
+        "file": "case5-before-the-meeting.yaml",
+        "criteria": [
+          1,
+          2,
+          3,
+          5
+        ],
+        "requires": [],
+        "requires_one_of": [],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 2,
+            "passed": 2,
+            "pass_at": 2,
+            "held": true,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true,
+            "efficiency": {
+              "runs": 2,
+              "calls": {
+                "median": 15,
+                "min": 14,
+                "max": 16
+              },
+              "turns": {
+                "median": 16,
+                "min": 15,
+                "max": 17
+              },
+              "refused": {
+                "median": 0,
+                "min": 0,
+                "max": 0
+              },
+              "retries": null
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "case54_a_word_from_the_fair",
+        "title": "A word from the fair, offered and not claimed",
+        "file": "case54-a-word-from-the-fair.yaml",
+        "criteria": [
+          1
+        ],
+        "requires": [],
+        "requires_one_of": [],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 2,
+            "passed": 2,
+            "pass_at": 2,
+            "held": true,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true,
+            "efficiency": {
+              "runs": 2,
+              "calls": {
+                "median": 13.5,
+                "min": 13,
+                "max": 14
+              },
+              "turns": {
+                "median": 14.5,
+                "min": 14,
+                "max": 15
+              },
+              "refused": {
+                "median": 1,
+                "min": 1,
+                "max": 1
+              },
+              "retries": null
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "case6_ask_the_company",
+        "title": "Ask the company",
+        "file": "case6-ask-the-company.yaml",
+        "criteria": [
+          1,
+          3,
+          5
+        ],
+        "requires": [],
+        "requires_one_of": [],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 2,
+            "passed": 2,
+            "pass_at": 2,
+            "held": true,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true,
+            "efficiency": {
+              "runs": 2,
+              "calls": {
+                "median": 17.5,
+                "min": 16,
+                "max": 19
+              },
+              "turns": {
+                "median": 18.5,
+                "min": 17,
+                "max": 20
+              },
+              "refused": {
+                "median": 0.5,
+                "min": 0,
+                "max": 1
+              },
+              "retries": null
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "case61_what_have_i_promised",
+        "title": "What have I promised",
+        "file": "case61-what-have-i-promised.yaml",
+        "criteria": [
+          1
+        ],
+        "requires": [],
+        "requires_one_of": [],
+        "by_model": [
+          {
+            "model": "claude-sonnet-5-5@claude-cli",
+            "runs": 2,
+            "passed": 2,
+            "pass_at": 2,
+            "held": true,
+            "driver": "claude:cli",
+            "search": "semantic",
+            "self_judged": true,
+            "efficiency": {
+              "runs": 2,
+              "calls": {
+                "median": 10.5,
+                "min": 9,
+                "max": 12
+              },
+              "turns": {
+                "median": 11.5,
+                "min": 10,
+                "max": 13
+              },
+              "refused": {
+                "median": 0,
+                "min": 0,
+                "max": 0
+              },
+              "retries": null
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
+          }
+        ]
+      },
+      {
         "name": "case62_held_meetings_to_opportunities",
         "title": "Held meetings that became opportunities",
         "file": "case62-held-meetings-to-opportunities.yaml",
@@ -826,7 +826,7 @@
         "by_model": [
           {
             "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
+            "runs": 3,
             "passed": 2,
             "pass_at": 2,
             "held": true,
@@ -834,21 +834,21 @@
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
-              "runs": 2,
+              "runs": 3,
               "calls": {
-                "median": 11.5,
-                "min": 8,
-                "max": 15
+                "median": 12,
+                "min": 12,
+                "max": 17
               },
               "turns": {
-                "median": 12.5,
-                "min": 9,
-                "max": 16
+                "median": 13,
+                "min": 13,
+                "max": 18
               },
               "refused": {
-                "median": 1,
+                "median": 0,
                 "min": 0,
-                "max": 2
+                "max": 1
               },
               "retries": null
             },
@@ -882,13 +882,13 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 8,
-                "min": 8,
+                "median": 7.5,
+                "min": 7,
                 "max": 8
               },
               "turns": {
-                "median": 9,
-                "min": 9,
+                "median": 8.5,
+                "min": 8,
                 "max": 9
               },
               "refused": {
@@ -918,33 +918,32 @@
         "by_model": [
           {
             "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 3,
-            "passed": 1,
+            "runs": 2,
+            "passed": 0,
             "pass_at": 2,
             "held": false,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
-              "runs": 3,
+              "runs": 2,
               "calls": {
-                "median": 13,
-                "min": 11,
-                "max": 14
-              },
-              "turns": {
-                "median": 14,
-                "min": 12,
+                "median": 12.5,
+                "min": 10,
                 "max": 15
               },
+              "turns": {
+                "median": 13.5,
+                "min": 11,
+                "max": 16
+              },
               "refused": {
-                "median": 2,
+                "median": 1.5,
                 "min": 1,
                 "max": 2
               },
               "retries": null
             },
-            "regraded": true,
             "measured_on_an_earlier_listing": [
               "scenario",
               "tool copy",
@@ -977,13 +976,13 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 9,
-                "min": 7,
+                "median": 10.5,
+                "min": 10,
                 "max": 11
               },
               "turns": {
-                "median": 10,
-                "min": 8,
+                "median": 11.5,
+                "min": 11,
                 "max": 12
               },
               "refused": {
@@ -993,7 +992,6 @@
               },
               "retries": null
             },
-            "regraded": true,
             "measured_on_an_earlier_listing": [
               "tool copy",
               "server instructions and resources",
@@ -1028,13 +1026,13 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 19.5,
-                "min": 18,
+                "median": 20,
+                "min": 19,
                 "max": 21
               },
               "turns": {
-                "median": 20.5,
-                "min": 19,
+                "median": 21,
+                "min": 20,
                 "max": 22
               },
               "refused": {
@@ -1048,7 +1046,6 @@
               "scenario",
               "tool copy",
               "server instructions and resources",
-              "judge",
               "harness"
             ]
           }
@@ -1079,17 +1076,17 @@
               "runs": 2,
               "calls": {
                 "median": 10.5,
-                "min": 9,
-                "max": 12
+                "min": 10,
+                "max": 11
               },
               "turns": {
                 "median": 11.5,
-                "min": 10,
-                "max": 13
+                "min": 11,
+                "max": 12
               },
               "refused": {
-                "median": 1,
-                "min": 1,
+                "median": 0.5,
+                "min": 0,
                 "max": 1
               },
               "retries": null
@@ -1190,25 +1187,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10,
-              "min": 9,
-              "max": 11
+              "median": 8.5,
+              "min": 8,
+              "max": 9
             },
             "turns": {
-              "median": 11,
-              "min": 10,
-              "max": 12
+              "median": 9.5,
+              "min": 9,
+              "max": 10
             },
             "refused": {
-              "median": 3.5,
-              "min": 3,
-              "max": 4
+              "median": 2,
+              "min": 1,
+              "max": 3
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -1311,17 +1307,14 @@
               "max": 5
             },
             "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "median": 1,
+              "min": 1,
+              "max": 1
             },
             "retries": null
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "scenario",
-            "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -1435,7 +1428,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -1527,26 +1519,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
+              "median": 2.5,
               "min": 2,
-              "max": 5
+              "max": 3
             },
             "turns": {
-              "median": 4.5,
+              "median": 3.5,
               "min": 3,
-              "max": 6
+              "max": 4
             },
             "refused": {
-              "median": 1.5,
+              "median": 0,
               "min": 0,
-              "max": 3
+              "max": 0
             },
             "retries": null
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -1656,13 +1646,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1752,27 +1742,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
+              "median": 2.5,
+              "min": 2,
+              "max": 3
+            },
+            "turns": {
               "median": 3.5,
               "min": 3,
               "max": 4
-            },
-            "turns": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
             },
             "refused": {
               "median": 0,
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1862,26 +1852,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
-              "min": 4,
+              "median": 4,
+              "min": 2,
               "max": 6
             },
             "turns": {
-              "median": 6,
-              "min": 5,
+              "median": 5,
+              "min": 3,
               "max": 7
             },
             "refused": {
-              "median": 1,
-              "min": 1,
+              "median": 0.5,
+              "min": 0,
               "max": 1
             },
             "retries": null
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -1965,7 +1953,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1973,29 +1961,29 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 7,
-              "min": 6,
-              "max": 8
+              "median": 5,
+              "min": 5,
+              "max": 10
             },
             "turns": {
-              "median": 8,
-              "min": 7,
-              "max": 9
+              "median": 6,
+              "min": 6,
+              "max": 11
             },
             "refused": {
-              "median": 2.5,
-              "min": 2,
+              "median": 0,
+              "min": 0,
               "max": 3
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 3
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2085,29 +2073,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 5,
-              "max": 9
-            },
-            "turns": {
-              "median": 8,
-              "min": 6,
+              "median": 9.5,
+              "min": 9,
               "max": 10
             },
-            "refused": {
-              "median": 1,
-              "min": 0,
-              "max": 2
+            "turns": {
+              "median": 10.5,
+              "min": 10,
+              "max": 11
             },
-            "retries": null
+            "refused": {
+              "median": 3.5,
+              "min": 3,
+              "max": 4
+            },
+            "retries": {
+              "median": 3.5,
+              "min": 3,
+              "max": 4
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "scenario",
-            "tool copy",
-            "server instructions and resources",
-            "judge",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2222,7 +2208,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -2304,7 +2289,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -2312,28 +2297,26 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 5,
+              "median": 4.5,
               "min": 4,
-              "max": 6
+              "max": 5
             },
             "turns": {
-              "median": 6,
+              "median": 5.5,
               "min": 5,
-              "max": 7
+              "max": 6
             },
             "refused": {
-              "median": 0,
+              "median": 0.5,
               "min": 0,
-              "max": 2
+              "max": 1
             },
             "retries": null
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -2448,10 +2431,7 @@
             "retries": null
           },
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
-            "server instructions and resources",
-            "judge",
             "harness"
           ]
         },
@@ -2561,15 +2541,13 @@
               "min": 1,
               "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "regraded": true,
-          "measured_on_an_earlier_listing": [
-            "scenario",
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2666,25 +2644,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8.5,
-              "min": 8,
-              "max": 9
+              "median": 7,
+              "min": 6,
+              "max": 8
             },
             "turns": {
-              "median": 9.5,
-              "min": 9,
-              "max": 10
+              "median": 8,
+              "min": 7,
+              "max": 9
             },
             "refused": {
-              "median": 3,
-              "min": 3,
+              "median": 1.5,
+              "min": 0,
               "max": 3
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -2793,13 +2770,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2910,7 +2887,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -3020,7 +2996,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -3112,27 +3087,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
+              "median": 2.5,
               "min": 2,
-              "max": 4
+              "max": 3
             },
             "turns": {
-              "median": 4,
+              "median": 3.5,
               "min": 3,
-              "max": 5
+              "max": 4
             },
             "refused": {
               "median": 0.5,
               "min": 0,
               "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3222,27 +3197,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
+              "median": 5.5,
               "min": 3,
-              "max": 5
+              "max": 8
             },
             "turns": {
-              "median": 5,
+              "median": 6.5,
               "min": 4,
-              "max": 6
+              "max": 9
             },
             "refused": {
               "median": 1,
               "min": 0,
               "max": 2
             },
-            "retries": null
+            "retries": {
+              "median": 1,
+              "min": 0,
+              "max": 2
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3332,14 +3307,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
+              "median": 4,
               "min": 4,
-              "max": 5
+              "max": 4
             },
             "turns": {
-              "median": 5.5,
+              "median": 5,
               "min": 5,
-              "max": 6
+              "max": 5
             },
             "refused": {
               "median": 1,
@@ -3350,7 +3325,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -3456,13 +3430,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3556,26 +3530,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
-              "min": 5,
-              "max": 5
+              "median": 3,
+              "min": 3,
+              "max": 3
             },
             "turns": {
-              "median": 6,
-              "min": 6,
-              "max": 6
+              "median": 4,
+              "min": 4,
+              "max": 4
             },
             "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
+              "median": 0,
+              "min": 0,
+              "max": 0
             },
             "retries": null
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -3679,15 +3651,14 @@
               "max": 8
             },
             "refused": {
-              "median": 2,
-              "min": 1,
+              "median": 3,
+              "min": 3,
               "max": 3
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -3789,17 +3760,17 @@
               "max": 5
             },
             "refused": {
-              "median": 1,
+              "median": 1.5,
               "min": 1,
-              "max": 1
+              "max": 2
             },
-            "retries": null
+            "retries": {
+              "median": 0.5,
+              "min": 0,
+              "max": 1
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3908,13 +3879,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4005,25 +3976,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
+              "median": 6,
               "min": 6,
-              "max": 8
+              "max": 6
             },
             "turns": {
-              "median": 8,
+              "median": 7,
               "min": 7,
-              "max": 9
+              "max": 7
             },
             "refused": {
-              "median": 2,
+              "median": 1,
               "min": 1,
-              "max": 3
+              "max": 1
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -4117,13 +4087,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
-              "min": 3,
+              "median": 3,
+              "min": 2,
               "max": 4
             },
             "turns": {
-              "median": 4.5,
-              "min": 4,
+              "median": 4,
+              "min": 3,
               "max": 5
             },
             "refused": {
@@ -4133,10 +4103,8 @@
             },
             "retries": null
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -4230,27 +4198,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
-              "min": 3,
-              "max": 4
+              "median": 5.5,
+              "min": 5,
+              "max": 6
             },
             "turns": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
+              "median": 6.5,
+              "min": 6,
+              "max": 7
             },
             "refused": {
+              "median": 1,
+              "min": 1,
+              "max": 1
+            },
+            "retries": {
               "median": 0.5,
               "min": 0,
               "max": 1
-            },
-            "retries": null
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4355,13 +4323,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4469,7 +4437,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -4565,14 +4532,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
+              "median": 11.5,
               "min": 6,
-              "max": 6
+              "max": 17
             },
             "turns": {
-              "median": 7,
+              "median": 12.5,
               "min": 7,
-              "max": 7
+              "max": 18
             },
             "refused": {
               "median": 1,
@@ -4582,8 +4549,6 @@
             "retries": null
           },
           "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         }
@@ -4612,27 +4577,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
+              "median": 7,
+              "min": 5,
+              "max": 9
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 8,
+              "min": 6,
+              "max": 10
             },
             "refused": {
-              "median": 0,
+              "median": 2,
               "min": 0,
-              "max": 0
+              "max": 4
             },
-            "retries": null
+            "retries": {
+              "median": 2,
+              "min": 0,
+              "max": 4
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4723,27 +4688,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
-              "min": 5,
-              "max": 7
+              "median": 4,
+              "min": 4,
+              "max": 4
             },
             "turns": {
-              "median": 7,
-              "min": 6,
-              "max": 8
+              "median": 5,
+              "min": 5,
+              "max": 5
             },
             "refused": {
               "median": 2,
               "min": 2,
               "max": 2
             },
-            "retries": null
+            "retries": {
+              "median": 1.5,
+              "min": 1,
+              "max": 2
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4851,13 +4816,13 @@
               "min": 1,
               "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 1,
+              "min": 1,
+              "max": 1
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4938,7 +4903,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -4946,7 +4911,7 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
               "median": 2,
               "min": 2,
@@ -4960,16 +4925,15 @@
             "refused": {
               "median": 0,
               "min": 0,
-              "max": 1
+              "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "scenario",
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5077,13 +5041,13 @@
               "min": 4,
               "max": 4
             },
-            "retries": null
+            "retries": {
+              "median": 4,
+              "min": 4,
+              "max": 4
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5185,17 +5149,17 @@
               "max": 8
             },
             "refused": {
-              "median": 1,
-              "min": 1,
+              "median": 0.5,
+              "min": 0,
               "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 0.5,
+              "min": 0,
+              "max": 1
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5305,14 +5269,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "scenario",
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5409,27 +5372,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9.5,
+              "median": 8,
               "min": 7,
-              "max": 12
+              "max": 9
             },
             "turns": {
-              "median": 10.5,
+              "median": 9,
               "min": 8,
-              "max": 13
+              "max": 10
             },
             "refused": {
-              "median": 1.5,
+              "median": 0,
               "min": 0,
-              "max": 3
+              "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5521,27 +5484,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8.5,
-              "min": 8,
+              "median": 7.5,
+              "min": 6,
               "max": 9
             },
             "turns": {
-              "median": 9.5,
-              "min": 9,
+              "median": 8.5,
+              "min": 7,
               "max": 10
             },
             "refused": {
-              "median": 1,
-              "min": 0,
-              "max": 2
+              "median": 3.5,
+              "min": 3,
+              "max": 4
             },
-            "retries": null
+            "retries": {
+              "median": 3.5,
+              "min": 3,
+              "max": 4
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5625,7 +5588,7 @@
         {
           "model": "claude-sonnet-5-5@claude-cli",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
@@ -5634,28 +5597,27 @@
           "efficiency": {
             "runs": 3,
             "calls": {
-              "median": 15,
+              "median": 11,
               "min": 11,
-              "max": 15
+              "max": 12
             },
             "turns": {
-              "median": 16,
+              "median": 12,
               "min": 12,
-              "max": 16
+              "max": 13
             },
             "refused": {
               "median": 4,
-              "min": 4,
+              "min": 3,
               "max": 4
             },
-            "retries": null
+            "retries": {
+              "median": 4,
+              "min": 3,
+              "max": 4
+            }
           },
-          "regraded": true,
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5748,28 +5710,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
+              "median": 4,
               "min": 4,
-              "max": 6
+              "max": 4
             },
             "turns": {
-              "median": 6,
+              "median": 5,
               "min": 5,
-              "max": 7
+              "max": 5
             },
             "refused": {
               "median": 1,
               "min": 1,
               "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 1,
+              "min": 1,
+              "max": 1
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "scenario",
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5857,7 +5818,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -5865,27 +5826,26 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 9,
+              "min": 8,
+              "max": 9
             },
             "turns": {
-              "median": 6.5,
-              "min": 6,
-              "max": 7
+              "median": 10,
+              "min": 9,
+              "max": 10
             },
             "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
+              "median": 4,
+              "min": 3,
+              "max": 4
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -5968,38 +5928,37 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
-          "passed": 2,
+          "runs": 3,
+          "passed": 3,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 8.5,
-              "min": 8,
-              "max": 9
+              "median": 9,
+              "min": 9,
+              "max": 12
             },
             "turns": {
-              "median": 9.5,
-              "min": 9,
-              "max": 10
+              "median": 10,
+              "min": 10,
+              "max": 13
             },
             "refused": {
               "median": 0,
               "min": 0,
-              "max": 0
+              "max": 4
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 4
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "scenario",
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6094,14 +6053,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 15,
+              "median": 15.5,
               "min": 15,
-              "max": 15
+              "max": 16
             },
             "turns": {
-              "median": 16,
+              "median": 16.5,
               "min": 16,
-              "max": 16
+              "max": 17
             },
             "refused": {
               "median": 3,
@@ -6112,7 +6071,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -6225,7 +6183,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -6321,25 +6278,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8,
-              "min": 8,
+              "median": 7.5,
+              "min": 7,
               "max": 8
             },
             "turns": {
-              "median": 9,
-              "min": 9,
+              "median": 8.5,
+              "min": 8,
               "max": 9
             },
             "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
+              "median": 1,
+              "min": 1,
+              "max": 1
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -6422,7 +6378,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-sdk",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -6430,27 +6386,25 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 17,
+              "median": 15.5,
               "min": 14,
               "max": 17
             },
             "turns": {
-              "median": 18,
+              "median": 16.5,
               "min": 15,
               "max": 18
             },
             "refused": {
-              "median": 5,
-              "min": 3,
-              "max": 5
+              "median": 2.5,
+              "min": 1,
+              "max": 4
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -6508,25 +6462,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
+              "median": 6.5,
               "min": 5,
-              "max": 9
+              "max": 8
             },
             "turns": {
-              "median": 8,
+              "median": 7.5,
               "min": 6,
-              "max": 10
+              "max": 9
             },
             "refused": {
-              "median": 1.5,
+              "median": 1,
               "min": 0,
-              "max": 3
+              "max": 2
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -6613,7 +6566,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -6621,29 +6574,29 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
               "median": 9,
-              "min": 9,
-              "max": 9
+              "min": 8,
+              "max": 12
             },
             "turns": {
               "median": 10,
-              "min": 10,
-              "max": 10
+              "min": 9,
+              "max": 13
             },
             "refused": {
-              "median": 1.5,
+              "median": 1,
               "min": 1,
               "max": 2
             },
-            "retries": null
+            "retries": {
+              "median": 1,
+              "min": 1,
+              "max": 2
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6736,27 +6689,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10.5,
-              "min": 10,
-              "max": 11
+              "median": 8.5,
+              "min": 8,
+              "max": 9
             },
             "turns": {
-              "median": 11.5,
-              "min": 11,
-              "max": 12
+              "median": 9.5,
+              "min": 9,
+              "max": 10
             },
             "refused": {
-              "median": 3,
-              "min": 3,
-              "max": 3
+              "median": 1,
+              "min": 1,
+              "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 0.5,
+              "min": 0,
+              "max": 1
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6847,27 +6800,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
+              "median": 4.5,
+              "min": 4,
+              "max": 5
+            },
+            "turns": {
               "median": 5.5,
               "min": 5,
               "max": 6
             },
-            "turns": {
-              "median": 6.5,
-              "min": 6,
-              "max": 7
-            },
             "refused": {
-              "median": 0.5,
+              "median": 0,
               "min": 0,
-              "max": 1
+              "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6957,27 +6910,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
+              "median": 5.5,
               "min": 5,
-              "max": 5
-            },
-            "turns": {
-              "median": 6,
-              "min": 6,
               "max": 6
             },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+            "turns": {
+              "median": 6.5,
+              "min": 6,
+              "max": 7
             },
-            "retries": null
+            "refused": {
+              "median": 0.5,
+              "min": 0,
+              "max": 1
+            },
+            "retries": {
+              "median": 0.5,
+              "min": 0,
+              "max": 1
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7081,15 +7034,14 @@
               "max": 7
             },
             "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "median": 1,
+              "min": 1,
+              "max": 1
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -7181,13 +7133,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
-              "min": 3,
+              "median": 2,
+              "min": 1,
               "max": 3
             },
             "turns": {
-              "median": 4,
-              "min": 4,
+              "median": 3,
+              "min": 2,
               "max": 4
             },
             "refused": {
@@ -7195,13 +7147,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7292,25 +7244,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
-              "min": 5,
-              "max": 8
+              "median": 6,
+              "min": 6,
+              "max": 6
             },
             "turns": {
-              "median": 7.5,
-              "min": 6,
-              "max": 9
+              "median": 7,
+              "min": 7,
+              "max": 7
             },
             "refused": {
-              "median": 1,
+              "median": 0,
               "min": 0,
-              "max": 2
+              "max": 0
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -7404,27 +7355,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 12,
-              "min": 10,
-              "max": 14
+              "median": 9.5,
+              "min": 7,
+              "max": 12
             },
             "turns": {
-              "median": 13,
-              "min": 11,
-              "max": 15
+              "median": 10.5,
+              "min": 8,
+              "max": 13
             },
             "refused": {
-              "median": 3.5,
-              "min": 2,
-              "max": 5
+              "median": 2.5,
+              "min": 1,
+              "max": 4
             },
-            "retries": null
+            "retries": {
+              "median": 1.5,
+              "min": 0,
+              "max": 3
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7522,25 +7473,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10.5,
-              "min": 10,
-              "max": 11
+              "median": 11,
+              "min": 9,
+              "max": 13
             },
             "turns": {
-              "median": 11.5,
-              "min": 11,
-              "max": 12
+              "median": 12,
+              "min": 10,
+              "max": 14
             },
             "refused": {
-              "median": 2.5,
+              "median": 3.5,
               "min": 2,
-              "max": 3
+              "max": 5
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -7646,13 +7596,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7761,13 +7711,13 @@
               "min": 0,
               "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 0.5,
+              "min": 0,
+              "max": 1
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7872,13 +7822,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7958,7 +7908,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -7966,29 +7916,26 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
               "median": 6,
-              "min": 5,
-              "max": 7
+              "min": 6,
+              "max": 6
             },
             "turns": {
               "median": 7,
-              "min": 6,
-              "max": 8
+              "min": 7,
+              "max": 7
             },
             "refused": {
-              "median": 1,
+              "median": 1.5,
               "min": 1,
-              "max": 1
+              "max": 2
             },
             "retries": null
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "scenario",
-            "tool copy",
-            "server instructions and resources",
             "judge",
             "harness"
           ]
@@ -8086,27 +8033,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 6,
-              "max": 8
+              "median": 5.5,
+              "min": 5,
+              "max": 6
             },
             "turns": {
-              "median": 8,
-              "min": 7,
-              "max": 9
+              "median": 6.5,
+              "min": 6,
+              "max": 7
             },
             "refused": {
-              "median": 2,
+              "median": 1,
               "min": 1,
-              "max": 3
+              "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 1,
+              "min": 1,
+              "max": 1
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -8211,14 +8158,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "regraded": true,
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -8328,7 +8274,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -8421,27 +8366,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
-              "min": 5,
+              "median": 4,
+              "min": 3,
               "max": 5
             },
             "turns": {
-              "median": 6,
-              "min": 6,
+              "median": 5,
+              "min": 4,
               "max": 6
             },
             "refused": {
-              "median": 2,
-              "min": 2,
+              "median": 1,
+              "min": 0,
               "max": 2
             },
-            "retries": null
+            "retries": {
+              "median": 1,
+              "min": 0,
+              "max": 2
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -8522,35 +8467,33 @@
         {
           "model": "claude-sonnet-5-5@claude-cli",
           "runs": 3,
-          "passed": 2,
+          "passed": 1,
           "pass_at": 2,
-          "held": true,
+          "held": false,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
             "runs": 3,
             "calls": {
-              "median": 3,
-              "min": 3,
-              "max": 3
-            },
-            "turns": {
               "median": 4,
-              "min": 4,
+              "min": 3,
               "max": 4
             },
+            "turns": {
+              "median": 5,
+              "min": 4,
+              "max": 5
+            },
             "refused": {
-              "median": 0,
+              "median": 1,
               "min": 0,
-              "max": 0
+              "max": 1
             },
             "retries": null
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -8644,13 +8587,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
-              "min": 2,
+              "median": 3.5,
+              "min": 3,
               "max": 4
             },
             "turns": {
-              "median": 4,
-              "min": 3,
+              "median": 4.5,
+              "min": 4,
               "max": 5
             },
             "refused": {
@@ -8658,14 +8601,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "regraded": true,
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -8757,25 +8699,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
-              "min": 3,
-              "max": 4
+              "median": 7.5,
+              "min": 7,
+              "max": 8
             },
             "turns": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
+              "median": 8.5,
+              "min": 8,
+              "max": 9
             },
             "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
+              "median": 2,
+              "min": 2,
+              "max": 2
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -8883,10 +8824,8 @@
             },
             "retries": null
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -8980,13 +8919,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
-              "min": 4,
+              "median": 5,
+              "min": 5,
               "max": 5
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
+              "median": 6,
+              "min": 6,
               "max": 6
             },
             "refused": {
@@ -8994,13 +8933,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -9090,26 +9029,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
+              "median": 4,
               "min": 4,
-              "max": 6
+              "max": 4
             },
             "turns": {
-              "median": 6,
+              "median": 5,
               "min": 5,
-              "max": 7
+              "max": 5
             },
             "refused": {
-              "median": 1,
+              "median": 0,
               "min": 0,
-              "max": 2
+              "max": 0
             },
             "retries": null
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -9204,25 +9141,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
+              "median": 3,
               "min": 3,
-              "max": 4
+              "max": 3
             },
             "turns": {
-              "median": 4.5,
+              "median": 4,
               "min": 4,
-              "max": 5
+              "max": 4
             },
             "refused": {
-              "median": 0.5,
+              "median": 0,
               "min": 0,
-              "max": 1
+              "max": 0
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -9314,25 +9250,24 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2,
-              "min": 1,
+              "median": 3,
+              "min": 3,
               "max": 3
             },
             "turns": {
-              "median": 3,
-              "min": 2,
+              "median": 4,
+              "min": 4,
               "max": 4
             },
             "refused": {
-              "median": 0.5,
-              "min": 0,
+              "median": 1,
+              "min": 1,
               "max": 1
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -9442,7 +9377,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -9524,39 +9458,37 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
-          "passed": 2,
+          "runs": 3,
+          "passed": 3,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 9.5,
-              "min": 8,
-              "max": 11
+              "median": 9,
+              "min": 6,
+              "max": 10
             },
             "turns": {
-              "median": 10.5,
-              "min": 9,
-              "max": 12
+              "median": 10,
+              "min": 7,
+              "max": 11
             },
             "refused": {
-              "median": 2.5,
-              "min": 1,
-              "max": 4
+              "median": 3,
+              "min": 2,
+              "max": 3
             },
-            "retries": null
+            "retries": {
+              "median": 2,
+              "min": 0,
+              "max": 3
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "scenario",
-            "tool copy",
-            "server instructions and resources",
-            "judge",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -9665,13 +9597,13 @@
               "min": 0,
               "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -9767,18 +9699,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 11,
-              "min": 9,
-              "max": 13
+              "median": 13,
+              "min": 10,
+              "max": 16
             },
             "turns": {
-              "median": 12,
-              "min": 10,
-              "max": 14
+              "median": 14,
+              "min": 11,
+              "max": 17
             },
             "refused": {
-              "median": 3,
-              "min": 1,
+              "median": 3.5,
+              "min": 2,
               "max": 5
             },
             "retries": null
@@ -9786,8 +9718,6 @@
           "measured_on_an_earlier_listing": [
             "scenario",
             "tool copy",
-            "server instructions and resources",
-            "judge",
             "harness"
           ]
         },
@@ -9886,13 +9816,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 7,
+              "median": 6.5,
+              "min": 6,
               "max": 7
             },
             "turns": {
-              "median": 8,
-              "min": 8,
+              "median": 7.5,
+              "min": 7,
               "max": 8
             },
             "refused": {
@@ -9904,7 +9834,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -10014,7 +9943,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -10108,24 +10036,23 @@
             "runs": 2,
             "calls": {
               "median": 3.5,
-              "min": 2,
-              "max": 5
+              "min": 3,
+              "max": 4
             },
             "turns": {
               "median": 4.5,
-              "min": 3,
-              "max": 6
+              "min": 4,
+              "max": 5
             },
             "refused": {
-              "median": 1.5,
+              "median": 0.5,
               "min": 0,
-              "max": 3
+              "max": 1
             },
             "retries": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -10235,7 +10162,6 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
             "harness"
           ]
         },
@@ -10327,27 +10253,27 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
-              "min": 3,
-              "max": 3
+              "median": 5,
+              "min": 5,
+              "max": 5
             },
             "turns": {
-              "median": 4,
-              "min": 4,
-              "max": 4
+              "median": 6,
+              "min": 6,
+              "max": 6
             },
             "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "median": 2,
+              "min": 2,
+              "max": 2
             },
-            "retries": null
+            "retries": {
+              "median": 2,
+              "min": 2,
+              "max": 2
+            }
           },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -11303,7 +11229,6 @@
       "called_in_held_runs": [
         "case105_what_changed_there",
         "case106_turn_that_rule_off",
-        "case107_tidy_up_the_room",
         "case108_ask_sofia_for_an_intro",
         "case111_how_is_the_workspace_doing",
         "case112_my_plan_and_the_dossier",
@@ -11355,9 +11280,9 @@
       "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
-          "reliability": 1,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
@@ -11550,6 +11475,7 @@
         "case107_tidy_up_the_room",
         "case108_ask_sofia_for_an_intro",
         "case109_my_hours_zone_and_language",
+        "case110_write_greta_a_thank_you",
         "case111_how_is_the_workspace_doing",
         "case113_after_the_sales_review",
         "case114_the_fleet_team",
@@ -11893,16 +11819,15 @@
       ],
       "called_in_held_runs": [
         "case106_turn_that_rule_off",
-        "case108_ask_sofia_for_an_intro",
         "case123_take_over_sofias_deal",
         "case128_is_she_here_twice",
         "case31_wrong_word_on_the_record",
         "case40_sort_the_queue",
+        "case47_tidy_the_fair_list",
         "case5_before_the_meeting",
         "case58_quiet_for_three_weeks",
         "case59_file_it_on_the_meeting_and_the_contract",
         "case65_clear_out_the_dead_deals",
-        "case91_add_a_review_stage",
         "case94_a_field_for_the_region",
         "case99_they_raised_money"
       ],
@@ -12638,6 +12563,7 @@
         "case44_chase_what_is_slipping",
         "case45_move_the_deal_on",
         "case46_get_us_in_a_room",
+        "case47_tidy_the_fair_list",
         "case48_that_whole_thread_is_filed_wrong",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
@@ -12981,6 +12907,7 @@
         "case128_is_she_here_twice",
         "case129_move_it_to_service",
         "case130_put_the_offer_link_on_the_deal",
+        "case131_no_to_the_hand_over",
         "case23_find_us_a_slot",
         "case31_wrong_word_on_the_record",
         "case33_two_cards_for_one_company",
@@ -12990,7 +12917,6 @@
         "case43_the_fair_leads_are_prospects",
         "case44_chase_what_is_slipping",
         "case45_move_the_deal_on",
-        "case48_that_whole_thread_is_filed_wrong",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
         "case50_what_moved_my_quarter",
