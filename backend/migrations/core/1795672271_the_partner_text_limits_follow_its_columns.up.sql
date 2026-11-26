@@ -1,0 +1,7 @@
+-- pgmigrate:no-transaction
+SET lock_timeout = '2s';
+CREATE OR REPLACE TRIGGER "text_bound_insert" AFTER INSERT ON "public"."partner" FOR EACH ROW
+WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), NULL, '{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}');
+CREATE OR REPLACE TRIGGER "text_bound_update" AFTER UPDATE ON "public"."partner" FOR EACH ROW
+WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), to_jsonb(OLD), '{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}');
+RESET lock_timeout;

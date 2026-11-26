@@ -29,7 +29,7 @@ func TestACardValuePastTheLimitLandsCut(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seeding the incumbent: %v", err)
 	}
-	limit := textbounds.LimitOf("public.contact_profile_field.value")
+	limit := textbounds.LimitOf("public.field_provenance.value")
 	results := importCards(ctx, t, e, "BEGIN:VCARD\nFN:Dana Known\nURL:https://example.com/"+
 		strings.Repeat("a", limit)+"\nEMAIL;TYPE=WORK:dana@known.example\nEND:VCARD\n")
 	if len(results) != 1 || results[0].Outcome != VCardUpdated {
@@ -47,7 +47,7 @@ func TestAResearchClaimPastTheLimitIsRefused(t *testing.T) {
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
 		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
-	limit := textbounds.LimitOf("public.contact_profile_field.value")
+	limit := textbounds.LimitOf("public.field_provenance.value")
 
 	_, err := e.store.SaveResearchClaims(ctx, contactID, []ResearchClaimInput{{
 		Field: "role", Value: strings.Repeat("ế", limit+1),

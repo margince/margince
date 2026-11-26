@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/lint-cache.yml .github/workflows/pace.yml .github/workflows/scheduled.yml .github/workflows/mcp-sweep.yml .github/workflows/_records.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key .github/actions/ci-image scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh scripts/pace-workflow.sh -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/lint-cache.yml .github/workflows/pace.yml .github/workflows/scheduled.yml .github/workflows/mcp-sweep.yml .github/workflows/_records.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key .github/actions/ci-image scripts/ci-verdict.sh scripts/ci-integration-proven.sh scripts/ci-stable-mtimes.sh scripts/pace-workflow.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
@@ -23,13 +23,6 @@ Five lanes run without blocking: `vuln`, the SonarCloud scan, `live-boot`, `home
 `repeat-changed-tests`. `scheduled.yml` checks `vuln` and the scan again daily on `main`. See
 [the workflows beside the merge gate](../reference/ci-workflows.md) for why a gate that does not block needs that
 second check. Why they do not block yet is under [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
-
-`scheduled.yml` also calls each data vendor once a day, through the production adapter. For Surfe that call
-is `GET /v1/credits` (`make vendor-live`), which costs nothing. It proves that the key works, and that the answer
-still has the fields the adapter and `surfe/testdata/vendor-wire.json` name. It does not reach the calls that cost money.
-
-The key is the repository secret `SURFE_LIVE_KEY`. Without it the job reports "not checked", which
-is not a pass. The job is not required, so a vendor that is down blocks no merge.
 
 `scheduled.yml` also renders every story on `main` once a day (`make fe-uat ARGS=--all-stories`). On a branch,
 `make fe-uat` renders only the stories the diff reaches, so a story that fails on `main` stays hidden until
@@ -59,24 +52,28 @@ already reached, because the queue gated that tree before it landed. With the qu
 ### The merge queue
 
 A `merge_group` run builds `main` + everything ahead of it in the queue + the entry under test, on a
-`gh-readonly-queue/main/...` ref that is removed later. It gates that tree. Two things follow:
+`gh-readonly-queue/main/...` ref that is removed later. It gates that tree. Three things follow:
 
 - **The full tree, always.** The change classifier is overridden on `merge_group` (every scope reports
-  `true`), so no job can be skipped there.
+  `true`), so no job can be skipped there, with one exception below.
+- **One integration lane per tree.** A group of one entry on the same `main` has the tree of the pull
+  request's last run. [`scripts/ci-integration-proven.sh`](../../scripts/ci-integration-proven.sh) finds
+  that run's `proven-integration-<tree>` artifact. Then `ci` admits the skipped lane.
 - **The tree that lands.** Each group's head is the tree that reaches `main`. With `HEADGREEN` it is
   the only one that must pass, so a commit inside a group can land without a green run of its own.
 
 The queue merges in **batches**. One PR at a time, with a lane of about 25 minutes, caps merges near
-two an hour. The measured rate is 55 merges a day on average, and up to 10 in a busy hour. Five builds at
-once lift that cap to about 12 an hour. A queue rule on `main` takes these settings:
+two an hour. The measured rate is 55 merges a day on average, and up to 10 in a busy hour. Three builds at
+once lift that cap to about 7 an hour, and a group merges several entries at once. A queue rule on
+`main` takes these settings:
 
 | Setting in the ruleset | Set to | What it bounds, and why this value |
 |---|---|---|
-| `max_entries_to_build` | **5** | queued entries that build at once; 10 merges an hour times a 25 minute lane is about 4 in flight |
-| `max_entries_to_merge` | **5** | entries that merge together as one group; equal to the build limit, so one green head can merge every entry in flight |
+| `max_entries_to_build` | **3** | queued entries that build at once. Each one starts a full run, and its jobs wait for runners beside every pull request's run |
+| `max_entries_to_merge` | **5** | entries that merge together as one group, so one green head can merge every entry it holds |
 | `min_entries_to_merge` / `…_wait_minutes` | 1 / 5 | a single entry merges as soon as it passes, so the wait never applies |
 | `grouping_strategy` | `HEADGREEN` | **which commits must pass** (see below) |
-| `check_response_timeout_minutes` | 75 | clears the `p95` full lane of 45 minutes by 30 minutes |
+| `check_response_timeout_minutes` | 120 | a full lane under a full runner queue: every job in the chain to `ci` waits for a runner, and 75 minutes timed out a group whose jobs were all green |
 | `merge_method` | `SQUASH` | one commit per pull request on `main` |
 
 `grouping_strategy` is not about partial merging. `HEADGREEN` asks only the group's **head** commit (the
@@ -145,6 +142,7 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 | `frontend` | `third-party-files.txt`, `frontend/**`, `backend/api/**` (the contract drives FE types), `backend/internal/modules/agents/previewcatalog_gen.json` (only `fe-drift` builds it again from `frontend/`), the composition inputs the lane type checks against (`instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs), and for the same reason the CI image `.github/ci-image/**` and `.github/actions/ci-image/**` | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
+| `release` | `Makefile`, `scripts/release*`, `scripts/lib-git-fixture.sh`, `.github/workflows/release.yml`, `.github/workflows/release-tag.yml`, `.github/workflows/_release-*.yml` | `release-scripts` (`make check-release`). The release workflows run it too, before a job calls a release script. `backend/gates/releaselane_test.go` derives this scope from the tree |
 | `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `scripts/sbom-census.sh`, `scripts/test-sbom-census.sh`, `scripts/install-sbom-python.sh`, `scripts/test-install-sbom-python.sh`, `scripts/sbom-license-parity.sh`, `scripts/test-sbom-license-parity.sh`, `third-party-files.txt`, `scripts/third_party_files.py`, `scripts/third-party-files.sh`, `scripts/test-third-party-files.sh`, `embedded-binaries.txt`, `scripts/embedded-binary-licenses.sh`, `scripts/test-embedded-binary-licenses.sh`, `.github/workflows/**`, `.github/actions/**` | the license gate |
 
 What the `backend` scope adds on top of `backend_db`:
@@ -235,18 +233,17 @@ changes ──┬─> deterministic-gates *
           │                  fe-unit (×4)*├─> fan-in * (+ merge) │   │
           │                  fe-bundle *  ┘                     │   │
           ├─> uat *  (`frontend` scope, beside the lane)        │   │
-          ├─> live-boot, home-budget                            │   │
+          ├─> live-boot, home-budget, release-scripts           │   │
           v                                                     v   v
  deterministic-gates + integration + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
   secret-scan    (every non-draft change, independent — + the image-pin gate)
   repeat-changed-tests  (every non-draft pull request, independent, advisory)
 
-  ci  ── the ONE required context. needs: ci-image, deterministic-gates,
-         test-budget, backend-lint, craftsmanship, craft-residue,
-         secret-scan, integration, frontend, uat, license-gate, images
-         (twelve — vuln, live-boot, home-budget and repeat-changed-tests
-         stay advisory and are NOT in the fan-in)
+  ci  ── the ONE required context. needs: changes, ci-image, deterministic-gates,
+         backend-lint, craftsmanship, craft-residue, secret-scan, integration,
+         frontend, uat, license-gate, images, release-scripts (thirteen; vuln,
+         live-boot, home-budget, repeat-changed-tests advisory)
 ```
 
 ### Two lanes are called, not inlined
@@ -329,7 +326,8 @@ It reaches a verdict from `needs.*.result` through [`scripts/ci-verdict.sh`](../
 The rule it exists to hold: **a skip is not a pass on `merge_group`**. GitHub counts a skipped *required*
 check as passing. So checks required one by one could pass on a run that did nothing. The classifier
 skips the jobs, and the ruleset reads the skips as green. The aggregate refuses any result other than
-`success` on `merge_group`.
+`success` on `merge_group`, except an `integration` skip that `changes` reports in `integration_proven`.
+The job also runs the test budget, so the verdict waits for one runner less.
 
 On `pull_request` it admits `skipped`. There the classifier is doing its job, and the queue lane covers
 the rest when the queue is on.
@@ -338,8 +336,8 @@ The job runs with `if: always()`. An aggregate that is skipped, together with a 
 report a **green** required check.
 
 A lane joins `needs` as its own change, so a red aggregate has one candidate cause. `license-gate`,
-`images` and `uat` each joined that way. `ci-image` is there because a failed image build skips every
-job that needs it, and a skip passes on a pull request.
+`images`, `uat` and `release-scripts` each joined that way. `ci-image` is there because a failed image
+build skips every job that needs it, and a skip passes on a pull request.
 
 These jobs are not in `needs`:
 

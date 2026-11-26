@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge, Skeleton } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
@@ -68,9 +69,9 @@ export function greetingText(
 }
 
 /**
- * The greeting on two lines, cut at the reader's name, with the name in the
- * accent ink. The name is found in the translated line rather than spliced in,
- * so each language keeps its own word order around it. With no name in the
+ * The greeting on two lines, cut at the reader's name, in one ink. The name
+ * is found in the translated line rather than spliced in, so each language
+ * keeps its own word order around it. With no name in the
  * line, the whole line stands on the second.
  */
 export function Greeting({
@@ -88,10 +89,7 @@ export function Greeting({
   return (
     <>
       <span className="glance-greeting-lead">{text.slice(0, at)}</span>
-      <span className="glance-greeting-name">
-        <span className="greeting-name">{firstName}</span>
-        {text.slice(at + firstName.length)}
-      </span>
+      <span className="glance-greeting-name">{text.slice(at)}</span>
     </>
   );
 }
@@ -226,12 +224,11 @@ export function BriefGlance({
             </p>
           )}
           {briefedAt && (
-            <p>
-              <Badge tone="ai">
-                {t("brief.briefedAt", {
-                  time: formatTimeOfDay(briefedAt, locale, readerZone),
-                })}
-              </Badge>
+            <p className="glance-briefed">
+              <Sparkles size={12} aria-hidden="true" />
+              {t("brief.briefedAt", {
+                time: formatTimeOfDay(briefedAt, locale, readerZone),
+              })}
             </p>
           )}
         </div>

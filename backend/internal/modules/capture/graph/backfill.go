@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"slices"
 	"time"
 
 	"golang.org/x/sync/semaphore"
@@ -42,6 +43,25 @@ func endsPage(ctx context.Context, err error) bool {
 		errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) ||
 		errors.Is(err, connector.ErrRateLimited) || errors.Is(err, connector.ErrAuthRejected) ||
 		errors.Is(err, connector.ErrUnreachable) || errors.Is(err, connector.ErrCursorGone)
+}
+
+// faultOf names the message when a fetch got an HTTP answer in the 5xx range.
+// That is the one error that can be the message's own, when the provider
+// answers for it every time. A transport failure carries no answer and stays
+// an outage.
+func faultOf(id string, err error) error {
+	var pe *connector.ProviderError
+	if errors.As(err, &pe) && pe.Status >= 500 && errors.Is(err, connector.ErrUnreachable) {
+		return &connector.MessageFaultError{ID: id, Err: err}
+	}
+	return err
+}
+
+// stalledFault says the error is a fetch fault of a message the engine
+// asked the page to walk past.
+func stalledFault(err error, skipIDs []string) bool {
+	var mf *connector.MessageFaultError
+	return errors.As(err, &mf) && slices.Contains(skipIDs, mf.ID)
 }
 
 // walk answers the page's page size and its walk, tuned by the installation.
@@ -98,6 +118,8 @@ func (c *Connector) backfillPageWith(
 		return connector.BackfillPageResult{}, err
 	}
 	pageSize, walk := c.walk()
+	skipIDs := connector.BackfillSkipFrom(ctx)
+	walk.Halts = func(err error) bool { return !errors.Is(err, connector.ErrSkip) && !stalledFault(err, skipIDs) }
 	msgs, next, err := c.api.ListAfter(ctx, access, after, pageToken, pageSize)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
@@ -118,7 +140,8 @@ func (c *Connector) backfillPageWith(
 		func(ctx context.Context, i int) ([]byte, error) {
 			// Through the folder the listing found it in, so a message moved to
 			// Junk Email since is refused by Graph instead of read.
-			return c.api.GetMIME(ctx, access, walked[i].ParentFolderID, walked[i].ID)
+			raw, err := c.api.GetMIME(ctx, access, walked[i].ParentFolderID, walked[i].ID)
+			return raw, faultOf(walked[i].ID, err)
 		},
 		func(i int, raw []byte, err error) error {
 			msg := walked[i]
@@ -126,7 +149,7 @@ func (c *Connector) backfillPageWith(
 			switch {
 			case err == nil:
 				failedInRow = 0
-			case endsPage(ctx, err):
+			case endsPage(ctx, err) && (ctx.Err() != nil || !stalledFault(err, skipIDs)):
 				return err
 			default:
 				// One message the capture refuses is walked past and counted;

@@ -219,33 +219,27 @@ func TestOnboardingBindsAPresetOfTheChosenVendor(t *testing.T) {
 }
 
 // ungradedSetupWaivers names the providers whose preset may bind a model with
-// no current certification record, each with why. One that no longer needs it
+// no certification record, each with why. One that no longer needs it
 // fails AssertAllMatched.
 var ungradedSetupWaivers = gatekit.Waive(map[string]string{
-	"openrouter":    "openrouter_cloud is re-certified in the full sweep of #12751; until then its records are stale or absent",
-	"gemini":        "the contact and company create tools now hold source to the six channels, which changed the agent_loop site check; agent_loop and nl_search wait for a paid re-certification of gemini_cloud",
-	"gemini_vertex": "the same agent_loop site check as gemini, on the same models",
+	"openrouter": "openrouter_cloud is re-certified in the full sweep of #12751; until then its records are stale or absent",
 })
 
-// Every task the binding onboarding writes answers on a model whose grade is
-// current. So a new installation gets a setup measured on the product as it
-// ships, read by the same lookup Settings shows.
-func TestOnboardingBindsOnlyModelsWithACurrentGrade(t *testing.T) {
+// Every task the binding onboarding writes answers on a model that was measured,
+// read by the same lookup Settings shows. A stale record still counts. Any prompt
+// input can stale one, and only a paid run refreshes it. Settings marks it
+// "recheck pending", and ai-records-stale.yml names it on the pull request.
+func TestOnboardingBindsOnlyMeasuredModels(t *testing.T) {
 	t.Parallel()
 	for id, cfg := range readSetupPresets(t) {
 		var ungraded []string
 		for _, row := range ai.FeatureRoutes(cfg, cfg, ai.BandNormal) {
-			cert := row.Certification
-			switch {
-			case cert == nil:
-			case cert.Grade == ai.CertGradeNotMeasured:
+			if cert := row.Certification; cert != nil && cert.Grade == ai.CertGradeNotMeasured {
 				ungraded = append(ungraded, row.Task+" on "+cert.Model+" (no record for every site)")
-			case cert.RecheckPending:
-				ungraded = append(ungraded, row.Task+" on "+cert.Model+" (record stale)")
 			}
 		}
 		if len(ungraded) > 0 && !ungradedSetupWaivers.Waived(t, id) {
-			t.Errorf("onboarding binds %s to models with no current grade: %s — certify its preset "+
+			t.Errorf("onboarding binds %s to models never measured: %s — certify its preset "+
 				"(`make e2e-ai ROUTING=config/presets/<its setup>.yaml`), then `make gen` rewrites the grade table",
 				id, strings.Join(ungraded, "; "))
 		}

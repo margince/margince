@@ -6,7 +6,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-91 columns · primary key `(id)` · referenced by 49 foreign keys
+91 columns · primary key `(id)` · referenced by 50 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -933,7 +933,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## attachment
 
-28 columns · primary key `(id)` · referenced by 6 foreign keys
+27 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -943,9 +943,8 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `bytes_withheld` | `boolean`, default `false` | yes | True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. |
 | `category` | `text`, default `'other'::text` | yes | What kind of document this is. |
 | `checksum` | `text` |  | sha256 of the bytes, for integrity/dedupe. |
-| `company_id` | `uuid` |  | The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. |
 | `content_type` | `text` |  |  |
-| `contract_id` | `uuid` |  | The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. |
+| `contract_id` | `uuid` |  | The agreement this file is about. |
 | `deal_id` | `uuid` |  |  |
 | `declared_type` | `text` |  |  |
 | `doc_state` | `text`, default `'current'::text` | yes | ASSERTED, never inferred. |
@@ -985,7 +984,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
-- `attachment_account_ix`: `btree (company_id, pinned DESC, created_at DESC) WHERE (archived_at IS NULL)`
 - `attachment_activity_ix`: `btree (activity_id) WHERE (activity_id IS NOT NULL)`
 - `attachment_contract_ix`: `btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL))`
 - `attachment_external_part_key`: `unique, btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL)`

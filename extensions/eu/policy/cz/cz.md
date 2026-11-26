@@ -2,10 +2,14 @@
 jurisdiction: cz
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Zákon č. 480/2004 Sb., o některých službách informační společnosti"
     provision: "§ 7"
     source-url: https://www.e-sbirka.cz/sb/2004/480
+    text-url: "https://e-sbirka.gov.cz/sbr-cache/dokumenty-sbirky/%2Fsb%2F2004%2F480%2F2023-03-23/fragmenty?cisloStranky=0"
+    text-digest: c1c762d9e0e3a617fb079b1645dd4cd795beb403f68055e201228b1d1f7c91bb
+    text-fetched: 2026-11-25
 fixtures:
   - finding: objection_route
     triggers: cz/fixtures/advertising-without-objection-route.md

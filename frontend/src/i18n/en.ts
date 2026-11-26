@@ -7209,7 +7209,7 @@ export const en = {
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
   "brief.updating": "Updating…",
-  "brief.briefedAt": "Briefed by Margince at {time}",
+  "brief.briefedAt": "Prepared by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
   "brief.first.title": "Needs you",
@@ -8880,6 +8880,7 @@ export const en = {
   "tasks.movedTo": "Moved to {when}",
   "tasks.moveUndoFailed": "Task was not moved back. Retry.",
   "tasks.remind.menu": "Remind me",
+  "tasks.remind.chipName": "Remind me (reminder set for {when})",
   "tasks.remind.inAnHour": "In 1 hour",
   "tasks.remind.tomorrowMorning": "Tomorrow morning",
   "tasks.remind.beforeDue": "1 hour before it is due",
@@ -8896,6 +8897,8 @@ export const en = {
   "tasks.remind.needsTime": "Enter a day and a time.",
   "tasks.remind.past": "Pick a time that is still ahead.",
   "tasks.log.action": "Log what happened",
+  "tasks.more": "More",
+  "tasks.context": "Context",
   "tasks.log.record": "Which record is this activity for?",
   "tasks.log.chooseRecord": "Choose another record",
   "tasks.log.noRecord": "Log without a record",
@@ -10755,9 +10758,10 @@ export const en = {
   "import.recent.files_other": "{count} files",
   "import.recent.filesBy": "{files} · by {name}",
   "import.recent.undo": "Undo",
+  "import.recent.rowsImported": "{written} of {read} imported",
   "import.status.pending": "Draft",
   "import.status.validating": "Checking",
-  "import.status.awaiting_approval": "Not imported",
+  "import.status.awaiting_approval": "Test run ready",
   "import.status.running": "Importing",
   "import.status.complete": "Complete",
   "import.status.failed": "Stopped",
@@ -11050,7 +11054,7 @@ export const en = {
     "This import is already running. It finishes on its own and this page updates.",
   "import.reason.undo_failed": "The record could not be undone.",
   "import.reason.amount_negative":
-    "“{value}” is below zero, and a deal’s amount cannot be.",
+    "“{value}” is below zero, and an imported amount cannot be.",
   "import.reason.author_too_long": "Author is longer than {max} characters.",
   "import.reason.cannot_create":
     "You cannot create {plural}, so the {plural} file is skipped.",
@@ -11096,10 +11100,14 @@ export const en = {
     "The company column is empty, so the row names no employer.",
   "import.reason.employer_column_empty_dropped":
     "The company column is empty, so the row names no employer. The row was imported without the link.",
+  "import.reason.employer_column_empty_will_drop":
+    "The company column is empty, so the row names no employer. The row will be imported without the link.",
   "import.reason.employer_not_found":
-    "No company named “{name}” is in the CRM, so there was nothing to link this contact to.",
+    "No company named “{name}” is in the CRM, so there is nothing to link this contact to.",
   "import.reason.employer_not_found_dropped":
-    "No company named “{name}” is in the CRM, so there was nothing to link this contact to. The row was imported without the link.",
+    "No company named “{name}” is in the CRM, so there is nothing to link this contact to. The row was imported without the link.",
+  "import.reason.employer_not_found_will_drop":
+    "No company named “{name}” is in the CRM, so there is nothing to link this contact to. The row will be imported without the link.",
   "import.reason.employer_refused":
     "The employer could not be resolved. Choose an unambiguous company that you may link.",
   "import.reason.employer_will_create":
@@ -11123,10 +11131,14 @@ export const en = {
     "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer.",
   "import.reason.link_ambiguous_dropped":
     "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer. The row was imported without the link.",
+  "import.reason.link_ambiguous_will_drop":
+    "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer. The row will be imported without the link.",
   "import.reason.link_not_found":
     "No company with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.link_not_found_dropped":
     "No company with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.link_not_found_will_drop":
+    "No company with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.linkedin_held":
     "This LinkedIn URL is already held by another record in the CRM, so the row cannot claim it.",
   "import.reason.natural_key_taken": "A record with this key already exists.",
@@ -11136,7 +11148,13 @@ export const en = {
     "“{value}” is not a domain that can be written.",
   "import.reason.not_a_number": "“{value}” is not a number.",
   "import.reason.not_an_amount":
-    "“{value}” is not an amount in {currency}. Write it like 12000.50.",
+    "“{value}” is not an amount in {currency}. Write it like {example}.",
+  "import.reason.amount_too_many_decimals":
+    "“{value}” has more decimal places than {currency} takes. Write it like {example}.",
+  "import.reason.amount_needs_currency":
+    "The amount “{value}” has no currency. Fill the currency column of this row with a code, like EUR.",
+  "import.reason.not_a_phone":
+    "“{value}” is not a phone number. Write it with its country code, like +49 30 1234567.",
   "import.reason.not_an_email":
     "“{value}” is not an email address that can be written.",
   "import.reason.not_yes_no": "“{value}” is not yes or no.",
@@ -11188,6 +11206,10 @@ export const en = {
     "“{value}” is not a stage of pipeline “{pipeline}”. Its stages are: {names}.",
   "import.reason.currency_not_a_code":
     "“{value}” is not a currency code. Write its three letters, like EUR.",
+  "import.reason.currency_not_money":
+    "“{value}” is the code for no currency or for tests, so it prices no deal. Write the deal’s currency, like EUR.",
+  "import.reason.close_date_far":
+    "“{value}” is more than {years} years away. Check that this close date is right.",
   "import.reason.close_date_future":
     "“{value}” is in the future, and a closed deal’s close date cannot be.",
   "import.reason.close_date_past":
@@ -11216,6 +11238,8 @@ export const en = {
     "No contact with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.contact_not_found_dropped":
     "No contact with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.contact_not_found_will_drop":
+    "No contact with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.activity_type_unnamed":
     "Name the activity’s type: note, call, meeting or email.",
   "import.reason.activity_type_unknown":
@@ -11263,12 +11287,16 @@ export const en = {
     "No lead with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.lead_not_found_dropped":
     "No lead with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.lead_not_found_will_drop":
+    "No lead with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.deal_not_found":
     "No deal with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.link_row_skipped":
     "The row “{ref}” was skipped in this import, so there is nothing to link to.",
   "import.reason.link_row_skipped_dropped":
     "The row “{ref}” was skipped in this import, so there is nothing to link to. The row was imported without the link.",
+  "import.reason.link_row_skipped_will_drop":
+    "The row “{ref}” was skipped in this import, so there is nothing to link to. The row will be imported without the link.",
   "import.reason.undo_edited":
     "Someone changed this record after the import, so it was left in place.",
   "import.reason.undo_still_referenced":
@@ -11279,10 +11307,14 @@ export const en = {
     "A file cannot set the status “{value}”. Use Qualify or Disqualify on the lead. The statuses a file may set are: {allowed}.",
   "import.reason.deal_not_found_dropped":
     "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.deal_not_found_will_drop":
+    "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.activity_link_ambiguous":
     "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer.",
   "import.reason.activity_link_ambiguous_dropped":
     "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer. The row was imported without the link.",
+  "import.reason.activity_link_ambiguous_will_drop":
+    "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer. The row will be imported without the link.",
   "import.reason.value_unreadable": "“{value}” cannot be read.",
   "import.problem.broken_link": "Broken link",
   "import.problem.dropped_link": "Link left out",
@@ -17617,6 +17649,9 @@ export const en = {
   "connectors.svc.queued": "Starting soon",
   "connectors.svc.imported": "Imported",
   "connectors.svc.stopped": "Stopped",
+  "connectors.svc.mailMissing": "Mail missing",
+  "connectors.svc.unreadPeriod":
+    "Some mail from {from} to {to} may be missing. Import older email with a window that reaches back to {from}.",
   "connectors.svc.calendar": "Calendar",
   "connectors.svc.calendarDesc":
     "Meetings show on contacts and deals, and your booking link offers only your free times.",

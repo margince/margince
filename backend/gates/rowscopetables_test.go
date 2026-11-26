@@ -693,5 +693,10 @@ const (
 	// 169: forecasting.addTeamStandings reads a team freeze's deal ids and hands
 	// them to the snapshot lens before any caller sees one. The lens applies the
 	// reader's deal row scope and the team's assertion check, as FocusLists does.
-	modulesTierUnscopedCeiling = 169
+	//
+	// 170–174: the three statements of contacts.legacyEvidenceMoves, and the
+	// subject queries of moveLegacyMeetingEvidence and dropProfileFieldSupportTx,
+	// name the companies and contacts whose legacy evidence rows move into
+	// field_provenance. The ids stay inside the move's SQL and reach no caller.
+	modulesTierUnscopedCeiling = 174
 )

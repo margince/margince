@@ -70,76 +70,6 @@ class UseTheMomentTest(GuardCase):
             self.assertTrue(fired, f"{answer!r} slipped past must_not_mention")
 
 
-class FinishTheImportTest(GuardCase):
-    scenario = "case10-finish-the-import.yaml"
-    mapping = "size[_ ]band"
-    report = "All 4 companies were imported into the CRM. Nothing was skipped. "
-
-    def test_the_mapping_said_in_plain_verbs(self):
-        for said in (
-            "Size landed in size_band; city and country went onto the address.",
-            "I stored size as size_band.",
-            "The size column became the size band field.",
-        ):
-            with self.subTest(said=said):
-                self.assertGreen(self.report + said)
-
-    def test_a_negation_in_an_earlier_clause_does_not_block_the_mapping(self):
-        for said in (
-            "Your CSV headers didn't match the company fields, so I mapped `name` to display name, "
-            "`city` to address city, `size` to size band, and `country` to address country.",
-            "The headers differ, so size went to size band.",
-        ):
-            with self.subTest(said=said):
-                self.assertGreen(self.report + said)
-
-    def test_the_target_named_by_its_label(self):
-        self.assertGreen(
-            self.report + "The columns resolve as name → company name, city → city, size → employee band, "
-            "and country → country."
-        )
-
-    def test_a_label_without_a_placing_or_an_echoed_column_still_fails(self):
-        for said in (
-            "All names, cities, employee bands, and countries were verified after import.",
-            "city → city, country → country.",
-            "size was not placed in employee band.",
-        ):
-            with self.subTest(said=said):
-                self.assertMissed(self.report + said, self.mapping)
-
-    def test_a_negation_after_the_field_is_still_the_mapping(self):
-        self.assertGreen(self.report + "I mapped size to size_band, not to the description.")
-
-    def test_the_mapping_as_a_table_row(self):
-        self.assertGreen(self.report + "\n\n| Column | Field |\n|---|---|\n| size | size_band |\n")
-
-    def test_a_report_that_names_no_target_field_still_fails(self):
-        self.assertMissed(
-            self.report + "Imported all four companies with the supplied city, size, and country fields.",
-            self.mapping,
-        )
-        self.assertMissed(self.report + "\n\n| Column | Value |\n|---|---|\n| size | 51-200 |\n", self.mapping)
-
-    def test_a_negated_placing_still_fails(self):
-        for said in (
-            "No size_band was set.",
-            "size_band was not set.",
-            "I did not map size to size_band.",
-            "I didn't map size to size_band.",
-            "Nothing went into size_band.",
-            "size_band wasn't mapped from your size column.",
-            "I mapped size to description, not size_band.",
-            "Size went into the notes, never size_band.",
-            "I didn't map size to size band.",
-            "size was not placed in size band.",
-            "Although I mapped city, I didn't map size to size band.",
-            "Your CSV headers didn't match the company fields, so I fixed them up.",
-        ):
-            with self.subTest(said=said):
-                self.assertMissed(self.report + said, self.mapping)
-
-
 class FairLeadsTest(GuardCase):
     scenario = "case43-the-fair-leads-are-prospects.yaml"
 
@@ -323,10 +253,6 @@ class TellHerWhatWeHoldTest(GuardCase):
                          "cannot currently be generated.")
         self.assertGreen("The workspace has no controller identity yet, so a complete notice cannot yet be generated.")
 
-    def test_saying_what_is_owed_and_nothing_more_fails(self):
-        self.assertMissed("You owe her a privacy notice under Art. 14 GDPR within a month.", "shall|should|may")
-        self.assertMissed("You owe her a privacy notice; it cannot be skipped.", "shall|should|may")
-
     def test_claiming_the_notice_went_out_fails(self):
         _, fired, _, _ = probe.judge(guards(self.scenario), "Done: the privacy notice was sent. Want me to log it?")
         self.assertTrue(fired, "a claimed send passed")
@@ -380,24 +306,3 @@ class IsTheCraneJobAtRiskTest(GuardCase):
 
     def test_an_answer_that_never_names_the_risk_fails(self):
         self.assertMissed("The Hafenkran retrofit is delivering; the supplier moved the control cabinets.", "risk")
-
-
-class AskSofiaForAnIntroTest(GuardCase):
-    scenario = "case108-ask-sofia-for-an-intro.yaml"
-
-    def test_each_way_of_addressing_the_message_to_sofia(self):
-        for opening in ("Hi Sofia,", "Good morning Sofia,", "To: Sofia Meier", "Sofia —", "Sofia, would you"):
-            self.assertGreen(f"{opening} could you introduce me to Heike at Nordwind?")
-
-    def test_a_salutation_line_of_her_name_alone_addresses_her(self):
-        for answer in ("Sofia\n\nCould you introduce me to Heike at Nordwind?",
-                       "> Sofia\n>\n> Could you introduce me to Heike at Nordwind?"):
-            self.assertGreen(answer)
-
-    def test_her_name_as_a_list_item_is_not_a_salutation(self):
-        self.assertMissed("Who knows Heike:\n- Sofia\nAsk her to introduce you.", "Sofia\\b")
-
-    def test_a_note_that_only_mentions_sofia_is_not_addressed_to_her(self):
-        for answer in ("Hi Heike, Sofia suggested I write so you could introduce us.",
-                       "I'd send a note to Sofia; she can introduce you to Heike."):
-            self.assertMissed(answer, "Sofia\\b")

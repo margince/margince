@@ -9,8 +9,12 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { runCoreLoop, type Wanted } from "./margince-core-engine";
 import type { CoreFrame, CoreRenderer } from "./margince-core-gl";
-import { rowFor } from "./margince-core-motion";
-import { CORE_FRAG, CORE_POINTS_VERT } from "./margince-core-shader";
+import { BEHAVIOUR, rowFor } from "./margince-core-motion";
+import {
+  CORE_FRAG,
+  CORE_POINTS_FRAG,
+  CORE_POINTS_VERT,
+} from "./margince-core-shader";
 
 // The regression this guards: a shader that holds its palette as GLSL
 // literals cannot be repainted by tokens.css at all, and the shader alone
@@ -137,5 +141,53 @@ describe("the palette reaching the renderer", () => {
     expect(frame.body[1]).toEqual(hexToRgb("#0d0e0f"));
 
     vi.restoreAllMocks();
+  });
+});
+
+// GLSL does not run in vitest, so the cases below pin the shader's source text.
+describe("the gold cluster", () => {
+  // uWork[3] is the stop the palette fills from --orbAmber (pinned above).
+  it("colours the gold ribbon from the amber stop, not from a literal", () => {
+    expect(CORE_POINTS_VERT).toMatch(
+      /col = mix\(col, uWork\[3\], [^;]*gold\);/,
+    );
+    expect(CORE_POINTS_VERT).toContain("vGold = gold;");
+  });
+
+  it("carries only the gold ribbon's light in the buffer's alpha", () => {
+    expect(CORE_POINTS_FRAG).toContain(
+      "outColor = vec4(vColor * a, a * vGold * dot(vColor, vec3(0.2126, 0.7152, 0.0722)));",
+    );
+  });
+
+  it("keeps the gold's hue where its share of the light is high", () => {
+    expect(CORE_FRAG).toContain(
+      "float goldShare = clamp(mid4.a / max(midL, 1e-4), 0.0, 1.0);",
+    );
+    expect(CORE_FRAG).toContain(
+      "body = mix(body, goldLit, smoothstep(0.1, 0.55, goldShare) * 0.95);",
+    );
+  });
+
+  it("mixes the state's tint into the gold's colour", () => {
+    expect(CORE_FRAG).toContain(
+      "vec3 goldCol = mix(uWork[3], uTintCol, uTint);",
+    );
+  });
+
+  it.each(["warning", "error"] as const)(
+    "gives %s a full tint, so its gold takes the tint colour",
+    (state) => {
+      expect(BEHAVIOUR[state].tint).toBe(1);
+    },
+  );
+});
+
+describe("the lens", () => {
+  it("bends nothing in the middle and ramps in over the outer quarter", () => {
+    const bend = /float bend = ([^;]+);/.exec(CORE_FRAG)?.[1];
+    expect(bend).toBe("pow(smoothstep(0.75, 1.0, pd), 1.5)");
+    expect(CORE_FRAG).toContain("vec2 q = p - n * 0.70 * bend;");
+    expect(CORE_FRAG).toContain("float split = 0.030 * bend;");
   });
 });
