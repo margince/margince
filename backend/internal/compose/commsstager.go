@@ -104,6 +104,7 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 		AuthoredBodyLen: in.AuthoredBodyLen,
 		AuthoredHTMLLen: in.AuthoredHTMLLen,
 		ResentFrom:      in.ResentFrom,
+		Claims:          in.Claims,
 	})
 	if err != nil {
 		return err

@@ -25,9 +25,11 @@ package compose
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/bounceresend"
 	"github.com/margince/margince/backend/internal/compose/mailprobe"
 	"github.com/margince/margince/backend/internal/compose/sendmetrics"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -35,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -147,7 +150,7 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 	if send.Delivery != nil {
 		directed := newDirectedSendService(pool, send.Delivery, send)
 		s.directedSendHandlers = directedSendHandlers{directed: &directed}
-		s.directedSendHandlers.bounceResendHandlers = newBounceResendHandlers(pool, send)
+		s.directedSendHandlers.Handlers = bounceresend.Handlers{Resend: NewBounceResend(pool, send)}
 	}
 	s.activitiesHandlers = s.activitiesHandlers.
 		WithPublicBaseURL(send.PublicBaseURL).
@@ -202,6 +205,16 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 	s.approvalsHandlers = decisions.WithLateEffects(func(svc *approvals.Service) {
 		registerLateApprovalEffects(svc, pool, send)
 	})
+}
+
+// NewBounceResend builds Send again on a bounced message from the same send
+// path every other send uses.
+func NewBounceResend(pool *pgxpool.Pool, send SendPath) *bounceresend.Service {
+	db := InstallationDB(pool)
+	return &bounceresend.Service{
+		Bounces: comms.NewStore(db, time.Now, activities.NewStore(db)), Contacts: newContactsStore(db),
+		Sends: sendStore(pool, send), Gate: consentGateFor(pool), Delivery: send.Delivery,
+	}
 }
 
 // consentGateFor is the ONE spelling of the send path's consent authority.

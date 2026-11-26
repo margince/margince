@@ -17,6 +17,7 @@ package compose
 import (
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/bounceresend"
 	"github.com/margince/margince/backend/internal/compose/sendlater"
 	"github.com/margince/margince/backend/internal/compose/sendmetrics"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -32,9 +33,9 @@ type directedSendHandlers struct {
 	// route answers not-implemented like every other unwired surface rather
 	// than panicking on a message nobody can send.
 	directed *directedSendService
-	// bounceResendHandlers rides here because it is the same send path wired
-	// from the same place, and Server embeds this struct.
-	bounceResendHandlers
+	// Server embeds this struct, and the bounce's Send again is the same send
+	// path wired from the same place.
+	bounceresend.Handlers
 }
 
 func (h directedSendHandlers) CorrectCommunicationWording(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {

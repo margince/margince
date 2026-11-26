@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 355 |
-| Columns | 4389 |
-| Foreign keys | 619 |
+| Columns | 4393 |
+| Foreign keys | 620 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -228,7 +228,7 @@ erDiagram
 | [`close_date_run`](deals.md#close_date_run) | deals | 12 | 2 |
 | [`close_date_run_member`](deals.md#close_date_run_member) | deals | 5 | 0 |
 | [`commission_entry`](commissions.md#commission_entry) | commissions | 18 | 1 |
-| [`comms_outbound`](comms.md#comms_outbound) | comms | 47 | 5 |
+| [`comms_outbound`](comms.md#comms_outbound) | comms | 51 | 6 |
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 32 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 21 | 2 |

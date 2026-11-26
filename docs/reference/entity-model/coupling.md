@@ -22,7 +22,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [chatlinks](chatlinks.md) | 2 | 29 | 0 | 4 | 2 |
 | [collections](collections.md) | 13 | 101 | 1 | 9 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
-| [comms](comms.md) | 1 | 47 | 5 | 6 | 1 |
+| [comms](comms.md) | 1 | 51 | 5 | 6 | 1 |
 | [compose](compose.md) | 43 | 395 | 3 | 30 | 26 |
 | [consent](consent.md) | 23 | 319 | 2 | 42 | 23 |
 | [contacts](contacts.md) | 49 | 712 | 75 | 35 | 12 |

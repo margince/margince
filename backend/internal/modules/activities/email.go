@@ -230,6 +230,9 @@ type DeliveryRequest struct {
 	// from those characters, so it does not add the three parts twice.
 	AuthoredBodyLen int
 	AuthoredHTMLLen int
+	// Claims is what the send stated about why it was sent, as JSON. See
+	// SendClaims.
+	Claims []byte
 	// ResentFrom is the bounced delivery this message repeats, zero otherwise.
 	ResentFrom ids.UUID
 }

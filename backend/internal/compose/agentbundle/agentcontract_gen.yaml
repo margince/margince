@@ -29776,6 +29776,12 @@ components:
           type: [string, 'null']
           format: date-time
           description: When the provider accepted it. Null unless the state is `sent`.
+        can_send_again:
+          type: boolean
+          description: |-
+            True when the reader may send this bounced message again to a corrected address,
+            by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+            message that bounced hard qualifies, once, and not one an agent wrote.
         files:
           type: array
           items: {$ref: '#/components/schemas/EmailDeliveryFile'}

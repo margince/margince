@@ -14,6 +14,7 @@ package activities
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -66,10 +67,15 @@ type outboundMessage struct {
 	provider string
 	// connection is the sender's mailbox of provider the send goes out from.
 	connection ids.UUID
-	// authoredBodyLen and authoredHTMLLen are how many characters at the front of
-	// body and htmlBody are the author's own words; see DeliveryRequest.
-	authoredBodyLen int
-	authoredHTMLLen int
+	// authored says how much of body and htmlBody the author wrote.
+	authored authorship
+}
+
+// authorship is what a delivery keeps so a send can repeat it. It holds the
+// part of the wire text the author wrote and what the send stated about why.
+type authorship struct {
+	body, html string
+	claims     []byte
 }
 
 // redactedMeetingLink stands in for a guest's management link in the copy the
@@ -188,8 +194,9 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin S
 		SplitFromThread: chain.splitFrom,
 		AnswersActivity: chain.answers,
 		ListUnsubscribe: m.listUnsubscribe,
-		AuthoredBodyLen: m.authoredBodyLen,
-		AuthoredHTMLLen: m.authoredHTMLLen,
+		AuthoredBodyLen: utf8.RuneCountInString(m.authored.body),
+		AuthoredHTMLLen: utf8.RuneCountInString(m.authored.html),
+		Claims:          m.authored.claims,
 		ResentFrom:      m.in.ResentFrom,
 	}
 }

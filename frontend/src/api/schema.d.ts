@@ -15383,7 +15383,7 @@ export interface paths {
          *     soft bounce, one filed under no contact the caller can read, and a message sent before
          *     its text was recorded. `address` equal to the address that refused answers 422.
          *
-         *     Humans only: it changes a contact's address and sends a message a person wrote, and an
+         *     Humans only: it changes a contact's address and sends a message a user wrote, and an
          *     agent has the `send_email` tool for its own mail.
          */
         post: operations["sendBouncedMessageAgain"];
@@ -31870,6 +31870,12 @@ export interface components {
              * @description When the provider accepted it. Null unless the state is `sent`.
              */
             delivered_at?: string | null;
+            /**
+             * @description True when the reader may send this bounced message again to a corrected address,
+             *     by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+             *     message that bounced hard qualifies, once, and not one an agent wrote.
+             */
+            can_send_again?: boolean;
             /**
              * @description What the message was staged with, as it was at that moment. Empty when it carried
              *     nothing.

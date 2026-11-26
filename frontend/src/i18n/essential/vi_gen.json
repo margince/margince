@@ -1297,6 +1297,7 @@
   "systemJob.capture_personal_purge": "Xóa thư cá nhân",
   "systemJob.capture_purge_receipt": "Biên nhận xóa thư",
   "systemJob.capture_part_slim_worker": "Dọn dẹp dữ liệu thư đã lưu",
+  "systemJob.chat_clarification": "Câu hỏi về tin nhắn chuyển tiếp",
   "systemJob.capture_trace_sweep": "Dọn dẹp dấu vết thư",
   "systemJob.capture_which_deal": "Câu hỏi về cơ hội từ thư",
   "systemJob.close_date": "Kiểm tra ngày chốt",

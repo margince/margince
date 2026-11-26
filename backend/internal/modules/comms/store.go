@@ -181,6 +181,9 @@ type StageInput struct {
 	// starts from them. See activities.DeliveryRequest.
 	AuthoredBodyLen int
 	AuthoredHTMLLen int
+	// Claims is what the send stated about why it was sent, as JSON. A send
+	// that repeats this one reads it back.
+	Claims []byte
 	// ResentFrom is the bounced delivery this one repeats, zero on any other.
 	ResentFrom ids.UUID
 }
@@ -238,16 +241,16 @@ func (s *Store) StageTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.UUID
 		  (id, activity_id, user_id, provider, message_id,
 		   recipients, cc, bcc, subject, body, html_body, from_name, consent_purpose, in_reply_to,
 		   references_chain, thread_key, list_unsubscribe, status, created_at, attachments, inline_logo_key, connection_id,
-		   answers_activity_id, authored_body_len, authored_html_len, resent_from)
+		   answers_activity_id, authored_body_len, authored_html_len, resent_from, send_claims)
 		VALUES ($1, $2, $3, $4, $5,
 		        $6, $7, $8, $9, $10, NULLIF($11,''), NULLIF($12,''), $13, NULLIF($14,''), $15,
 		        NULLIF($16,''), NULLIF($17,''), 'pending', $18, $19, NULLIF($20,''), NULLIF($21::uuid, '00000000-0000-0000-0000-000000000000'),
 		        NULLIF($22::uuid, '00000000-0000-0000-0000-000000000000'),
-		        $23, $24, NULLIF($25::uuid, '00000000-0000-0000-0000-000000000000'))`,
+		        $23, $24, NULLIF($25::uuid, '00000000-0000-0000-0000-000000000000'), $26::jsonb)`,
 		id, in.ActivityID, userID, in.Provider, in.MessageID,
 		recipients, cc, bcc, in.Subject, in.Body, in.HTMLBody, in.FromName, in.ConsentPurpose,
 		in.InReplyTo, refs, in.ThreadKey, in.ListUnsubscribe, s.now().UTC(), files, in.InlineLogoKey, in.ConnectionID,
-		in.AnswersActivity, in.AuthoredBodyLen, in.AuthoredHTMLLen, in.ResentFrom); err != nil {
+		in.AnswersActivity, in.AuthoredBodyLen, in.AuthoredHTMLLen, in.ResentFrom, in.Claims); err != nil {
 		// The idempotency key is an ANSWER, and it is mapped rather than
 		// wrapped: a raw violation carries the constraint and table names, and
 		// no caller is owed the schema behind a refusal it can act on.

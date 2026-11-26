@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package bounceresend_test
 
 // "Send again" on a bounce, driven through the real send path: the real
 // delivery machinery, the real consent gate and the comms rows production
@@ -12,21 +12,41 @@ package compose
 import (
 	"context"
 	"errors"
+	"io"
+	"log/slog"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/bounceresend"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
+
+// grantedWording is the wording a fixture's grant records as shown to the subject.
+var grantedWording = "Fixture: the subject was shown this sentence and agreed to it."
+
+// assertDelivered counts the deliveries the real machinery wrote.
+func assertDelivered(t *testing.T, e *integration.Env, want int, when string) {
+	t.Helper()
+	if n := e.WsCount(t, `SELECT count(*) FROM comms_outbound`); n != want {
+		t.Fatalf("%s left %d deliveries, want %d", when, n, want)
+	}
+}
 
 const (
 	bouncedAddress   = "old@buyer.test"
@@ -36,7 +56,7 @@ const (
 // bounceFixture is one rep's send that hard-bounced, as production writes it.
 type bounceFixture struct {
 	e        *integration.Env
-	svc      bounceResendService
+	svc      *bounceresend.Service
 	contact  ids.UUID
 	purpose  consent.Purpose
 	consents *consent.Store
@@ -46,15 +66,30 @@ type bounceFixture struct {
 
 func newBounceFixture(t *testing.T) bounceFixture {
 	t.Helper()
+	return newBounceFixtureSending(t, func(bounceFixture) context.Context { return nil }, nil)
+}
+
+// newBounceFixtureSending is the fixture with the original send changed. `as`
+// is the context it is sent in, where nil is the rep's own. `tweak` edits the
+// input.
+func newBounceFixtureSending(
+	t *testing.T, as func(bounceFixture) context.Context, tweak func(*activities.SendEmailInput),
+) bounceFixture {
+	t.Helper()
 	e := integration.Setup(t)
-	send := SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: realDeliveryStager(t, e)}
+	integration.ApplyRiverSchema(t)
+	inserter, err := jobs.NewInserter(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatalf("jobs.NewInserter: %v", err)
+	}
+	send := compose.SendPath{PublicBaseURL: "https://mail.example.test", Delivery: compose.NewDeliveryStager(e.Pool, inserter)}
 	f := bounceFixture{
-		e: e, svc: newBounceResendService(e.Pool, send.Delivery, send),
-		consents: consent.NewStore(InstallationDB(e.Pool)),
+		e: e, svc: compose.NewBounceResend(e.Pool, send),
+		consents: consent.NewStore(compose.InstallationDB(e.Pool)),
 		rep:      e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms),
 	}
 	f.contact = e.SeedContact(t, "Buyer Contact", &e.Rep1)
-	addContactEmail(t, e, f.contact, bouncedAddress)
+	f.e.WsExec(t, `INSERT INTO contact_email (contact_id, email, email_type, is_primary, source, captured_by) VALUES ($1, $2, 'work', true, 'manual', 'human:x')`, f.contact, bouncedAddress)
 	purpose, err := f.consents.CreatePurpose(e.Admin(), "newsletter", "Newsletter", false, "")
 	if err != nil {
 		t.Fatalf("create the purpose: %v", err)
@@ -76,11 +111,19 @@ func newBounceFixture(t *testing.T) bounceFixture {
 	}); err != nil {
 		t.Fatalf("seed the thread: %v", err)
 	}
-	if _, err := f.svc.sends.SendEmail(f.rep, activities.FromActivity(ids.From[ids.ActivityKind](anchor)), activities.SendEmailInput{
+	original := activities.SendEmailInput{
 		Recipients: []string{bouncedAddress}, Subject: "Retrofit quote",
 		Body: "Here is the quote.", HTMLBody: "<p>Here is the quote.</p>",
 		ConsentPurpose: "newsletter",
-	}, f.svc.gate, f.svc.delivery); err != nil {
+	}
+	if tweak != nil {
+		tweak(&original)
+	}
+	sender := f.rep
+	if other := as(f); other != nil {
+		sender = other
+	}
+	if _, err := f.svc.Sends.SendEmail(sender, activities.FromActivity(ids.From[ids.ActivityKind](anchor)), original, f.svc.Gate, f.svc.Delivery); err != nil {
 		t.Fatalf("the original send: %v", err)
 	}
 	f.bounceID = ids.MustParse(e.WsScalar(t, `SELECT id::text FROM comms_outbound`))
@@ -95,7 +138,7 @@ func (f bounceFixture) bounce(t *testing.T, id ids.UUID, address string) {
 		Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: f.e.Rep1, OnBehalfOf: f.e.Rep1,
 	})
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	marked, err := f.svc.bounces.RecordBounce(ctx, connector.BounceReport{
+	marked, err := f.svc.Bounces.RecordBounce(ctx, connector.BounceReport{
 		MessageID: f.e.WsScalar(t, `SELECT message_id FROM comms_outbound WHERE id = $1`, id),
 		Recipient: address, Kind: connector.BounceHard, Reason: "550 5.1.1 user unknown",
 	})
@@ -115,7 +158,7 @@ func (f bounceFixture) setConsent(t *testing.T, state string) {
 
 func (f bounceFixture) canSendAgain(t *testing.T, id ids.UUID) bool {
 	t.Helper()
-	bounced, err := f.svc.bounces.HardBouncesFor(f.rep, time.Now().Add(-time.Hour), 10)
+	bounced, err := f.svc.Bounces.HardBouncesFor(f.rep, time.Unix(0, 0), 10)
 	if err != nil {
 		t.Fatalf("reading the bounce lane: %v", err)
 	}
@@ -229,6 +272,9 @@ func TestSendAgainIsRefusedWhenConsentWasWithdrawnSinceTheBounce(t *testing.T) {
 	if !f.canSendAgain(t, f.bounceID) {
 		t.Error("a refused repeat used up the bounce's one Send again")
 	}
+	if got := f.liveAddresses(t); len(got) != 1 || got[0] != bouncedAddress {
+		t.Errorf("a refused send left the contact with %v, want the old address back", got)
+	}
 }
 
 func TestSendAgainIsRefusedWhenTheContactWasSuppressedSinceTheBounce(t *testing.T) {
@@ -243,6 +289,9 @@ func TestSendAgainIsRefusedWhenTheContactWasSuppressedSinceTheBounce(t *testing.
 		t.Fatal("SendAgain reached a suppressed contact")
 	}
 	assertDelivered(t, f.e, 1, "a repeat to a suppressed contact")
+	if got := f.liveAddresses(t); len(got) != 1 || got[0] != bouncedAddress {
+		t.Errorf("a refused send left the contact with %v, want the old address back", got)
+	}
 }
 
 func TestOnlySomeoneWhoMaySendAndChangeTheContactMaySendAgain(t *testing.T) {
@@ -291,8 +340,7 @@ func TestSendAgainRefusesAnAddressThatCannotReplaceTheBouncedOne(t *testing.T) {
 	f := newBounceFixture(t)
 	for _, typed := range []string{bouncedAddress, strings.ToUpper(bouncedAddress), "not an address", "Name <x@buyer.test>", ""} {
 		_, err := f.svc.SendAgain(f.rep, f.bounceID, typed)
-		var fault apperrors.FieldFault
-		if !errors.As(err, &fault) {
+		if _, ok := errors.AsType[apperrors.FieldFault](err); !ok {
 			t.Errorf("SendAgain(%q) = %v, want a refusal naming the address field", typed, err)
 		}
 	}
@@ -390,4 +438,143 @@ func TestSendAgainIsRefusedWhenNoVisibleLinkedContactHoldsTheBouncedAddress(t *t
 		t.Errorf("the linked contact gained %v, want nothing appended", got)
 	}
 	assertDelivered(t, f.e, 1, "a refused repeat")
+}
+
+func TestTwoPressesWithDifferentAddressesMakeOneEditAndOneDelivery(t *testing.T) {
+	f := newBounceFixture(t)
+	addresses := []string{"first@buyer.test", "second@buyer.test"}
+	results := make([]error, len(addresses))
+	var wg sync.WaitGroup
+	for i, address := range addresses {
+		wg.Go(func() {
+			_, results[i] = f.svc.SendAgain(f.rep, f.bounceID, address)
+		})
+	}
+	wg.Wait()
+
+	sent := -1
+	for i, err := range results {
+		if err == nil {
+			if sent >= 0 {
+				t.Fatalf("both presses were accepted: %v", results)
+			}
+			sent = i
+		}
+	}
+	if sent < 0 {
+		t.Fatalf("neither press was accepted: %v", results)
+	}
+	assertDelivered(t, f.e, 2, "the first send and exactly one repeat")
+	if got := f.liveAddresses(t); !slices.Contains(got, addresses[sent]) || slices.Contains(got, bouncedAddress) {
+		t.Errorf("the contact holds %v, want the accepted press's address %s and not the bounced one", got, addresses[sent])
+	}
+}
+
+// decisionOf is what the consent engine recorded about one delivery, which is
+// the question it was asked.
+func (f bounceFixture) decisionOf(t *testing.T, delivery string) string {
+	t.Helper()
+	return f.e.WsScalar(t, `SELECT concat_ws('|', requested_category, resolved_category, purpose_key, legal_entity_id::text, reason_code)
+	  FROM communication_decision WHERE delivery_id = $1::uuid AND phase = 'staging' ORDER BY decided_at LIMIT 1`, delivery)
+}
+
+func TestSendAgainAsksTheConsentEngineTheQuestionTheFirstSendAsked(t *testing.T) {
+	f := newBounceFixtureSending(t, func(bounceFixture) context.Context { return nil }, func(in *activities.SendEmailInput) {
+		in.Context = commsauthz.CategoryMarketing
+		in.OperatorReason = "they asked at the fair"
+	})
+	sent, err := f.svc.SendAgain(f.rep, f.bounceID, correctedAddress)
+	if err != nil {
+		t.Fatalf("SendAgain: %v", err)
+	}
+
+	first, repeat := f.decisionOf(t, f.bounceID.String()), f.decisionOf(t, f.e.WsScalar(t,
+		`SELECT id::text FROM comms_outbound WHERE activity_id = $1`, ids.UUID(sent.Id)))
+	if first == "" || !strings.HasPrefix(first, string(commsauthz.CategoryMarketing)+"|") {
+		t.Fatalf("the first send recorded %q, want its claimed category", first)
+	}
+	if first != repeat {
+		t.Errorf("the repeat asked %q, the first send asked %q", repeat, first)
+	}
+	if reason := f.e.WsScalar(t, `SELECT send_claims->>'operator_reason' FROM comms_outbound WHERE id = $1`, f.bounceID); reason != "they asked at the fair" {
+		t.Errorf("the delivery kept operator reason %q", reason)
+	}
+}
+
+func TestTheOwnerOfABounceIsTheLiveHolderOfTheBouncedAddress(t *testing.T) {
+	f := newBounceFixture(t)
+	activity := f.e.WsScalar(t, `SELECT activity_id::text FROM comms_outbound WHERE id = $1`, f.bounceID)
+	// A linked contact that only ever held the address, with the lower id.
+	older := ids.MustParse("00000000-0000-7000-8000-000000000002")
+	f.e.WsExec(t, `INSERT INTO contact (id, full_name, source, captured_by, owner_id) VALUES ($1, 'Past Holder', 'test', 'human:x', $2)`, older, f.e.Rep1)
+	f.e.WsExec(t, `INSERT INTO contact_email (contact_id, email, email_type, is_primary, source, captured_by, archived_at) VALUES ($1, $2, 'work', false, 'manual', 'human:x', now())`, older, bouncedAddress)
+	f.e.WsExec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2::uuid, 'contact', $3)`, ids.NewV7(), activity, older)
+
+	bounced, err := f.svc.Bounces.HardBouncesFor(f.rep, time.Unix(0, 0), 10)
+	if err != nil || len(bounced) != 1 {
+		t.Fatalf("the lane = %+v, %v", bounced, err)
+	}
+	if bounced[0].ContactID != f.contact {
+		t.Errorf("the row names contact %s, want the live holder %s", bounced[0].ContactID, f.contact)
+	}
+	if _, err := f.svc.SendAgain(f.rep, f.bounceID, correctedAddress); err != nil {
+		t.Fatalf("SendAgain: %v", err)
+	}
+	if got := f.addressesOf(t, f.contact); len(got) != 1 || got[0] != correctedAddress {
+		t.Errorf("the live holder has %v, want the corrected address", got)
+	}
+	if got := f.addressesOf(t, older); len(got) != 0 {
+		t.Errorf("the past holder gained %v", got)
+	}
+}
+
+func TestABounceOfAMergedContactIsNotOfferedSendAgain(t *testing.T) {
+	f := newBounceFixture(t)
+	survivor := f.e.SeedContact(t, "Survivor", &f.e.Rep1)
+	f.e.WsExec(t, `UPDATE contact SET merged_into_id = $2 WHERE id = $1`, f.contact, survivor)
+
+	if f.canSendAgain(t, f.bounceID) {
+		t.Error("Send again is offered on a bounce of a merged contact")
+	}
+	if _, err := f.svc.SendAgain(f.rep, f.bounceID, correctedAddress); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("SendAgain = %v, want not found", err)
+	}
+}
+
+func TestAMessageAnAgentWroteIsNotSentAgainWithOneClick(t *testing.T) {
+	f := newBounceFixtureSending(t, func(f bounceFixture) context.Context {
+		return f.e.AgentFor(t, f.e.Rep1, []ids.UUID{f.e.Team1}, integration.SchedulerPerms)
+	}, nil)
+
+	if f.canSendAgain(t, f.bounceID) {
+		t.Error("Send again is offered on a message an agent wrote")
+	}
+	if _, err := f.svc.SendAgain(f.rep, f.bounceID, correctedAddress); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("SendAgain = %v, want not found", err)
+	}
+	assertDelivered(t, f.e, 1, "the refused repeat")
+}
+
+func TestTheTimelineOffersSendAgainByTheSameRuleAsTheWorklist(t *testing.T) {
+	f := newBounceFixture(t)
+	activity := ids.MustParse(f.e.WsScalar(t, `SELECT activity_id::text FROM comms_outbound WHERE id = $1`, f.bounceID))
+	offered := func() bool {
+		var states map[ids.UUID]activities.EmailRowState
+		if err := database.WithWorkspaceTx(f.rep, f.e.Pool, func(tx pgx.Tx) (err error) {
+			states, err = activities.EmailStatesFor(f.rep, tx, []ids.UUID{activity}, clocktest.Now(t))
+			return err
+		}); err != nil {
+			t.Fatalf("reading the timeline's delivery: %v", err)
+		}
+		return states[activity].Delivery.CanSendAgain
+	}
+	if !offered() || !f.canSendAgain(t, f.bounceID) {
+		t.Fatal("a fresh hard bounce is not offered on both the timeline and the Worklist")
+	}
+	if _, err := f.svc.SendAgain(f.rep, f.bounceID, correctedAddress); err != nil {
+		t.Fatalf("SendAgain: %v", err)
+	}
+	if offered() {
+		t.Error("the timeline still offers Send again after the bounce was sent again")
+	}
 }
