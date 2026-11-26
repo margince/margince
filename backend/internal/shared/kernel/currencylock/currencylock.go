@@ -7,6 +7,7 @@ package currencylock
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -103,4 +104,14 @@ func (l Lock) Refusal() string {
 		return prose
 	}
 	return "conversion rates are already frozen against the base currency, so it cannot change"
+}
+
+// Params are the facts under the keys of the read's base_currency_lock, so a
+// client words a refusal as it words the read. An unnamed base is left out.
+func (l Lock) Params() map[string]string {
+	params := map[string]string{"reason": string(l.Reason), "count": strconv.Itoa(l.Count)}
+	if l.BaseCurrency != "" {
+		params["base_currency"] = l.BaseCurrency
+	}
+	return params
 }
