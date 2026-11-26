@@ -2,10 +2,13 @@
 jurisdiction: nl
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Telecommunicatiewet"
     provision: "art. 11.7"
     source-url: https://wetten.overheid.nl/BWBR0009950/
+    text-digest: 99c230aab81c690af9fa2875cf42fd4748eb8fa664d7ee56a50198f3a29486b6
+    text-fetched: 2026-11-25
 fixtures:
   - finding: objection_route
     triggers: nl/fixtures/advertising-without-objection-route.md

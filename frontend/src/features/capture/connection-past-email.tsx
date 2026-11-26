@@ -9,13 +9,18 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Meter } from "../../design-system/readings";
 import type { ServiceRowTone } from "../../design-system/servicerow";
 import { type StatusKind, statusTone } from "../../design-system/statusbadge";
-import { formatDuration, formatNumber } from "../../format/format";
+import {
+  formatDateTime,
+  formatDuration,
+  formatNumber,
+} from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { type ImportWindow, useBackfillRun } from "../../lib/backfill-run";
 import { useDrawsImportRun } from "../../lib/import-onscreen";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   IMPORT_WINDOW_LABELS,
   isImportWindow,
@@ -30,6 +35,7 @@ import { canResume, runReading } from "./backfillrunview";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type BackfillStatus = components["schemas"]["BackfillStatus"];
+type UnreadPeriod = components["schemas"]["CaptureUnreadPeriod"];
 
 const STATS = [
   { key: "captured", label: "backfill.statEmails" },
@@ -83,6 +89,9 @@ export function usePastEmail({
   });
   const run = importRun.status.data;
   useDrawsImportRun(run !== undefined && runReading(run).live);
+  const unread = mail.unread_period ? (
+    <UnreadPeriodNote period={mail.unread_period} />
+  ) : null;
 
   // A reconnect can hold a wider window over an import that already finished.
   // The hold stands until a run of that window is moving or has run.
@@ -111,9 +120,15 @@ export function usePastEmail({
       action: (
         <Button onClick={onImport}>{t("connectors.svc.importPast")}</Button>
       ),
+      body: unread,
     };
   }
-  const status = runStatus(run, t);
+  // A finished import that did not reach back over the unread period is not
+  // the mailbox read in full.
+  const status =
+    unread && run.state === "done"
+      ? pastStatus("attention", t("connectors.svc.mailMissing"))
+      : runStatus(run, t);
   return {
     name,
     status,
@@ -125,9 +140,25 @@ export function usePastEmail({
           {status.label}
         </span>
         <RunBody run={run} importRun={importRun} />
+        {unread}
       </>
     ),
   };
+}
+
+// The dates no sync read, which are what the owner points an import at.
+function UnreadPeriodNote({ period }: Readonly<{ period: UnreadPeriod }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  return (
+    <span className="t-caption" data-testid="past-email-unread">
+      {t("connectors.svc.unreadPeriod", {
+        from: formatDateTime(period.from, locale, zone),
+        to: formatDateTime(period.to, locale, zone),
+      })}
+    </span>
+  );
 }
 
 type ImportRun = ReturnType<typeof useBackfillRun>;
