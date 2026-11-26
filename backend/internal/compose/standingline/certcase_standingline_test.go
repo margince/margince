@@ -42,8 +42,8 @@ func lineScenario(t *testing.T, want standingLineExpectation) aitasks.PreparedCa
 	return prepared
 }
 
-// The case tells a line that says what was said from one that only says who
-// wrote, from a refused reply and from a line that was kept.
+// The case accepts a line that says what was said. It grades apart one that
+// misses it, a refused reply and a line kept when it should be.
 func TestTheStandingLineCaseGradesWhatTheLineSays(t *testing.T) {
 	said := standingLineExpectation{NamesToken: "contract draft", Avoids: []string{"both sides"}}
 	cases := []struct {

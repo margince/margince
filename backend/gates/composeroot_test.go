@@ -102,10 +102,10 @@ const (
 	// Raised by 240 production and 260 test lines for the extension card's setup
 	// state and the schedule book's time zone. Both drive the unexported
 	// inventory handler, schedule book and catch-up schedule.
-	// Raised by 281 production and 155 test lines, and 1 test file, for the How
-	// it stands job and its page case, and the task explanation's certification
-	// case and its test. The job needs the unexported job context; the cases
-	// drive the contact page.
+	// Raised by 281 production and 155 test lines, and 1 test file. They hold
+	// the How it stands job and its page case, and the task explanation's
+	// certification case and its test. The job needs the unexported job
+	// context; the cases drive the contact page.
 	composeRootProductionLines = 231_660
 	composeRootTestLines       = 362_033
 )

@@ -48,8 +48,8 @@ func taskExplainScenario(t *testing.T) aitasks.PreparedCase {
 	return prepared
 }
 
-// The case tells an explanation that rests on the promise from one that
-// rests elsewhere, names no next step, or says what the reader was not shown.
+// The case accepts an explanation that rests on the promise. It refuses one
+// that rests elsewhere, names no next step, or says what was not shown.
 func TestTheTaskExplanationCaseGradesWhatTheExplanationRestsOn(t *testing.T) {
 	cases := []struct {
 		name, fact, cites, next, grade string
