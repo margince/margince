@@ -77,11 +77,11 @@ func TestAnAgentReadsAndAnswersOnlyItsOwnColleaguesDealQuestion(t *testing.T) {
 		} `json:"data"`
 	}
 	var mine, theirs queue
-	asked.CallOK(t, "read_workspace", map[string]any{"action": "link_suggestions"}).JSON(t, &mine)
+	asked.CallOK(t, "read_workspace", map[string]any{"topic": "link_suggestions"}).JSON(t, &mine)
 	if len(mine.Data) != 1 || mine.Data[0].EntityID != deal || mine.Data[0].Unit != nil {
 		t.Fatalf("the asked colleague's agent reads %+v, want Margince's question about the deal", mine.Data)
 	}
-	other.CallOK(t, "read_workspace", map[string]any{"action": "link_suggestions"}).JSON(t, &theirs)
+	other.CallOK(t, "read_workspace", map[string]any{"topic": "link_suggestions"}).JSON(t, &theirs)
 	if len(theirs.Data) != 0 {
 		t.Fatalf("another colleague's agent reads %+v, want nothing", theirs.Data)
 	}
