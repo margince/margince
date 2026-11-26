@@ -3,12 +3,11 @@
 
 import type { components } from "../api/schema";
 import type { StatusKind } from "../design-system/statusbadge";
-import { activityDay } from "../format/activitywhen";
+import { activitySince } from "../format/activitywhen";
 import { formatMoneyWhole } from "../format/format";
 import { formatDayMonthNearYear } from "../format/format.dates";
 import { LEAD_STATUS_LABEL } from "../format/leadstatus";
 import { isProjectPhase, PHASE_LABEL } from "../format/projectphase";
-import { formatRelativeTime } from "../format/relativetime";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { labelFor } from "../lib/labelfor";
@@ -51,17 +50,15 @@ function leadStatusKind(status: Lead["status"]): StatusKind {
  */
 function lastContactOf(
   standing: NonNullable<SearchResult["standing"]>,
-  { t, locale, zone, now }: Reading,
+  { t, locale, now }: Reading,
 ): string | undefined {
   const at = standing.last_activity_at;
   if (!at) return undefined;
+  const precision = standing.last_activity_precision ?? "instant";
   return t("palette.lastContact", {
-    when:
-      standing.last_activity_precision === "day"
-        ? activityDay(at, "day", locale, zone, (day, locale, zone) =>
-            formatDayMonthNearYear(day, locale, zone, now),
-          )
-        : formatRelativeTime(at, locale, now),
+    when: activitySince({ at, precision }, now, locale, (day, locale, zone) =>
+      formatDayMonthNearYear(day, locale, zone, now),
+    ),
   });
 }
 

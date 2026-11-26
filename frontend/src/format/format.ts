@@ -1,5 +1,4 @@
 import type { Locale, Translator } from "../i18n";
-import { calendarDay } from "./calendarday";
 import { handScaledUnit } from "./compactscale";
 import { calendarDaysBetween } from "./format.dates";
 import { numberFormat } from "./formatters";
@@ -412,27 +411,13 @@ export function formatDuration(ms: number, locale: Locale): string {
   }).format(hours);
 }
 
-/**
- * Age on the record calendar, retaining hours for events earlier today. A
- * `day` entry names its date and no hour, so it counts whole days from that
- * date, which is its UTC date for every reader.
- */
+/** Age on the record calendar, retaining hours for events earlier today. */
 export function formatAge(
   at: string,
   now: number,
   locale: Locale,
   zone: string,
-  precision: "day" | "instant" = "instant",
 ): string {
-  if (precision === "day") {
-    const named = Date.parse(`${calendarDay(new Date(at), "UTC")}T00:00:00Z`);
-    const today = Date.parse(`${calendarDay(new Date(now), zone)}T00:00:00Z`);
-    return numberFormat(locale, {
-      style: "unit",
-      unit: "day",
-      unitDisplay: "narrow",
-    }).format(Math.max(0, Math.round((today - named) / 86_400_000)));
-  }
   const days = Math.max(
     0,
     calendarDaysBetween(new Date(at), new Date(now), zone),

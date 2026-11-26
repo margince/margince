@@ -92,10 +92,10 @@ export type Momentum =
   | Readonly<{
       state: "stalled";
       since?: string;
-      precision?: OccurredPrecision;
+      precision: OccurredPrecision;
     }>
   | Readonly<{ state: "on_hold"; until: string }>
-  | Readonly<{ state: "active"; last: string; precision?: OccurredPrecision }>
+  | Readonly<{ state: "active"; last: string; precision: OccurredPrecision }>
   | Readonly<{ state: "quiet" }>;
 
 /**
@@ -129,11 +129,11 @@ export function momentumOf(
   >,
   now: Date,
 ): Momentum {
-  const precision = deal.last_activity_precision;
+  const precision = deal.last_activity_precision ?? "instant";
   if (deal.stalled) {
     return deal.last_activity_at
       ? { state: "stalled", since: deal.last_activity_at, precision }
-      : { state: "stalled" };
+      : { state: "stalled", precision };
   }
   if (waitHolds(deal.wait_until, deal.wait_ends_at, now)) {
     return { state: "on_hold", until: deal.wait_until };

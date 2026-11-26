@@ -1,5 +1,6 @@
 import type { components } from "../../api/schema";
 import type { TimelineEventKind } from "../../design-system/standingtimeline";
+import type { OccurredPrecision } from "../../format/activitywhen";
 import { stable } from "../../format/collate";
 import { dueOnDay } from "../../lib/standingpeeks";
 import { lastUpdate } from "./projectstanding";
@@ -21,7 +22,10 @@ export type ProjectMoment =
   | Moment<"signed", { title: string }>
   | Moment<"won", { name: string; amountMinor?: number; currency?: string }>
   | Moment<"due", { subject: string; zone: string }>
-  | Moment<"update", { subject?: string }>
+  | Moment<
+      "update",
+      { subject?: string; occurredAt: string; precision: OccurredPrecision }
+    >
   | Moment<"end", Record<never, never>>;
 
 // The start opens the axis, so the range runs from the day the work began
@@ -129,6 +133,8 @@ export function projectMoments(
     moments.push({
       key: "update",
       at: last.at,
+      occurredAt: last.occurredAt,
+      precision: last.precision,
       kind: "last",
       what: "update",
       subject: newestSubject(view),

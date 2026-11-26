@@ -3,9 +3,12 @@
 
 import { ListPlus, Mail, MailPlus, Send, Sparkles } from "lucide-react";
 import type { ReactNode, RefObject } from "react";
-import { type ActivityMoment, activityAgo } from "../format/activitywhen";
 import {
-  formatAge,
+  type ActivityMoment,
+  activityAge,
+  activityAgo,
+} from "../format/activitywhen";
+import {
   formatDayMonthNearYear,
   formatMoneyCompact,
   MONEY_ABSENT,
@@ -209,12 +212,14 @@ function DealCardFoot({
             {/* How long it has sat is the size of the stall, and only then: on
                 a healthy card the number is a fact nobody acts on. */}
             <span className="deal-age">
-              {formatAge(
-                deal.idleSince,
+              {activityAge(
+                {
+                  at: deal.idleSince,
+                  precision: deal.idleSincePrecision ?? "instant",
+                },
                 deal.measuredAt,
                 locale,
                 zone,
-                deal.idleSincePrecision,
               )}
             </span>
           </span>

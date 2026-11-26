@@ -246,6 +246,7 @@ describe("the figures and the axis", () => {
       );
     expect(at("2026-08-06T09:00:00Z")).toEqual({
       at: "2026-08-06T09:00:00Z",
+      occurredAt: "2026-08-06T09:00:00Z",
       daysAgo: 7,
       precision: "instant",
     });

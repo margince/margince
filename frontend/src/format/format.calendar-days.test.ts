@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { calendarDaysBetween, daysAgoText, formatAge } from "./format";
+import { calendarDaysBetween, daysAgoText } from "./format";
 
 // Day counting reads the CALENDAR, not the clock.
 //
@@ -119,19 +119,6 @@ describe("daysAgoText", () => {
     );
     expect(daysAgoText(1200, t, "de")).toBe(
       'contact.strip.days:{"count":"1.200"}',
-    );
-  });
-});
-
-describe("formatAge of a date-only activity", () => {
-  it("counts whole days from its own date, wherever the reader is", () => {
-    const now = Date.parse("2026-11-25T10:30:00Z");
-    const stored = "2026-11-20T12:00:00Z";
-    expect(formatAge(stored, now, "en", "Pacific/Kiritimati", "day")).toBe(
-      formatAge("2026-11-20T00:30:00+14:00", now, "en", "Pacific/Kiritimati"),
-    );
-    expect(formatAge(stored, now, "en", "Pacific/Kiritimati", "day")).not.toBe(
-      formatAge(stored, now, "en", "Pacific/Kiritimati"),
     );
   });
 });

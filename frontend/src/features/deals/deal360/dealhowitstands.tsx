@@ -324,7 +324,7 @@ function momentumDim(
           ? t("deal.standing.momentum.stalledSub", {
               date: activityDay(
                 momentum.since,
-                momentum.precision ?? "instant",
+                momentum.precision,
                 locale,
                 zone,
                 formatDayMonth,
@@ -347,7 +347,7 @@ function momentumDim(
         sub: t("deal.standing.momentum.activeSub", {
           date: activityDay(
             momentum.last,
-            momentum.precision ?? "instant",
+            momentum.precision,
             locale,
             zone,
             formatDayMonth,

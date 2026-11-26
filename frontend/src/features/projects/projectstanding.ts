@@ -1,7 +1,9 @@
 import type { components } from "../../api/schema";
 import type { ReadingTone } from "../../design-system/readingtone";
 import {
-  activityDate,
+  type ActivityMoment,
+  activityDaysAgo,
+  activityPlacedAt,
   type OccurredPrecision,
 } from "../../format/activitywhen";
 import { calendarDaysUntil } from "../../format/daysuntil";
@@ -181,7 +183,10 @@ export function phaseTimes(view: Project360): ReadonlyMap<string, PhaseTime> {
 }
 
 export type LastUpdate = Readonly<{
+  // Where the timeline places it, which for a day entry is its date's start.
   at: string;
+  // The stored time, which the activity rows are matched against.
+  occurredAt: string;
   daysAgo: number;
   precision: OccurredPrecision;
 }>;
@@ -194,27 +199,33 @@ export function lastUpdate(
   view: Project360,
   zone: string = UTC_ZONE,
 ): LastUpdate | undefined {
-  const rollup = view.rollups?.last_activity_at ? view.rollups : undefined;
-  const at = rollup?.last_activity_at ?? view.project.last_activity_at;
-  if (!at) {
+  const moment = lastUpdateMoment(view);
+  if (!moment) {
     return undefined;
   }
-  const precision =
-    (rollup
-      ? rollup.last_activity_precision
-      : view.project.last_activity_precision) ?? "instant";
-  const daysAgo =
-    precision === "day"
-      ? Math.max(
-          0,
-          -calendarDaysUntil(
-            activityDate(at, precision, zone),
-            zone,
-            new Date(view.as_of),
-          ),
-        )
-      : daysPast(Date.parse(at), Date.parse(view.as_of)).days;
-  return { at, daysAgo, precision };
+  return {
+    at: activityPlacedAt(moment, zone),
+    occurredAt: moment.at,
+    daysAgo: activityDaysAgo(moment, Date.parse(view.as_of), zone),
+    precision: moment.precision,
+  };
+}
+
+function lastUpdateMoment(view: Project360): ActivityMoment | undefined {
+  const rollup = view.rollups;
+  if (rollup?.last_activity_at) {
+    return {
+      at: rollup.last_activity_at,
+      precision: rollup.last_activity_precision ?? "instant",
+    };
+  }
+  const project = view.project;
+  return project.last_activity_at
+    ? {
+        at: project.last_activity_at,
+        precision: project.last_activity_precision ?? "instant",
+      }
+    : undefined;
 }
 
 // A week with nothing filed is the silence the timeline draws as a band.
