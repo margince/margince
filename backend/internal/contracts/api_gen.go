@@ -37658,11 +37658,11 @@ type Attachment struct {
 	// Checksum sha256 of the bytes, for integrity/dedupe.
 	Checksum *string `json:"checksum,omitempty"`
 
-	// CompanyId The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
+	// CompanyId The account a file is filed under, worked out when it is read: the company it is filed on, or the company of the deal it is filed on now. A file on any other record names none; the account's Documents list reaches a mail's file through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's.
 	CompanyId   *openapi_types.UUID `json:"company_id,omitempty"`
 	ContentType *string             `json:"content_type,omitempty"`
 
-	// ContractId The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
+	// ContractId The agreement this file is about. A read path rather than a second parent: visibility stays the primary parent's. Set at upload by the member filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
 	ContractId *openapi_types.UUID `json:"contract_id,omitempty"`
 	CreatedAt  time.Time           `json:"created_at"`
 

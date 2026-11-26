@@ -944,7 +944,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `category` | `text`, default `'other'::text` | yes | What kind of document this is. |
 | `checksum` | `text` |  | sha256 of the bytes, for integrity/dedupe. |
 | `content_type` | `text` |  |  |
-| `contract_id` | `uuid` |  | The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. |
+| `contract_id` | `uuid` |  | The agreement this file is about. |
 | `deal_id` | `uuid` |  |  |
 | `declared_type` | `text` |  |  |
 | `doc_state` | `text`, default `'current'::text` | yes | ASSERTED, never inferred. |
