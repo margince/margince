@@ -1715,6 +1715,7 @@
   "deal.openDeal": "Mở deal",
   "record.notShown": "Không hiển thị",
   "format.notForecast": "Chưa dự báo",
+  "format.tooLargeExact": "Quá lớn để hiển thị chính xác",
   "record.fieldRequired": "Trường này bắt buộc.",
   "amount.refused.ambiguous": "Nhập số tiền dưới dạng {whole} hoặc {decimal}.",
   "amount.refused.ambiguousWhole": "Nhập số tiền dưới dạng {whole}.",
