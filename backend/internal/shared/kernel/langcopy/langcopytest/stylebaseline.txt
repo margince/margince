@@ -3,9 +3,11 @@
 # its line. A line whose sentence passes or is gone fails a test.
 # One line: rule id, a tab, the sentence as a Go string; vi.toi adds a tab and
 # the English the sentence was checked beside.
-# The recut only drops lines whose sentence passes or is gone, and rewrites
+# The file only shrinks: make style-baseline-shrinks fails a line its copy at
+# the merge base with main does not hold, so CI refuses an added or swapped line.
+# The recut drops the lines whose sentence passes or is gone, and rewrites
 # wantStyleWaivers and wantStyleDigest in stylebaseline_test.go to match.
-# Any other edit changes both pins in the same change, where review sees it.
+# A line dropped by hand changes both pins in the same change.
 # From backend/:
 #   go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut
 en.contraction	"Asking a colleague for context isn't available yet"

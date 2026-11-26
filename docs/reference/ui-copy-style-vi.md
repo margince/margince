@@ -393,8 +393,8 @@ and outsider address and retired vocabulary. The retired words and the patterns 
 snapshot a test holds to both; formal address is a hand port pinned to its census pattern. A table is member copy unless
 its test names another register with a reason. Agent allows tôi. Outsider allows quý khách and vui lòng and fails bạn.
 Controller also allows chúng tôi. Own voice keeps only tone marks, NFC, quotes, dashes and !, and Verbatim none.
-`wantStyleWaivers` and `wantStyleDigest` pin the count and SHA-256 of the findings to rewrite in
-`langcopytest/stylebaseline.txt`. The [recut](ui-copy-style.md#copy-the-server-writes) only drops passing or gone lines
-and rewrites both pins; any other edit changes both in its diff. Not reached: a member's own draft (`draftfloor`, intro
+`langcopytest/stylebaseline.txt` lists the findings to rewrite and only shrinks: `make style-baseline-shrinks` fails a
+line its copy at the merge base with `main` lacks, a swap included. `wantStyleWaivers` and `wantStyleDigest` pin its count
+and SHA-256, and the [recut](ui-copy-style.md#copy-the-server-writes) only drops passing or gone lines. Not reached: a member's own draft (`draftfloor`, intro
 notes), the demo mail of `capture/offlinedemo`, the word lists of `draftcheck`, `salutation` and `searchplan`, text
 returned from a `switch`, and strings outside a table: problem details, `crm.yaml` and MCP tool copy (#13561, #13562).

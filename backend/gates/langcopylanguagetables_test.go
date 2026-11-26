@@ -186,7 +186,7 @@ func checkNested(t *testing.T) { langcopytest.EnglishText(t, "x", nested["saved"
 func TestUnwalked(t *testing.T) { _ = unwalked }
 func TestShadowed(t *testing.T) { check(t); unwalked := struct{ unwalked int }{unwalked: 1}; _ = unwalked.unwalked }
 func unusedCheck(t langcopytest.T) { langcopytest.EnglishText(t, "x", orphaned[0]) }
-func TestLocal(t *testing.T) { unusedCheck := 1; _ = unusedCheck }
+func TestLocal(t *testing.T) { unusedCheck := func() {}; unusedCheck(); _ = orphaned }
 `
 	pkg := &languagePackage{tables: map[string]string{}, literalIn: map[string]bool{}}
 	for name, text := range map[string]string{"copy.go": source, "copy_test.go": walk} {
@@ -537,7 +537,7 @@ func namedByStyleTests(tests []*ast.File) []string {
 						reaches[fn.Name.Name] = true
 					}
 				case *ast.CallExpr:
-					if callee, isIdent := n.Fun.(*ast.Ident); isIdent {
+					if callee, isIdent := n.Fun.(*ast.Ident); isIdent && !local[callee.Name] {
 						calls[fn.Name.Name] = append(calls[fn.Name.Name], callee.Name)
 					}
 				}

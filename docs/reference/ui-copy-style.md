@@ -244,14 +244,22 @@ dash, spelling and `&` rules. Text a program matches, or a reader copies as it
 stands, keeps none of them.
 
 Findings that wait for a rewrite are listed in `stylebaseline.txt` in that
-folder, one rule and sentence a line. A test fails a line whose sentence now
-passes, or that no Go string spells. Two pins in `stylebaseline_test.go` hold
-its lines: `wantStyleWaivers` is how many there are, and `wantStyleDigest` the
-SHA-256 of them sorted, comments left out. A test fails when either differs.
+folder, one rule and sentence a line. The file only gets shorter.
+
+`make style-baseline-shrinks` compares it with its copy at the merge base with
+`main`. It fails on each line that copy does not hold, so a changed line counts
+as a new one. Removed lines and comments pass. A file that `main` has never held
+passes whole, as the start of the list. CI runs the check, and fails when it
+finds no `main` to compare with.
+
+A test fails a line whose sentence now passes, or that no Go string spells. Two
+pins in `stylebaseline_test.go` hold its lines: `wantStyleWaivers` is how many
+there are, and `wantStyleDigest` the SHA-256 of them sorted, comments left out.
+A test fails when either differs, so `go test` shows an edit before CI does.
 
 The command below only drops the lines that fail, and rewrites both pins to
-match. Any other edit, whether it adds, drops or swaps a line, changes both pins
-in the same change, where review sees it. Run it from `backend/`:
+match. A line dropped by hand sets both pins in the same change. Run it from
+`backend/`:
 
 ```sh
 go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut

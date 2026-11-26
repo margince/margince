@@ -64,7 +64,8 @@ func TestASwappedStyleWaiverBreaksTheDigestPin(t *testing.T) {
 func pinsHold(waivers []Waiver) error {
 	if digest := styleDigest(waivers); len(waivers) != wantStyleWaivers || digest != wantStyleDigest {
 		return fmt.Errorf("%s holds %d waivers with digest %s, and the pins say %d and %s. "+
-			"The recut rewrites both pins when it drops lines; any other edit sets both in the same change, for review to accept",
+			"The recut rewrites both pins when it drops lines, and a line dropped by hand sets both in the same change. "+
+			"A line added or swapped fails make style-baseline-shrinks: rewrite the sentence instead",
 			baselinePath, len(waivers), digest, wantStyleWaivers, wantStyleDigest)
 	}
 	return nil
