@@ -9,9 +9,9 @@ import (
 )
 
 // storedTokenCount is the count a meter writes for one provider-reported
-// figure. A negative count is stored as zero and logged: the call was served
-// and spent, so refusing it saves nothing, while adding it would lower the
-// totals the budget reads. The schema's non-negative checks hold the result.
+// figure. A negative count is stored as zero and logged. The call was served
+// and spent, so refusing it saves nothing. Adding it would lower the totals the
+// budget reads. The schema's non-negative checks hold the result.
 func storedTokenCount(ctx context.Context, log *slog.Logger, column string, reported int) int {
 	if reported >= 0 {
 		return reported
