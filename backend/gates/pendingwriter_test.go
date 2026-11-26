@@ -41,7 +41,6 @@ package gates
 import (
 	"regexp"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -51,8 +50,12 @@ import (
 // integration-tagged, so this lane reads its text rather than importing it.
 const pendingWriterClassification = "migrations/schema_fitness_integration_test.go"
 
-// pendingWriterEntry is one "table.column" key classified PENDING WRITER.
-var pendingWriterEntry = regexp.MustCompile(`"(\w+)\.(\w+)":\s*"PENDING WRITER`)
+// pendingWriterEntry is one "table.column" key classified PENDING WRITER, in an
+// interpreted or a raw string.
+var pendingWriterEntry = regexp.MustCompile("\"(\\w+)\\.(\\w+)\":\\s*[\"`]PENDING WRITER")
+
+// pendingWriterValue is any string that opens with the claim.
+var pendingWriterValue = regexp.MustCompile("[\"`]PENDING WRITER")
 
 // pendingWriterTables maps each table with a PENDING WRITER entry to the
 // columns that carry the claim, read from the classification itself.
@@ -133,7 +136,7 @@ func TestEveryPendingWriterEntryIsRead(t *testing.T) {
 	for _, columns := range tables {
 		read += len(columns)
 	}
-	if written := strings.Count(text, `"PENDING WRITER`); written != read {
+	if written := len(pendingWriterValue.FindAllStringIndex(text, -1)); written != read {
 		t.Errorf("%s holds %d PENDING WRITER entries and this gate read %d — write each key as "+
 			"\"table.column\" so the claim is held", pendingWriterClassification, written, read)
 	}
