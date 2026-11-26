@@ -100,6 +100,9 @@ type forwardRoute struct {
 	// held says the message names no author, so it is filed for the forwarding
 	// member alone and no contact is made.
 	held bool
+	// member is the colleague who forwarded a message that names no author. It is
+	// zero otherwise, because only that message is asked about.
+	member ids.UUID
 }
 
 // routeForward turns a member's forward into the message it carries. Anything
@@ -123,7 +126,7 @@ func routeForward(ctx context.Context, sink connector.Sink, binding connector.Ch
 	ctx = principal.WithActor(ctx, actor)
 	forward := msg.Forward
 	if forward.Author == nil {
-		return ctx, forwardRoute{msg: msg, held: true}, nil
+		return ctx, forwardRoute{msg: msg, held: true, member: member}, nil
 	}
 	// A colleague is no customer. Their message is held for the forwarder, as
 	// one with no author is, and no contact is made for the colleague.

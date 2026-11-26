@@ -63,6 +63,10 @@ type ChatBinding struct {
 	// it files: PostureClassified or PostureHeld, never shared. A seat answers
 	// first. The pin answers for a source with no seat. Empty holds.
 	PinnedPosture string
+	// Connection is the channel_connection row the message arrived through. It
+	// is what a later send from the same account is resolved by. Zero for the
+	// workspace's own bot, which a workspace has one of.
+	Connection ids.UUID
 }
 
 // The postures a member-owned chat source may pin. A pin may only narrow who
@@ -81,6 +85,8 @@ type ChatLink struct {
 	Ownership   ChatOwnership
 	OwnerUserID ids.UUID
 	SeatID      ids.UUID
+	// ConnectionID is the account's channel_connection row.
+	ConnectionID ids.UUID
 }
 
 // ChatParty is the contact on the other side of a conversation.
@@ -170,6 +176,12 @@ type ChatMessage struct {
 	// member, and so whether the message is filed for the original author, is
 	// decided where the message is filed.
 	Forward *ChatForward
+	// ReplyToID is the provider's id of the message this one answers, in the
+	// network's own spelling. Empty when it answers none.
+	ReplyToID string
+	// SharedContact is the contact card the sender attached, when the message
+	// is one.
+	SharedContact *ChatSharedContact
 	// Parts and PartDrops are the files the message carried and the ones the
 	// source refused, already bounded and typed as the mail parser's are.
 	Parts     []Part
@@ -185,6 +197,18 @@ type ChatForward struct {
 	Author *ChatParty
 	// OriginalAt is when the author wrote the message, if the provider says. Zero when unknown.
 	OriginalAt time.Time
+}
+
+// ChatSharedContact is a contact card a sender shared into a chat. It names a
+// someone by the accounts the provider knows them under. Each network fills only
+// the field its own identities use.
+type ChatSharedContact struct {
+	DisplayName string
+	// Phones are the numbers on the card, as the provider wrote them.
+	Phones []string
+	// UserID is the provider's account id of the one it names. A card carries it
+	// for a Telegram user or a Zalo customer.
+	UserID string
 }
 
 // ChatMemberFinder is implemented by a Sink that can say which workspace

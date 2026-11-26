@@ -2290,6 +2290,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.capture_personal_purge": "Xóa thư cá nhân",
   "systemJob.capture_purge_receipt": "Biên nhận xóa thư",
   "systemJob.capture_part_slim_worker": "Dọn dẹp dữ liệu thư đã lưu",
+  "systemJob.chat_clarification": "Câu hỏi về tin nhắn chuyển tiếp",
   "systemJob.capture_trace_sweep": "Dọn dẹp dấu vết thư",
   "systemJob.capture_which_deal": "Câu hỏi về cơ hội từ thư",
   "systemJob.close_date": "Kiểm tra ngày chốt",
@@ -11155,6 +11156,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.captured_deal_refile": "Gắn hoạt động đã thu thập vào cơ hội",
   "jobs.kind.captured_deal_refile_sweep":
     "Khôi phục việc gắn hoạt động đã thu thập",
+  "jobs.kind.chat_clarification_sweep":
+    "Hỏi đồng nghiệp ai đã viết các tin nhắn trò chuyện họ chuyển tiếp",
   "jobs.kind.capture_part_slim": "Dọn dẹp dữ liệu thư đã lưu",
   "jobs.kind.capture_sync": "Đồng bộ hộp thư",
   "jobs.kind.check_company_vat": "Kiểm tra mã số VAT",

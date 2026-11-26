@@ -2356,6 +2356,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.capture_purge_receipt":
     "Fehlende Löschbelege für E-Mails nachtragen",
   "systemJob.capture_part_slim_worker": "Bereinigung des E-Mail-Speichers",
+  "systemJob.chat_clarification": "Frage zu weitergeleiteten Nachrichten",
   "systemJob.capture_trace_sweep": "Bereinigung der E-Mail-Spuren",
   "systemJob.capture_which_deal": "Deal-Frage aus E-Mail",
   "systemJob.close_date": "Prüfung der Abschlussdaten",
@@ -11477,6 +11478,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.captured_deal_refile": "Erfasste Aktivitäten zu Deals zuordnen",
   "jobs.kind.captured_deal_refile_sweep":
     "Zuordnung erfasster Aktivitäten nachholen",
+  "jobs.kind.chat_clarification_sweep":
+    "Kolleginnen und Kollegen fragen, von wem weitergeleitete Chatnachrichten sind",
   "jobs.kind.capture_part_slim": "Bereinigung des E-Mail-Speichers",
   "jobs.kind.capture_sync": "Postfach-Synchronisierung",
   "jobs.kind.check_company_vat": "Prüfung der Umsatzsteuer-ID",

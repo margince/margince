@@ -159,6 +159,9 @@ func decodeMessage(scope messageScope, dir Direction, raw json.RawMessage) (Mess
 	for _, e := range w.Errors {
 		msg.ErrorCodes = append(msg.ErrorCodes, e.Code)
 	}
+	for _, c := range w.Contacts {
+		msg.Shared = append(msg.Shared, c.decode())
+	}
 	w.fillContent(&msg)
 	return msg, nil
 }
@@ -209,6 +212,35 @@ func (b wireBody) fill(msg *Message, typ string) {
 			msg.Kind, msg.Text = KindText, b.Interactive.ListReply.Title
 		}
 	}
+}
+
+func (c wireSharedContact) decode() SharedContact {
+	card := SharedContact{Name: c.Name.FormattedName}
+	for _, p := range c.Phones {
+		if number := digitsOf(firstText(p.WaID, p.Phone)); number != "" {
+			card.Phones = append(card.Phones, number)
+		}
+	}
+	return card
+}
+
+// digitsOf is a phone number without its punctuation and leading plus.
+func digitsOf(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, s)
+}
+
+func firstText(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func decodeStatus(phoneNumberID string, raw json.RawMessage) (Status, error) {

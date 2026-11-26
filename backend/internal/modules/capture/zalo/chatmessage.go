@@ -30,14 +30,34 @@ func ChatMessage(ev Event) (connector.ChatMessage, error) {
 	if ev.Message.Direction == Outbound {
 		direction = connector.DirectionOutbound
 	}
-	return connector.ChatMessage{
+	chat := connector.ChatMessage{
 		ConversationID: safeKeyPart(ev.UserID),
 		IdempotencyKey: safeKeyPart(ev.Message.ID),
 		Direction:      direction,
 		Counterparty:   connector.ChatParty{UserID: ev.UserID},
 		Body:           body(ev.Message),
 		OccurredAt:     ev.OccurredAt,
-	}, nil
+	}
+	if direction == connector.DirectionInbound {
+		chat.ReplyToID = ev.Message.ReplyToID
+		chat.SharedContact = businessCardOf(ev.Message)
+	}
+	return chat, nil
+}
+
+// businessCardOf is the customer a business card shares, when the card names one.
+func businessCardOf(msg *Message) *connector.ChatSharedContact {
+	for _, a := range msg.Attachments {
+		if a.UserID == "" && a.Phone == "" {
+			continue
+		}
+		card := &connector.ChatSharedContact{UserID: a.UserID}
+		if a.Phone != "" {
+			card.Phones = []string{a.Phone}
+		}
+		return card
+	}
+	return nil
 }
 
 func safeKeyPart(id string) string { return strings.ReplaceAll(id, ":", "_") }
@@ -68,5 +88,6 @@ func ChatBinding(ev Event, link connector.ChatLink) connector.ChatBinding {
 		Ownership:    link.Ownership,
 		OwnerUserID:  link.OwnerUserID,
 		SeatID:       link.SeatID,
+		Connection:   link.ConnectionID,
 	}
 }

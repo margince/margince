@@ -57,11 +57,24 @@ func ChatMessage(msg Message) (connector.ChatMessage, error) {
 		Body:           body,
 		OccurredAt:     msg.At,
 	}
+	if direction == connector.DirectionInbound {
+		chat.ReplyToID = msg.ReplyToID
+		chat.SharedContact = sharedContactOf(msg.Shared)
+	}
 	// WhatsApp says only that a message was forwarded, never who wrote it.
 	if msg.Forwarded && direction == connector.DirectionInbound {
 		chat.Forward = &connector.ChatForward{}
 	}
 	return chat, nil
+}
+
+// sharedContactOf is the card a message shares, when it shares one
+// customer. A message of several cards names no single customer.
+func sharedContactOf(cards []SharedContact) *connector.ChatSharedContact {
+	if len(cards) != 1 {
+		return nil
+	}
+	return &connector.ChatSharedContact{DisplayName: cards[0].Name, Phones: cards[0].Phones}
 }
 
 // ChatChange maps an edit or a revoke to a change of the message it names. The
@@ -110,5 +123,6 @@ func ChatBinding(msg Message, link connector.ChatLink) connector.ChatBinding {
 		Ownership:    link.Ownership,
 		OwnerUserID:  link.OwnerUserID,
 		SeatID:       link.SeatID,
+		Connection:   link.ConnectionID,
 	}
 }

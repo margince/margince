@@ -180,7 +180,11 @@ func (p contactsEnsurer) liftVendorMark(ctx context.Context, email string, conta
 
 // EnsureChannelCounterparty adapts channel identity and any corroborating work address.
 func (p contactsEnsurer) EnsureChannelCounterparty(ctx context.Context, in capture.EnsureChannelRequest) (capture.EnsureOutcome, error) {
-	res, err := p.store.EnsureChannelCounterparty(ctx, contacts.EnsureChannelCounterpartyInput{
+	ensure := p.store.EnsureChannelCounterparty
+	if in.RequireHeld {
+		ensure = p.store.EnsureHeldChannelCounterparty
+	}
+	res, err := ensure(ctx, contacts.EnsureChannelCounterpartyInput{
 		Identity:           in.Identity,
 		DisplayName:        in.DisplayName,
 		CorroboratingEmail: in.CorroboratingEmail,
@@ -189,6 +193,9 @@ func (p contactsEnsurer) EnsureChannelCounterparty(ctx context.Context, in captu
 		CapturedBy:         in.CapturedBy,
 		LinkOnly:           in.LinkOnly,
 	})
+	if errors.Is(err, contacts.ErrActivityNotHeld) {
+		return capture.EnsureOutcome{}, capture.ErrHeldForwardGone
+	}
 	if errors.Is(err, contacts.ErrCounterpartyIsSeat) {
 		return capture.EnsureOutcome{}, nil
 	}

@@ -34,6 +34,7 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   capture_sync: "jobs.kind.capture_sync",
   capture_trace_sweep: "systemJob.capture_trace_sweep",
   captured_deal_refile: "jobs.kind.captured_deal_refile",
+  chat_clarification_sweep: "jobs.kind.chat_clarification_sweep",
   captured_deal_refile_sweep: "jobs.kind.captured_deal_refile_sweep",
   check_company_vat: "jobs.kind.check_company_vat",
   close_date_sweep: "jobs.kind.close_date_sweep",

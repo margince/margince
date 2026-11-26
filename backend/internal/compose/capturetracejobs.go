@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/chatclarify"
 	"github.com/margince/margince/backend/internal/compose/tracesweep"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -64,4 +65,24 @@ func (w *captureTraceSweepWorker) Work(ctx context.Context, _ *river.Job[Capture
 
 func (w *captureTraceSweepWorker) sweepWorkspace(ctx context.Context, workspace ids.UUID) error {
 	return tracesweep.Workspace(ctx, w.pool, workspace, traceRetention, w.purger)
+}
+
+// ChatClarificationSweepArgs runs one fleet-wide pass over the forwards colleagues
+// made to company chat accounts without naming an author.
+type ChatClarificationSweepArgs struct{}
+
+// Kind is the stable job identifier River persists in river_job.
+func (ChatClarificationSweepArgs) Kind() string { return "chat_clarification_sweep" }
+
+// FleetWide marks this as answering for the whole installation: it walks the
+// workspaces itself (jobs.FleetWide).
+func (ChatClarificationSweepArgs) FleetWide() {
+	// Intentionally empty: jobs.FleetWide is a marker interface.
+}
+
+type chatClarificationSweepWorker struct{ sweep chatclarify.Sweep }
+
+// Work asks the colleagues of every workspace who wrote what they forwarded.
+func (w *chatClarificationSweepWorker) Work(ctx context.Context, _ *river.Job[ChatClarificationSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerEveryWorkspace(ctx, w.sweep.Pool, w.sweep.Workspace))
 }
