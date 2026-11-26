@@ -43,6 +43,9 @@ var publicRequests = map[string]map[string]bool{
 	// Dispact's push receiver: the signature with the sealed events secret is
 	// the credential, and the handler checks it before reading anything.
 	"/v1/channel-events/dispact": {http.MethodPost: true},
+	// Zalo's push receiver: the X-ZEvent-Signature MAC with the sealed OA secret
+	// key is the credential, and the handler checks it before reading anything.
+	"/v1/channel-events/zalo-oa": {http.MethodPost: true},
 	// Meta's WhatsApp webhook. The verify token (GET) and the HMAC signature with
 	// the app secret (POST) are the credentials. The handler checks them against
 	// the sealed secrets before it stores anything.
