@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Null-only fallbacks leave unnamed leads blank and disagree with promotion.
-// Both fallback operators must use the shared feature owner.
+// Both fallback operators must use the shared owner in lib/.
 import ts from "typescript";
 import { parseSource } from "../../scripts/lib/source-tree";
 import type { CensusFile, CensusRule } from "../tree";
@@ -115,8 +115,8 @@ export function fallbacksIn(fileName: string, text: string): string[] {
 // The files that own the rule, named one by one. A second helper beside
 // `leadname.ts` would otherwise pass the census.
 const LEAD_NAME_OWNERS: ReadonlySet<string> = new Set([
-  "src/features/leads/leadname.ts",
-  "src/features/leads/leadname.test.ts",
+  "src/lib/leadname.ts",
+  "src/lib/leadname.test.ts",
 ]);
 
 const judged = (file: CensusFile) =>
@@ -129,7 +129,7 @@ export const rule: CensusRule = {
   corpus: (tree) => tree.files.filter(judged),
   visit: (file) => (file.source ? fallbacksOf(file.source, file.rel) : []),
   advice:
-    "A lead's name is worked out in one place: call leadName() from " +
-    "features/leads/leadname.ts instead of spelling `full_name ?? email` again. " +
+    "A lead's name is worked out in one place: call leadIdentityName() from " +
+    "lib/leadname.ts instead of spelling `full_name ?? email` again. " +
     "That fallback renders a lead with an empty name as blank.",
 };

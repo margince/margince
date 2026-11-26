@@ -2008,6 +2008,8 @@ export const en = {
   "brief.queue.back": "Back to Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
+  "brief.queue.count_one": "{count} item in the Worklist",
+  "brief.queue.count_other": "{count} items in the Worklist",
   "brief.queue.hide": "Hide Worklist",
   "brief.team.planUnavailable": "No current plan visible to you for {name}.",
   "brief.team.noCommitments": "{name} has no commitments in this plan.",
@@ -3661,7 +3663,7 @@ export const en = {
   "list.unowned": "Unassigned",
   "list.created": "Created",
   "list.lastActivity": "Last activity",
-  "list.filterOwnerMe": "Owned by you",
+  "list.filterOwnerMe": "You",
   "list.filterOwnerAll": "Any owner",
   "list.ownerDeactivated": "{name} (deactivated)",
   "list.ownerSuspended": "{name} (suspended)",
@@ -3673,6 +3675,10 @@ export const en = {
   "views.save": "Save view",
   "views.saveConfirm": "Save",
   "views.saveTitle": "Save this view",
+  "views.update": "Update “{name}”",
+  "views.updated": "View updated: “{name}”",
+  "views.nameTaken":
+    "A view with this name already exists. Choose another name.",
   "views.name": "Name",
   // Names the saved-view rail where the rail itself cannot: a failure notice
   // lands beside the list's own tools, and "this section did not load" under a
@@ -5780,7 +5786,8 @@ export const en = {
   "tags.moreUncounted": "more",
   "tags.moreUncountedTip":
     "Including {names}. Open the record for the full set.",
-  "tags.columnHeaderPartial": "Tags (partial list)",
+  "tags.filterLabel": "Tag",
+  "tags.filterLabelPartial": "Tag (partial list)",
   "tags.loading": "Loading tags…",
   "tags.panelTitle": "Tags",
   "tags.add": "Add tag",
@@ -5829,7 +5836,8 @@ export const en = {
     "No tag with that name. An administrator or operations user can add one.",
   "tagResult.gone":
     "This tag no longer exists. It may have been merged into another.",
-  "tagResult.totalVisible": "{count} visible assignments",
+  "tagResult.tagged_one": "{count} tagged record",
+  "tagResult.tagged_other": "{count} tagged records",
   "tagResult.contacts": "Contacts",
   "tagResult.companies": "Companies",
   "tagResult.deals": "Deals",
@@ -6486,7 +6494,7 @@ export const en = {
   "deal.timeline.empty": "No activity on this deal yet.",
   "legalEntities.title": "Legal entities",
   "legalEntities.sub":
-    "The companies you trade as. A colleague you have not assigned works for the default, which takes its name, address and logo from the company above.",
+    "The companies you trade as. A colleague you have not assigned works for the default, which takes its name, address and logo from the company profile.",
   "legalEntities.loading": "Loading legal entities…",
   "legalEntities.addOpen": "New legal entity",
   "legalEntities.addTitle": "New legal entity",
@@ -6499,6 +6507,7 @@ export const en = {
     "Not set: the installation’s jurisdiction applies",
   "legalEntities.defaultBadge": "Default",
   "legalEntities.defaultUnnamed": "Your company",
+  "legalEntities.fromCompanyProfile": "From the company profile",
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",
@@ -6873,6 +6882,10 @@ export const en = {
   "bulk.selectPage": "Select every row on this page",
   "bulk.selectAll": "Select all",
   "bulk.clearSelection": "Clear selection",
+  "bulk.selecting_one": "Selecting {count}…",
+  "bulk.selecting_other": "Selecting {count}…",
+  "bulk.selectingOf_one": "Selecting {count} of {total}…",
+  "bulk.selectingOf_other": "Selecting {count} of {total}…",
   "bulk.selectionLimit_one":
     "One change takes at most {count} record, so the selection stops there.",
   "bulk.selectionLimit_other":
@@ -6940,12 +6953,19 @@ export const en = {
   "bulk.undoneCompanies_other": "{count} companies put back.",
   "bulk.undoneDeals_one": "{count} deal put back.",
   "bulk.undoneDeals_other": "{count} deals put back.",
+  "bulk.doneTasks_one": "{count} task created.",
+  "bulk.doneTasks_other": "{count} tasks created.",
+  "bulk.undoneTasks_one": "{count} task archived.",
+  "bulk.undoneTasks_other": "{count} tasks archived.",
   "bulk.undoLeftBehind_one":
     "{count} link, tag or list membership could not come back.",
   "bulk.undoLeftBehind_other":
     "{count} links, tags or list memberships could not come back.",
-  "bulk.reason.no_change_list": "Already on or off the Shortlist",
-  "bulk.reason.no_change_tag": "Already has or lacks this tag",
+  "bulk.reason.no_change_listed": "Already on this Shortlist",
+  "bulk.reason.no_change_unlisted": "Not on this Shortlist",
+  "bulk.reason.no_change_tagged": "Already has this tag",
+  "bulk.reason.no_change_untagged": "Does not have this tag",
+  "bulk.reason.no_change_undo": "Not part of the change you are undoing",
   "bulk.tag": "Tag",
   "bulk.tagPick": "Pick a tag",
   "bulk.addTag": "Add tag",
@@ -6979,7 +6999,7 @@ export const en = {
   "bulk.confirmComplete": "Mark done",
   "bulk.stateDone": "Done",
   "bulk.stateOpen": "Open",
-  "bulk.reason.no_change_done": "Already in that state",
+  "bulk.reason.no_change_done": "Already done",
   "bulk.titleMoveStage": "Move the selected {unit} to {stage}?",
   "bulk.confirmMoveStage": "Move",
   "bulk.stateStageUnnamed": "A stage",
@@ -7066,6 +7086,7 @@ export const en = {
   "offer.rejectConfirm": "Mark this offer as rejected?",
   "offer.rejectReason": "Reason (optional)",
   "offer.regenerate": "Regenerate revision",
+  "offer.regeneratedPlain": "Copied without AI changes.",
   "offer.writeUnsure":
     "Margince could not tell whether that went through. Check the deal’s offers before you try again.",
   "offer.aiDisclosureTitle": "AI-assisted offer",
@@ -7218,6 +7239,7 @@ export const en = {
   "brief.week.quiet": "No completed work or deal movement recorded.",
 
   // What is on screen out of what the day holds, on the panel's own line.
+  "brief.first.shownOf": "{shown} of {total} shown",
   "brief.feed.changedBadge_one": "1 changed",
   "brief.feed.changedBadge_other": "{count} changed",
   "brief.feed.loading": "Loading Morning brief…",
@@ -7533,6 +7555,17 @@ export const en = {
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",
   "brief.rail": "Context",
+  "brief.firstDay.title": "Your first day on Home",
+  "brief.firstDay.what":
+    "Home shows what needs you today, what Margince did for you and your meetings. Each morning it opens with your Morning brief.",
+  "brief.firstDay.briefTonight":
+    "Your first Morning brief is prepared overnight and opens Home tomorrow.",
+  "brief.firstDay.briefOff":
+    "Margince prepares a Morning brief overnight only once you allow it.",
+  "brief.firstDay.turnOn": "Turn on overnight preparation",
+  "brief.firstDay.briefLater":
+    "Your Morning brief opens Home once one has been prepared for you.",
+  "brief.firstDay.setup": "Set up next",
   "brief.rail.numbers": "Numbers",
   "extensionReports.withheld": "Withheld: too few records to show",
   "extensionReports.unavailable": "This report could not be loaded.",
@@ -10097,7 +10130,7 @@ export const en = {
   "agent.activity.summarize.queued": "Summary queued",
   "agent.activity.summarize.running": "Writing summary…",
   "agent.activity.summarize.done": "Summary ready",
-  "agent.activity.summarize.degraded": "Summary stopped partway",
+  "agent.activity.summarize.degraded": "Summary made without full AI help",
   "agent.activity.summarize.failed": "Summary failed",
   "agent.activity.summarize.stalled": "Summary is taking unusually long",
   // The same six with the record NAMED — the company, the contact or the
@@ -10107,27 +10140,36 @@ export const en = {
   "agent.activity.summarizeNamed.queued": "Summary of {name} queued",
   "agent.activity.summarizeNamed.running": "Summarizing {name}…",
   "agent.activity.summarizeNamed.done": "Summary of {name} ready",
-  "agent.activity.summarizeNamed.degraded": "Summary of {name} stopped partway",
+  "agent.activity.summarizeNamed.degraded":
+    "Summary of {name} made without full AI help",
   "agent.activity.summarizeNamed.failed": "Summary of {name} failed",
   "agent.activity.summarizeNamed.stalled":
     "Summary of {name} is taking unusually long",
-  "agent.activity.draftReply.queued": "Reply draft queued",
-  "agent.activity.draftReply.running": "Drafting reply…",
-  "agent.activity.draftReply.done": "Draft reply ready",
-  "agent.activity.draftReply.degraded": "Reply draft stopped partway",
-  "agent.activity.draftReply.failed": "Reply draft failed",
-  "agent.activity.draftReply.stalled": "Reply draft is taking unusually long",
+  "agent.activity.draftEmail.queued": "Email draft queued",
+  "agent.activity.draftEmail.running": "Drafting email…",
+  "agent.activity.draftEmail.done": "Email draft ready",
+  "agent.activity.draftEmail.degraded": "Email draft made without full AI help",
+  "agent.activity.draftEmail.failed": "Email draft failed",
+  "agent.activity.draftEmail.stalled": "Email draft is taking unusually long",
+  "agent.activity.draftEmailNamed.queued": "Email draft about {name} queued",
+  "agent.activity.draftEmailNamed.running": "Drafting an email about {name}…",
+  "agent.activity.draftEmailNamed.done": "Email draft about {name} ready",
+  "agent.activity.draftEmailNamed.degraded":
+    "Email draft about {name} made without full AI help",
+  "agent.activity.draftEmailNamed.failed": "Email draft about {name} failed",
+  "agent.activity.draftEmailNamed.stalled":
+    "Email draft about {name} is taking unusually long",
   "agent.activity.offerDraft.queued": "Offer draft queued",
   "agent.activity.offerDraft.running": "Drafting offer…",
   "agent.activity.offerDraft.done": "Draft offer ready",
-  "agent.activity.offerDraft.degraded": "Offer draft stopped partway",
+  "agent.activity.offerDraft.degraded": "Offer draft made without full AI help",
   "agent.activity.offerDraft.failed": "Offer draft failed",
   "agent.activity.offerDraft.stalled": "Offer draft is taking unusually long",
   "agent.activity.draftReplyNamed.queued": "Reply draft for “{name}” queued",
   "agent.activity.draftReplyNamed.running": "Drafting a reply to “{name}”…",
   "agent.activity.draftReplyNamed.done": "Draft reply to “{name}” ready",
   "agent.activity.draftReplyNamed.degraded":
-    "Reply draft for “{name}” stopped partway",
+    "Reply draft for “{name}” made without full AI help",
   "agent.activity.draftReplyNamed.failed": "Reply draft for “{name}” failed",
   "agent.activity.draftReplyNamed.stalled":
     "Reply draft for “{name}” is taking unusually long",
@@ -10135,7 +10177,7 @@ export const en = {
   "agent.activity.offerDraftNamed.running": "Drafting an offer for {name}…",
   "agent.activity.offerDraftNamed.done": "Draft offer for {name} ready",
   "agent.activity.offerDraftNamed.degraded":
-    "Offer draft for {name} stopped partway",
+    "Offer draft for {name} made without full AI help",
   "agent.activity.offerDraftNamed.failed": "Offer draft for {name} failed",
   "agent.activity.offerDraftNamed.stalled":
     "Offer draft for {name} is taking unusually long",
@@ -15054,6 +15096,14 @@ export const en = {
     "“{label}” added to reports. Everyone who reads reports sees its label and choices.",
   "cf.removedFromReports": "“{label}” removed from reports",
   "cf.audit.title": "Recent field changes",
+  "cf.audit.renamed": "Renamed",
+  "cf.audit.translations": "Translations changed",
+  "cf.audit.choices": "Choices changed",
+  "cf.audit.shownInCreate": "Shown in create forms",
+  "cf.audit.hiddenFromCreate": "Hidden from create forms",
+  "cf.audit.addedToReports": "Added to reports",
+  "cf.audit.removedFromReports": "Removed from reports",
+  "cf.audit.kinds": "Activity types changed",
   "audit.kind.customField": "Custom field",
   "audit.kind.activity_retention_evidence": "Retention evidence",
   "audit.kind.activity_review_template": "Activity review template",
@@ -20925,6 +20975,11 @@ export const en = {
   "lists.editFilter": "Edit filter",
   "lists.filterCannotOpen": "This list’s filter cannot be opened here.",
   "lists.savedTo": "Saved to “{name}”",
+  "lists.settingsSaved": "List saved",
+  "lists.restored": "List restored",
+  "lists.archivedDone": "List archived",
+  "lists.addedTo": "Added to “{name}”",
+  "lists.addedToShortlist": "Added to the Shortlist",
   "lists.editingTitle": "Editing the filter of {name}",
   "lists.editingBody":
     "Save to the list to change which records it holds. To keep a copy instead, save the filter as a new view.",
@@ -22896,6 +22951,7 @@ export const en = {
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
   // the client half of a mirror the server sends keys against. So the set is
   // the contract (src/lib/magickeys.ts), not one screen's copy.
+  "magic.heading.firstBrief": "Before your first brief",
   "magic.heading.brief": "Since your last brief",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",

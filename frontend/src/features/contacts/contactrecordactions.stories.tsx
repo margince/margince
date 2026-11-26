@@ -76,7 +76,8 @@ function ContactMenu({
 
 const ROUTES = {
   "GET /me": meRoute({ contact: ["read", "update"] }),
-  "GET /custom-fields": () => jsonResponse({ data: [] }),
+  "GET /custom-fields": () =>
+    jsonResponse({ page: { has_more: false }, data: [] }),
 };
 
 export const OpenMenu: Story = {

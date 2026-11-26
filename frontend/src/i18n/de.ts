@@ -2090,6 +2090,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.queue.back": "Zurück zur Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Worklist einblenden",
+  "brief.queue.count_one": "{count} Eintrag in der Worklist",
+  "brief.queue.count_other": "{count} Einträge in der Worklist",
   "brief.queue.hide": "Worklist ausblenden",
   "brief.team.planUnavailable":
     "Für {name} ist kein aktueller Plan für dich sichtbar.",
@@ -3731,7 +3733,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.unowned": "Nicht zugewiesen",
   "list.created": "Erstellt",
   "list.lastActivity": "Letzte Aktivität",
-  "list.filterOwnerMe": "In deiner Verantwortung",
+  "list.filterOwnerMe": "Du",
   "list.filterOwnerAll": "Alle Verantwortlichen",
   "list.ownerDeactivated": "{name} (deaktiviert)",
   "list.ownerSuspended": "{name} (gesperrt)",
@@ -3743,6 +3745,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "views.save": "Ansicht speichern",
   "views.saveConfirm": "Speichern",
   "views.saveTitle": "Diese Ansicht speichern",
+  "views.update": "„{name}“ aktualisieren",
+  "views.updated": "Ansicht aktualisiert: „{name}“",
+  "views.nameTaken":
+    "Eine Ansicht mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "views.name": "Name",
   "views.rail": "Gespeicherte Ansichten",
   "views.loadFailed":
@@ -5849,7 +5855,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tags.moreUncounted": "weitere",
   "tags.moreUncountedTip":
     "Darunter {names}. Öffne den Datensatz für alle Tags.",
-  "tags.columnHeaderPartial": "Tags (unvollständig)",
+  "tags.filterLabel": "Tag",
+  "tags.filterLabelPartial": "Tag (unvollständig)",
   "tags.loading": "Tags werden geladen…",
   "tags.panelTitle": "Tags",
   "tags.add": "Tag hinzufügen",
@@ -5901,7 +5908,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kein Tag mit diesem Namen. Admins und Operations können eines erstellen.",
   "tagResult.gone":
     "Dieses Tag existiert nicht mehr. Das Tag wurde möglicherweise mit einem anderen Tag zusammengeführt.",
-  "tagResult.totalVisible": "Sichtbare Zuordnungen: {count}",
+  "tagResult.tagged_one": "{count} Datensatz mit diesem Tag",
+  "tagResult.tagged_other": "{count} Datensätze mit diesem Tag",
   "tagResult.contacts": "Kontakte",
   "tagResult.companies": "Unternehmen",
   "tagResult.deals": "Deals",
@@ -6518,7 +6526,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.timeline.empty": "Noch keine Aktivität zu diesem Deal.",
   "legalEntities.title": "Rechtsträger",
   "legalEntities.sub":
-    "Die Rechtsträger, unter denen du auftrittst. Wer keinem zugeordnet ist, arbeitet für den Standard-Rechtsträger. Dieser übernimmt Namen, Adresse und Logo vom Unternehmen oben.",
+    "Die Rechtsträger, unter denen du auftrittst. Wer keinem zugeordnet ist, arbeitet für den Standard-Rechtsträger. Dieser übernimmt Namen, Adresse und Logo aus dem Unternehmensprofil.",
   "legalEntities.loading": "Rechtsträger werden geladen…",
   "legalEntities.addOpen": "Neuer Rechtsträger",
   "legalEntities.addTitle": "Neuer Rechtsträger",
@@ -6531,6 +6539,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nicht gesetzt: Der Rechtsraum der Installation gilt",
   "legalEntities.defaultBadge": "Standard",
   "legalEntities.defaultUnnamed": "Dein Unternehmen",
+  "legalEntities.fromCompanyProfile": "Aus dem Unternehmensprofil",
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Firmierung",
   "legalEntities.country": "Land",
@@ -6908,6 +6917,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.selectPage": "Alle Zeilen dieser Seite auswählen",
   "bulk.selectAll": "Alle auswählen",
   "bulk.clearSelection": "Auswahl aufheben",
+  "bulk.selecting_one": "{count} wird ausgewählt…",
+  "bulk.selecting_other": "{count} werden ausgewählt…",
+  "bulk.selectingOf_one": "{count} von {total} wird ausgewählt…",
+  "bulk.selectingOf_other": "{count} von {total} werden ausgewählt…",
   "bulk.selectionLimit_one":
     "Eine Änderung umfasst höchstens {count} Datensatz, daher endet die Auswahl dort.",
   "bulk.selectionLimit_other":
@@ -6979,12 +6992,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.undoneCompanies_other": "{count} Unternehmen zurückgesetzt.",
   "bulk.undoneDeals_one": "{count} Deal zurückgesetzt.",
   "bulk.undoneDeals_other": "{count} Deals zurückgesetzt.",
+  "bulk.doneTasks_one": "{count} Aufgabe erstellt.",
+  "bulk.doneTasks_other": "{count} Aufgaben erstellt.",
+  "bulk.undoneTasks_one": "{count} Aufgabe archiviert.",
+  "bulk.undoneTasks_other": "{count} Aufgaben archiviert.",
   "bulk.undoLeftBehind_one":
     "{count} Verknüpfung, Tag oder Listenzugehörigkeit konnte nicht wiederhergestellt werden.",
   "bulk.undoLeftBehind_other":
     "{count} Verknüpfungen, Tags oder Listenzugehörigkeiten konnten nicht wiederhergestellt werden.",
-  "bulk.reason.no_change_list": "Schon auf oder nicht auf der Shortlist",
-  "bulk.reason.no_change_tag": "Hat diesen Tag schon oder hat ihn nicht",
+  "bulk.reason.no_change_listed": "Schon auf dieser Shortlist",
+  "bulk.reason.no_change_unlisted": "Nicht auf dieser Shortlist",
+  "bulk.reason.no_change_tagged": "Hat diesen Tag schon",
+  "bulk.reason.no_change_untagged": "Hat diesen Tag nicht",
+  "bulk.reason.no_change_undo": "War nicht Teil der Änderung",
   "bulk.tag": "Tag",
   "bulk.tagPick": "Tag wählen",
   "bulk.addTag": "Tag hinzufügen",
@@ -7019,7 +7039,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.confirmComplete": "Als erledigt markieren",
   "bulk.stateDone": "Erledigt",
   "bulk.stateOpen": "Offen",
-  "bulk.reason.no_change_done": "Bereits in diesem Zustand",
+  "bulk.reason.no_change_done": "Schon erledigt",
   "bulk.titleMoveStage": "Ausgewählte {unit} nach {stage} verschieben?",
   "bulk.confirmMoveStage": "Verschieben",
   "bulk.stateStageUnnamed": "Eine Phase",
@@ -7111,6 +7131,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.rejectConfirm": "Dieses Angebot als abgelehnt markieren?",
   "offer.rejectReason": "Grund (optional)",
   "offer.regenerate": "Revision neu erzeugen",
+  "offer.regeneratedPlain": "Ohne Änderungen durch KI kopiert.",
   "offer.writeUnsure":
     "Margince konnte nicht feststellen, ob das geklappt hat. Prüfe die Angebote am Deal, bevor du es noch einmal versuchst.",
   "offer.aiDisclosureTitle": "KI-gestütztes Angebot",
@@ -7239,6 +7260,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "Keine erledigte Arbeit und keine Deal-Bewegung erfasst.",
 
+  "brief.first.shownOf": "{shown} von {total} angezeigt",
   "brief.feed.changedBadge_one": "1 geändert",
   "brief.feed.changedBadge_other": "{count} geändert",
   "brief.feed.loading": "Morgenbericht wird geladen…",
@@ -7540,6 +7562,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.readings.leadsBasis": "Geplante Aufgaben für Leads",
   "brief.readings.leadsDue": "Nächste Fälligkeit {value}",
   "brief.rail": "Kontext",
+  "brief.firstDay.title": "Dein erster Tag auf Home",
+  "brief.firstDay.what":
+    "Home zeigt, was heute auf dich wartet, was Margince für dich erledigt hat und deine Termine. Jeden Morgen beginnt Home mit deinem Morgenbericht.",
+  "brief.firstDay.briefTonight":
+    "Dein erster Morgenbericht wird über Nacht vorbereitet und erscheint morgen auf Home.",
+  "brief.firstDay.briefOff":
+    "Margince bereitet einen Morgenbericht über Nacht erst vor, wenn du es erlaubst.",
+  "brief.firstDay.turnOn": "Vorbereitung über Nacht einschalten",
+  "brief.firstDay.briefLater":
+    "Dein Morgenbericht erscheint auf Home, sobald einer für dich vorbereitet wurde.",
+  "brief.firstDay.setup": "Als Nächstes einrichten",
   "brief.rail.numbers": "Kennzahlen",
   "extensionReports.withheld":
     "Zurückgehalten: zu wenige Datensätze für eine Anzeige",
@@ -10155,7 +10188,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.activity.summarize.running": "Die Zusammenfassung wird geschrieben…",
   "agent.activity.summarize.done": "Zusammenfassung bereit",
   "agent.activity.summarize.degraded":
-    "Die Zusammenfassung wurde vorzeitig abgebrochen.",
+    "Zusammenfassung ohne volle KI-Hilfe erstellt",
   "agent.activity.summarize.failed": "Zusammenfassung fehlgeschlagen",
   "agent.activity.summarize.stalled":
     "Die Zusammenfassung dauert ungewöhnlich lange.",
@@ -10163,24 +10196,34 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.activity.summarizeNamed.running": "{name} wird zusammengefasst…",
   "agent.activity.summarizeNamed.done": "Zusammenfassung von {name} bereit",
   "agent.activity.summarizeNamed.degraded":
-    "Die Zusammenfassung von {name} wurde vorzeitig abgebrochen.",
+    "Zusammenfassung von {name} ohne volle KI-Hilfe erstellt",
   "agent.activity.summarizeNamed.failed":
     "Zusammenfassung von {name} fehlgeschlagen",
   "agent.activity.summarizeNamed.stalled":
     "Die Zusammenfassung von {name} dauert ungewöhnlich lange.",
-  "agent.activity.draftReply.queued": "Antwortentwurf geplant",
-  "agent.activity.draftReply.running": "Die Antwort wird entworfen…",
-  "agent.activity.draftReply.done": "Antwortentwurf bereit",
-  "agent.activity.draftReply.degraded":
-    "Der Antwortentwurf wurde vorzeitig abgebrochen.",
-  "agent.activity.draftReply.failed": "Antwortentwurf fehlgeschlagen",
-  "agent.activity.draftReply.stalled":
-    "Der Antwortentwurf dauert ungewöhnlich lange.",
+  "agent.activity.draftEmail.queued": "E-Mail-Entwurf geplant",
+  "agent.activity.draftEmail.running": "Die E-Mail wird entworfen…",
+  "agent.activity.draftEmail.done": "E-Mail-Entwurf bereit",
+  "agent.activity.draftEmail.degraded":
+    "E-Mail-Entwurf ohne volle KI-Hilfe erstellt",
+  "agent.activity.draftEmail.failed": "E-Mail-Entwurf fehlgeschlagen",
+  "agent.activity.draftEmail.stalled":
+    "Der E-Mail-Entwurf dauert ungewöhnlich lange.",
+  "agent.activity.draftEmailNamed.queued": "E-Mail-Entwurf zu {name} geplant",
+  "agent.activity.draftEmailNamed.running":
+    "Die E-Mail zu {name} wird entworfen…",
+  "agent.activity.draftEmailNamed.done": "E-Mail-Entwurf zu {name} bereit",
+  "agent.activity.draftEmailNamed.degraded":
+    "E-Mail-Entwurf zu {name} ohne volle KI-Hilfe erstellt",
+  "agent.activity.draftEmailNamed.failed":
+    "E-Mail-Entwurf zu {name} fehlgeschlagen",
+  "agent.activity.draftEmailNamed.stalled":
+    "Der E-Mail-Entwurf zu {name} dauert ungewöhnlich lange.",
   "agent.activity.offerDraft.queued": "Angebotsentwurf geplant",
   "agent.activity.offerDraft.running": "Das Angebot wird entworfen…",
   "agent.activity.offerDraft.done": "Angebotsentwurf bereit",
   "agent.activity.offerDraft.degraded":
-    "Der Angebotsentwurf wurde vorzeitig abgebrochen.",
+    "Angebotsentwurf ohne volle KI-Hilfe erstellt",
   "agent.activity.offerDraft.failed": "Angebotsentwurf fehlgeschlagen",
   "agent.activity.offerDraft.stalled":
     "Der Angebotsentwurf dauert ungewöhnlich lange.",
@@ -10189,7 +10232,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Antwort auf „{name}“ wird entworfen…",
   "agent.activity.draftReplyNamed.done": "Antwortentwurf zu „{name}“ bereit",
   "agent.activity.draftReplyNamed.degraded":
-    "Der Antwortentwurf zu „{name}“ wurde vorzeitig abgebrochen.",
+    "Antwortentwurf zu „{name}“ ohne volle KI-Hilfe erstellt",
   "agent.activity.draftReplyNamed.failed":
     "Antwortentwurf zu „{name}“ fehlgeschlagen",
   "agent.activity.draftReplyNamed.stalled":
@@ -10199,7 +10242,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Angebot für {name} wird entworfen…",
   "agent.activity.offerDraftNamed.done": "Angebotsentwurf für {name} bereit",
   "agent.activity.offerDraftNamed.degraded":
-    "Der Angebotsentwurf für {name} wurde vorzeitig abgebrochen.",
+    "Angebotsentwurf für {name} ohne volle KI-Hilfe erstellt",
   "agent.activity.offerDraftNamed.failed":
     "Angebotsentwurf für {name} fehlgeschlagen",
   "agent.activity.offerDraftNamed.stalled":
@@ -15137,6 +15180,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{label}“ in Berichten nutzbar. Wer Berichte liest, sieht seine Bezeichnung und Auswahlwerte.",
   "cf.removedFromReports": "„{label}“ aus Berichten entfernt",
   "cf.audit.title": "Letzte Feldänderungen",
+  "cf.audit.renamed": "Umbenannt",
+  "cf.audit.translations": "Übersetzungen geändert",
+  "cf.audit.choices": "Auswahl geändert",
+  "cf.audit.shownInCreate": "Beim Erstellen eingeblendet",
+  "cf.audit.hiddenFromCreate": "Beim Erstellen ausgeblendet",
+  "cf.audit.addedToReports": "In Berichten nutzbar",
+  "cf.audit.removedFromReports": "Aus Berichten entfernt",
+  "cf.audit.kinds": "Aktivitätstypen geändert",
   "audit.kind.customField": "Eigenes Feld",
   "audit.kind.activity_retention_evidence": "Aufbewahrungsnachweis",
   "audit.kind.activity_review_template": "Vorlage für Aktivitätsbewertungen",
@@ -21174,6 +21225,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.filterCannotOpen":
     "Der Filter dieser Liste lässt sich hier nicht öffnen.",
   "lists.savedTo": "In „{name}“ gespeichert",
+  "lists.settingsSaved": "Liste gespeichert",
+  "lists.restored": "Liste wiederhergestellt",
+  "lists.archivedDone": "Liste archiviert",
+  "lists.addedTo": "Zu „{name}“ hinzugefügt",
+  "lists.addedToShortlist": "Zur Shortlist hinzugefügt",
   "lists.editingTitle": "Du bearbeitest den Filter von {name}",
   "lists.editingBody":
     "Speichere in die Liste, um zu ändern, welche Datensätze sie enthält. Um stattdessen eine Kopie zu behalten, speichere den Filter als neue Ansicht.",
@@ -23237,6 +23293,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "JJJJ-MM oder JJJJ-MM-TT. Lass das Feld leer, wenn das Datum unbekannt ist.",
   "employment.more": "Weitere Anstellungen anzeigen",
 
+  "magic.heading.firstBrief": "Vor deinem ersten Morgenbericht",
   "magic.heading.brief": "Seit deinem letzten Morgenbericht",
   "magic.loading": "Blick in den Maschinenraum",
   "magic.lane.done": "Für dich erledigt",

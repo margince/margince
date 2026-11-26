@@ -133,8 +133,15 @@ func trackedFiles(t *testing.T) []trackedFile {
 
 // trackedIndex is the index as one git call per test binary; the run does not
 // change it.
-var trackedIndex = sync.OnceValues(func() ([]trackedFile, error) {
-	out, err := exec.Command("git", "-C", repoRoot, "ls-files", "-sz").Output()
+var trackedIndex = sync.OnceValues(func() ([]trackedFile, error) { return trackedIndexAt(repoRoot) })
+
+// trackedIndexAt lists root's index with the caller's git routing dropped, as
+// gitPaths does, so an exported GIT_DIR cannot point the census at another
+// repository.
+func trackedIndexAt(root string) ([]trackedFile, error) {
+	cmd := exec.Command("git", "-C", root, "ls-files", "-sz")
+	cmd.Env = withoutGitVariables(callerGitRouting)
+	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +158,7 @@ var trackedIndex = sync.OnceValues(func() ([]trackedFile, error) {
 		files = append(files, trackedFile{path: path, symlink: strings.HasPrefix(meta, "120000")})
 	}
 	return files, nil
-})
+}
 
 // requiredWords returns lower-case literals of which every match of re holds at
 // least one, or nil when the pattern promises none.
