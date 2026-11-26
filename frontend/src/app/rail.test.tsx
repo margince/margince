@@ -16,6 +16,7 @@ import {
   armHoverIntent,
   takeHoverClock,
 } from "../design-system/hoverintent-testing";
+import { WorklistRedirect } from "../features/brief/brief.queue";
 import { navigate, parseHash, type Route } from "../lib/router";
 import {
   fixtureSection,
@@ -89,6 +90,7 @@ const CANONICAL_ORDER = [
   "Companies",
   "Leads",
   "Deals",
+  "Worklist",
   "Projects",
   "Filters and views",
   "Analytics",
@@ -111,10 +113,17 @@ const levelLabels = () => {
     .map((link) => link.getAttribute("aria-label"));
 };
 
+const activeLabels = () =>
+  screen
+    .getAllByRole("link")
+    .filter((link) => link.getAttribute("aria-current") === "page")
+    .map((link) => link.getAttribute("aria-label"));
+
 const BAR = ["Home", "Contacts", "Deals"];
 const OFF_BAR = [
   "Companies",
   "Leads",
+  "Worklist",
   "Projects",
   "Filters and views",
   "Analytics",
@@ -406,14 +415,44 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(cells).toEqual(["Home", "Contacts", "agent", "Deals", "more"]);
   });
 
-  it("keeps Brief on the phone bar and omits the duplicate Worklist destination", async () => {
+  it("keeps Home on the phone bar and puts Worklist in the More menu", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();
     render(<WorkspaceRail route={{ screen: "home" }} />);
     expect(levelLabels()).toEqual(BAR);
     await user.click(screen.getByRole("button", { name: "More" }));
     expect(menuLabels()).not.toContain("Home");
-    expect(menuLabels()).not.toContain("Worklist");
+    expect(menuLabels().slice(0, 3)).toEqual([
+      "Companies",
+      "Leads",
+      "Worklist",
+    ]);
+  });
+
+  it("marks Home, and not Worklist, on Home with the panel closed", () => {
+    window.location.hash = "#/home";
+    render(<WorkspaceRail route={{ screen: "home" }} />);
+    expect(activeLabels()).toEqual(["Home"]);
+  });
+
+  it("marks Worklist, and not Home, on Home with the panel open", () => {
+    window.location.hash = "#/home?queue=1";
+    render(<WorkspaceRail route={{ screen: "home" }} />);
+    expect(activeLabels()).toEqual(["Worklist"]);
+  });
+
+  it("opens Home with the panel when the Worklist row is clicked", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <WorkspaceRail route={{ screen: "home" }} />
+        <WorklistRedirect />
+      </>,
+    );
+    const row = screen.getByRole("link", { name: "Worklist" });
+    expect(row.getAttribute("href")).toBe("/#/worklist");
+    await user.click(row);
+    await waitFor(() => expect(window.location.hash).toBe("#/home?queue=1"));
   });
 
   it("keeps exactly one agent, in the bar, while the menu is open", async () => {
