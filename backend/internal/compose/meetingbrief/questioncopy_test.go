@@ -10,13 +10,15 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 )
 
 func TestQuestionLanguageKeepsGapsAndEvidence(t *testing.T) {
-	langcopytest.Census(t, questionWords,
+	asked, notes := questionCopyByVoice(t)
+	langcopytest.Census(t, asked,
 		langcopytest.OwnVoice("a question is what the rep asks the buyer aloud, so I and our side are the rep's"))
-	langcopytest.Census(t, questionNoteWords)
+	langcopytest.Census(t, notes)
 	empty := Input{ActivityID: meetingID, Company: "Original Company"}
 	typ := MeetingType{Value: crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown}
 	english := unknownsFor(empty, typ, nil)
@@ -43,6 +45,45 @@ func TestQuestionLanguageKeepsGapsAndEvidence(t *testing.T) {
 			}
 		}
 	}
+}
+
+// A questionWords field in neither list would escape both censuses, so it fails here.
+func questionCopyByVoice(t *testing.T) (asked, notes map[string]langcopy.Phrase) {
+	t.Helper()
+	askedFields := []string{"Intent", "Funding", "Approvers", "PriorContact", "Outstanding", "Background", "Joining", "Changed"}
+	noteFields := []string{
+		"Answer", "Progress", "Prepare", "Objection", "Evidence", "PromiseOpen", "RaisedOpen", "Named",
+		"ListenPriority", "WhyIntent", "WhyDecision", "WhyDeal", "ListenProblem", "ListenRoles", "ListenContact",
+	}
+	asked, notes = map[string]langcopy.Phrase{}, map[string]langcopy.Phrase{}
+	voiceOf := map[string]map[string]langcopy.Phrase{}
+	for _, name := range askedFields {
+		voiceOf[name] = asked
+	}
+	for _, name := range noteFields {
+		if _, both := voiceOf[name]; both {
+			t.Fatalf("questionWords.%s is listed both as a question asked aloud and as a note to the rep", name)
+		}
+		voiceOf[name] = notes
+	}
+	table := reflect.ValueOf(questionWords)
+	for i := range table.NumField() {
+		name := table.Type().Field(i).Name
+		voice, listed := voiceOf[name]
+		if !listed {
+			t.Fatalf("questionWords.%s is neither a question asked aloud nor a note to the rep, so no census reads it", name)
+		}
+		phrase, ok := reflect.TypeAssert[langcopy.Phrase](table.Field(i))
+		if !ok {
+			t.Fatalf("questionWords.%s is not a langcopy.Phrase", name)
+		}
+		voice[name] = phrase
+		delete(voiceOf, name)
+	}
+	for name := range voiceOf {
+		t.Fatalf("%s is listed as question copy but questionWords has no such field", name)
+	}
+	return asked, notes
 }
 
 func TestClosedClaimsAreNotDescribedAsOutstanding(t *testing.T) {
