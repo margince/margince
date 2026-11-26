@@ -51,9 +51,6 @@ func wirePartner(p partnerRow, stages map[string]partnerStageFacts) crmcontracts
 		segments := p.ServedSegments
 		out.ServedSegments = &segments
 	}
-	out.PartnerFitScore = intPtr(p.FitScore)
-	out.PartnerFitScoreComputed = intPtr(p.FitScoreComputed)
-	out.PartnerFitOverrideReason = p.FitOverrideReason
 	metrics := map[string]any{"certified_staff": p.CertifiedStaff}
 	if p.RetentionRate != nil {
 		metrics["retention_rate"] = *p.RetentionRate
@@ -77,14 +74,4 @@ func wirePartnerActivation(out *crmcontracts.Partner, a partnerActivation) {
 		deal := openapi_types.UUID(*a.DealID)
 		out.ActivationDealId = &deal
 	}
-}
-
-// intPtr widens the DB's smallint to the contract's int without sharing
-// the row's storage.
-func intPtr(v *int16) *int {
-	if v == nil {
-		return nil
-	}
-	w := int(*v)
-	return &w
 }
