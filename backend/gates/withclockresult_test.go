@@ -48,6 +48,14 @@ func TestWithClockReturnsACopyWhoseResultIsUsed(t *testing.T) {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
+			src, err := gatekit.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			// isWithClockName folds case, so every judged method and counted call holds the folded name.
+			if !mayHoldFolded(string(src), strings.ToLower(withClockName)) {
+				return nil
+			}
 			file, err := gatekit.ParseFile(path, 0)
 			if errors.As(err, new(scanner.ErrorList)) {
 				// A file that does not parse is left to the compiler.
@@ -173,7 +181,9 @@ func withClockFindingsIn(fset *token.FileSet, file *ast.File) (found []withClock
 	return found, calls
 }
 
-func isWithClockName(name string) bool { return strings.EqualFold(name, "WithClock") }
+const withClockName = "WithClock"
+
+func isWithClockName(name string) bool { return strings.EqualFold(name, withClockName) }
 
 func isWithClockCall(expr ast.Expr) bool {
 	call, ok := expr.(*ast.CallExpr)
