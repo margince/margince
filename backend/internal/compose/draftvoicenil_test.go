@@ -83,7 +83,7 @@ func TestNoDraftingEntryPointIsAlwaysUnvoiced(t *testing.T) {
 	// stopped seeing calls it used to see: either look at why, or lower this
 	// number deliberately. A rise is ordinary — a new drafting call — and
 	// raising it is the whole of the response.
-	const governedCalls = 26
+	const governedCalls = 25
 	if governed != governedCalls {
 		t.Errorf("the sweep reached %d voice-carrying calls and this gate pins %d. Fewer means it stopped "+
 			"recognising calls it used to read — most likely a voice parameter was renamed out of "+

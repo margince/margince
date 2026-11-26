@@ -12,24 +12,16 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// preflightRecordKinds refuses a kind core could not carry, and a kind one unit
-// declares twice. Two units never collide, because the unit's name is part of
-// the kind name. validateExtensionSet already refuses two units whose
-// namespaces open one another, the only way two kinds could share an RBAC object.
-func preflightRecordKinds(exts []extension.Extension) error {
-	if err := preflightLinkTypes(exts); err != nil {
-		return err
-	}
+// preflightKindsLinksSignals refuses a unit's record kinds, link types or signal
+// types that core could not carry. The rules are the unit's own
+// (Extension.ValidateDeclarations), so a unit's tests meet the boot's refusal.
+// Two units never collide, because the unit's name is part of every stored
+// name. validateExtensionSet already refuses two units whose namespaces open
+// one another, the only way two kinds could share an RBAC object.
+func preflightKindsLinksSignals(exts []extension.Extension) error {
 	for _, e := range exts {
-		seen := make(map[string]bool, len(e.RecordKinds))
-		for _, k := range e.RecordKinds {
-			if err := k.Validate(e.Name); err != nil {
-				return fmt.Errorf("compose: extension %q: %w", e.Name, err)
-			}
-			if seen[k.Kind] {
-				return fmt.Errorf("compose: extension %q declares record kind %q twice", e.Name, k.Kind)
-			}
-			seen[k.Kind] = true
+		if err := e.ValidateDeclarations(); err != nil {
+			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
 		}
 	}
 	return nil

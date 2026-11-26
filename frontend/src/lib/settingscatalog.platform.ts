@@ -139,12 +139,17 @@ export const PLATFORM_PAGES = [
     // Bindings and keys write on `ai_routing:update`; model prices, here and in
     // a provider sheet, on the `ai_model_rate` upsert (removal is admitted on
     // update).
-    changes: acts(writes("ai_routing", ["update"]), writes("ai_model_rate")),
+    changes: acts(
+      writes("ai_routing", ["update"]),
+      writes("ai_model_rate"),
+      writes("ai_team_rules", ["update"]),
+    ),
     tabs: [
       { id: "providers" },
       { id: "tiers" },
       { id: "tasks" },
       { id: "prices" },
+      { id: "rules", requires: reads("ai_team_rules") },
     ],
   },
   {

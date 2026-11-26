@@ -6244,7 +6244,7 @@ export interface paths {
          *     screen shows for each. Which extensions are installed is a fact of the binary, so the
          *     contract cannot list the values; this operation does.
          *
-         *     Readable by any signed-in seat, because the company list shows these types and filters
+         *     Readable by any signed-in seat and its agent, because the company list shows these types and filters
          *     on them. Each value and label is declared in extension code, never typed by an
          *     administrator. Empty when no installed extension declares a type.
          */
@@ -11728,6 +11728,87 @@ export interface paths {
         patch: operations["updateTelegramBusinessConnectionVisibility"];
         trace?: never;
     };
+    "/channel-connections/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the WhatsApp Business numbers connected to the workspace.
+         * @description Newest first. No secret is returned.
+         */
+        get: operations["listWhatsAppConnections"];
+        put?: never;
+        /**
+         * Connect a WhatsApp Business number to the workspace.
+         * @description Seals the access token and the app secret in the credential store and makes a live
+         *     connection for the phone number. No call to Meta is made. The response carries the
+         *     webhook verify token once; paste it into the Meta app's webhook settings together with
+         *     `<public_base_url>/v1/channel-events/whatsapp`. Margince keeps no copy the admin can read
+         *     again, so a lost verify token means disconnecting the number and connecting it again.
+         *
+         *     One live connection exists per phone number: connecting a number that is already
+         *     connected is a `409`.
+         */
+        post: operations["createWhatsAppConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-connections/whatsapp/{id}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change who may read a WhatsApp number's messages.
+         * @description Sets the mail visibility of the number's seat, as `PATCH /shared-mailboxes/{id}` does for a
+         *     shared mailbox and the Telegram Business route does for its accounts: the next message
+         *     follows it. `shared` needs `capture.shared_posture_allowed` and `classified` is refused,
+         *     both with `422`. The request must carry `confirm: true`. Admin only, in a signed-in session.
+         */
+        patch: operations["updateWhatsAppConnectionVisibility"];
+        trace?: never;
+    };
+    "/channel-connections/whatsapp/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect a WhatsApp Business number from the workspace.
+         * @description Archives the connection and destroys the sealed secrets. From then on the webhook route
+         *     stores nothing for the number. What its chats already filed stays.
+         */
+        delete: operations["disconnectWhatsAppConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channel-links/{record_type}/{id}": {
         parameters: {
             query?: never;
@@ -11880,6 +11961,40 @@ export interface paths {
          *     answered `200` `already_taken`, so Dispact stops retrying a notice whose answer it lost.
          */
         post: operations["receiveDispactChannelEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Answer Meta's webhook subscription check (anonymous).
+         * @description Meta calls this with `hub.mode=subscribe`, `hub.verify_token` and `hub.challenge` when
+         *     the webhook is saved. The answer is the challenge as plain text when the token is the
+         *     verify token of a connected number, and `403` otherwise, whether or not any number is
+         *     connected.
+         */
+        get: operations["verifyWhatsAppWebhook"];
+        put?: never;
+        /**
+         * Take a signed WhatsApp Business webhook delivery (anonymous).
+         * @description Meta posts a batch of messages, message echoes and delivery statuses, signed in
+         *     `X-Hub-Signature-256` (`sha256=<hex HMAC-SHA256 of the raw body>`) with the app secret.
+         *     The signature is checked against every connected number's app secret before the body is
+         *     read. Only items for a number whose own secret verified are kept: each is stored once
+         *     and queued for filing, in one transaction. An item for a number that is not connected, a
+         *     field this version does not handle and an item that cannot be decoded are skipped, and
+         *     the answer is still `200`, so Meta does not retry them. A redelivered item is stored
+         *     once.
+         */
+        post: operations["receiveWhatsAppWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14547,7 +14662,9 @@ export interface paths {
          *     brought in, and the old one stops. So the request must carry `confirm: true`. The new team
          *     must have at least one active member. `shared` needs `capture.shared_posture_allowed`;
          *     `classified` is refused. `apply_to_history` also narrows mail already captured when the
-         *     visibility moves to `held`.
+         *     visibility moves to `held`. The answer comes before that mail is narrowed: a background
+         *     job narrows it in batches, `history_narrowing` shows what is left, and mail the job has not
+         *     reached keeps the audience it had.
          *
          *     Admin only, in a signed-in session.
          */
@@ -14803,7 +14920,9 @@ export interface paths {
          *
          *     The posture governs mail captured AFTERWARDS. `apply_to_history` additionally narrows what
          *     this mailbox already brought in, which emits one `activity.updated` per row whose audience
-         *     moved; it never widens, and `selected` rows are left alone. Widening history back is a
+         *     moved; it never widens, and `selected` rows are left alone. The answer comes before that
+         *     mail is narrowed: a background job narrows it in batches, `history_narrowing` on the
+         *     connection shows what is left, and mail the job has not reached keeps the audience it had. Widening history back is a
          *     separate, deliberate call. It decides what the owner's colleagues may read of their
          *     correspondence, so an agent asks its user first.
          */
@@ -16785,6 +16904,33 @@ export interface paths {
          */
         get: operations["getAiProviderHealth"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/team-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the team rules every AI draft follows (ai_team_rules read).
+         * @description The one text the whole workspace's drafts follow. It outranks the sender's own rules.
+         *     Every seat reads it; admin and ops write it.
+         */
+        get: operations["getAiTeamRules"];
+        /**
+         * Replace the team rules every AI draft follows (ai_team_rules update).
+         * @description `expected_updated_at` is the `updated_at` the editor read, left out when it read no saved
+         *     version. A save over a newer version answers 409. Text longer than 20000 characters is
+         *     refused with 422. Empty text removes the rules.
+         */
+        put: operations["replaceAiTeamRules"];
         post?: never;
         delete?: never;
         options?: never;
@@ -20493,6 +20639,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/{id}/merge-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the holders of two accounts to confirm merging them. Admin-only, human-only.
+         * @description For a source account that has been used. Mails a single-use confirmation link to the
+         *     sign-in address of each side that is not deactivated and has not confirmed yet, and
+         *     supersedes any link still open for that side. The merge itself still goes through
+         *     `mergeMembers`, and refuses until every such side has confirmed. A link confirms and
+         *     signs nobody in. It dies when the account's address changes, its credentials end or it is
+         *     deactivated, and after three days.
+         *
+         *     Refused (409) unless the preview the token names has no blocker other than
+         *     `confirmation_missing`, and when this installation cannot send email. Answers the
+         *     preview as it stands after the request, with a token to merge from once every side has
+         *     confirmed. Shares the set-password link limits per actor and per target. Audited on each
+         *     side's account.
+         */
+        post: operations["requestMemberMerge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/confirm-member-merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm that this account may be merged into another, from the mailed link.
+         * @description Spends the single-use token mailed by `requestMemberMerge`. It signs nobody in and changes nothing about the account. An expired, used, unknown or withdrawn token, and one whose account has since left, produce one neutral error. Audited.
+         */
+        post: operations["confirmMemberMerge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}/merge": {
         parameters: {
             query?: never;
@@ -20507,7 +20707,7 @@ export interface paths {
         put?: never;
         /**
          * Merge a duplicate into the selected surviving member.
-         * @description The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+         * @description An unused source merges at once. A used source merges only after the holder of each side that is not deactivated has confirmed through `requestMemberMerge`; a deactivated side needs no confirmation, so two deactivated accounts merge on an administrator's say alone. The acting administrator can be neither side.
          */
         post: operations["mergeMembers"];
         delete?: never;
@@ -30623,6 +30823,7 @@ export interface components {
              * @enum {string}
              */
             readonly mail_posture?: "shared" | "classified" | "held";
+            history_narrowing?: components["schemas"]["MailHistoryNarrowing"];
             context_tag?: components["schemas"]["ConnectorContextTag"];
             history_baseline?: components["schemas"]["MailHistoryBaseline"];
             /** Format: date-time */
@@ -30721,10 +30922,25 @@ export interface components {
              * @description Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
              *     narrows: a move towards `shared` leaves history where it is, because opening what was
              *     captured under a stricter answer is a separate decision from what to do next. Rows a
-             *     human set to `selected` are never touched.
+             *     human set to `selected` are never touched. A background job does the narrowing after
+             *     the answer; a narrowing to `held` still pending is never loosened to `classified`.
              * @default false
              */
             apply_to_history: boolean;
+        };
+        /**
+         * @description Earlier mail of this mailbox that a background job is still narrowing, after a change
+         *     asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+         *     yet keeps the audience it had.
+         */
+        MailHistoryNarrowing: {
+            /**
+             * @description What the earlier mail is narrowed to.
+             * @enum {string}
+             */
+            posture: "classified" | "held";
+            /** @description Messages still to narrow. */
+            remaining: number;
         };
         WorkspaceEmailDomain: {
             /** @description The domain, IDNA-folded and lowercased. Covers its subdomains. */
@@ -31961,6 +32177,7 @@ export interface components {
             backup_owner_id?: string | null;
             /** @description A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none. */
             unread_period?: components["schemas"]["CaptureUnreadPeriod"];
+            history_narrowing?: components["schemas"]["MailHistoryNarrowing"];
         };
         SharedMailboxList: {
             items: components["schemas"]["SharedMailbox"][];
@@ -33041,6 +33258,24 @@ export interface components {
             /** Format: int64 */
             company_monthly_tokens: number | null;
         };
+        AiTeamRules: {
+            text: string;
+            /**
+             * Format: date-time
+             * @description When the text was last saved. Left out while none was saved.
+             */
+            updated_at?: string;
+            /** @description Who saved it last. Left out while none was saved. */
+            updated_by?: string;
+        };
+        AiTeamRulesChange: {
+            text: string;
+            /**
+             * Format: date-time
+             * @description The updated_at the editor read. Left out when the editor read no saved version.
+             */
+            expected_updated_at?: string;
+        };
         AiBudgetChange: {
             config: components["schemas"]["AiBudgetConfig"];
             expected_revision: string;
@@ -33631,6 +33866,72 @@ export interface components {
         };
         TelegramBusinessConnectionListResponse: {
             data: components["schemas"]["TelegramBusinessConnection"][];
+        };
+        /** @description One WhatsApp Business phone number connected to the workspace. No secret is part of it. */
+        WhatsAppConnection: {
+            /** Format: uuid */
+            id: string;
+            /** @description The WhatsApp Business Account id. */
+            wabaId: string;
+            /** @description Meta's id of the phone number, the key a webhook item is matched to its connection by. */
+            phoneNumberId: string;
+            /** @description The number in the form WhatsApp shows it. Display only. */
+            displayPhoneNumber: string;
+            /** @enum {string} */
+            status: "connected" | "disconnected";
+            /** Format: date-time */
+            connectedAt: string;
+            /**
+             * Format: uuid
+             * @description The seat the number's messages file through.
+             */
+            seatId?: string | null;
+            /**
+             * Format: uuid
+             * @description The team that reads the number's messages.
+             */
+            readerTeamId?: string | null;
+            /**
+             * @description What the seat asks of the number's messages. Changed with `PATCH /channel-connections/whatsapp/{id}/visibility`.
+             * @enum {string|null}
+             */
+            mailVisibility?: "held" | "shared" | null;
+        };
+        WhatsAppConnectionListResponse: {
+            data: components["schemas"]["WhatsAppConnection"][];
+        };
+        CreateWhatsAppConnectionRequest: {
+            /**
+             * Format: uuid
+             * @description The team that reads the number's messages. The number's seat starts `held`: only this team reads them until an admin shares them.
+             */
+            readerTeamId: string;
+            wabaId: string;
+            phoneNumberId: string;
+            displayPhoneNumber: string;
+            /** @description The system-user access token for the WhatsApp Business Account. Sealed into the credential store on arrival and never echoed back. */
+            accessToken: string;
+            /** @description The Meta app's secret, which signs each webhook delivery. Sealed into the credential store on arrival and never echoed back. */
+            appSecret: string;
+        };
+        WhatsAppConnectionCreated: {
+            connection: components["schemas"]["WhatsAppConnection"];
+            /** @description The token Meta sends in the webhook subscription check. Made by the server and shown only in this response. */
+            verifyToken: string;
+        };
+        /** @description One batch of changes from Meta, as the signature covers it. The route reads the raw body, so the items inside `entry` are decoded by the server and not described here. */
+        WhatsAppWebhookDelivery: {
+            /** @description Always `whatsapp_business_account`. */
+            object: string;
+            entry: {
+                [key: string]: unknown;
+            }[];
+        };
+        WhatsAppWebhookReceipt: {
+            /** @description Items kept and queued for filing. A redelivered item counts again and is stored once. */
+            stored: number;
+            /** @description Items not kept: a number that is not connected, a field not handled, or an item that could not be decoded. */
+            skipped: number;
         };
         ChannelConnectionListResponse: {
             data: components["schemas"]["ChannelConnection"][];
@@ -51150,10 +51451,20 @@ export interface components {
             /** Format: date-time */
             expected_updated_at: string;
         };
+        /** @description One member verb the caller holds the grant for and this member refuses, with why. */
+        MemberUnavailableAction: {
+            /** @enum {string} */
+            action: "merge";
+            /**
+             * @description Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
+             * @enum {string}
+             */
+            reason: "sole_admin" | "self" | "agent_seat";
+        };
         /** @enum {string} */
-        MemberRetirementBlocker: "approval_decisions" | "automations" | "booking_pages" | "data_requests" | "deal_rooms" | "introductions" | "lists" | "stewarded_lists" | "mail_drafts" | "meeting_invitations" | "meeting_proposals" | "privacy_notices" | "record_responsibilities" | "reports" | "report_schedules" | "saved_views" | "scheduled_mail" | "handoffs" | "voice_profiles" | "web_forms" | "webhooks" | "weekly_plans" | "analytics_shares" | "source_used" | "self_survivor" | "deactivate_first" | "choose_survivor" | "choose_receiver" | "private_tasks" | "work_not_transferable" | "state_changed";
+        MemberRetirementBlocker: "approval_decisions" | "automations" | "booking_pages" | "data_requests" | "deal_rooms" | "introductions" | "lists" | "stewarded_lists" | "mail_drafts" | "meeting_invitations" | "meeting_proposals" | "privacy_notices" | "record_responsibilities" | "reports" | "report_schedules" | "saved_views" | "scheduled_mail" | "handoffs" | "voice_profiles" | "web_forms" | "webhooks" | "weekly_plans" | "analytics_shares" | "confirmation_missing" | "suspended_side" | "self_survivor" | "deactivate_first" | "choose_survivor" | "choose_receiver" | "private_tasks" | "work_not_transferable" | "state_changed";
         /** @enum {string} */
-        MemberRetirementConsequence: "source_signed_out" | "connectors_reconnect" | "survivor_access" | "original_attribution" | "private_alerts_archived" | "crm_private_records_move" | "private_audiences_retained" | "email_reserved" | "survivor_inactive";
+        MemberRetirementConsequence: "source_signed_out" | "connectors_reconnect" | "survivor_access" | "original_attribution" | "private_alerts_archived" | "crm_private_records_move" | "private_audiences_retained" | "email_reserved" | "survivor_inactive" | "sign_in_dropped";
         MemberRetirementPreview: {
             owned: components["schemas"]["HandoverCounts"];
             signal_count: number;
@@ -51171,6 +51482,20 @@ export interface components {
             survivor_name?: string;
             /** Format: email */
             survivor_email?: string;
+            /** @description Present for a merge whose source account has been used: one entry per side, saying whether that side's holder has confirmed. `confirmation_missing` is in `blockers` while any side is `requested` or `not_requested`. */
+            confirmations?: components["schemas"]["MemberMergeConfirmation"][];
+        };
+        MemberMergeConfirmation: {
+            /** Format: uuid */
+            user_id: string;
+            /** @enum {string} */
+            side: "source" | "survivor";
+            display_name: string;
+            /**
+             * @description `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
+             * @enum {string}
+             */
+            state: "confirmed" | "requested" | "not_requested" | "not_needed";
         };
         /**
          * @description The records that hold one blocker. `total` counts every one of them. `records` lists the
@@ -51276,6 +51601,10 @@ export interface components {
             merged_from?: components["schemas"]["SeatName"][];
             /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
             allowed_actions?: ("change_role" | "issue_password_link" | "resend_invite" | "remove_mfa" | "deactivate" | "reactivate" | "hand_over" | "edit" | "merge" | "remove")[];
+            /** @description True when `merge` is in `allowed_actions` and this account has been used (a password, a sign-in or a linked provider), so merging it waits for the holder of each side that can still sign in to confirm. Absent otherwise, and on the same views as `allowed_actions`. */
+            merge_needs_confirmation?: boolean;
+            /** @description The member verbs the caller holds the `user_admin` grant for and this member refuses, each with the reason, so a client explains the missing button instead of hiding it. An action never appears here and in `allowed_actions`. Present wherever `allowed_actions` is; empty when nothing is refused. */
+            unavailable_actions?: components["schemas"]["MemberUnavailableAction"][];
             /**
              * Format: date-time
              * @description When this member last used the product: the latest request any of their sign-in sessions made, including a session since signed out, revoked or expired. Clearing dead sessions records the latest of their requests on the member first, so the value outlives the sessions. Signing in counts as activity. Work an agent or a connected app did on their behalf does not.
@@ -52970,7 +53299,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review" | "legal_entity" | "sales_initiative" | "tax_rate";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "ai_team_rules" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review" | "legal_entity" | "sales_initiative" | "tax_rate";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -69422,7 +69751,7 @@ export interface operations {
                 status?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
-                /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. */
+                /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. `listCompanyTypes` lists the values, and an agent reads them with the `read_workspace` action `company_types`. */
                 extension_relationship_type?: string;
                 /**
                  * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
@@ -72626,7 +72955,7 @@ export interface operations {
                 priority?: "low" | "medium" | "high" | "unset";
                 /** @description An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker. */
                 acquisition_source?: string;
-                /** @description A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. */
+                /** @description A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. `listLinkTypes` lists the values, and an agent reads them with the `read_workspace` action `link_types`. */
                 link_type?: string;
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
@@ -83666,7 +83995,7 @@ export interface operations {
     getFilterVocabulary: {
         parameters: {
             query: {
-                /** @description The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. */
+                /** @description The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. `listRecordKinds` lists the kinds the caller may read, and an agent reads them with the `read_workspace` action `record_kinds`. */
                 resource: components["schemas"]["FilterResource"];
             };
             header?: never;
@@ -85859,6 +86188,149 @@ export interface operations {
             };
         };
     };
+    listWhatsAppConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WhatsApp connections. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppConnectionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createWhatsAppConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWhatsAppConnectionRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection and its verify token. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppConnectionCreated"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal the secrets in (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateWhatsAppConnectionVisibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTelegramBusinessConnectionVisibilityRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnectWhatsAppConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getChannelLink: {
         parameters: {
             query?: never;
@@ -86229,6 +86701,118 @@ export interface operations {
                 };
             };
             /** @description This deployment takes no chat notices, or could not record the notice id (`code: channel_events_unavailable`); Dispact retries. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    verifyWhatsAppWebhook: {
+        parameters: {
+            query?: {
+                /** @description Always `subscribe`. */
+                "hub.mode"?: string;
+                "hub.verify_token"?: string;
+                "hub.challenge"?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The challenge, echoed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The token matches no connected number (`code: channel_event_rejected`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment takes no WhatsApp events (`code: channel_events_unavailable`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveWhatsAppWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhatsAppWebhookDelivery"];
+            };
+        };
+        responses: {
+            /** @description The delivery was taken. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppWebhookReceipt"];
+                };
+            };
+            /** @description The body is signed by no connected number (`code: channel_event_rejected`). The answer is the same for each cause. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The body is larger than a delivery can be (`code: channel_event_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate-limited; Meta retries. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment takes no WhatsApp events, or could not store the delivery (`code: channel_events_unavailable`); Meta retries. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -92388,6 +92972,64 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
         };
     };
+    getAiTeamRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The saved team rules, empty text when none were saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTeamRules"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    replaceAiTeamRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiTeamRulesChange"];
+            };
+        };
+        responses: {
+            /** @description The saved team rules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTeamRules"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The team rules changed since the editor read them; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getAiBudget: {
         parameters: {
             query?: never;
@@ -97810,6 +98452,98 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    requestMemberMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeMembersRequest"];
+            };
+        };
+        responses: {
+            /** @description The preview after the request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberRetirementPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Another change since the preview, a blocker still open, nothing left to confirm, or no way to send email. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    confirmMemberMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Confirmed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid, used, or expired token (one neutral error for all of them). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     mergeMembers: {

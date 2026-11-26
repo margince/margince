@@ -31,6 +31,12 @@ func seedChosenOriginal(t *testing.T, env *sarIdentifierEnv, key string, leads, 
 	}
 }
 
+// chosenKey names one run's original, so a second run on the same database
+// files a new one instead of colliding with the first.
+func chosenKey(name string) string {
+	return "chosen-" + name + "-" + ids.NewV7().String()
+}
+
 func originalsHeld(t *testing.T, env *sarIdentifierEnv, key string) int {
 	t.Helper()
 	var n int
@@ -50,13 +56,14 @@ func seedPlainLead(t *testing.T, env *sarIdentifierEnv, name string) ids.UUID {
 func TestAnonymizingALeadRemovesTheOriginalsFiledOnItByChoice(t *testing.T) {
 	env := setupSARIdentifiers(t)
 	lead := seedPlainLead(t, env, "Aged")
-	seedChosenOriginal(t, env, "chosen-anon", []ids.UUID{lead}, nil)
+	key := chosenKey("anon")
+	seedChosenOriginal(t, env, key, []ids.UUID{lead}, nil)
 
 	retention := &RetentionService{eraser: NewEraser(env.db)}
 	if err := env.db.Tx(env.ctx, func(tx pgx.Tx) error { return retention.anonymizeLead(env.ctx, tx, lead) }); err != nil {
 		t.Fatal(err)
 	}
-	if n := originalsHeld(t, env, "chosen-anon"); n != 0 {
+	if n := originalsHeld(t, env, key); n != 0 {
 		t.Fatalf("%d originals survive the anonymization of the lead they were filed on", n)
 	}
 }
@@ -66,7 +73,8 @@ func TestDeletingAnUntoldLeadRemovesTheOriginalsFiledOnItByChoice(t *testing.T) 
 	lead := seedPlainLead(t, env, "Untold")
 	mustExec(context.Background(), t, env.owner,
 		`INSERT INTO lead_privacy_notice (lead_id, template_key, template_version, state, failure, failed_at) VALUES ($1, 'site_lead', 1, 'failed', 'refused', now())`, lead)
-	seedChosenOriginal(t, env, "chosen-untold", []ids.UUID{lead}, nil)
+	key := chosenKey("untold")
+	seedChosenOriginal(t, env, key, []ids.UUID{lead}, nil)
 
 	err := env.db.Tx(env.ctx, func(tx pgx.Tx) error {
 		return EraseUntoldLeadTx(env.ctx, tx, UntoldLead{LeadID: ids.From[ids.LeadKind](lead)})
@@ -74,7 +82,7 @@ func TestDeletingAnUntoldLeadRemovesTheOriginalsFiledOnItByChoice(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n := originalsHeld(t, env, "chosen-untold"); n != 0 {
+	if n := originalsHeld(t, env, key); n != 0 {
 		t.Fatalf("%d originals survive the deletion of the lead they were filed on", n)
 	}
 }
@@ -86,13 +94,14 @@ func TestAnOriginalFiledOnALeadAndAContactSurvivesTheLeadsErasure(t *testing.T) 
 	lead := seedPlainLead(t, env, "Shared")
 	contact := ids.NewV7()
 	mustExec(context.Background(), t, env.owner, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Kept', 'manual', 'system:test')`, contact)
-	seedChosenOriginal(t, env, "chosen-both", []ids.UUID{lead}, []ids.UUID{contact})
+	key := chosenKey("both")
+	seedChosenOriginal(t, env, key, []ids.UUID{lead}, []ids.UUID{contact})
 
 	retention := &RetentionService{eraser: NewEraser(env.db)}
 	if err := env.db.Tx(env.ctx, func(tx pgx.Tx) error { return retention.anonymizeLead(env.ctx, tx, lead) }); err != nil {
 		t.Fatal(err)
 	}
-	if n := originalsHeld(t, env, "chosen-both"); n != 1 {
+	if n := originalsHeld(t, env, key); n != 1 {
 		t.Fatalf("%d originals after erasing only the lead, want the one the contact is still owed", n)
 	}
 }

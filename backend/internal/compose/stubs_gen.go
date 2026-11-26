@@ -395,6 +395,14 @@ func (stubs) PreviewAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "PreviewAiTaskOverrides")
 }
 
+func (stubs) GetAiTeamRules(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiTeamRules")
+}
+
+func (stubs) ReplaceAiTeamRules(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReplaceAiTeamRules")
+}
+
 func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiUsageParams) {
 	httperr.NotImplemented(w, r, "GetAiUsage")
 }
@@ -819,6 +827,10 @@ func (stubs) ChangePassword(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ChangePassword")
 }
 
+func (stubs) ConfirmMemberMerge(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ConfirmMemberMerge")
+}
+
 func (stubs) RequestPasswordReset(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RequestPasswordReset")
 }
@@ -1135,6 +1147,22 @@ func (stubs) UpdateTelegramBusinessConnectionVisibility(w nethttp.ResponseWriter
 	httperr.NotImplemented(w, r, "UpdateTelegramBusinessConnectionVisibility")
 }
 
+func (stubs) ListWhatsAppConnections(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListWhatsAppConnections")
+}
+
+func (stubs) CreateWhatsAppConnection(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateWhatsAppConnection")
+}
+
+func (stubs) DisconnectWhatsAppConnection(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DisconnectWhatsAppConnection")
+}
+
+func (stubs) UpdateWhatsAppConnectionVisibility(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateWhatsAppConnectionVisibility")
+}
+
 func (stubs) DisconnectChannel(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DisconnectChannel")
 }
@@ -1145,6 +1173,14 @@ func (stubs) ReplaceChannelToken(w nethttp.ResponseWriter, r *nethttp.Request, i
 
 func (stubs) ReceiveDispactChannelEvent(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ReceiveDispactChannelEvent")
+}
+
+func (stubs) VerifyWhatsAppWebhook(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.VerifyWhatsAppWebhookParams) {
+	httperr.NotImplemented(w, r, "VerifyWhatsAppWebhook")
+}
+
+func (stubs) ReceiveWhatsAppWebhook(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReceiveWhatsAppWebhook")
 }
 
 func (stubs) UnlinkChannel(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
@@ -4281,6 +4317,10 @@ func (stubs) HandOverUserWork(w nethttp.ResponseWriter, r *nethttp.Request, id c
 
 func (stubs) MergeMembers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergeMembersParams) {
 	httperr.NotImplemented(w, r, "MergeMembers")
+}
+
+func (stubs) RequestMemberMerge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RequestMemberMerge")
 }
 
 func (stubs) RemoveUserMfa(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

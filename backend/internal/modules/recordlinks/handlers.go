@@ -12,8 +12,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
-// Handlers is the links' HTTP surface. Every operation is human-only: how two
-// records relate is a user's call, and no agent tool exists for it.
+// Handlers is the links' HTTP surface. Every operation but the list of link
+// types is human-only: how two records relate is a user's call. The types are
+// declared in code, and an agent needs them to filter deals by link type.
 type Handlers struct {
 	store *Store
 }

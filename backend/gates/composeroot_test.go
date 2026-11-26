@@ -34,7 +34,9 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1383
+	// Raised by 1 for the history-narrowing fleet worker, which binds each
+	// workspace through this package's unexported job helpers.
+	composeRootProductionFiles = 1385
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -43,7 +45,9 @@ const (
 	// test file for the data reset cases of an event the sweep orphaned. Raised by
 	// 1 test file for the extension notice kind cases. Raised by 1 test file for
 	// the unit tool coverage cases, which read the unexported tool coverage census.
-	composeRootTestFiles = 1919
+	// Raised by 2 test files for the row scope cases of an owned extension kind.
+	// They drive unexported readers of the kind.
+	composeRootTestFiles = 1921
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -99,8 +103,15 @@ const (
 	// Raised by 240 production and 260 test lines for the extension card's setup
 	// state and the schedule book's time zone. Both drive the unexported
 	// inventory handler, schedule book and catch-up schedule.
-	composeRootProductionLines = 231_243
-	composeRootTestLines       = 361_804
+	// Raised by 79 production lines for the WhatsApp ingest args, its server option and
+	// the raw subjects a polled Telegram update records.
+	// Raised by 61 production and 2 test lines for the history-narrowing fleet
+	// worker.
+	// Raised by 76 production and 459 test lines for the row scope of an owned
+	// extension kind and its cases. They drive the unexported report runner,
+	// History query, boot owner check and filter preview handler.
+	composeRootProductionLines = 231_459
+	composeRootTestLines       = 362_265
 )
 
 // A read under these floors stopped early or read the wrong place, and would

@@ -9,6 +9,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Fragen, ob ein gesendetes Angebot den Deal verschiebt",
   "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.history_narrowing": "Einschränkung früherer E-Mails",
   "systemJob.promise_kept":
     "Eine Zusage schließen, die ein Termin als erfüllt zeigt",
   "systemJob.transcript_audience":
@@ -97,8 +98,32 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Offene Wochenpläne dieses Mitglieds abschließen.",
   "users.retirement.analytics_shares":
     "Aktive geteilte Analytics-Ansichten für dieses Mitglied widerrufen.",
-  "users.retirement.source_used":
-    "Nur ungenutzte importierte oder eingeladene Konten können zusammengeführt werden. Bei eingerichteten Konten Arbeit übergeben und das Mitglied deaktivieren.",
+  "users.retirement.confirmation_missing":
+    "Wer hinter einem Konto steht, das sich noch anmelden kann, muss diese Zusammenführung bestätigen. Fordere unten die Bestätigung an; ein deaktiviertes Konto braucht keine.",
+  "users.retirement.sign_in_dropped":
+    "Passwort, verknüpfte Anmeldeanbieter und zweiter Faktor des zusammengeführten Kontos werden nicht übernommen. Wer das Konto nutzt, meldet sich mit dem Konto an, das bleibt.",
+  "users.merge.confirmTitle": "Bestätigung durch die Kontoinhaber",
+  "users.merge.state.confirmed": "Bestätigt",
+  "users.merge.state.requested": "Link gesendet, Antwort offen",
+  "users.merge.state.not_requested": "Noch nicht angefragt",
+  "users.merge.state.not_needed": "Nicht nötig",
+  "users.merge.ask": "Bestätigung anfordern",
+  "users.merge.askAgain": "Links erneut senden",
+  "users.merge.asked": "Bestätigungslinks gesendet.",
+  "users.mergeConfirm.title": "Zusammenführung deiner Konten bestätigen",
+  "users.mergeConfirm.body":
+    "Ein Admin möchte zwei Konten zusammenführen, die dir gehören. Private E-Mails und Aktivitäten des Kontos, das entfällt, wandern in das Konto, das bleibt. Das meldet dich nicht an.",
+  "users.mergeConfirm.action": "Zusammenführung bestätigen",
+  "users.mergeConfirm.done":
+    "Bestätigt. Der Admin kann die Zusammenführung jetzt abschließen. Du kannst diese Seite schließen.",
+  "users.mergeConfirm.dead":
+    "Dieser Link gilt nicht mehr. Er ist vielleicht abgelaufen, schon benutzt oder ersetzt worden. Wende dich an den Admin, damit er einen neuen sendet.",
+  "users.mergeConfirm.failed":
+    "Die Bestätigung ist nicht durchgegangen. Versuche es gleich noch einmal.",
+  "users.retirement.suspended_side":
+    "Ein gesperrtes Konto kann nicht bestätigen. Aktiviere oder deaktiviere es zuerst.",
+  "users.mergeNeedsConfirmation":
+    "Das Zusammenführen eines benutzten Kontos wartet auf die Nutzenden: Jedes Konto, das sich noch anmelden kann, erhält einen Link zur Bestätigung.",
   "users.retirement.self_survivor":
     "Ein anderes Mitglied als sich selbst als Ziel wählen.",
   "users.retirement.deactivate_first":
@@ -163,6 +188,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.editCancel": "Abbrechen",
   "users.editSave": "Mitglied speichern",
   "users.merge": "Duplikat zusammenführen",
+  "users.mergeRefused.sole_admin":
+    "Das ist die einzige Administration, deshalb lässt sich das Konto nicht zusammenführen.",
+  "users.mergeRefused.self":
+    "Das ist dein eigenes Konto, deshalb lässt es sich nicht zusammenführen.",
+  "users.mergeRefused.agent_seat":
+    "Agentenplätze lassen sich nicht zusammenführen.",
+  "users.mergeRefused.other":
+    "Dieses Konto lässt sich im Moment nicht zusammenführen.",
   "users.remove": "Mitglied entfernen",
   "users.mergeTitle": "{name} mit einem anderen Konto zusammenführen?",
   "users.removeTitle": "{name} entfernen?",
@@ -3535,6 +3568,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.errorReference": "Referenz",
   "common.assistantUnavailable":
     "Die KI hat nicht geantwortet. Bitte versuche es noch mal, oder frage deinen Admin nach Einstellungen → KI.",
+  "common.teamRulesUnavailable":
+    "Die Teamregeln konnten nicht gelesen werden, deshalb wurde kein Entwurf geschrieben. Bitte versuche es gleich noch mal.",
   "common.providerOutOfCredit":
     "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Bitte wende dich an die Systemadministration.",
   "common.providerUnauthorized":
@@ -11378,6 +11413,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Anreicherung von Unternehmensdaten aus E-Mails",
   "jobs.kind.capture_backfill": "Import des E-Mail-Verlaufs",
   "jobs.kind.capture_backfill_reconcile": "Wiederaufnahme des E-Mail-Imports",
+  "jobs.kind.capture_history_narrowing": "Einschränkung früherer E-Mails",
   "jobs.kind.capture_confidentiality_verdict":
     "Vertraulichkeitsprüfung von E-Mails",
   "jobs.kind.capture_counterparty_verdict": "Prüfung der Absendeadressen",
@@ -11446,6 +11482,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.technical_enrich_backfill": "Nachholen der technischen Abfrage",
   "jobs.kind.technical_enrich_company": "Technische Abfrage für Unternehmen",
   "jobs.kind.telegram_ingest": "Übernahme von Telegram-Nachrichten",
+  "jobs.kind.whatsapp_ingest": "Übernahme von WhatsApp-Nachrichten",
   "jobs.kind.telegram_poll": "Abruf von Telegram-Nachrichten",
   "jobs.kind.chat_link_flush": "Beiträge in Chat-Kanälen",
   "jobs.kind.chat_pull": "Zusammenfassungen aus Chat-Kanälen",
@@ -13148,6 +13185,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.mailPosture.historyBody":
     "Diese Einstellung gilt für E-Mails, die ab jetzt erfasst werden. E-Mails, die bereits im CRM sind, behalten ihre Sichtbarkeit, es sei denn, du schränkst sie entsprechend ein.",
   "connectors.mailPosture.historyApply": "Auch erfasste E-Mails einschränken",
+  "connectors.mailPosture.historyNarrowing_one":
+    "Frühere E-Mails werden im Hintergrund eingeschränkt: noch {count} Nachricht. Jede Nachricht behält ihre Sichtbarkeit, bis sie an der Reihe ist.",
+  "connectors.mailPosture.historyNarrowing_other":
+    "Frühere E-Mails werden im Hintergrund eingeschränkt: noch {count} Nachrichten. Jede Nachricht behält ihre Sichtbarkeit, bis sie an der Reihe ist.",
   "connectors.disconnectBodyGoogleNote":
     "Google führt Margince möglicherweise weiterhin unter den Drittanbieter-Apps mit Zugriff auf dein Konto. Entferne Margince dort, um den Zugriff vollständig zu widerrufen.",
   "connectors.disconnectBodyMicrosoftNote":
@@ -15233,6 +15274,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.workspace": "Unternehmensprofil",
   "audit.kind.agent_client": "Verbundenes KI-Tool",
   "audit.kind.ai_budget": "KI-Kontingent",
+  "audit.kind.ai_team_rules": "Teamregeln",
   "audit.kind.ai_call_payload": "Inhalt eines KI-Aufrufs",
   "audit.kind.ai_routing": "KI-Modellzuordnung",
   "audit.kind.authentication_policy": "Anmelderichtlinie",
@@ -15516,6 +15558,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.part.models.tiers": "Modellstufen",
   "settings.part.models.tasks": "KI-Aufgaben",
   "settings.part.models.prices": "Preise",
+  "settings.part.models.rules": "Regeln",
   "settings.part.usage.allowance": "Kontingent",
   "settings.part.usage.agents": "Agentenlimits",
   "settings.part.usage.spend": "Ausgaben",
@@ -16204,7 +16247,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Je mehr eigene Texte es liest, desto näher kommt es dir.",
   "settings.voice.rulesTitle": "Deine Regeln",
   "settings.voice.rulesIntro":
-    "Margince überschreibt diese Regeln nie, und jeder Entwurf folgt ihnen.",
+    "Margince überschreibt diese Regeln nie, und jeder Entwurf folgt ihnen. Wo sie den Teamregeln widersprechen, gelten die Teamregeln.",
   "voice.insights.themesLabel": "Darauf kommst du immer wieder",
   "voice.insights.figKept": "Behaltene Entwürfe",
   "voice.insights.figKeptValue": "{kept} von {drafted}",
@@ -16504,6 +16547,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.object.voice_profile": "Schreibstil",
   "roles.object.ai_routing": "KI-Routing",
   "roles.object.ai_budget": "KI-Kontingent",
+  "roles.object.ai_team_rules": "Teamregeln",
+  "teamRules.title": "Teamregeln",
+  "teamRules.intro":
+    "Ein Text, dem jeder KI-Entwurf in deinem Unternehmen folgt: was gesagt werden darf und welche Formulierung gilt. Er hat Vorrang vor den eigenen Regeln einzelner Mitglieder in Voice DNA. Er erlaubt nie, dass ein Entwurf eine Tatsache nennt, die der Datensatz nicht enthält.",
+  "teamRules.label": "Regeln für jeden Entwurf",
+  "teamRules.length":
+    "{used} von {max} Zeichen. Jeder Entwurf trägt diesen Text.",
+  "teamRules.savedBy": "Zuletzt gespeichert von {who} am {when}.",
+  "teamRules.unknownEditor": "jemandem",
+  "teamRules.none": "Noch keine Teamregeln gespeichert.",
+  "teamRules.conflictTitle":
+    "Ein Mitglied hat die Teamregeln gespeichert, während du sie bearbeitet hast",
+  "teamRules.conflictBody":
+    "Lade neu, um ihre Fassung zu sehen und deine Änderung zu verwerfen, oder behalte deinen Text und speichere ihn über ihre.",
+  "teamRules.reload": "Neue Fassung laden",
+  "teamRules.keepMine": "Meinen Text behalten",
   "roles.object.ai_diagnostics": "KI-Nutzung",
   "roles.object.ai_model_rate": "Modellpreise",
   "roles.object.embedding_reindex": "Suchindex",
