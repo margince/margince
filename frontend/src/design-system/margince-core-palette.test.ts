@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { runCoreLoop, type Wanted } from "./margince-core-engine";
 import type { CoreFrame, CoreRenderer } from "./margince-core-gl";
-import { rowFor } from "./margince-core-motion";
+import { BEHAVIOUR, rowFor } from "./margince-core-motion";
 import { CORE_FRAG, CORE_POINTS_VERT } from "./margince-core-shader";
 
 // The regression this guards: a shader that holds its palette as GLSL
@@ -137,5 +137,37 @@ describe("the palette reaching the renderer", () => {
     expect(frame.body[1]).toEqual(hexToRgb("#0d0e0f"));
 
     vi.restoreAllMocks();
+  });
+});
+
+describe("the gold cluster", () => {
+  // uWork[3] is the stop the palette fills from --orbAmber (pinned above).
+  it("colours the gold ribbon from the amber stop, not from a literal", () => {
+    expect(CORE_POINTS_VERT).toMatch(
+      /col = mix\(col, uWork\[3\], [^;]*gold\);/,
+    );
+  });
+
+  it("keeps the gold's hue in the composite from the same stop, tinted by a stop", () => {
+    expect(CORE_FRAG).toContain(
+      "vec3 goldCol = mix(uWork[3], uTintCol, uTint);",
+    );
+  });
+
+  it.each(["warning", "error"] as const)(
+    "turns the gold to the %s colour, since that state tints fully",
+    (state) => {
+      expect(BEHAVIOUR[state].tint).toBe(1);
+    },
+  );
+});
+
+describe("the lens", () => {
+  // GLSL cannot run here, so this pins the form: zero up to 0.75 of the radius.
+  it("bends nothing in the middle and ramps in over the outer quarter", () => {
+    const bend = /float bend = ([^;]+);/.exec(CORE_FRAG)?.[1];
+    expect(bend).toBe("pow(smoothstep(0.75, 1.0, pd), 1.5)");
+    expect(CORE_FRAG).toContain("vec2 q = p - n * 0.70 * bend;");
+    expect(CORE_FRAG).toContain("float split = 0.030 * bend;");
   });
 });

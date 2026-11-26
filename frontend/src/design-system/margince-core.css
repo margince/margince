@@ -154,6 +154,13 @@
   margin: calc(var(--coreGlass) / -2) 0 0 calc(var(--coreGlass) / -2);
   z-index: 1;
 }
+/* Whole pixels, so the drawing buffer maps one to one onto the screen. */
+@supports (width: round(1px, 1px)) {
+  .core-shell {
+    width: round(var(--coreGlass), 1px);
+    height: round(var(--coreGlass), 1px);
+  }
+}
 /* The contact shadow, so the ball sits on something instead of floating in
    soup. Sized from the ball, so it tracks every breakpoint. */
 .core-shell::after {

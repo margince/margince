@@ -65,15 +65,53 @@ const LAYERS = 4;
  * hero's. The shader divides each point's light by the overlap, so the
  * brightness holds across sizes.
  */
-export function pointGrid(side: number): Readonly<{
+export function pointGrid(
+  side: number,
+  density = 1,
+  pointScale = 1,
+): Readonly<{
   along: number;
   across: number;
   pointPx: number;
 }> {
+  const d = Math.sqrt(density);
   return {
-    along: Math.round(Math.min(240, Math.max(40, side * 0.35))),
-    across: Math.round(Math.min(80, Math.max(14, side * 0.14))),
-    pointPx: Math.min(8, Math.max(2, side * 0.0126)),
+    along: Math.round(Math.min(240 * d, Math.max(40, side * 0.35 * d))),
+    across: Math.round(Math.min(80 * d, Math.max(14, side * 0.14 * d))),
+    pointPx: Math.min(8, Math.max(2, side * 0.0126 * pointScale)),
+  };
+}
+
+/** The CSS size where the large treatment starts, and how far it ramps in. */
+const LARGE_FROM = 80;
+const LARGE_RAMP = 32;
+
+/** The largest point a large orb draws, in CSS px: the agent panel's own. */
+export const POINT_CAP_CSS = 2.3;
+
+/**
+ * The points for a canvas of `cssSide` CSS px drawn at `side` device px.
+ *
+ * A large orb gets more and softer points, never larger ones than the panel's.
+ * Past that cap it gets more points instead, so its grain stays as sharp.
+ */
+export function pointsFor(
+  cssSide: number,
+  side: number,
+): Readonly<{ along: number; across: number; pointPx: number; soft: number }> {
+  const large = Math.min(1, Math.max(0, (cssSide - LARGE_FROM) / LARGE_RAMP));
+  const density = 1 + (1.8 - 1) * large;
+  const pointScale = 1 + (1.5 - 1) * large;
+  const grid = pointGrid(side, density, pointScale);
+  const capPx = POINT_CAP_CSS * (side / Math.max(cssSide, 1));
+  const shrink = Math.min(1, capPx / grid.pointPx);
+  if (shrink >= 1) {
+    return { ...grid, soft: large };
+  }
+  return {
+    ...pointGrid(side, density / Math.sqrt(shrink), pointScale),
+    pointPx: capPx,
+    soft: large,
   };
 }
 
@@ -158,6 +196,7 @@ const UNIFORMS = [
   "uGrid",
   "uPointPx",
   "uParticles",
+  "uSoft",
 ] as const;
 
 type UniformName = (typeof UNIFORMS)[number];
@@ -340,6 +379,7 @@ export function createCoreRenderer(
   const atComposite = locate(gl, composite);
   const halfFloat = gl.getExtension("EXT_color_buffer_float") !== null;
   let target: Target | null = null;
+  let cssSide = 1;
 
   const ensureTarget = (): Target | null => {
     const side = canvas.width;
@@ -353,6 +393,7 @@ export function createCoreRenderer(
   return {
     resize(cssSize, dpr) {
       const side = Math.max(1, Math.round(cssSize * Math.min(dpr, MAX_DPR)));
+      cssSide = cssSize;
       if (canvas.width === side && canvas.height === side) {
         return;
       }
@@ -365,7 +406,7 @@ export function createCoreRenderer(
       if (!into) {
         return;
       }
-      const grid = pointGrid(side);
+      const grid = pointsFor(cssSide, side);
       gl.viewport(0, 0, side, side);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, into.buffer);
@@ -375,8 +416,10 @@ export function createCoreRenderer(
       setFrame(gl, atPoints, frame, side);
       gl.uniform2i(atPoints("uGrid"), grid.along, grid.across);
       gl.uniform1f(atPoints("uPointPx"), grid.pointPx);
+      gl.uniform1f(atPoints("uSoft"), grid.soft);
       gl.enable(gl.BLEND);
-      gl.blendFuncSeparate(gl.ONE, gl.ONE, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      // Alpha adds too: it carries the gold ribbon's light to the composite.
+      gl.blendFunc(gl.ONE, gl.ONE);
       gl.drawArrays(gl.POINTS, 0, LAYERS * grid.along * grid.across);
       gl.disable(gl.BLEND);
 

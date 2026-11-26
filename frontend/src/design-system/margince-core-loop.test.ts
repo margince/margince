@@ -6,6 +6,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   attachCoreLoop,
+  pixelSnap,
   runCoreLoop,
   type Wanted,
 } from "./margince-core-engine";
@@ -328,5 +329,66 @@ describe("the Core out of sight", () => {
 
     expect(asked).toHaveLength(0);
     expect(drawn).toBe(renderer.frames.length);
+  });
+});
+
+describe("the Core on whole device pixels", () => {
+  it("nudges a canvas that sits between pixels onto the grid", () => {
+    const box = { left: 643.875, top: 119.875, width: 152 };
+    expect(pixelSnap(box, 152, 2, [0, 0])).toEqual([0.125, 0.125]);
+  });
+
+  it("keeps the same nudge when measured with that nudge applied", () => {
+    const nudged = { left: 644, top: 120, width: 152 };
+    expect(pixelSnap(nudged, 152, 2, [0.125, 0.125])).toEqual([0.125, 0.125]);
+  });
+
+  it("leaves a canvas already on the grid where it is", () => {
+    expect(pixelSnap({ left: 12.5, top: 3, width: 50 }, 50, 2, [0, 0])).toEqual(
+      [0, 0],
+    );
+  });
+
+  it("scales the nudge into the canvas's own CSS px under a scaled ancestor", () => {
+    // Drawn at half size, so a quarter device pixel is half a CSS px inside.
+    const halved = { left: 10.125, top: 0, width: 50 };
+    const [dx] = pixelSnap(halved, 100, 2, [0, 0]);
+    expect((halved.left + dx * 0.5) * 2).toBeCloseTo(Math.round(20.25), 9);
+  });
+
+  it("measures again after a window resize and after a transition ends", () => {
+    vi.spyOn(globalThis, "requestAnimationFrame").mockReturnValue(1);
+    vi.spyOn(globalThis, "cancelAnimationFrame").mockImplementation(() => {});
+    vi.stubGlobal("devicePixelRatio", 2);
+    const canvas = document.createElement("canvas");
+    document.body.append(canvas);
+    let left = 643.875;
+    // Like a browser, the measured box carries the nudge already applied.
+    const nudge = () => Number.parseFloat(canvas.style.translate) || 0;
+    vi.spyOn(canvas, "getBoundingClientRect").mockImplementation(
+      () => new DOMRect(left + nudge(), 120, 152, 152),
+    );
+    const sized: number[] = [];
+    const release = attachCoreLoop(
+      canvas,
+      { current: { behaviour: rowFor("idle"), paper: 0 } },
+      () => ({ ...recorder(() => 0), resize: (css) => sized.push(css) }),
+      { current: null },
+      () => {},
+    );
+    const first = sized.length;
+    expect(canvas.style.translate).toBe("0.125px 0px");
+
+    left = 300.25;
+    window.dispatchEvent(new Event("resize"));
+    expect(sized.length).toBe(first + 1);
+    expect(canvas.style.translate).toBe("0.25px 0px");
+
+    left = 300.375;
+    document.body.dispatchEvent(new Event("transitionend", { bubbles: true }));
+    expect(sized.length).toBe(first + 2);
+    expect(canvas.style.translate).toBe("0.125px 0px");
+    release();
+    canvas.remove();
   });
 });

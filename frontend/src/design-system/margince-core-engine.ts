@@ -89,6 +89,27 @@ export type CoreRendererFactory = (
   canvas: HTMLCanvasElement,
 ) => CoreRenderer | null;
 
+/** The canvas's nudge onto the device-pixel grid, in its own CSS px. */
+export type PixelShift = readonly [number, number];
+
+/**
+ * The nudge that lands a canvas's corner on whole device pixels.
+ *
+ * Between pixels, the compositor resamples the canvas every frame and blurs it.
+ * `box` already carries the previous nudge, and an ancestor's scale divides it.
+ */
+export function pixelSnap(
+  box: Readonly<{ left: number; top: number; width: number }>,
+  layoutWidth: number,
+  dpr: number,
+  previous: PixelShift,
+): PixelShift {
+  const scale = layoutWidth > 0 ? box.width / layoutWidth : 1;
+  const x = (box.left - previous[0] * scale) * dpr;
+  const y = (box.top - previous[1] * scale) * dpr;
+  return [(Math.round(x) - x) / dpr / scale, (Math.round(y) - y) / dpr / scale];
+}
+
 export function runCoreLoop(
   canvas: HTMLCanvasElement,
   wanted: { current: Wanted },
@@ -109,13 +130,17 @@ export function runCoreLoop(
   let onScreen = true;
   let activeAt = performance.now();
   let calm = 1;
+  let shift: PixelShift = [0, 0];
   const watched = () => onScreen && !document.hidden && isWindowFocused();
 
   const measure = () => {
     // The Core is a ball, so one side serves: whichever the box gives, the
     // square drawing buffer is sized from it.
     const box = canvas.getBoundingClientRect();
-    renderer.resize(Math.max(box.width, box.height), devicePixelRatio || 1);
+    const dpr = devicePixelRatio || 1;
+    renderer.resize(Math.max(box.width, box.height), dpr);
+    shift = pixelSnap(box, canvas.offsetWidth, dpr, shift);
+    canvas.style.translate = `${shift[0]}px ${shift[1]}px`;
   };
 
   /** Advances every dial one frame and reports whether anything is still
@@ -251,6 +276,15 @@ function watchCanvas(
     wake();
   });
   observer.observe(canvas);
+  // A move without a resize also needs a new pixel nudge: a window resize
+  // re-centres the orb, and an entrance animation ends somewhere new.
+  const remeasure = () => {
+    loopRef.current?.remeasure();
+    wake();
+  };
+  window.addEventListener("resize", remeasure);
+  document.addEventListener("animationend", remeasure, true);
+  document.addEventListener("transitionend", remeasure, true);
   const releaseFocus = subscribeToWindowFocus((focused) => {
     if (focused) {
       poke();
@@ -273,6 +307,9 @@ function watchCanvas(
     host?.removeEventListener("pointerenter", poke);
     host?.removeEventListener("focusin", poke);
     document.removeEventListener("visibilitychange", wake);
+    window.removeEventListener("resize", remeasure);
+    document.removeEventListener("animationend", remeasure, true);
+    document.removeEventListener("transitionend", remeasure, true);
     sight.disconnect();
     releaseFocus();
     observer.disconnect();
