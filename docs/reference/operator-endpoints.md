@@ -166,9 +166,10 @@ Served next to `/v1`:
 
   The Home cache section counts the Home reads a member waited on, in the counter
   `margince_home_cache_reads_total`. Its `read` label is `worklist` or `magic`. Its `outcome` label
-  is `hit` when a kept answer served the read, and `miss` when Home was read fresh. It is `stale`
-  when a kept answer served the read after its five minutes ran out. Home is then read again in the
-  background. It is `first` when Home was read fresh and no answer had been kept for that question
+  is `hit` when a kept answer served the read, and `miss` when Home was read fresh.
+
+  It is `stale` when a kept answer served the read after its five minutes ran out. Home is then read
+  again in the background. It is `first` when Home was read fresh and no answer had been kept for that question
   yet. The `/v1/worklist` question names the day, so for `read="worklist"` that is a member's first
   Home read of the day.
 
