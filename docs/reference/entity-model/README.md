@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 355 |
-| Columns | 4364 |
+| Columns | 4360 |
 | Foreign keys | 618 |
 | Owning areas | 40 |
 
@@ -52,7 +52,7 @@ Ranked by how many foreign keys point at them.
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 30 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 14 | 9 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 8 | 8 |
-| [`attachment`](activities.md#attachment) | [activities](activities.md) | 28 | 6 |
+| [`attachment`](activities.md#attachment) | [activities](activities.md) | 27 | 6 |
 
 ```mermaid
 erDiagram
@@ -187,7 +187,7 @@ erDiagram
 | [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 3 | 0 |
 | [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 6 | 0 |
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 12 | 0 |
-| [`attachment`](activities.md#attachment) | activities | 28 | 6 |
+| [`attachment`](activities.md#attachment) | activities | 27 | 6 |
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 13 | 0 |
 | [`audit_log`](platform.md#audit_log) | platform | 15 | 1 |
 | [`auth_token`](identity.md#auth_token) | identity | 12 | 0 |
@@ -339,7 +339,7 @@ erDiagram
 | [`intro_request`](introductions.md#intro_request) | introductions | 31 | 0 |
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 10 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 11 | 1 |
-| [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 15 | 1 |
+| [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 17 | 1 |
 | [`lawful_basis_confirmation`](consent.md#lawful_basis_confirmation) | consent | 9 | 0 |
 | [`lead`](contacts.md#lead) | contacts | 50 | 20 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |
@@ -379,7 +379,7 @@ erDiagram
 | [`offer_line_item`](deals.md#offer_line_item) | deals | 21 | 0 |
 | [`offer_template`](deals.md#offer_template) | deals | 10 | 1 |
 | [`onboarding_wizard_state`](identity.md#onboarding_wizard_state) | identity | 15 | 0 |
-| [`partner`](contacts.md#partner) | contacts | 27 | 0 |
+| [`partner`](contacts.md#partner) | contacts | 22 | 0 |
 | [`partner_stage`](contacts.md#partner_stage) | contacts | 13 | 1 |
 | [`passport`](identity.md#passport) | identity | 14 | 9 |
 | [`pipeline`](deals.md#pipeline) | deals | 8 | 5 |
