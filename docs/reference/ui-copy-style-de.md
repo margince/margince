@@ -262,10 +262,13 @@ distorted value.
 ## Vocabulary
 
 One German word per concept, the same word on every screen. In the Never
-column a word in code format is retired by `frontend/census/rules/copy-style-de.census.ts`: it fails
-as a whole word, case-sensitive, anywhere outside the keys the test names with
-a reason. A plain word is held by the reviewer, and only in the sense its row
-gives, because it is ordinary German in another sense.
+column a word in code format is retired. It fails as a whole word,
+case-sensitive. `frontend/census/rules/copy-style-de.census.ts` holds it on
+the screens, outside the keys the census names with a reason.
+`backend/gates/germanvocabulary_test.go` holds it on every German string in
+the server's Go code. Both read this column, so a word added here is retired
+on both sides. A plain word is held by the reviewer, and only in the sense its
+row gives, because it is ordinary German in another sense.
 
 | Concept | German | Never |
 |---|---|---|

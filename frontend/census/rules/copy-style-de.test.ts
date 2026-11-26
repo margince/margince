@@ -87,15 +87,18 @@ describe("the de copy checks, over planted catalogs", () => {
     ]);
   });
 
-  it("holds the retired words to the Vocabulary table, both ways", () => {
-    const column = " `Firma` and `Kiste` ";
-    const lines = styleFindings([], column);
-    expect(lines).toContain(
-      "misses a word the Vocabulary table retires: Kiste",
-    );
-    expect(lines).toContain(
-      "retires a word the Vocabulary table does not: Funnel",
-    );
+  it("retires exactly the words the Vocabulary table sets in code", () => {
+    const lines = styleFindings(
+      [
+        {
+          source: "de.ts",
+          catalog: { "a.box": "Eine Kiste", "a.plain": "Eine Truhe" },
+          english: {},
+        },
+      ],
+      " `Kiste`, Truhe ",
+    ).filter((line) => line.startsWith("uses no retired word"));
+    expect(lines).toEqual(['uses no retired word: de.ts a.box: "Eine Kiste"']);
     expect(styleFindings([], "")).toContain(
       "the Vocabulary table's Never column sets no word in code",
     );
