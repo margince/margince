@@ -346,13 +346,13 @@ func (s *Service) applyMemberRetirement(ctx context.Context, tx pgx.Tx, actor Id
 	if merge {
 		merged = target
 	}
-	if _, err := tx.Exec(ctx, `UPDATE app_user SET removed_at = now(), merged_into_user_id = @merged WHERE id = @member`, pgx.StrictNamedArgs{memberParameter: source, "merged": merged}); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE app_user SET removed_at = now(), merged_into_user_id = @merged, `+clearedChatAccountsSQL+` WHERE id = @member`, pgx.StrictNamedArgs{memberParameter: source, "merged": merged}); err != nil {
 		return err
 	}
 	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
 		return err
 	}
-	after := map[string]any{"removed": true, "merged_into_user_id": merged, "work_given_to": target}
+	after := map[string]any{"removed": true, "merged_into_user_id": merged, "work_given_to": target, "chat_accounts_cleared": true}
 	if len(confirmations) > 0 {
 		after["merge_confirmations"] = confirmations
 	}
