@@ -1733,7 +1733,6 @@ public.attachment.bytes_withheld boolean NOT NULL gen=- def=false
 public.attachment.captured_by text NOT NULL gen=- def=-
 public.attachment.category text NOT NULL gen=- def='other'::text
 public.attachment.checksum text gen=- def=-
-public.attachment.company_id uuid gen=- def=-
 public.attachment.content_type text gen=- def=-
 public.attachment.contract_id uuid gen=- def=-
 public.attachment.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1757,7 +1756,6 @@ public.attachment.title text gen=- def=-
 public.attachment.trg_attachment_updated CREATE TRIGGER trg_attachment_updated BEFORE UPDATE ON public.attachment FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.attachment.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.attachment.url text gen=- def=-
-public.attachment_account_ix CREATE INDEX attachment_account_ix ON public.attachment USING btree (company_id, pinned DESC, created_at DESC) WHERE (archived_at IS NULL)
 public.attachment_activity_ix CREATE INDEX attachment_activity_ix ON public.attachment USING btree (activity_id) WHERE (activity_id IS NOT NULL)
 public.attachment_contract_ix CREATE INDEX attachment_contract_ix ON public.attachment USING btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL))
 public.attachment_external_part_key CREATE UNIQUE INDEX attachment_external_part_key ON public.attachment USING btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL)
@@ -3311,6 +3309,7 @@ public.company.company_status_check CHECK ((status = ANY (ARRAY['unknown'::text,
 public.company.company_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company.company_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.company.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.company.deleted_company_drops_evidence CREATE TRIGGER deleted_company_drops_evidence AFTER DELETE ON public.company REFERENCING OLD TABLE AS gone_subject FOR EACH STATEMENT EXECUTE FUNCTION deleted_subject_drops_evidence('company')
 public.company.description text gen=- def=-
 public.company.display_name text NOT NULL gen=- def=-
 public.company.email text gen=- def=-
@@ -3432,42 +3431,77 @@ public.company_domain_disposition.text_bound_update CREATE TRIGGER text_bound_up
 public.company_domain_disposition.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_domain_disposition_pkey CREATE UNIQUE INDEX company_domain_disposition_pkey ON public.company_domain_disposition USING btree (id)
 public.company_domain_pkey CREATE UNIQUE INDEX company_domain_pkey ON public.company_domain USING btree (id)
+public.company_evidence_count_revision() secdef=false cfg=- acl=- 
+DECLARE
+  touched uuid[] := ARRAY[]::uuid[];
+BEGIN
+  IF current_setting('margince.evidence_move', true) = 'on' THEN
+    RETURN NULL;
+  END IF;
+  IF TG_OP <> 'DELETE' AND company_fact_category(NEW.field_name) IS NOT NULL THEN
+    touched := touched || NEW.object_id;
+  END IF;
+  IF TG_OP <> 'INSERT' AND company_fact_category(OLD.field_name) IS NOT NULL THEN
+    touched := touched || OLD.object_id;
+  END IF;
+  -- A company being deleted takes its facts with it; it has no counter left
+  -- to move.
+  INSERT INTO company_fact_revision AS r (company_id, revision)
+  SELECT c.id, 1 FROM company c WHERE c.id = ANY(touched)
+  ON CONFLICT (company_id) DO UPDATE SET revision = r.revision + 1;
+  RETURN NULL;
+END;
+
 public.company_fact acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_fact.captured_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_fact.captured_by text NOT NULL gen=- def=-
-public.company_fact.category text NOT NULL gen=- def=-
-public.company_fact.company_fact_category_check CHECK ((category = ANY (ARRAY['company'::text, 'offering'::text, 'market'::text, 'signal'::text])))
-public.company_fact.company_fact_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_fact.company_fact_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))
-public.company_fact.company_fact_field_vocab CHECK ((((category = 'company'::text) AND (field = ANY (ARRAY['founded_year'::text, 'employee_range'::text, 'phone'::text, 'contact_email'::text, 'location'::text]))) OR ((category = 'offering'::text) AND (field = ANY (ARRAY['service'::text, 'product'::text, 'capability'::text]))) OR ((category = 'market'::text) AND (field = ANY (ARRAY['served_industry'::text, 'company_size'::text, 'geography'::text, 'language'::text]))) OR ((category = 'signal'::text) AND (field = ANY (ARRAY['certification'::text, 'partner'::text, 'named_customer'::text, 'technology'::text, 'quantified_outcome'::text, 'mail_provider'::text, 'email_security'::text, 'hosting_provider'::text, 'operated_service'::text])))))
-public.company_fact.company_fact_pkey PRIMARY KEY (id)
-public.company_fact.company_fact_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
-public.company_fact.company_fact_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE SET NULL (site_read_id)
-public.company_fact.company_fact_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'technical_lookup'::text])))
-public.company_fact.company_fact_technical_evidence CHECK (((source <> 'technical_lookup'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (retrieved_at IS NOT NULL))))
-public.company_fact.company_fact_value_key_cardinality CHECK ((((category = 'company'::text) AND (field <> 'location'::text) AND (value_key = ''::text)) OR ((category = 'company'::text) AND (field = 'location'::text) AND (value_key <> ''::text)) OR ((category = ANY (ARRAY['offering'::text, 'market'::text, 'signal'::text])) AND (value_key <> ''::text))))
-public.company_fact.company_fact_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
-public.company_fact.company_fact_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.company_fact.company_id uuid NOT NULL gen=- def=-
-public.company_fact.confidence numeric(4,3) gen=- def=-
-public.company_fact.evidence_snippet text gen=- def=-
-public.company_fact.field text NOT NULL gen=- def=-
-public.company_fact.id uuid NOT NULL gen=- def=uuidv7()
-public.company_fact.retrieved_at timestamp with time zone gen=- def=-
-public.company_fact.site_read_id uuid gen=- def=-
-public.company_fact.source text NOT NULL gen=- def='site_read'::text
-public.company_fact.source_url text gen=- def=-
-public.company_fact.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_fact FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field": 20000, "value": 20000, "source": 20000, "category": 20000, "value_key": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000,"value_key":20000}')
-public.company_fact.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_fact FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "category": 20000, "value_key": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000,"value_key":20000}')
-public.company_fact.trg_company_fact_count_revision CREATE TRIGGER trg_company_fact_count_revision AFTER INSERT OR DELETE OR UPDATE ON public.company_fact FOR EACH ROW EXECUTE FUNCTION company_fact_count_revision()
-public.company_fact.trg_company_fact_updated CREATE TRIGGER trg_company_fact_updated BEFORE UPDATE ON public.company_fact FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.company_fact.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_fact.uq_company_fact UNIQUE (company_id, category, field, value_key)
-public.company_fact.value text NOT NULL gen=- def=-
-public.company_fact.value_key text NOT NULL gen=- def=''::text
-public.company_fact.verified_at timestamp with time zone gen=- def=-
-public.company_fact.verified_by uuid gen=- def=-
-public.company_fact.version bigint NOT NULL gen=- def=1
+public.company_fact opts=-  SELECT field_provenance.id,
+    field_provenance.object_id AS company_id,
+    company_fact_category(field_provenance.field_name) AS category,
+    field_provenance.field_name AS field,
+    field_provenance.value,
+    field_provenance.value_key,
+    field_provenance.evidence_snippet,
+    field_provenance.evidence_ref AS source_url,
+    field_provenance.confidence,
+    field_provenance.source,
+    field_provenance.captured_by,
+    field_provenance.site_read_id,
+    field_provenance.captured_at,
+    field_provenance.version,
+    field_provenance.updated_at,
+    field_provenance.retrieved_at,
+    field_provenance.verified_at,
+    field_provenance.verified_by
+   FROM field_provenance
+  WHERE ((field_provenance.object_type = 'company'::text) AND (field_provenance.value IS NOT NULL) AND (company_fact_category(field_provenance.field_name) IS NOT NULL))
+UNION ALL
+ SELECT company_fact_legacy.id,
+    company_fact_legacy.company_id,
+    company_fact_legacy.category,
+    company_fact_legacy.field,
+    company_fact_legacy.value,
+    company_fact_legacy.value_key,
+    company_fact_legacy.evidence_snippet,
+    company_fact_legacy.source_url,
+    company_fact_legacy.confidence,
+    company_fact_legacy.source,
+    company_fact_legacy.captured_by,
+    company_fact_legacy.site_read_id,
+    company_fact_legacy.captured_at,
+    company_fact_legacy.version,
+    company_fact_legacy.updated_at,
+    company_fact_legacy.retrieved_at,
+    company_fact_legacy.verified_at,
+    company_fact_legacy.verified_by
+   FROM company_fact_legacy;
+public.company_fact_category(field text) secdef=false cfg=- acl=- 
+  SELECT CASE
+    WHEN field IN ('founded_year', 'employee_range', 'phone', 'contact_email', 'location') THEN 'company'
+    WHEN field IN ('service', 'product', 'capability') THEN 'offering'
+    WHEN field IN ('served_industry', 'company_size', 'geography', 'language') THEN 'market'
+    WHEN field IN ('certification', 'partner', 'named_customer', 'technology', 'quantified_outcome',
+                   'mail_provider', 'email_security', 'hosting_provider', 'operated_service') THEN 'signal'
+  END
+
 public.company_fact_count_revision() secdef=false cfg=- acl=- 
 DECLARE
   touched uuid[];
@@ -3487,7 +3521,37 @@ BEGIN
   RETURN NULL;
 END;
 
-public.company_fact_pkey CREATE UNIQUE INDEX company_fact_pkey ON public.company_fact USING btree (id)
+public.company_fact_legacy acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_fact_legacy.captured_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_fact_legacy.captured_by text NOT NULL gen=- def=-
+public.company_fact_legacy.category text NOT NULL gen=- def=-
+public.company_fact_legacy.company_fact_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_fact_legacy.company_fact_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))
+public.company_fact_legacy.company_fact_pkey PRIMARY KEY (id)
+public.company_fact_legacy.company_fact_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
+public.company_fact_legacy.company_fact_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE SET NULL (site_read_id)
+public.company_fact_legacy.company_fact_technical_evidence CHECK (((source <> 'technical_lookup'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (retrieved_at IS NOT NULL))))
+public.company_fact_legacy.company_fact_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
+public.company_fact_legacy.company_fact_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.company_fact_legacy.company_id uuid NOT NULL gen=- def=-
+public.company_fact_legacy.confidence numeric(4,3) gen=- def=-
+public.company_fact_legacy.evidence_snippet text gen=- def=-
+public.company_fact_legacy.field text NOT NULL gen=- def=-
+public.company_fact_legacy.id uuid NOT NULL gen=- def=uuidv7()
+public.company_fact_legacy.retrieved_at timestamp with time zone gen=- def=-
+public.company_fact_legacy.site_read_id uuid gen=- def=-
+public.company_fact_legacy.source text NOT NULL gen=- def='site_read'::text
+public.company_fact_legacy.source_url text gen=- def=-
+public.company_fact_legacy.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_fact_legacy FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field": 20000, "value": 20000, "source": 20000, "category": 20000, "value_key": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000,"value_key":20000}')
+public.company_fact_legacy.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_fact_legacy FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "category": 20000, "value_key": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000,"value_key":20000}')
+public.company_fact_legacy.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_fact_legacy.uq_company_fact UNIQUE (company_id, category, field, value_key)
+public.company_fact_legacy.value text NOT NULL gen=- def=-
+public.company_fact_legacy.value_key text NOT NULL gen=- def=''::text
+public.company_fact_legacy.verified_at timestamp with time zone gen=- def=-
+public.company_fact_legacy.verified_by uuid gen=- def=-
+public.company_fact_legacy.version bigint NOT NULL gen=- def=1
+public.company_fact_pkey CREATE UNIQUE INDEX company_fact_pkey ON public.company_fact_legacy USING btree (id)
 public.company_fact_revision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.company_fact_revision.company_fact_revision_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_fact_revision.company_fact_revision_js_safe CHECK (((revision >= 0) AND (revision <= '9007199254740991'::bigint)))
@@ -3663,37 +3727,42 @@ public.company_open_pipeline_rollup(as_of date) secdef=false cfg=- acl==X/margin
 
 public.company_pkey CREATE UNIQUE INDEX company_pkey ON public.company USING btree (id)
 public.company_profile_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_profile_field.captured_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_profile_field.captured_by text NOT NULL gen=- def=-
-public.company_profile_field.company_id uuid NOT NULL gen=- def=-
-public.company_profile_field.company_profile_field_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_profile_field.company_profile_field_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))
-public.company_profile_field.company_profile_field_field_check CHECK ((field = ANY (ARRAY['display_name'::text, 'offer_summary'::text, 'icp'::text, 'value_proposition'::text, 'usp'::text, 'customer_pains'::text, 'desired_outcomes'::text, 'buying_center'::text, 'buying_intents'::text, 'common_objections'::text, 'sales_motion'::text, 'legal_name'::text, 'registered_address'::text, 'register_vat'::text, 'industry'::text, 'history'::text, 'legal_form'::text, 'register_court'::text, 'register_number'::text])))
-public.company_profile_field.company_profile_field_pkey PRIMARY KEY (id)
-public.company_profile_field.company_profile_field_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE CASCADE
-public.company_profile_field.company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'meeting'::text])))
-public.company_profile_field.company_profile_field_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
-public.company_profile_field.company_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.company_profile_field.company_profile_meeting_evidence CHECK (((source <> 'meeting'::text) OR ((source_activity_id IS NOT NULL) AND (confidence IS NOT NULL) AND (COALESCE(evidence_snippet, ''::text) = ''::text))))
-public.company_profile_field.company_profile_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
-public.company_profile_field.confidence numeric(4,3) gen=- def=-
-public.company_profile_field.evidence_snippet text gen=- def=-
-public.company_profile_field.field text NOT NULL gen=- def=-
-public.company_profile_field.id uuid NOT NULL gen=- def=uuidv7()
-public.company_profile_field.retrieved_at timestamp with time zone gen=- def=-
-public.company_profile_field.source text NOT NULL gen=- def='site_read'::text
-public.company_profile_field.source_activity_id uuid gen=- def=-
-public.company_profile_field.source_url text gen=- def=-
-public.company_profile_field.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_profile_field FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field": 20000, "value": 20000, "source": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000}')
-public.company_profile_field.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_profile_field FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000}')
-public.company_profile_field.trg_company_profile_field_citation CREATE TRIGGER trg_company_profile_field_citation BEFORE INSERT OR UPDATE ON public.company_profile_field FOR EACH ROW EXECUTE FUNCTION company_profile_field_cites_only_a_meeting()
-public.company_profile_field.trg_company_profile_field_updated CREATE TRIGGER trg_company_profile_field_updated BEFORE UPDATE ON public.company_profile_field FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.company_profile_field.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_profile_field.uq_company_profile_field UNIQUE (company_id, field)
-public.company_profile_field.value text NOT NULL gen=- def=-
-public.company_profile_field.verified_at timestamp with time zone gen=- def=-
-public.company_profile_field.verified_by uuid gen=- def=-
-public.company_profile_field.version bigint NOT NULL gen=- def=1
+public.company_profile_field opts=-  SELECT field_provenance.id,
+    field_provenance.object_id AS company_id,
+    field_provenance.field_name AS field,
+    field_provenance.value,
+    field_provenance.evidence_snippet,
+    field_provenance.evidence_ref AS source_url,
+    field_provenance.confidence,
+    field_provenance.source,
+    field_provenance.captured_by,
+    field_provenance.captured_at,
+    field_provenance.version,
+    field_provenance.updated_at,
+    field_provenance.retrieved_at,
+    field_provenance.verified_at,
+    field_provenance.verified_by,
+    field_provenance.source_activity_id
+   FROM field_provenance
+  WHERE ((field_provenance.object_type = 'company'::text) AND (field_provenance.value IS NOT NULL) AND (company_fact_category(field_provenance.field_name) IS NULL))
+UNION ALL
+ SELECT company_profile_field_legacy.id,
+    company_profile_field_legacy.company_id,
+    company_profile_field_legacy.field,
+    company_profile_field_legacy.value,
+    company_profile_field_legacy.evidence_snippet,
+    company_profile_field_legacy.source_url,
+    company_profile_field_legacy.confidence,
+    company_profile_field_legacy.source,
+    company_profile_field_legacy.captured_by,
+    company_profile_field_legacy.captured_at,
+    company_profile_field_legacy.version,
+    company_profile_field_legacy.updated_at,
+    company_profile_field_legacy.retrieved_at,
+    company_profile_field_legacy.verified_at,
+    company_profile_field_legacy.verified_by,
+    company_profile_field_legacy.source_activity_id
+   FROM company_profile_field_legacy;
 public.company_profile_field_cites_only_a_meeting() secdef=false cfg=- acl=- 
 BEGIN
   IF NEW.source IS DISTINCT FROM 'meeting' THEN
@@ -3702,7 +3771,35 @@ BEGIN
   RETURN NEW;
 END
 
-public.company_profile_field_pkey CREATE UNIQUE INDEX company_profile_field_pkey ON public.company_profile_field USING btree (id)
+public.company_profile_field_legacy acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_profile_field_legacy.captured_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_profile_field_legacy.captured_by text NOT NULL gen=- def=-
+public.company_profile_field_legacy.company_id uuid NOT NULL gen=- def=-
+public.company_profile_field_legacy.company_profile_field_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_profile_field_legacy.company_profile_field_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))
+public.company_profile_field_legacy.company_profile_field_pkey PRIMARY KEY (id)
+public.company_profile_field_legacy.company_profile_field_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.company_profile_field_legacy.company_profile_field_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
+public.company_profile_field_legacy.company_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.company_profile_field_legacy.company_profile_meeting_evidence CHECK (((source <> 'meeting'::text) OR ((source_activity_id IS NOT NULL) AND (confidence IS NOT NULL) AND (COALESCE(evidence_snippet, ''::text) = ''::text))))
+public.company_profile_field_legacy.company_profile_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
+public.company_profile_field_legacy.confidence numeric(4,3) gen=- def=-
+public.company_profile_field_legacy.evidence_snippet text gen=- def=-
+public.company_profile_field_legacy.field text NOT NULL gen=- def=-
+public.company_profile_field_legacy.id uuid NOT NULL gen=- def=uuidv7()
+public.company_profile_field_legacy.retrieved_at timestamp with time zone gen=- def=-
+public.company_profile_field_legacy.source text NOT NULL gen=- def='site_read'::text
+public.company_profile_field_legacy.source_activity_id uuid gen=- def=-
+public.company_profile_field_legacy.source_url text gen=- def=-
+public.company_profile_field_legacy.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_profile_field_legacy FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field": 20000, "value": 20000, "source": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000}')
+public.company_profile_field_legacy.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_profile_field_legacy FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000}')
+public.company_profile_field_legacy.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_profile_field_legacy.uq_company_profile_field UNIQUE (company_id, field)
+public.company_profile_field_legacy.value text NOT NULL gen=- def=-
+public.company_profile_field_legacy.verified_at timestamp with time zone gen=- def=-
+public.company_profile_field_legacy.verified_by uuid gen=- def=-
+public.company_profile_field_legacy.version bigint NOT NULL gen=- def=1
+public.company_profile_field_pkey CREATE UNIQUE INDEX company_profile_field_pkey ON public.company_profile_field_legacy USING btree (id)
 public.company_refuse_anchor_retirement() secdef=false cfg=- acl=- 
 BEGIN
   IF NEW.merged_into_id IS NOT NULL
@@ -4037,6 +4134,7 @@ public.contact.contact_visibility_check CHECK ((visibility = ANY (ARRAY['workspa
 public.contact.converted_from_lead_id uuid gen=- def=-
 public.contact.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.created_from_activity_id uuid gen=- def=-
+public.contact.deleted_contact_drops_evidence CREATE TRIGGER deleted_contact_drops_evidence AFTER DELETE ON public.contact REFERENCING OLD TABLE AS gone_subject FOR EACH STATEMENT EXECUTE FUNCTION deleted_subject_drops_evidence('contact')
 public.contact.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.first_name text gen=- def=-
 public.contact.full_name text NOT NULL gen=- def=-
@@ -4280,35 +4378,73 @@ public.contact_phone_pkey CREATE UNIQUE INDEX contact_phone_pkey ON public.conta
 public.contact_phone_superseded_phone_ix CREATE INDEX contact_phone_superseded_phone_ix ON public.contact_phone USING btree (superseded_phone_id) WHERE (superseded_phone_id IS NOT NULL)
 public.contact_pkey CREATE UNIQUE INDEX contact_pkey ON public.contact USING btree (id)
 public.contact_profile_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.contact_profile_field.captured_by text NOT NULL gen=- def=-
-public.contact_profile_field.confidence numeric(4,3) gen=- def=-
-public.contact_profile_field.contact_id uuid NOT NULL gen=- def=-
-public.contact_profile_field.contact_profile_field_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
-public.contact_profile_field.contact_profile_field_contact_fk FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
-public.contact_profile_field.contact_profile_field_field_check CHECK ((field = ANY (ARRAY['title'::text, 'phone'::text, 'role'::text, 'linkedin'::text, 'company_name'::text, 'address'::text, 'website'::text, 'first_name'::text, 'last_name'::text, 'email'::text])))
-public.contact_profile_field.contact_profile_field_pkey PRIMARY KEY (id)
-public.contact_profile_field.contact_profile_field_value_key_cardinality CHECK (((field = ANY (ARRAY['phone'::text, 'email'::text])) = (value_key <> ''::text)))
-public.contact_profile_field.contact_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.contact_profile_field.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.contact_profile_field.evidence_snippet text NOT NULL gen=- def=-
-public.contact_profile_field.field text NOT NULL gen=- def=-
-public.contact_profile_field.id uuid NOT NULL gen=- def=uuidv7()
-public.contact_profile_field.observed_at timestamp with time zone NOT NULL gen=- def=now()
-public.contact_profile_field.signature_support jsonb NOT NULL gen=- def='{}'::jsonb
-public.contact_profile_field.source text NOT NULL gen=- def=-
-public.contact_profile_field.source_ref text NOT NULL gen=- def=-
-public.contact_profile_field.superseded_captured_by text gen=- def=-
-public.contact_profile_field.superseded_observed_at timestamp with time zone gen=- def=-
-public.contact_profile_field.superseded_value text gen=- def=-
-public.contact_profile_field.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_profile_field FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field": 20000, "value": 20000, "source": 20000, "value_key": 20000, "source_ref": 20000, "captured_by": 20000, "evidence_snippet": 20000, "superseded_value": 20000, "superseded_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_ref":20000,"superseded_captured_by":20000,"superseded_value":20000,"value":20000,"value_key":20000}')
-public.contact_profile_field.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_profile_field FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "value_key": 20000, "source_ref": 20000, "captured_by": 20000, "evidence_snippet": 20000, "superseded_value": 20000, "superseded_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_ref":20000,"superseded_captured_by":20000,"superseded_value":20000,"value":20000,"value_key":20000}')
-public.contact_profile_field.trg_contact_profile_field_updated CREATE TRIGGER trg_contact_profile_field_updated BEFORE UPDATE ON public.contact_profile_field FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.contact_profile_field.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.contact_profile_field.uq_contact_profile_field UNIQUE (contact_id, field, value_key)
-public.contact_profile_field.value text NOT NULL gen=- def=-
-public.contact_profile_field.value_key text NOT NULL gen=- def=''::text
-public.contact_profile_field.version bigint NOT NULL gen=- def=1
-public.contact_profile_field_pkey CREATE UNIQUE INDEX contact_profile_field_pkey ON public.contact_profile_field USING btree (id)
+public.contact_profile_field opts=-  SELECT field_provenance.id,
+    field_provenance.object_id AS contact_id,
+    field_provenance.field_name AS field,
+    field_provenance.value,
+    field_provenance.evidence_snippet,
+    field_provenance.evidence_ref AS source_ref,
+    field_provenance.confidence,
+    field_provenance.source,
+    field_provenance.captured_by,
+    field_provenance.version,
+    field_provenance.captured_at AS created_at,
+    field_provenance.updated_at,
+    COALESCE(field_provenance.observed_at, field_provenance.captured_at) AS observed_at,
+    field_provenance.superseded_value,
+    field_provenance.superseded_captured_by,
+    field_provenance.superseded_observed_at,
+    field_provenance.value_key,
+    field_provenance.signature_support
+   FROM field_provenance
+  WHERE ((field_provenance.object_type = 'contact'::text) AND (field_provenance.value IS NOT NULL))
+UNION ALL
+ SELECT contact_profile_field_legacy.id,
+    contact_profile_field_legacy.contact_id,
+    contact_profile_field_legacy.field,
+    contact_profile_field_legacy.value,
+    contact_profile_field_legacy.evidence_snippet,
+    contact_profile_field_legacy.source_ref,
+    contact_profile_field_legacy.confidence,
+    contact_profile_field_legacy.source,
+    contact_profile_field_legacy.captured_by,
+    contact_profile_field_legacy.version,
+    contact_profile_field_legacy.created_at,
+    contact_profile_field_legacy.updated_at,
+    contact_profile_field_legacy.observed_at,
+    contact_profile_field_legacy.superseded_value,
+    contact_profile_field_legacy.superseded_captured_by,
+    contact_profile_field_legacy.superseded_observed_at,
+    contact_profile_field_legacy.value_key,
+    contact_profile_field_legacy.signature_support
+   FROM contact_profile_field_legacy;
+public.contact_profile_field_legacy acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.contact_profile_field_legacy.captured_by text NOT NULL gen=- def=-
+public.contact_profile_field_legacy.confidence numeric(4,3) gen=- def=-
+public.contact_profile_field_legacy.contact_id uuid NOT NULL gen=- def=-
+public.contact_profile_field_legacy.contact_profile_field_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
+public.contact_profile_field_legacy.contact_profile_field_contact_fk FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.contact_profile_field_legacy.contact_profile_field_pkey PRIMARY KEY (id)
+public.contact_profile_field_legacy.contact_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.contact_profile_field_legacy.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.contact_profile_field_legacy.evidence_snippet text NOT NULL gen=- def=-
+public.contact_profile_field_legacy.field text NOT NULL gen=- def=-
+public.contact_profile_field_legacy.id uuid NOT NULL gen=- def=uuidv7()
+public.contact_profile_field_legacy.observed_at timestamp with time zone NOT NULL gen=- def=now()
+public.contact_profile_field_legacy.signature_support jsonb NOT NULL gen=- def='{}'::jsonb
+public.contact_profile_field_legacy.source text NOT NULL gen=- def=-
+public.contact_profile_field_legacy.source_ref text NOT NULL gen=- def=-
+public.contact_profile_field_legacy.superseded_captured_by text gen=- def=-
+public.contact_profile_field_legacy.superseded_observed_at timestamp with time zone gen=- def=-
+public.contact_profile_field_legacy.superseded_value text gen=- def=-
+public.contact_profile_field_legacy.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_profile_field_legacy FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field": 20000, "value": 20000, "source": 20000, "value_key": 20000, "source_ref": 20000, "captured_by": 20000, "evidence_snippet": 20000, "superseded_value": 20000, "superseded_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_ref":20000,"superseded_captured_by":20000,"superseded_value":20000,"value":20000,"value_key":20000}')
+public.contact_profile_field_legacy.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_profile_field_legacy FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "value_key": 20000, "source_ref": 20000, "captured_by": 20000, "evidence_snippet": 20000, "superseded_value": 20000, "superseded_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_ref":20000,"superseded_captured_by":20000,"superseded_value":20000,"value":20000,"value_key":20000}')
+public.contact_profile_field_legacy.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.contact_profile_field_legacy.uq_contact_profile_field UNIQUE (contact_id, field, value_key)
+public.contact_profile_field_legacy.value text NOT NULL gen=- def=-
+public.contact_profile_field_legacy.value_key text NOT NULL gen=- def=''::text
+public.contact_profile_field_legacy.version bigint NOT NULL gen=- def=1
+public.contact_profile_field_pkey CREATE UNIQUE INDEX contact_profile_field_pkey ON public.contact_profile_field_legacy USING btree (id)
 public.contact_provider_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact_provider_claim.captured_by text NOT NULL gen=- def=-
 public.contact_provider_claim.claim_key text NOT NULL gen=- def=-
@@ -5581,6 +5717,14 @@ public.dedupe_scan_state.stream text NOT NULL gen=- def=-
 public.dedupe_scan_state.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.dedupe_scan_state FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"stream": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"stream":20000}')
 public.dedupe_scan_state.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.dedupe_scan_state FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"stream": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"stream":20000}')
 public.dedupe_scan_state_pkey CREATE UNIQUE INDEX dedupe_scan_state_pkey ON public.dedupe_scan_state USING btree (stream)
+public.deleted_subject_drops_evidence() secdef=false cfg=- acl=- 
+BEGIN
+  DELETE FROM field_provenance f
+   USING gone_subject g
+   WHERE f.object_type = TG_ARGV[0] AND f.object_id = g.id AND f.value IS NOT NULL;
+  RETURN NULL;
+END
+
 public.email_signature acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.email_signature.archived_at timestamp with time zone gen=- def=-
 public.email_signature.body text NOT NULL gen=- def=-
@@ -5660,6 +5804,14 @@ public.event_outbox_entity_record CREATE INDEX event_outbox_entity_record ON pub
 public.event_outbox_event_id CREATE INDEX event_outbox_event_id ON public.event_outbox USING btree (((envelope ->> 'event_id'::text)))
 public.event_outbox_pkey CREATE UNIQUE INDEX event_outbox_pkey ON public.event_outbox USING btree (id)
 public.event_outbox_seq_seq acl=- rls=false force=false
+public.evidence_cites_only_a_meeting() secdef=false cfg=- acl=- 
+BEGIN
+  IF NEW.source IS DISTINCT FROM 'meeting' THEN
+    NEW.source_activity_id := NULL;
+  END IF;
+  RETURN NEW;
+END
+
 public.existing_customer_notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.existing_customer_notice.captured_by text NOT NULL gen=- def=-
 public.existing_customer_notice.collection_channel text NOT NULL gen=- def=-
@@ -5776,16 +5928,51 @@ public.field_provenance.captured_at timestamp with time zone NOT NULL gen=- def=
 public.field_provenance.captured_by text NOT NULL gen=- def=-
 public.field_provenance.confidence numeric(4,3) gen=- def=-
 public.field_provenance.evidence_ref text gen=- def=-
+public.field_provenance.evidence_snippet text gen=- def=-
 public.field_provenance.field_name text NOT NULL gen=- def=-
+public.field_provenance.field_provenance_company_fact_source CHECK (((value IS NULL) OR (object_type <> 'company'::text) OR (company_fact_category(field_name) IS NULL) OR (source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'technical_lookup'::text]))))
+public.field_provenance.field_provenance_company_profile_field CHECK (((value IS NULL) OR (object_type <> 'company'::text) OR (company_fact_category(field_name) IS NOT NULL) OR (field_name = ANY (ARRAY['display_name'::text, 'offer_summary'::text, 'icp'::text, 'value_proposition'::text, 'usp'::text, 'customer_pains'::text, 'desired_outcomes'::text, 'buying_center'::text, 'buying_intents'::text, 'common_objections'::text, 'sales_motion'::text, 'legal_name'::text, 'registered_address'::text, 'register_vat'::text, 'industry'::text, 'history'::text, 'legal_form'::text, 'register_court'::text, 'register_number'::text]))))
+public.field_provenance.field_provenance_company_profile_source CHECK (((value IS NULL) OR (object_type <> 'company'::text) OR (company_fact_category(field_name) IS NOT NULL) OR (source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'meeting'::text]))))
 public.field_provenance.field_provenance_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))
+public.field_provenance.field_provenance_contact_evidence_quote CHECK (((value IS NULL) OR (object_type <> 'contact'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_ref IS NOT NULL))))
+public.field_provenance.field_provenance_contact_profile_field CHECK (((value IS NULL) OR (object_type <> 'contact'::text) OR (field_name = ANY (ARRAY['title'::text, 'phone'::text, 'role'::text, 'linkedin'::text, 'company_name'::text, 'address'::text, 'website'::text, 'first_name'::text, 'last_name'::text, 'email'::text]))))
+public.field_provenance.field_provenance_evidence_subject CHECK (((value IS NULL) OR (object_type = ANY (ARRAY['company'::text, 'contact'::text]))))
+public.field_provenance.field_provenance_evidence_value_key CHECK (((value IS NULL) OR ((object_type = 'company'::text) AND ((company_fact_category(field_name) IS NULL) OR ((company_fact_category(field_name) = 'company'::text) AND (field_name <> 'location'::text))) AND (value_key = ''::text)) OR ((object_type = 'company'::text) AND ((field_name = 'location'::text) OR (company_fact_category(field_name) = ANY (ARRAY['offering'::text, 'market'::text, 'signal'::text]))) AND (value_key <> ''::text)) OR ((object_type = 'contact'::text) AND ((field_name = ANY (ARRAY['phone'::text, 'email'::text])) = (value_key <> ''::text)))))
+public.field_provenance.field_provenance_meeting_evidence CHECK (((value IS NULL) OR (source <> 'meeting'::text) OR ((source_activity_id IS NOT NULL) AND (confidence IS NOT NULL) AND (COALESCE(evidence_snippet, ''::text) = ''::text))))
 public.field_provenance.field_provenance_object_type_check CHECK ((object_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
 public.field_provenance.field_provenance_pkey PRIMARY KEY (id)
+public.field_provenance.field_provenance_site_evidence CHECK (((value IS NULL) OR (object_type <> 'company'::text) OR (source <> 'site_read'::text) OR ((COALESCE(evidence_snippet, ''::text) <> ''::text) AND (COALESCE(evidence_ref, ''::text) <> ''::text) AND (confidence IS NOT NULL))))
+public.field_provenance.field_provenance_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE SET NULL (site_read_id)
+public.field_provenance.field_provenance_source_activity_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.field_provenance.field_provenance_stamp_has_no_key CHECK (((value IS NOT NULL) OR (value_key = ''::text)))
+public.field_provenance.field_provenance_technical_evidence CHECK (((value IS NULL) OR (source <> 'technical_lookup'::text) OR ((COALESCE(evidence_snippet, ''::text) <> ''::text) AND (COALESCE(evidence_ref, ''::text) <> ''::text) AND (retrieved_at IS NOT NULL))))
+public.field_provenance.field_provenance_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
+public.field_provenance.field_provenance_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.field_provenance.id uuid NOT NULL gen=- def=uuidv7()
 public.field_provenance.object_id uuid NOT NULL gen=- def=-
 public.field_provenance.object_type text NOT NULL gen=- def=-
+public.field_provenance.observed_at timestamp with time zone gen=- def=-
+public.field_provenance.retrieved_at timestamp with time zone gen=- def=-
+public.field_provenance.signature_support jsonb NOT NULL gen=- def='{}'::jsonb
+public.field_provenance.site_read_id uuid gen=- def=-
 public.field_provenance.source text NOT NULL gen=- def=-
-public.field_provenance.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.field_provenance FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "field_name": 120, "captured_by": 20000, "object_type": 20000, "evidence_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"field_name":120,"object_type":20000,"source":20000}')
-public.field_provenance.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.field_provenance FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "field_name": 120, "captured_by": 20000, "object_type": 20000, "evidence_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"field_name":120,"object_type":20000,"source":20000}')
+public.field_provenance.source_activity_id uuid gen=- def=-
+public.field_provenance.superseded_captured_by text gen=- def=-
+public.field_provenance.superseded_observed_at timestamp with time zone gen=- def=-
+public.field_provenance.superseded_value text gen=- def=-
+public.field_provenance.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.field_provenance FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"value": 20000, "source": 20000, "value_key": 20000, "field_name": 120, "captured_by": 20000, "object_type": 20000, "evidence_ref": 20000, "evidence_snippet": 20000, "superseded_value": 20000, "superseded_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"evidence_snippet":20000,"field_name":120,"object_type":20000,"source":20000,"superseded_captured_by":20000,"superseded_value":20000,"value":20000,"value_key":20000}')
+public.field_provenance.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.field_provenance FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"value": 20000, "source": 20000, "value_key": 20000, "field_name": 120, "captured_by": 20000, "object_type": 20000, "evidence_ref": 20000, "evidence_snippet": 20000, "superseded_value": 20000, "superseded_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"evidence_snippet":20000,"field_name":120,"object_type":20000,"source":20000,"superseded_captured_by":20000,"superseded_value":20000,"value":20000,"value_key":20000}')
+public.field_provenance.trg_deleted_company_evidence_counts_revision CREATE TRIGGER trg_deleted_company_evidence_counts_revision AFTER DELETE ON public.field_provenance FOR EACH ROW WHEN (((old.object_type = 'company'::text) AND (old.value IS NOT NULL))) EXECUTE FUNCTION company_evidence_count_revision()
+public.field_provenance.trg_field_provenance_citation CREATE TRIGGER trg_field_provenance_citation BEFORE INSERT OR UPDATE ON public.field_provenance FOR EACH ROW WHEN ((new.value IS NOT NULL)) EXECUTE FUNCTION evidence_cites_only_a_meeting()
+public.field_provenance.trg_field_provenance_updated CREATE TRIGGER trg_field_provenance_updated BEFORE UPDATE ON public.field_provenance FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.field_provenance.trg_inserted_company_evidence_counts_revision CREATE TRIGGER trg_inserted_company_evidence_counts_revision AFTER INSERT ON public.field_provenance FOR EACH ROW WHEN (((new.object_type = 'company'::text) AND (new.value IS NOT NULL))) EXECUTE FUNCTION company_evidence_count_revision()
+public.field_provenance.trg_updated_company_evidence_counts_revision CREATE TRIGGER trg_updated_company_evidence_counts_revision AFTER UPDATE ON public.field_provenance FOR EACH ROW WHEN ((((new.object_type = 'company'::text) AND (new.value IS NOT NULL)) OR ((old.object_type = 'company'::text) AND (old.value IS NOT NULL)))) EXECUTE FUNCTION company_evidence_count_revision()
+public.field_provenance.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.field_provenance.value text gen=- def=-
+public.field_provenance.value_key text NOT NULL gen=- def=''::text
+public.field_provenance.verified_at timestamp with time zone gen=- def=-
+public.field_provenance.verified_by uuid gen=- def=-
+public.field_provenance.version bigint NOT NULL gen=- def=1
 public.field_provenance_pkey CREATE UNIQUE INDEX field_provenance_pkey ON public.field_provenance USING btree (id)
 public.finance_connection acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.finance_connection.archived_at timestamp with time zone gen=- def=-
@@ -6460,8 +6647,8 @@ public.idx_company_domain_disposition_due CREATE INDEX idx_company_domain_dispos
 public.idx_company_domain_trgm CREATE INDEX idx_company_domain_trgm ON public.company_domain USING gin (f_fold_apostrophes(lower(domain)) gin_trgm_ops) WHERE (archived_at IS NULL)
 public.idx_company_exact_legal_name_key CREATE INDEX idx_company_exact_legal_name_key ON public.company USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(legal_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_company_exact_name_key CREATE INDEX idx_company_exact_name_key ON public.company USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(display_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
-public.idx_company_fact_dedupe_scan CREATE INDEX idx_company_fact_dedupe_scan ON public.company_fact USING btree (updated_at, id)
-public.idx_company_fact_lookup CREATE INDEX idx_company_fact_lookup ON public.company_fact USING btree (category, field, value_key)
+public.idx_company_fact_dedupe_scan CREATE INDEX idx_company_fact_dedupe_scan ON public.company_fact_legacy USING btree (updated_at, id)
+public.idx_company_fact_lookup CREATE INDEX idx_company_fact_lookup ON public.company_fact_legacy USING btree (category, field, value_key)
 public.idx_company_geocode_state_point CREATE INDEX idx_company_geocode_state_point ON public.company_geocode_state USING btree (lat, lon) WHERE (status = 'ok'::text)
 public.idx_company_import_display_name CREATE INDEX idx_company_import_display_name ON public.company USING btree (f_fold_import_name(display_name)) WHERE ((archived_at IS NULL) AND (merged_into_id IS NULL))
 public.idx_company_import_legal_name CREATE INDEX idx_company_import_legal_name ON public.company USING btree (f_fold_import_name(legal_name)) WHERE ((legal_name IS NOT NULL) AND (archived_at IS NULL) AND (merged_into_id IS NULL))
@@ -6472,7 +6659,7 @@ public.idx_company_name_keyset_desc CREATE INDEX idx_company_name_keyset_desc ON
 public.idx_company_name_trgm CREATE INDEX idx_company_name_trgm ON public.company USING gin (f_fold_apostrophes(lower(display_name)) gin_trgm_ops)
 public.idx_company_owner CREATE INDEX idx_company_owner ON public.company USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_company_parent CREATE INDEX idx_company_parent ON public.company USING btree (parent_company_id) WHERE (parent_company_id IS NOT NULL)
-public.idx_company_profile_field_source_activity CREATE INDEX idx_company_profile_field_source_activity ON public.company_profile_field USING btree (source_activity_id) WHERE (source_activity_id IS NOT NULL)
+public.idx_company_profile_field_source_activity CREATE INDEX idx_company_profile_field_source_activity ON public.company_profile_field_legacy USING btree (source_activity_id) WHERE (source_activity_id IS NOT NULL)
 public.idx_company_rel_type_cascade CREATE INDEX idx_company_rel_type_cascade ON public.company_relationship_type USING btree (company_id)
 public.idx_company_search CREATE INDEX idx_company_search ON public.company USING gin (search_tsv)
 public.idx_company_status CREATE INDEX idx_company_status ON public.company USING btree (status) WHERE (archived_at IS NULL)
@@ -6585,7 +6772,10 @@ public.idx_dsr_open CREATE INDEX idx_dsr_open ON public.data_subject_request USI
 public.idx_event_outbox_unpublished CREATE INDEX idx_event_outbox_unpublished ON public.event_outbox USING btree (seq) WHERE (published_at IS NULL)
 public.idx_existing_customer_notice_legal_entity CREATE INDEX idx_existing_customer_notice_legal_entity ON public.existing_customer_notice USING btree (legal_entity_id)
 public.idx_existing_customer_notice_purpose_purpose CREATE INDEX idx_existing_customer_notice_purpose_purpose ON public.existing_customer_notice_purpose USING btree (purpose_id)
+public.idx_field_provenance_company_evidence_scan CREATE INDEX idx_field_provenance_company_evidence_scan ON public.field_provenance USING btree (updated_at, id) WHERE ((object_type = 'company'::text) AND (value IS NOT NULL))
+public.idx_field_provenance_company_fact_lookup CREATE INDEX idx_field_provenance_company_fact_lookup ON public.field_provenance USING btree (field_name, value_key) WHERE ((object_type = 'company'::text) AND (value IS NOT NULL))
 public.idx_field_provenance_object CREATE INDEX idx_field_provenance_object ON public.field_provenance USING btree (object_type, object_id, field_name, captured_at DESC)
+public.idx_field_provenance_source_activity CREATE INDEX idx_field_provenance_source_activity ON public.field_provenance USING btree (source_activity_id) WHERE (source_activity_id IS NOT NULL)
 public.idx_forecast_call_period CREATE INDEX idx_forecast_call_period ON public.forecast_call USING btree (period_start, period_end, scope_kind, scope_id)
 public.idx_forecast_contribution_deal CREATE INDEX idx_forecast_contribution_deal ON public.forecast_contribution USING btree (deal_id, created_at DESC)
 public.idx_forecast_snapshot_call CREATE INDEX idx_forecast_snapshot_call ON public.forecast_snapshot USING btree (call_id) WHERE (call_id IS NOT NULL)
@@ -8332,7 +8522,6 @@ public.partner.certified_staff smallint NOT NULL gen=- def=0
 public.partner.company_id uuid NOT NULL gen=- def=-
 public.partner.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.partner.id uuid NOT NULL gen=- def=uuidv7()
-public.partner.joined_at date gen=- def=-
 public.partner.margin_tier text gen=- def=-
 public.partner.next_step text gen=- def=-
 public.partner.next_step_due_at date gen=- def=-
@@ -8342,14 +8531,8 @@ public.partner.partner_cert_status_check CHECK ((cert_status = ANY (ARRAY['appli
 public.partner.partner_certified_staff_check CHECK ((certified_staff >= 0))
 public.partner.partner_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.partner.partner_company_id_key UNIQUE (company_id)
-public.partner.partner_fit_override_reason text gen=- def=-
-public.partner.partner_fit_score smallint gen=- def=-
-public.partner.partner_fit_score_computed smallint gen=- def=-
 public.partner.partner_kinds text[] NOT NULL gen=- def='{}'::text[]
 public.partner.partner_margin_tier_check CHECK (((margin_tier IS NULL) OR (margin_tier = ANY (ARRAY['tier1_15'::text, 'tier2_20'::text, 'tier3_25'::text]))))
-public.partner.partner_partner_fit_override_reason_check CHECK (((partner_fit_override_reason IS NULL) OR (length(btrim(partner_fit_override_reason)) > 0)))
-public.partner.partner_partner_fit_score_check CHECK (((partner_fit_score IS NULL) OR ((partner_fit_score >= 0) AND (partner_fit_score <= 100))))
-public.partner.partner_partner_fit_score_computed_check CHECK (((partner_fit_score_computed IS NULL) OR ((partner_fit_score_computed >= 0) AND (partner_fit_score_computed <= 100))))
 public.partner.partner_partner_kinds_check CHECK ((partner_kinds <@ ARRAY['hosting'::text, 'consulting'::text, 'strategic'::text, 'referral'::text]))
 public.partner.partner_pkey PRIMARY KEY (id)
 public.partner.partner_relationship_stage_fkey FOREIGN KEY (relationship_stage) REFERENCES partner_stage(key) ON UPDATE RESTRICT ON DELETE RESTRICT
@@ -8357,12 +8540,11 @@ public.partner.partner_retention_rate_check CHECK (((retention_rate IS NULL) OR 
 public.partner.partner_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text])))
 public.partner.partner_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.partner.relationship_stage text NOT NULL gen=- def=-
-public.partner.renews_at date gen=- def=-
 public.partner.retention_rate smallint gen=- def=-
 public.partner.served_segments text[] gen=- def=-
 public.partner.source text NOT NULL gen=- def=-
-public.partner.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000, "partner_fit_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_fit_override_reason":2000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
-public.partner.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000, "partner_fit_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_fit_override_reason":2000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
+public.partner.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
+public.partner.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
 public.partner.trg_partner_updated CREATE TRIGGER trg_partner_updated BEFORE UPDATE ON public.partner FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.partner.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.partner.version bigint NOT NULL gen=- def=1
@@ -11383,8 +11565,8 @@ public.uq_company_anchor CREATE UNIQUE INDEX uq_company_anchor ON public.company
 public.uq_company_domain CREATE UNIQUE INDEX uq_company_domain ON public.company_domain USING btree (domain) WHERE (archived_at IS NULL)
 public.uq_company_domain_disposition CREATE UNIQUE INDEX uq_company_domain_disposition ON public.company_domain_disposition USING btree (domain)
 public.uq_company_domain_primary CREATE UNIQUE INDEX uq_company_domain_primary ON public.company_domain USING btree (company_id) WHERE (is_primary AND (archived_at IS NULL))
-public.uq_company_fact CREATE UNIQUE INDEX uq_company_fact ON public.company_fact USING btree (company_id, category, field, value_key)
-public.uq_company_profile_field CREATE UNIQUE INDEX uq_company_profile_field ON public.company_profile_field USING btree (company_id, field)
+public.uq_company_fact CREATE UNIQUE INDEX uq_company_fact ON public.company_fact_legacy USING btree (company_id, category, field, value_key)
+public.uq_company_profile_field CREATE UNIQUE INDEX uq_company_profile_field ON public.company_profile_field_legacy USING btree (company_id, field)
 public.uq_company_rel_type CREATE UNIQUE INDEX uq_company_rel_type ON public.company_relationship_type USING btree (company_id, relationship_type) WHERE (archived_at IS NULL)
 public.uq_company_source CREATE UNIQUE INDEX uq_company_source ON public.company USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_contact_channel_identity CREATE UNIQUE INDEX uq_contact_channel_identity ON public.contact_channel_identity USING btree (provider, channel_user_id) WHERE (archived_at IS NULL)
@@ -11392,7 +11574,7 @@ public.uq_contact_channel_identity_scoped CREATE UNIQUE INDEX uq_contact_channel
 public.uq_contact_email_dedupe CREATE UNIQUE INDEX uq_contact_email_dedupe ON public.contact_email USING btree (email) WHERE (archived_at IS NULL)
 public.uq_contact_email_primary CREATE UNIQUE INDEX uq_contact_email_primary ON public.contact_email USING btree (contact_id) WHERE (is_primary AND (archived_at IS NULL))
 public.uq_contact_phone_primary CREATE UNIQUE INDEX uq_contact_phone_primary ON public.contact_phone USING btree (contact_id) WHERE (is_primary AND (archived_at IS NULL))
-public.uq_contact_profile_field CREATE UNIQUE INDEX uq_contact_profile_field ON public.contact_profile_field USING btree (contact_id, field, value_key)
+public.uq_contact_profile_field CREATE UNIQUE INDEX uq_contact_profile_field ON public.contact_profile_field_legacy USING btree (contact_id, field, value_key)
 public.uq_contact_source CREATE UNIQUE INDEX uq_contact_source ON public.contact USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_custom_field_column CREATE UNIQUE INDEX uq_custom_field_column ON public.custom_field USING btree (object, column_name)
 public.uq_custom_field_slug CREATE UNIQUE INDEX uq_custom_field_slug ON public.custom_field USING btree (object, slug) WHERE (status <> 'retired'::text)
@@ -11412,6 +11594,7 @@ public.uq_deal_source CREATE UNIQUE INDEX uq_deal_source ON public.deal USING bt
 public.uq_deal_suggestion_fingerprint CREATE UNIQUE INDEX uq_deal_suggestion_fingerprint ON public.deal_suggestion USING btree (fingerprint)
 public.uq_deal_suggestion_open_company CREATE UNIQUE INDEX uq_deal_suggestion_open_company ON public.deal_suggestion USING btree (company_id) WHERE (state = 'open'::text)
 public.uq_dedupe_candidate_pair CREATE UNIQUE INDEX uq_dedupe_candidate_pair ON public.dedupe_candidate USING btree (entity_type, COALESCE(left_contact_id, left_company_id, left_lead_id), COALESCE(right_contact_id, right_company_id, right_lead_id))
+public.uq_field_provenance_evidence CREATE UNIQUE INDEX uq_field_provenance_evidence ON public.field_provenance USING btree (object_type, object_id, field_name, value_key) WHERE (value IS NOT NULL)
 public.uq_forecast_contribution_deal CREATE UNIQUE INDEX uq_forecast_contribution_deal ON public.forecast_contribution USING btree (snapshot_id, deal_id)
 public.uq_forecast_snapshot_daily CREATE UNIQUE INDEX uq_forecast_snapshot_daily ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE ((trigger = 'daily'::text) AND (pipeline_id IS NULL) AND (population_fingerprint = ''::text))
 public.uq_forecast_snapshot_daily_context CREATE UNIQUE INDEX uq_forecast_snapshot_daily_context ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, pipeline_id, population_fingerprint, base_currency, definition_version, local_day) NULLS NOT DISTINCT WHERE ((trigger = 'daily'::text) AND (population_fingerprint <> ''::text))

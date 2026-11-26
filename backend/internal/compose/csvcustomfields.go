@@ -12,6 +12,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/importcells"
 	"github.com/margince/margince/backend/internal/compose/importguide"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -184,7 +185,7 @@ func suggestImportMapping(p migration.Profile, object string, targets []string, 
 // size band, so either would skip every row.
 var sampleGuards = map[string]func(string) bool{
 	csvTargetID:   isMarginceID,
-	fieldSizeBand: func(value string) bool { return importableSizeBands[value] },
+	fieldSizeBand: importcells.IsSizeBand,
 }
 
 // isMarginceID reports a version-7 UUID, the only kind ids.NewV7 mints. Another

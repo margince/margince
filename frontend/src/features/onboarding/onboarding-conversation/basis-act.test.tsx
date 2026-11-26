@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../../../i18n";
+import type { components } from "../../../api/schema";
+import { type Locale, LocaleProvider, translatePlural } from "../../../i18n";
 import {
   installFetchStub,
   jsonResponse,
@@ -36,6 +37,47 @@ function renderBasis(admin: boolean, patches: unknown[] = []) {
       return jsonResponse({ ...settings, ...(body as object) });
     },
   });
+  return mountBasis("en");
+}
+
+// The PATCH is refused with these field faults. `lockAfter` is a lock a rate
+// set meanwhile, which the read after the refusal reports.
+function renderRefused(
+  errors: unknown[],
+  locale: Locale,
+  lockAfter?: components["schemas"]["BaseCurrencyLock"],
+) {
+  let refused = false;
+  const patches: unknown[] = [];
+  installFetchStub({
+    "GET /me": meRoute({ installation_settings: ["update"] }),
+    "GET /installation/settings": () =>
+      jsonResponse(
+        refused && lockAfter
+          ? {
+              ...settings,
+              base_currency_locked: true,
+              base_currency_lock: lockAfter,
+            }
+          : settings,
+      ),
+    "PATCH /installation/settings": (body: unknown) => {
+      patches.push(body);
+      refused = true;
+      return jsonResponse(
+        {
+          code: "validation_error",
+          detail: "The installation could not be saved.",
+          details: { errors },
+        },
+        422,
+      );
+    },
+  });
+  return { ...mountBasis(locale), patches };
+}
+
+function mountBasis(locale: Locale) {
   const state: ConversationState = {
     ...initialConversationState,
     act: "basis",
@@ -48,7 +90,7 @@ function renderBasis(admin: boolean, patches: unknown[] = []) {
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <LocaleProvider initial="en">
+      <LocaleProvider initial={locale}>
         <BasisAct state={state} dispatch={dispatch} />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -116,6 +158,98 @@ describe("BasisAct", () => {
       /3-letter currency code/,
     );
     expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it("words a currency frozen after the step loaded as its lock, once, then moves on", async () => {
+    const { dispatch, patches } = renderRefused(
+      [
+        {
+          field: "installation.base_currency",
+          code: "setting_frozen",
+          message: "2 rate(s) in the sheet convert into EUR",
+          params: { reason: "rate_sheet", count: "2", base_currency: "EUR" },
+        },
+      ],
+      "de",
+      { reason: "rate_sheet", count: 2, base_currency: "EUR" },
+    );
+    const user = userEvent.setup();
+
+    const currency = await screen.findByLabelText("Basiswährung");
+    await user.clear(currency);
+    await user.type(currency, "chf");
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+
+    const sentence = translatePlural(
+      "de",
+      "installationSettings.baseCurrencyLock.rateSheet",
+      2,
+      { count: "2", base: "EUR" },
+    );
+    const refusal = await screen.findByText(sentence);
+    expect(refusal).toHaveClass("field-error");
+    expect(currency).toHaveAttribute("aria-invalid", "true");
+    expect(currency.getAttribute("aria-describedby")).toContain(refusal.id);
+    // The read after the refusal locks the field, and its hint stays hidden.
+    await waitFor(() => expect(currency).toBeDisabled());
+    expect(screen.getAllByText(sentence)).toHaveLength(1);
+    expect(screen.queryByText(/convert into EUR/)).toBeNull();
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(currency).toHaveValue("EUR");
+
+    // Nothing else changed, so the second Continue writes nothing.
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    await waitFor(() =>
+      expect(dispatch).toHaveBeenCalledWith({ type: "BASIS_DONE" }),
+    );
+    expect(patches).toEqual([{ base_currency: "CHF" }]);
+  });
+
+  it("puts a refused time zone beside its field, not at the foot", async () => {
+    renderRefused(
+      [
+        {
+          field: "installation.timezone",
+          code: "setting_invalid",
+          message: '"Mars/Olympus" is not an IANA zone name this server knows',
+        },
+      ],
+      "en",
+    );
+    const user = userEvent.setup();
+
+    const zone = await screen.findByLabelText("Company time zone");
+    await user.clear(zone);
+    await user.type(zone, "Mars/Olympus");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    const refusal = await screen.findByText(/not an IANA zone name/);
+    expect(zone).toHaveAttribute("aria-invalid", "true");
+    expect(zone.getAttribute("aria-describedby")).toContain(refusal.id);
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+  });
+
+  it("says a refusal of a field the step does not draw at the foot", async () => {
+    renderRefused(
+      [
+        {
+          field: "installation.base_language",
+          code: "setting_invalid",
+          message: "Not a language this server speaks.",
+        },
+      ],
+      "en",
+    );
+    const user = userEvent.setup();
+
+    const zone = await screen.findByLabelText("Company time zone");
+    await user.type(zone, "x");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The installation could not be saved.",
+    );
+    expect(zone).not.toHaveAttribute("aria-invalid");
   });
 
   it("holds Continue until the reporting basis has been read", async () => {

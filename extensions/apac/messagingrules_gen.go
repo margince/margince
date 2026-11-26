@@ -19,6 +19,9 @@ func messagingRules() []messaging.Rules {
 			EffectiveFrom: time.Date(2004, time.April, 10, 0, 0, 0, 0, time.UTC),
 			Provision:     "ss. 16-18",
 			SourceURL:     "https://www.legislation.gov.au/C2004A01214/latest/text",
+			TextURL:       "https://www.legislation.gov.au/C2004A01214/2016-03-10/2016-03-10/text/original/epub/OEBPS/document_1/document_1.html",
+			TextDigest:    "013e7d926da51b0284bd80138e13247344f07c7a32057b79b39acdd3b1bf019b",
+			TextFetchedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		}, {
 			Name: "Spam Regulations 2021 (Cth)",
 		}, {
@@ -43,7 +46,8 @@ func messagingRules() []messaging.Rules {
 			MarketingOnly: true,
 		}},
 		Provenance: messaging.Provenance{
-			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+			CreatedAt:       time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+			SourceCheckedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		},
 		Citations: []messaging.Citation{{
 			Code:       "no_marketing_consent",
@@ -86,7 +90,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Spam Act 2003 (Cth)",
 			Provision:  "Schedule 2, cl. 6",
 		}},
-		Digest: "b8121211ffd1409fa10c3fd8f39ed2cad5a92faa921ab01691989b80008e2654",
+		Digest: "7c08789f7e2130b85c6df140191f1a4c0059c0386fc320c40adb07e2940cf530",
 	}, {
 		Jurisdiction: "cn",
 		Version:      1,
@@ -95,16 +99,22 @@ func messagingRules() []messaging.Rules {
 			EffectiveFrom: time.Date(2006, time.March, 30, 0, 0, 0, 0, time.UTC),
 			Provision:     "arts. 13 and 14",
 			SourceURL:     "https://www.gov.cn/zhengce/2022-08/23/content_5722728.htm",
+			TextDigest:    "b58d6462eac5f6f8d9599ad8d75451d429437bd176ae50269c292f31bf4ba770",
+			TextFetchedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		}, {
 			Name:          "Advertising Law of the PRC",
 			EffectiveFrom: time.Date(2015, time.September, 1, 0, 0, 0, 0, time.UTC),
 			Provision:     "art. 43",
 			SourceURL:     "https://scjgj.beijing.gov.cn/cxfw/flfgcxfw/ggl/202204/t20220401_2646388.html",
+			TextDigest:    "f79fdabce09cc7ac6f46c1f8526a83cc42c6e5c16ae9d7d74205ee2d35bba4f0",
+			TextFetchedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		}, {
 			Name:          "Personal Information Protection Law of the PRC (PIPL)",
 			EffectiveFrom: time.Date(2021, time.November, 1, 0, 0, 0, 0, time.UTC),
 			Provision:     "arts. 13 and 17",
 			SourceURL:     "https://www.cac.gov.cn/2021-08/20/c_1631050028355286.htm",
+			TextDigest:    "b003ad1a08795d192844ef7ca3147384996513924d965f8b0e48985e4aa5a006",
+			TextFetchedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -124,7 +134,8 @@ func messagingRules() []messaging.Rules {
 		SubjectPrefix:         "广告",
 		NoLegitimateInterests: true,
 		Provenance: messaging.Provenance{
-			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+			CreatedAt:       time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+			SourceCheckedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		},
 		Citations: []messaging.Citation{{
 			Code:       "no_marketing_consent",
@@ -191,7 +202,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Personal Information Protection Law of the PRC (PIPL)",
 			Provision:  "art. 17(1)",
 		}},
-		Digest: "638e3e94ea39573cdc7d390db4999e134f23c5dc286be4befbc37ad3733e60a8",
+		Digest: "83f84512875bc5a1df88f98506c584be71d79d248984d87b981773e618c7d4bf",
 	}, {
 		Jurisdiction: "hk",
 		Version:      1,
@@ -309,6 +320,9 @@ func messagingRules() []messaging.Rules {
 			EffectiveFrom: time.Date(2002, time.July, 1, 0, 0, 0, 0, time.UTC),
 			Provision:     "arts. 3 and 4",
 			SourceURL:     "https://laws.e-gov.go.jp/law/414AC0100000026",
+			TextURL:       "https://laws.e-gov.go.jp/api/2/law_data/414AC0100000026?response_format=xml",
+			TextDigest:    "5a418a3003c3ec77bbc5923dfdff9d835c80d582cba508062d14e0d828fb62d7",
+			TextFetchedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		}, {
 			Name:          "Act No. 54 of 2008, amending Act No. 26 of 2002",
 			EffectiveFrom: time.Date(2008, time.December, 1, 0, 0, 0, 0, time.UTC),
@@ -330,7 +344,8 @@ func messagingRules() []messaging.Rules {
 			MarketingOnly: true,
 		}},
 		Provenance: messaging.Provenance{
-			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+			CreatedAt:       time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+			SourceCheckedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		},
 		Citations: []messaging.Citation{{
 			Code:       "no_marketing_consent",
@@ -373,7 +388,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
 			Provision:  "art. 4(ii)",
 		}},
-		Digest: "1136d3bd13db9fcbcc2db22e7a5d9bc8b1ac82e092b79c41dc373d56922fc705",
+		Digest: "ee3391fd03575c07c755b6869b2311408daa386e719d9146bfe420bc87b1ff5c",
 	}, {
 		Jurisdiction: "kr",
 		Version:      1,
@@ -382,10 +397,16 @@ func messagingRules() []messaging.Rules {
 			EffectiveFrom: time.Date(2014, time.November, 29, 0, 0, 0, 0, time.UTC),
 			Provision:     "art. 50",
 			SourceURL:     "https://www.law.go.kr/법령/정보통신망이용촉진및정보보호등에관한법률",
+			TextURL:       "https://www.law.go.kr/LSW/lsInfoR.do?lsiSeq=290001&efYd=20261002&chrClsCd=010202&ancYnChk=0",
+			TextDigest:    "337e1748f0440b0b07fc563077c819f2db3b7d1f7f01d92be8d83036fa303f90",
+			TextFetchedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		}, {
-			Name:      "Enforcement Decree of the Act on Promotion of Information and Communications Network Utilization and Information Protection",
-			Provision: "arts. 61 and 62-2",
-			SourceURL: "https://www.law.go.kr/법령/정보통신망이용촉진및정보보호등에관한법률시행령",
+			Name:          "Enforcement Decree of the Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			Provision:     "arts. 61 and 62-2",
+			SourceURL:     "https://www.law.go.kr/법령/정보통신망이용촉진및정보보호등에관한법률시행령",
+			TextURL:       "https://www.law.go.kr/LSW/lsInfoR.do?lsiSeq=290483&efYd=20261002&chrClsCd=010202&ancYnChk=0",
+			TextDigest:    "dd29911852573b53770a4eb336394924d580defe5bc3c8a108ce4580409030ae",
+			TextFetchedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -404,7 +425,8 @@ func messagingRules() []messaging.Rules {
 		ConsentConfirmationNeedsRequest: true,
 		ConsentRequestFirstFor:          []messaging.PurposeClass{"marketing", "phone_outreach"},
 		Provenance: messaging.Provenance{
-			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+			CreatedAt:       time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+			SourceCheckedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		},
 		Citations: []messaging.Citation{{
 			Code:       "no_marketing_consent",
@@ -447,7 +469,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Act on Promotion of Information and Communications Network Utilization and Information Protection",
 			Provision:  "art. 50(4)",
 		}},
-		Digest: "7c40de76a42b8962ce37d1530b649bd4be86e2d4b6f33c06450a47363380be39",
+		Digest: "74a3f11215e8b068b144f6a2ebd152b753f3a06f8b9a9189154c3c6c22dffe53",
 	}, {
 		Jurisdiction: "my",
 		Version:      1,
@@ -689,10 +711,14 @@ func messagingRules() []messaging.Rules {
 			Name:          "Decree 91/2020/ND-CP",
 			EffectiveFrom: time.Date(2020, time.October, 1, 0, 0, 0, 0, time.UTC),
 			SourceURL:     "https://vanban.chinhphu.vn/default.aspx?pageid=27160&docid=200773",
+			TextDigest:    "7e247f256c0f2ca7b1830e9c6672a7401c527500e9e959015beac831ef58fd8c",
+			TextFetchedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		}, {
 			Name:          "Law 91/2025/QH15",
 			EffectiveFrom: time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC),
 			SourceURL:     "https://congbaocdn.chinhphu.vn/CongBaoCP/VanBan/2025/6/45578/57730-1-2025971-97291-2025-qh15.pdf",
+			TextDigest:    "226dd6da66a6eea348e04db0f8c496d884021b730298991c6f6683720a0dfa2e",
+			TextFetchedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		}, {
 			Name:          "Decree 356/2025/ND-CP",
 			EffectiveFrom: time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC),
@@ -700,6 +726,8 @@ func messagingRules() []messaging.Rules {
 			Name:          "Advertising Law 16/2012/QH13, as amended by Law 75/2025/QH15",
 			EffectiveFrom: time.Date(2013, time.January, 1, 0, 0, 0, 0, time.UTC),
 			SourceURL:     "https://vanban.chinhphu.vn/default.aspx?pageid=27160&docid=163008",
+			TextDigest:    "8c6d5303f751c38f87b1e3c7c4beb31ece80c4f80621b45ba3162acb075e5e4a",
+			TextFetchedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -734,7 +762,8 @@ func messagingRules() []messaging.Rules {
 		ConsentConfirmationNeedsRequest:   true,
 		ConsentRequestFirstFor:            []messaging.PurposeClass{"marketing", "phone_outreach"},
 		Provenance: messaging.Provenance{
-			CreatedAt: time.Date(2026, time.September, 4, 0, 0, 0, 0, time.UTC),
+			CreatedAt:       time.Date(2026, time.September, 4, 0, 0, 0, 0, time.UTC),
+			SourceCheckedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		},
 		Citations: []messaging.Citation{{
 			Code:       "no_marketing_consent",
@@ -806,6 +835,6 @@ func messagingRules() []messaging.Rules {
 			Instrument: "Advertising Law 16/2012/QH13, as amended by Law 75/2025/QH15",
 			Provision:  "Art. 39(2)",
 		}},
-		Digest: "f3d650a05d925c3ba05d6f69c36afbf762cad072d67d39fdd057edebe45a0a23",
+		Digest: "db0fc499a28b29a3c5b9a07a9ba38e550cebd986a26992efa22294b6c111abff",
 	}}
 }

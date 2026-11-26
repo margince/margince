@@ -338,6 +338,9 @@ func (s *Store) ApplyDeepReadTx(ctx context.Context, tx pgx.Tx, in DeepReadPropo
 	if err != nil {
 		return err
 	}
+	if err := moveLegacyEvidence(ctx, tx, entityCompany, in.CompanyID.UUID); err != nil {
+		return err
+	}
 	rowsBefore, err := readProfileFieldImages(ctx, tx, in.CompanyID)
 	if err != nil {
 		return err
@@ -406,16 +409,22 @@ func upsertCompanyFacts(ctx context.Context, tx pgx.Tx, in DeepReadProposal, by 
 	}
 	applied := make([]map[string]any, 0, len(in.Facts))
 	for _, f := range in.Facts {
+		// The category follows from the field, so it is checked here rather
+		// than stored beside it.
+		if err := factInVocabulary(f.Category, f.Field); err != nil {
+			return nil, err
+		}
 		tag, err := tx.Exec(ctx, `
-			INSERT INTO company_fact (company_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by, site_read_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'site_read', $9, $10)
-			ON CONFLICT (company_id, category, field, value_key)
+			INSERT INTO field_provenance (object_type, object_id, field_name, value, value_key, evidence_snippet,
+			       evidence_ref, confidence, source, captured_by, site_read_id)
+			VALUES ('company', $1, $2, $3, $4, $5, $6, $7, 'site_read', $8, $9)
+			ON CONFLICT (object_type, object_id, field_name, value_key) WHERE value IS NOT NULL
 			DO UPDATE SET value = EXCLUDED.value, evidence_snippet = EXCLUDED.evidence_snippet,
-			              source_url = EXCLUDED.source_url, confidence = EXCLUDED.confidence,
+			              evidence_ref = EXCLUDED.evidence_ref, confidence = EXCLUDED.confidence,
 			              source = EXCLUDED.source, captured_by = EXCLUDED.captured_by,
 			              site_read_id = EXCLUDED.site_read_id, captured_at = now()
-			WHERE `+companyFactReplaceableSQL,
-			in.CompanyID, f.Category, f.Field, f.Value, f.ValueKey,
+			WHERE `+companyEvidenceReplaceableSQL(tableEvidence),
+			in.CompanyID, f.Field, f.Value, f.ValueKey,
 			f.EvidenceSnippet, f.SourceURL, f.Confidence, by, siteReadID)
 		if err != nil {
 			return nil, fmt.Errorf("upsert company fact %s.%s: %w", f.Category, f.Field, err)
@@ -426,5 +435,3 @@ func upsertCompanyFacts(ctx context.Context, tx pgx.Tx, in DeepReadProposal, by 
 	}
 	return applied, nil
 }
-
-const companyFactReplaceableSQL = "company_fact.source NOT IN ('human', 'agent')"

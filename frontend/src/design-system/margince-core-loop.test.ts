@@ -11,6 +11,7 @@ import {
 } from "./margince-core-engine";
 import type { CoreFrame, CoreRenderer } from "./margince-core-gl";
 import { FRAME_MS, rowFor, still } from "./margince-core-motion";
+import { pixelSnap } from "./margince-core-snap";
 
 // The draw loop's contract with the GPU, which is a contract about WHEN rather
 // than about pixels. `margince-core-engine.test.tsx` covers the same engine from
@@ -328,5 +329,214 @@ describe("the Core out of sight", () => {
 
     expect(asked).toHaveLength(0);
     expect(drawn).toBe(renderer.frames.length);
+  });
+});
+
+describe("the Core on whole device pixels", () => {
+  it("nudges a canvas that sits between pixels onto the grid", () => {
+    const box = { left: 643.875, top: 119.875, width: 152 };
+    expect(pixelSnap(box, 152, 2, [0, 0])).toEqual([0.125, 0.125]);
+  });
+
+  it("keeps the same nudge when measured with that nudge applied", () => {
+    const nudged = { left: 644, top: 120, width: 152 };
+    expect(pixelSnap(nudged, 152, 2, [0.125, 0.125])).toEqual([0.125, 0.125]);
+  });
+
+  it("leaves a canvas already on the grid where it is", () => {
+    expect(pixelSnap({ left: 12.5, top: 3, width: 50 }, 50, 2, [0, 0])).toEqual(
+      [0, 0],
+    );
+  });
+
+  it("scales the nudge into the canvas's own CSS px under a scaled ancestor", () => {
+    // At ratio 2, a quarter device px is 0.125 CSS px on screen, 0.25 inside.
+    const halved = { left: 10.125, top: 0, width: 50 };
+    expect(pixelSnap(halved, 100, 2, [0, 0])).toEqual([-0.25, 0]);
+  });
+});
+
+describe("the Core's placement through the page's events", () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+
+  /** A parked Core on a fractional box, with frames and ratio queries held. */
+  function placed(layoutWidth = 152) {
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    const frames = new Map<number, FrameRequestCallback>();
+    let ids = 0;
+    vi.spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb) => {
+      ids += 1;
+      frames.set(ids, cb);
+      return ids;
+    });
+    vi.spyOn(globalThis, "cancelAnimationFrame").mockImplementation((id) => {
+      frames.delete(id);
+    });
+    vi.stubGlobal("devicePixelRatio", 2);
+    const ratio = { asked: 0, added: 0, removed: 0, change: () => {} };
+    vi.stubGlobal("matchMedia", () => {
+      ratio.asked += 1;
+      return {
+        addEventListener: (_type: string, listener: () => void) => {
+          ratio.added += 1;
+          ratio.change = listener;
+        },
+        removeEventListener: () => {
+          ratio.removed += 1;
+        },
+      };
+    });
+    const host = document.createElement("div");
+    const canvas = document.createElement("canvas");
+    host.append(canvas);
+    document.body.append(host);
+    const box = { left: 643.875, width: 152 };
+    vi.spyOn(canvas, "offsetWidth", "get").mockReturnValue(layoutWidth);
+    // Like a browser, the measured box carries the nudge, scaled by the ancestor.
+    const nudge = () => Number.parseFloat(canvas.style.translate) || 0;
+    const scale = box.width / layoutWidth;
+    vi.spyOn(canvas, "getBoundingClientRect").mockImplementation(
+      () => new DOMRect(box.left + nudge() * scale, 120, box.width, box.width),
+    );
+    const work = { sized: 0, drawn: 0 };
+    const loopRef: Parameters<typeof attachCoreLoop>[3] = { current: null };
+    const release = attachCoreLoop(
+      canvas,
+      { current: { behaviour: still("idle"), paper: 0, snap: true } },
+      () => ({
+        ...recorder(() => 0),
+        resize: () => {
+          work.sized += 1;
+        },
+        draw: () => {
+          work.drawn += 1;
+        },
+      }),
+      loopRef,
+      () => {},
+    );
+    // Runs the frames asked for so far, so the loop parks before a case begins.
+    const flush = () => {
+      for (const [id, frame] of [...frames]) {
+        frames.delete(id);
+        frame(0);
+      }
+    };
+    flush();
+    const settled = { ...work };
+    return {
+      canvas,
+      host,
+      box,
+      work,
+      settled,
+      frames,
+      flush,
+      ratio,
+      release,
+      loopRef,
+    };
+  }
+
+  it("re-lands on whole pixels after a resize, in one frame, without drawing", () => {
+    const core = placed();
+    expect(core.canvas.style.translate).toBe("0.125px 0px");
+
+    core.box.left = 300.25;
+    window.dispatchEvent(new Event("resize"));
+    window.dispatchEvent(new Event("resize"));
+    expect(core.frames.size).toBe(1);
+    core.flush();
+
+    expect(core.canvas.style.translate).toBe("0.25px 0px");
+    expect(core.work).toEqual(core.settled);
+    core.release();
+  });
+
+  it("answers an unrelated transition with one snap frame, no draw and no wake", () => {
+    const core = placed();
+    const elsewhere = document.createElement("div");
+    document.body.append(elsewhere);
+
+    elsewhere.dispatchEvent(new Event("transitionend", { bubbles: true }));
+    elsewhere.dispatchEvent(new Event("animationend", { bubbles: true }));
+    expect(core.frames.size).toBeLessThanOrEqual(1);
+    core.flush();
+
+    expect(core.work).toEqual(core.settled);
+    expect(core.frames.size).toBe(0);
+    core.release();
+  });
+
+  it("re-lands when a sibling's transition pushes the canvas", () => {
+    const core = placed();
+    const sibling = document.createElement("div");
+    core.host.before(sibling);
+    core.box.left = 300.25;
+
+    sibling.dispatchEvent(new Event("transitionend", { bubbles: true }));
+    core.flush();
+
+    expect(core.canvas.style.translate).toBe("0.25px 0px");
+    expect(core.work).toEqual(core.settled);
+    core.release();
+  });
+
+  it("waits while off screen, and lands again on the next wake", () => {
+    const core = placed();
+    core.loopRef.current?.setOnScreen(false);
+    core.box.left = 300.25;
+    window.dispatchEvent(new Event("resize"));
+    expect(core.frames.size).toBe(0);
+
+    core.loopRef.current?.setOnScreen(true);
+    expect(core.canvas.style.translate).toBe("0.25px 0px");
+    core.release();
+  });
+
+  it("re-measures, draws and listens again when the pixel ratio changes", () => {
+    const core = placed();
+    core.ratio.change();
+
+    expect(core.work.sized).toBeGreaterThan(core.settled.sized);
+    expect(core.work.drawn).toBeGreaterThan(core.settled.drawn);
+    expect(core.ratio.asked).toBe(2);
+    expect(core.ratio.removed).toBe(1);
+    core.release();
+  });
+
+  it("follows an ancestor's scale through the canvas's own layout width", () => {
+    const core = placed(304);
+    // Drawn at half scale, so the quarter device px nudge is 0.25 CSS px inside.
+    expect(core.canvas.style.translate).toBe("0.25px 0px");
+    core.release();
+  });
+
+  it("removes every listener it added, and the nudge, on unmount", () => {
+    const counted = ["resize", "animationend", "transitionend"];
+    const tally = (target: EventTarget) => {
+      const added = vi.spyOn(target, "addEventListener");
+      const removed = vi.spyOn(target, "removeEventListener");
+      return () =>
+        counted.map((type) => [
+          added.mock.calls.filter(([name]) => name === type).length,
+          removed.mock.calls.filter(([name]) => name === type).length,
+        ]);
+    };
+    const onWindow = tally(window);
+    const onDocument = tally(document);
+    const core = placed();
+    window.dispatchEvent(new Event("resize"));
+    core.release();
+
+    expect(core.frames.size).toBe(0);
+    for (const [added, removed] of [...onWindow(), ...onDocument()]) {
+      expect(removed).toBe(added);
+    }
+    expect(onWindow()[0]?.[0]).toBe(1);
+    expect(core.ratio.removed).toBe(core.ratio.added);
+    expect(core.canvas.style.translate).toBe("");
   });
 });

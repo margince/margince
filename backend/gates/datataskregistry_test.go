@@ -28,10 +28,14 @@ import (
 )
 
 func sourceTaskIDs(source string) ([]string, error) {
-	file, err := parser.ParseFile(token.NewFileSet(), "catalog.go", source, 0)
+	file, err := parser.ParseFile(token.NewFileSet(), "catalog.go", source, parser.SkipObjectResolution)
 	if err != nil {
 		return nil, err
 	}
+	return fileTaskIDs(file), nil
+}
+
+func fileTaskIDs(file *ast.File) []string {
 	found := map[string]bool{}
 	ast.Inspect(file, func(node ast.Node) bool {
 		literal, ok := node.(*ast.BasicLit)
@@ -49,7 +53,7 @@ func sourceTaskIDs(source string) ([]string, error) {
 		out = append(out, id)
 	}
 	slices.Sort(out)
-	return out, nil
+	return out
 }
 
 func removedTaskIDs(before, after []string) []string {
@@ -125,13 +129,12 @@ func currentTaskLiterals() ([]string, error) {
 			return nil
 		}
 		files++
-		raw, err := gatekit.ReadFile(path)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return err
 		}
-		ids, err := sourceTaskIDs(string(raw))
-		out = append(out, ids...)
-		return err
+		out = append(out, fileTaskIDs(file)...)
+		return nil
 	})
 	if err == nil && files == 0 {
 		err = errors.New("empty internal source census")
