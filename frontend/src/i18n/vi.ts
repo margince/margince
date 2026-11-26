@@ -12663,6 +12663,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "senders.markBusiness": "Đánh dấu là công việc",
   "senders.keepOut": "Loại trừ",
   "senders.withdraw": "Rút lại câu trả lời",
+  "senders.liftPrivate": "Bỏ: cho phép tạo liên hệ lại",
+  "senders.kind.private": "Riêng tư",
+  "senders.privateStands": "Không tạo liên hệ cho người gửi này",
   "senders.keepOutTitle": "Loại trừ vĩnh viễn người gửi này?",
   "senders.keepOutBody":
     "Sẽ không tạo liên hệ nào, và thư người gửi này đã đưa vào hộp thư của bạn sẽ bị hủy. Các bản sao do đồng nghiệp nhập vẫn thuộc về họ.",

@@ -133,6 +133,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		initiativeenrolment.Task(NewInitiativeStore(pool)),
 		heldContactsDataTask(pool),
 		technicalAddressDataTask(pool),
+		capture.PersonalStandingDataTask(),
 		gmailDedupeScanDataTask(),
 		retiredReviewsDataTask(pool),
 		viabilitytasks.DataTask(activities.NewStore(InstallationDB(pool))),

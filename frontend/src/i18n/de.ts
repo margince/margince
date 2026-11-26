@@ -13010,6 +13010,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "senders.markBusiness": "Als geschäftlich markieren",
   "senders.keepOut": "Ausschließen",
   "senders.withdraw": "Antwort zurückziehen",
+  "senders.liftPrivate": "Aufheben: Kontakte wieder erlauben",
+  "senders.kind.private": "Privat",
+  "senders.privateStands": "Für diesen Absender wird kein Kontakt angelegt",
   "senders.keepOutTitle": "Diese Absendeadresse dauerhaft ausschließen?",
   "senders.keepOutBody":
     "Es wird kein Kontakt erstellt, und E-Mails von dieser Absendeadresse, die bereits in dein Postfach gelangt sind, werden vernichtet. Kopien, die ein Teammitglied importiert hat, bleiben bei diesem Teammitglied.",

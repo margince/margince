@@ -29300,8 +29300,10 @@ components:
           description: The ledger's own lifecycle for this sender.
         decision:
           type: string
-          enum: [business, keep_out]
-          description: What YOU decided instead, absent when you have not.
+          enum: [business, keep_out, personal]
+          description: |-
+            What YOU decided instead, absent when you have not. `personal` is the standing decision a
+            private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
         overruled_kind:
           type: string
           description: |-

@@ -55,10 +55,10 @@ func PrivateSenderClause(alias, readerPos string) string {
 		         ON so.address = pe.email AND so.user_id = %[2]s
 		 WHERE pe.contact_id = %[1]s.contact_id
 		   AND pe.archived_at IS NULL
-		   AND (so.decision = '%[4]s'
+		   AND (so.decision IN ('%[4]s', '%[6]s')
 		     OR (so.decision IS DISTINCT FROM '%[3]s'
 		         AND cp.kind IN ('personal', 'advisor', 'newsletter', 'transactional', 'spam'))))
 	  AND NOT EXISTS (SELECT 1 FROM contact mk
 	                   WHERE mk.id = %[1]s.contact_id AND NOT (%[5]s)))`,
-		alias, readerPos, OverrideBusiness, OverrideKeepOut, relationshipmark.NotMarkedSQL("mk"))
+		alias, readerPos, OverrideBusiness, OverrideKeepOut, relationshipmark.NotMarkedSQL("mk"), OverridePersonal)
 }

@@ -84,24 +84,16 @@ func (e *CounterpartyVerdictEngine) apply(
 			triageDomain, err = e.createVendorPitchContact(ctx, tx, row)
 			return err
 		case capture.KindPersonal:
-			// No record, and none kept: a family member is not a counterparty
-			// of the business, and one minted before this answer arrived is
-			// withdrawn now. The mail itself is not destroyed here — the purge
-			// that does that is its own change, with an undo window in front of
-			// it — so this withdraws the record and leaves the thread to the
-			// mailbox owner.
-			//
-			// UNBOUNDED BY CORRESPONDENCE, unlike the noise arm above. That
-			// bound protects a business counterparty from one misclassified
-			// message; here the owner writing back is what a private
-			// correspondence LOOKS like, so reading it as evidence of business
-			// kept every record this kind is about — a founder's clinic among
-			// them.
-			//
-			// hideNoise is deliberately NOT called. Its scope excludes every
-			// address the workspace has written to, which is every address this
-			// kind is ever about, so it would be a no-op that read like a hide.
+			// A family member is not a counterparty: withdraw any record minted
+			// before this answer and keep the address out from now on. The mail
+			// is not destroyed here; the purge has its own undo window.
+			// Unbounded by correspondence, unlike the noise arm. hideNoise is
+			// not called: its scope excludes every address the workspace has
+			// written to, which is every address this kind is about.
 			if err := e.retractSendersContacts(ctx, tx, row, retractOwnersOnly); err != nil {
+				return err
+			}
+			if err := capture.RecordPersonalStandingTx(ctx, tx, row.OwnerID, row.Email); err != nil {
 				return err
 			}
 			return retractPersonalSenderLeadLinksTx(ctx, tx, row.Email, row.OwnerID)

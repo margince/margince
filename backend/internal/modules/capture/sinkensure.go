@@ -264,9 +264,15 @@ func (s *Sink) decideCorrespondent(ctx context.Context, tx pgx.Tx, rec connector
 	// class, whatever its domain — so this runs BEFORE the free-mail tier, which
 	// would otherwise set create=true and skip the check entirely, minting the
 	// contact a prior `noise` verdict refused every time that sender wrote again.
-	alreadyKnown, settled, priorReason, err := s.alreadyDecided(ctx, tx, rec, cp.Email, activityID)
+	alreadyKnown, settled, private, priorReason, err := s.alreadyDecided(ctx, tx, rec, cp.Email, activityID, row.OwnerID)
 	if err != nil {
 		return counterpartyDecision{}, err
+	}
+	// The seat's standing private decision outranks T1: no contact is made
+	// for the address, whoever writes and in either direction.
+	if private {
+		decision.create = false
+		return decision.traced(TraceCaptured, priorReason), nil
 	}
 	// T1 OUTRANKS a stale terminal answer, exactly as it outranks the T2
 	// registry, and for the same reason: the workspace writing to an address is
@@ -309,37 +315,40 @@ func (s *Sink) decideCorrespondent(ctx context.Context, tx pgx.Tx, rec connector
 // question, and no model call — the hide sweep folds this message in with
 // the rest of that sender's mail on its next pass).
 func (s *Sink) alreadyDecided(
-	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, email string, activityID ids.UUID,
-) (known, settled bool, reason string, err error) {
-	prior, err := priorDispositionTx(ctx, tx, email)
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, email string, activityID ids.UUID, seat ids.UUID,
+) (known, settled, private bool, reason string, err error) {
+	prior, private, err := priorDispositionTx(ctx, tx, email, seat)
 	if err != nil {
-		return false, false, "", err
+		return false, false, false, "", err
+	}
+	if private {
+		return false, true, true, TraceReasonPrivateThread, nil
 	}
 	switch prior {
 	case PendingStatusReal:
-		return true, false, "", nil
+		return true, false, false, "", nil
 	case priorKnownNonContact:
 		// Decided, and decided to be nobody. Settled so the question is not
 		// re-asked and re-billed on every later message, and NOT `known`, so no
 		// contact is minted from a mailbox the verdict already judged has none.
-		return false, true, TraceReasonDecidedPrior, nil
+		return false, true, false, TraceReasonDecidedPrior, nil
 	case PendingStatusNoise:
 		// Google's meeting mail is asked again rather than filed under a noise
 		// answer, which judgeOne then replaces with one that keeps it visible.
 		spared, err := googleMeetingMailTx(ctx, tx, activityID, email)
 		if err != nil || spared {
-			return false, false, "", err
+			return false, false, false, "", err
 		}
-		return false, true, TraceReasonNoisePrior, s.logBreadcrumbTx(ctx, tx, "capture_noise_sender", rec,
+		return false, true, false, TraceReasonNoisePrior, s.logBreadcrumbTx(ctx, tx, "capture_noise_sender", rec,
 			"a prior verdict already judged this sender noise")
 	case PendingStatusRejected, PendingStatusSuppressed:
 		// A human's decline and a registry suppression are answers too. Without
 		// this the next message re-raises the same question, buys another model
 		// call, and offers the human the decision they already made.
-		return false, true, TraceReasonDecidedPrior, s.logBreadcrumbTx(ctx, tx, "capture_decided_sender", rec,
+		return false, true, false, TraceReasonDecidedPrior, s.logBreadcrumbTx(ctx, tx, "capture_decided_sender", rec,
 			"this sender was already decided: "+prior)
 	default:
-		return false, false, "", nil
+		return false, false, false, "", nil
 	}
 }
 
@@ -363,24 +372,28 @@ const priorKnownNonContact = "known_noncontact"
 // known correspondence — auto-creating every later bulk mail from it and
 // switching off the noise sweep for it for good. It still identifies the
 // contact; it just does not speak here.
-func priorDispositionTx(ctx context.Context, tx pgx.Tx, email string) (string, error) {
+func priorDispositionTx(ctx context.Context, tx pgx.Tx, email string, seat ids.UUID) (status string, private bool, err error) {
 	normalized := normalizeEmail(email)
 	if normalized == "" {
-		return "", nil
+		return "", false, nil
 	}
-	var status string
-	err := tx.QueryRow(ctx, "SELECT "+priorDispositionExpression("$1", "$2"), normalized, noiseVerdictReach.Seconds()).Scan(&status)
+	// The seat's standing private decision rides in this statement. A separate
+	// one would cost an exchange for every message.
+	err = tx.QueryRow(ctx, "SELECT "+priorDispositionExpression("$1", "$2")+`,
+		EXISTS (SELECT 1 FROM capture_sender_override
+		         WHERE user_id = $3 AND address = $1 AND decision = $4)`,
+		normalized, noiseVerdictReach.Seconds(), seat, OverridePersonal).Scan(&status, &private)
 	if err != nil {
-		return "", fmt.Errorf("capture: reading the prior disposition: %w", err)
+		return "", false, fmt.Errorf("capture: reading the prior disposition: %w", err)
 	}
-	return status, nil
+	return status, private, nil
 }
 
 // senderSuppressedTx is the suppression verdict as the ledger keeps it. Every
 // writer that files a mail after its capture asks it, so a suppressed mail
 // stays filed under nobody it names (sinkmaillinks.go).
 func senderSuppressedTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
-	prior, err := priorDispositionTx(ctx, tx, email)
+	prior, _, err := priorDispositionTx(ctx, tx, email, ids.Nil)
 	return prior == PendingStatusSuppressed, err
 }
 

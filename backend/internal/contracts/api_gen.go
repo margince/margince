@@ -5084,6 +5084,7 @@ func (e CaptureProviderAvailabilityReason) Valid() bool {
 const (
 	CaptureSenderDecisionDecisionBusiness CaptureSenderDecisionDecision = "business"
 	CaptureSenderDecisionDecisionKeepOut  CaptureSenderDecisionDecision = "keep_out"
+	CaptureSenderDecisionDecisionPersonal CaptureSenderDecisionDecision = "personal"
 )
 
 // Valid indicates whether the value is a known member of the CaptureSenderDecisionDecision enum.
@@ -5092,6 +5093,8 @@ func (e CaptureSenderDecisionDecision) Valid() bool {
 	case CaptureSenderDecisionDecisionBusiness:
 		return true
 	case CaptureSenderDecisionDecisionKeepOut:
+		return true
+	case CaptureSenderDecisionDecisionPersonal:
 		return true
 	default:
 		return false
@@ -41257,7 +41260,8 @@ type CaptureSenderDecision struct {
 	// contact. Present exactly when `contact_id` is.
 	ContactName *string `json:"contact_name,omitempty"`
 
-	// Decision What YOU decided instead, absent when you have not.
+	// Decision What YOU decided instead, absent when you have not. `personal` is the standing decision a
+	// private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
 	Decision *CaptureSenderDecisionDecision `json:"decision,omitempty"`
 
 	// DeletesAt When this sender's oldest message is destroyed. Present only for a `personal` verdict
@@ -41296,7 +41300,8 @@ type CaptureSenderDecision struct {
 	Status *string `json:"status,omitempty"`
 }
 
-// CaptureSenderDecisionDecision What YOU decided instead, absent when you have not.
+// CaptureSenderDecisionDecision What YOU decided instead, absent when you have not. `personal` is the standing decision a
+// private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
 type CaptureSenderDecisionDecision string
 
 // CaptureSenderListResponse defines model for CaptureSenderListResponse.
