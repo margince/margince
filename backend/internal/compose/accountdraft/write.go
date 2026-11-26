@@ -61,7 +61,7 @@ func draftSystemFor(fence promptfence.Fence, voiced bool) string {
 	if voiced {
 		system += "\n\n" + draftvoice.SystemRule
 	}
-	return system + "\n" + fence.Rule("account summary")
+	return system + "\n" + fence.Rule("account summary") + "\n" + fence.PolicyRule()
 }
 
 // groundedWithoutCitation reports whether this reason is honest with no record

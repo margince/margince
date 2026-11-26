@@ -50,16 +50,16 @@ type retirementMember struct {
 	Removed *time.Time
 	Merged  *ids.UUID
 	Agent   bool
-	Unused  bool
+	Usage   memberUsage
 }
 
 func readRetirementMember(ctx context.Context, tx pgx.Tx, id ids.UserID, lock bool) (retirementMember, error) {
 	var m retirementMember
-	query := `SELECT display_name, email, status, updated_at, removed_at, merged_into_user_id, is_agent, ` + unusedMemberSQL("app_user") + ` FROM app_user WHERE id = @member AND archived_at IS NULL`
+	query := `SELECT display_name, email, status, updated_at, removed_at, merged_into_user_id, is_agent, ` + memberUsageColumns("app_user") + ` FROM app_user WHERE id = @member AND archived_at IS NULL`
 	if lock {
 		query += " FOR UPDATE"
 	}
-	err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{memberParameter: id}).Scan(&m.Name, &m.Email, &m.Status, &m.Updated, &m.Removed, &m.Merged, &m.Agent, &m.Unused)
+	err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{memberParameter: id}).Scan(&m.Name, &m.Email, &m.Status, &m.Updated, &m.Removed, &m.Merged, &m.Agent, &m.Usage.PasswordSet, &m.Usage.SignedIn, &m.Usage.ProviderLinked)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return m, apperrors.ErrNotFound
 	}
@@ -130,6 +130,11 @@ func (s *Service) retirementPreviewTx(ctx context.Context, tx pgx.Tx, actor Iden
 		return out, err
 	}
 	applyRetirementWork(&out, work, member, actor, target, merge)
+	if merge && target != nil {
+		if err := applyMergeConfirmations(ctx, tx, &out, source.UUID, *target, member, survivor, lock); err != nil {
+			return out, err
+		}
+	}
 	workStamp := work.Stamp
 	encoded, err := json.Marshal(struct {
 		Actor, Source    ids.UUID
@@ -170,7 +175,7 @@ func applyRetirementWork(out *crmcontracts.MemberRetirementPreview, work MemberW
 		out.SignalCount = work.Signals
 	}
 	if merge {
-		applyMergeEligibility(out, member, actor, target)
+		applyMergeEligibility(out, actor, target)
 	}
 	if !merge && refuseUnlessDeactivated(member.Status) != nil {
 		out.Blockers = append(out.Blockers, "deactivate_first")
@@ -183,10 +188,7 @@ func applyRetirementWork(out *crmcontracts.MemberRetirementPreview, work MemberW
 	}
 }
 
-func applyMergeEligibility(out *crmcontracts.MemberRetirementPreview, member retirementMember, actor Identity, target *ids.UUID) {
-	if !member.Unused {
-		out.Blockers = append(out.Blockers, "source_used")
-	}
+func applyMergeEligibility(out *crmcontracts.MemberRetirementPreview, actor Identity, target *ids.UUID) {
 	if target != nil && *target == actor.UserID.UUID {
 		out.Blockers = append(out.Blockers, "self_survivor")
 	}
@@ -324,6 +326,13 @@ func (s *Service) retireMemberTx(ctx context.Context, tx pgx.Tx, actor Identity,
 }
 
 func (s *Service) applyMemberRetirement(ctx context.Context, tx pgx.Tx, actor Identity, source ids.UserID, target *ids.UUID, preview crmcontracts.MemberRetirementPreview, before retirementMember, merge bool) error {
+	var confirmations []ids.UUID
+	if merge && target != nil && !before.Usage.unused() {
+		var err error
+		if confirmations, err = spendMergeConfirmations(ctx, tx, source.UUID, *target); err != nil {
+			return err
+		}
+	}
 	if _, err := tx.Exec(ctx, `UPDATE app_user SET status = 'deactivated' WHERE id = @member`, pgx.StrictNamedArgs{memberParameter: source}); err != nil {
 		return err
 	}
@@ -343,8 +352,12 @@ func (s *Service) applyMemberRetirement(ctx context.Context, tx pgx.Tx, actor Id
 	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
 		return err
 	}
+	after := map[string]any{"removed": true, "merged_into_user_id": merged, "work_given_to": target}
+	if len(confirmations) > 0 {
+		after["merge_confirmations"] = confirmations
+	}
 	auditID, err := storekit.Audit(ctx, tx, "archive", "user", source.UUID,
-		map[string]string{"display_name": preview.SourceName, "status": before.Status}, map[string]any{"removed": true, "merged_into_user_id": merged, "work_given_to": target})
+		map[string]string{"display_name": preview.SourceName, "status": before.Status}, after)
 	if err != nil {
 		return err
 	}

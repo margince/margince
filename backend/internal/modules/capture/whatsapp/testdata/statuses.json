@@ -1,0 +1,4 @@
+{"object":"whatsapp_business_account","entry":[{"id":"WABA1","changes":[{"field":"messages","value":{"messaging_product":"whatsapp","metadata":{"display_phone_number":"15550001111","phone_number_id":"PNID1"},"statuses":[
+{"id":"wamid.OUT1","status":"delivered","timestamp":"1764000200","recipient_id":"491701234567"},
+{"id":"wamid.OUT2","status":"failed","timestamp":"1764000201","recipient_id":"491701234567","errors":[{"code":131047,"title":"Re-engagement message"}]}
+]}}]}]}

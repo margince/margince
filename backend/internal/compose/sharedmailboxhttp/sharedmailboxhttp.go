@@ -195,5 +195,6 @@ func sharedMailboxOnWire(v capture.SharedMailboxView) crmcontracts.SharedMailbox
 		out.BackupOwnerId = &backup
 	}
 	out.UnreadPeriod = capturehealth.UnreadPeriodOf(v.UnreadFrom, v.UnreadTo)
+	out.HistoryNarrowing = capturehealth.HistoryNarrowingOf(v.HistoryNarrowing)
 	return out
 }

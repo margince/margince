@@ -139,6 +139,15 @@ func UnreadPeriodOf(from, to *time.Time) *crmcontracts.CaptureUnreadPeriod {
 	return &crmcontracts.CaptureUnreadPeriod{From: from.UTC(), To: to.UTC()}
 }
 
+// HistoryNarrowingOf is a mailbox's pending history narrowing on the wire, or
+// absent when none is pending.
+func HistoryNarrowingOf(n *capture.HistoryNarrowing) *crmcontracts.MailHistoryNarrowing {
+	if n == nil {
+		return nil
+	}
+	return &crmcontracts.MailHistoryNarrowing{Posture: crmcontracts.MailHistoryNarrowingPosture(n.Posture), Remaining: n.Remaining}
+}
+
 // AgeSeconds renders how long something has been waiting, or absent when
 // nothing is. Absent and zero differ: one is an empty queue, the other a queue
 // that just filled.

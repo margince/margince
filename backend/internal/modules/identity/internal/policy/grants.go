@@ -143,6 +143,8 @@ const (
 	// would buy a rep nothing and widen the reach of the object governing egress.
 	objAiRouting = "ai_routing"
 	objAiBudget  = "ai_budget"
+	// Everyone reads the team rules their drafts follow; only admin/ops write them.
+	objAiTeamRules = "ai_team_rules"
 	// Everyone reads (a rep sees whether auto-enrich is on); only admin/ops
 	// toggle it or carve a domain back out of the consumer-mail baseline.
 	// `create` is the one write a rep holds: contributing a consumer domain the

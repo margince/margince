@@ -213,18 +213,21 @@ func (s *Sink) refuseErasedChannelAccount(ctx context.Context, tx pgx.Tx, cp con
 	if counterpartyShapeOf(cp) != shapeChannel {
 		return nil
 	}
-	ci := cp.ChannelIdentity
-	if err := storekit.LockChannelIdentities(ctx, tx, []storekit.ChannelIdentityKey{
-		{Provider: ci.Provider, ChannelUserID: ci.ChannelUserID},
-	}); err != nil {
+	var keys []storekit.ChannelIdentityKey
+	for _, ci := range cp.ChannelIdentity.All() {
+		keys = append(keys, storekit.ChannelIdentityKey{Provider: ci.Provider, ChannelUserID: storekit.ChannelSuppressionAccount(ci.AccountScope, ci.ChannelUserID)})
+	}
+	if err := storekit.LockChannelIdentities(ctx, tx, keys); err != nil {
 		return err
 	}
-	suppressed, err := storekit.ChannelIdentitySuppressed(ctx, tx, ci.Provider, ci.ChannelUserID)
-	if err != nil {
-		return err
-	}
-	if suppressed {
-		return fmt.Errorf("capture: the record's channel account is on the erasure suppression list: %w", connector.ErrSkip)
+	for _, key := range keys {
+		suppressed, err := storekit.ChannelIdentitySuppressed(ctx, tx, key.Provider, key.ChannelUserID)
+		if err != nil {
+			return err
+		}
+		if suppressed {
+			return fmt.Errorf("capture: the record's channel account is on the erasure suppression list: %w", connector.ErrSkip)
+		}
 	}
 	return nil
 }

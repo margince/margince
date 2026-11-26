@@ -62,6 +62,10 @@ type Sink struct {
 	// purgeRemoved acts on a message the provider says the owner deleted. Nil
 	// captures mail and acts on no deletions.
 	purgeRemoved MessagePurger
+	// editChat and purgeChat act on a chat message the provider edited or
+	// deleted after it was filed. Nil acts on neither.
+	editChat  ChatEditor
+	purgeChat ChatPurger
 	// tracePayloads is the deployment's capture.trace_payloads posture: with it
 	// on, the 24-hour trace keeps each message's sender and subject. Off is the
 	// default and the only value a member can cause.

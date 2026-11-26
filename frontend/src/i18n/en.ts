@@ -6,6 +6,7 @@ export const en = {
   "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
   "systemJob.legal_review_desk": "Legal review desk",
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.history_narrowing": "Narrowing earlier mail",
   "systemJob.promise_kept": "Closing a commitment a meeting shows kept",
   "systemJob.transcript_audience": "Giving meeting notes the meeting’s readers",
   "systemJob.meeting_profile":
@@ -79,8 +80,32 @@ export const en = {
   "users.retirement.weekly_plans": "Close this member’s open weekly plans.",
   "users.retirement.analytics_shares":
     "Revoke live analytics shares scoped to this member.",
-  "users.retirement.source_used":
-    "Only unused imported or invited identities can be merged. Hand over work and deactivate a member who has already completed sign-in setup.",
+  "users.retirement.confirmation_missing":
+    "The holder of each account that can still sign in must confirm this merge. Ask for confirmation below; a deactivated account needs none.",
+  "users.retirement.sign_in_dropped":
+    "The merged account’s password, linked sign-in providers and second factor are not moved. Its holder signs in with the account you keep.",
+  "users.merge.confirmTitle": "Confirmation by the account holders",
+  "users.merge.state.confirmed": "Confirmed",
+  "users.merge.state.requested": "Link sent, waiting",
+  "users.merge.state.not_requested": "Not asked yet",
+  "users.merge.state.not_needed": "Not needed",
+  "users.merge.ask": "Ask for confirmation",
+  "users.merge.askAgain": "Send the links again",
+  "users.merge.asked": "Confirmation links sent.",
+  "users.mergeConfirm.title": "Confirm the merge of your accounts",
+  "users.mergeConfirm.body":
+    "An administrator asked to merge two accounts that belong to you. The private mail and activity of the account that goes away move to the account that stays. This does not sign you in.",
+  "users.mergeConfirm.action": "Confirm the merge",
+  "users.mergeConfirm.done":
+    "Confirmed. The administrator can finish the merge now. You can close this page.",
+  "users.mergeConfirm.dead":
+    "This link is not valid any more. It may have expired, been used, or been replaced. Ask the administrator to send a new one.",
+  "users.mergeConfirm.failed":
+    "The confirmation did not go through. Try again in a moment.",
+  "users.retirement.suspended_side":
+    "A suspended account cannot confirm. Reactivate or deactivate it first.",
+  "users.mergeNeedsConfirmation":
+    "Merging a used account waits for the holders: each account that can still sign in gets a link to confirm.",
   "users.retirement.self_survivor":
     "Choose a surviving member other than yourself.",
   "users.retirement.deactivate_first":
@@ -140,6 +165,12 @@ export const en = {
   "users.editCancel": "Cancel",
   "users.editSave": "Save member",
   "users.merge": "Merge duplicate",
+  "users.mergeRefused.sole_admin":
+    "This is the only administrator, so it cannot be merged.",
+  "users.mergeRefused.self":
+    "This is your own account, so it cannot be merged.",
+  "users.mergeRefused.agent_seat": "Agent seats cannot be merged.",
+  "users.mergeRefused.other": "This account cannot be merged right now.",
   "users.remove": "Remove member",
   "users.mergeTitle": "Merge {name} into another account?",
   "users.removeTitle": "Remove {name}?",
@@ -3437,6 +3468,8 @@ export const en = {
   "common.errorReference": "Reference",
   "common.assistantUnavailable":
     "The AI did not answer. Try again, or ask your admin to check Settings → AI.",
+  "common.teamRulesUnavailable":
+    "The team rules could not be read, so no draft was written. Try again in a moment.",
   "common.providerOutOfCredit":
     "The AI provider has no credit left. Contact your system administrator.",
   "common.providerUnauthorized":
@@ -11341,6 +11374,7 @@ export const en = {
   "jobs.kind.capture_auto_enrich_sweep": "Company enrichment from mail",
   "jobs.kind.capture_backfill": "Mail history import",
   "jobs.kind.capture_backfill_reconcile": "Mail history import recovery",
+  "jobs.kind.capture_history_narrowing": "Narrowing earlier mail",
   "jobs.kind.capture_confidentiality_verdict": "Mail confidentiality check",
   "jobs.kind.capture_counterparty_verdict": "Mail sender check",
   "jobs.kind.capture_enrich": "Contact details from signatures",
@@ -11404,6 +11438,7 @@ export const en = {
   "jobs.kind.technical_enrich_backfill": "Technical lookup backlog",
   "jobs.kind.technical_enrich_company": "Company technical lookup",
   "jobs.kind.telegram_ingest": "Telegram message intake",
+  "jobs.kind.whatsapp_ingest": "WhatsApp message intake",
   "jobs.kind.telegram_poll": "Telegram message fetch",
   "jobs.kind.chat_link_flush": "Chat channel posts",
   "jobs.kind.chat_pull": "Chat channel summaries",
@@ -13076,6 +13111,10 @@ export const en = {
   "connectors.mailPosture.historyBody":
     "This setting applies to mail captured from now on. Mail already in the CRM keeps its visibility unless you narrow it to match.",
   "connectors.mailPosture.historyApply": "Also narrow captured mail",
+  "connectors.mailPosture.historyNarrowing_one":
+    "Earlier mail is being narrowed in the background: {count} message left. A message keeps its visibility until it is reached.",
+  "connectors.mailPosture.historyNarrowing_other":
+    "Earlier mail is being narrowed in the background: {count} messages left. A message keeps its visibility until it is reached.",
   "connectors.disconnectBodyGoogleNote":
     "Google may still list Margince under your account’s third-party access. Remove it there to revoke access fully.",
   "connectors.disconnectBodyMicrosoftNote":
@@ -15152,6 +15191,7 @@ export const en = {
   "audit.kind.workspace": "Company profile",
   "audit.kind.agent_client": "Connected AI tool",
   "audit.kind.ai_budget": "AI allowance",
+  "audit.kind.ai_team_rules": "Team rules",
   "audit.kind.ai_call_payload": "AI call content",
   "audit.kind.ai_routing": "AI model routing",
   "audit.kind.authentication_policy": "Sign-in policy",
@@ -15434,6 +15474,7 @@ export const en = {
   "settings.part.models.tiers": "Model tiers",
   "settings.part.models.tasks": "AI tasks",
   "settings.part.models.prices": "Prices",
+  "settings.part.models.rules": "Rules",
   "settings.part.usage.allowance": "Allowance",
   "settings.part.usage.agents": "Agent limits",
   "settings.part.usage.spend": "Spend",
@@ -16098,7 +16139,7 @@ export const en = {
     "The more of your own writing it reads, the closer it gets.",
   "settings.voice.rulesTitle": "Your rules",
   "settings.voice.rulesIntro":
-    "Margince never overwrites these. They steer every draft.",
+    "Margince never overwrites these. They steer every draft. Where they disagree with the team rules, the team rules win.",
   "voice.insights.themesLabel": "You keep coming back to",
   "voice.insights.figKept": "Drafts you kept",
   "voice.insights.figKeptValue": "{kept} of {drafted}",
@@ -16389,6 +16430,22 @@ export const en = {
   "roles.object.voice_profile": "Writing voice",
   "roles.object.ai_routing": "AI routing",
   "roles.object.ai_budget": "AI allowance",
+  "roles.object.ai_team_rules": "Team rules",
+  "teamRules.title": "Team rules",
+  "teamRules.intro":
+    "One text that every AI draft in your company follows: what may be said and which wording to use. It wins over a colleague’s own rules in Voice DNA. It never lets a draft state a fact the record does not hold.",
+  "teamRules.label": "Rules for every draft",
+  "teamRules.length":
+    "{used} of {max} characters. Every draft carries this text.",
+  "teamRules.savedBy": "Last saved by {who} on {when}.",
+  "teamRules.unknownEditor": "someone",
+  "teamRules.none": "No team rules saved yet.",
+  "teamRules.conflictTitle":
+    "A colleague saved the team rules while you were editing",
+  "teamRules.conflictBody":
+    "Reload to see their version and drop your edit, or keep your text and save it over theirs.",
+  "teamRules.reload": "Reload their version",
+  "teamRules.keepMine": "Keep my text",
   "roles.object.ai_diagnostics": "AI usage",
   "roles.object.ai_model_rate": "Model prices",
   "roles.object.embedding_reindex": "Search index",
