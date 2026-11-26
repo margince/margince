@@ -120,8 +120,10 @@ const (
 	// Raised by 44 production and 99 test lines for the agent-for-a-colleague
 	// seam, the finance card's hidden billing count and their cases.
 	// Raised by 94 production lines for the Zalo ingest and token renewal job args.
-	composeRootProductionLines = 231_597
-	composeRootTestLines       = 362_364
+	// Raised by 23 production and 11 test lines for the date-only precision a
+	// company route and a quiet reason carry, and their cases.
+	composeRootProductionLines = 231_620
+	composeRootTestLines       = 362_380
 )
 
 // A read under these floors stopped early or read the wrong place, and would

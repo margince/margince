@@ -21,6 +21,25 @@ function hit(type: string, standing?: SearchResult["standing"]): SearchResult {
 }
 
 describe("describeHit", () => {
+  it("dates a date-only last touch by its own date far east of UTC", () => {
+    const east = {
+      ...reading,
+      zone: "Pacific/Kiritimati",
+      now: new Date("2026-11-17T12:00:00Z"),
+    };
+    const touched = (precision: "day" | "instant") =>
+      describeHit(
+        hit("company", {
+          last_activity_at: "2026-11-10T12:00:00Z",
+          last_activity_precision: precision,
+        }),
+        undefined,
+        east,
+      ).aside;
+    expect(touched("day")).toBe(t("palette.lastContact", { when: "10 Nov" }));
+    expect(touched("instant")).not.toContain("10 Nov");
+  });
+
   it("gives an open deal its amount, its close date and its stage", () => {
     expect(
       describeHit(

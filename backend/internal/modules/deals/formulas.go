@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -141,10 +142,7 @@ func MeetingAheadSQL(alias string) string {
 // entry, so days since it count from its own date. The clock holds that row's
 // occurred_at, which is how the row is found.
 func LastActivityDaySQL(deal string) string {
-	return `EXISTS (SELECT 1 FROM activity_link day_link
-		JOIN activity day_row ON day_row.id = day_link.activity_id
-		WHERE day_link.deal_id = ` + deal + `.id AND day_row.archived_at IS NULL
-		  AND day_row.occurred_at = ` + deal + `.last_activity_at AND day_row.occurred_precision = 'day')`
+	return occurredday.ClockIsDaySQL(occurredday.LinkedClockRowsSQL("deal_id", deal+".id"), deal+".last_activity_at")
 }
 
 // PartnerSourcedSQL is the list-filter spelling of "this deal is
