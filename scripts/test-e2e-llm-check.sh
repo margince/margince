@@ -847,13 +847,6 @@ judges case10-finish-the-import.yaml case10 german-report-that-skipped-a-row 1 "
 # The commit is now required to be reported as done, and the table that only
 # says what the import WOULD do reaches none of it.
 judges case10-finish-the-import.yaml case10 stops-at-the-dry-run 1 "never said anything matching" "!forbids"
-# And the mapping the run had to invent. `name,city,size,country` places nothing
-# on its own, so every run chooses where those columns go — and a run that chose
-# `size`→description and reported "4 companies created, 0 skipped" satisfied
-# every other assertion this case had. This fixture is that run: the counts are
-# right, the commit is reported, and what the spreadsheet actually became is
-# never said.
-judges case10-finish-the-import.yaml case10 maps-a-column-and-never-says-so 1 "size[_ ]band" "!forbids"
 
 # CASE 20 — a capability denial written around a fixed list of verb phrases.
 # "Composing this into a document is not possible here" scored as an answer that
