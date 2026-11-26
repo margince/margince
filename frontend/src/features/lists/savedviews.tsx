@@ -149,6 +149,7 @@ export function useSavedViewTabs(resource: ViewResource): SavedViewTab[] {
             filters: state.filters,
             includeArchived: state.includeArchived,
             perPage: state.perPage,
+            version: view.version,
           },
         ]
       : [];
@@ -217,13 +218,15 @@ function SaveViewButton({
 
 /**
  * "Update": writes the list's dials over the view the reader opened and then
- * changed, held to the version that view was read at. Keys the view stores
- * beside its list state are kept.
+ * changed, held to the version they opened it at. A write made since, even one
+ * a refetch has brought in, is then refused as a version skew rather than lost.
+ * Keys the view stores beside its list state are kept.
  */
 function UpdateViewButton({
   view,
+  version,
   query,
-}: Readonly<{ view: SavedView; query: ListQuery }>) {
+}: Readonly<{ view: SavedView; version: number; query: ListQuery }>) {
   const t = useT();
   const toast = useToast();
   const { saveQuery } = useSaveView();
@@ -234,7 +237,7 @@ function UpdateViewButton({
         saveQuery
           .mutateAsync({
             id: view.id,
-            version: view.version,
+            version,
             query: { ...view.query, ...listStateFrom(query) },
           })
           .then(
@@ -296,20 +299,31 @@ export function SaveViewAction({
   state: ListOpening & Readonly<{ query: ListQuery }>;
 }>) {
   const views = useSavedViews(resource);
-  const openedId = useContext(OpenedViewContext);
-  const saved = views.data ?? [];
+  const openedView = useContext(OpenedViewContext);
+  if (views.data === undefined) {
+    // Until the reader's views are read, no name can be checked against them
+    // and no view can be known to hold this list already.
+    return null;
+  }
+  const saved = views.data;
   const holdsThisList = (view: SavedView) => {
     const stored = listStateOf(view);
     return stored !== null && matchesView(stored, state.query);
   };
   const unsaved = isNarrowed(state.query, state) && !saved.some(holdsThisList);
   const opened = saved.find(
-    (view) => view.id === openedId && listStateOf(view) !== null,
+    (view) => view.id === openedView?.id && listStateOf(view) !== null,
   );
+  // Only the version the reader opened may guard the write, never the cache's.
+  const openedVersion = openedView?.version;
   return (
     <>
-      {unsaved && opened && (
-        <UpdateViewButton view={opened} query={state.query} />
+      {unsaved && opened && openedVersion !== undefined && (
+        <UpdateViewButton
+          view={opened}
+          version={openedVersion}
+          query={state.query}
+        />
       )}
       {unsaved && (
         <SaveViewButton
@@ -322,7 +336,7 @@ export function SaveViewAction({
       {/* Beside Save, because it is the same set of the reader's own views:
           a tab can be pressed but not named or removed, so this is the only
           place a view that has served its purpose can go. */}
-      {views.data && <ManageViewsButton views={views.data} />}
+      <ManageViewsButton views={saved} />
     </>
   );
 }

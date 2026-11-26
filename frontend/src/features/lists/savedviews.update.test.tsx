@@ -3,16 +3,33 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ListQuery } from "../../components/listquery";
-import { OpenedViewContext } from "../../components/listqueryviews";
+import {
+  type ListPage,
+  type ListQuery,
+  ListTable,
+  useListQuery,
+} from "../../components/listquery";
+import {
+  type OpenedView,
+  OpenedViewContext,
+} from "../../components/listqueryviews";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { SaveViewAction } from "./savedviews";
+import { SAVED_VIEWS_KEY } from "../../lib/savedviews.queries";
+import { openView, toggleArchived } from "../../testing/listview.testkit";
+import { meFixture } from "../../testing/mefixture";
+import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ManageViewsButton } from "./savedviews.manage";
 
 // What the View panel offers once the reader has views of this list. Nothing
@@ -22,6 +39,7 @@ import { ManageViewsButton } from "./savedviews.manage";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.location.hash = "";
 });
 
 const BY_NAME: ListQuery = {
@@ -88,7 +106,7 @@ function stubViews(views: unknown[], refuseWrites = false) {
   return writes;
 }
 
-function wrap(ui: ReactNode, opened: string | null = null) {
+function wrap(ui: ReactNode, opened: OpenedView | null = null) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -184,6 +202,40 @@ describe("Save view beside the reader's saved views", () => {
     });
   });
 
+  // A name checked against views not yet read would pass any name.
+  it("is not offered until the reader's views are read", async () => {
+    let answer: (views: unknown[]) => void = () => undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            answer = (views) =>
+              resolve(
+                Response.json({
+                  data: views,
+                  page: { next_cursor: null, has_more: false },
+                }),
+              );
+          }),
+      ),
+    );
+    wrap(
+      <SaveViewAction
+        resource="contacts"
+        state={{ query: { ...BY_NAME, sort: "-created_at" } }}
+      />,
+    );
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(saveView()).toBeNull();
+
+    answer([VIP]);
+    expect(
+      await screen.findByRole("button", { name: en["views.save"] }),
+    ).toBeTruthy();
+  });
+
   it("confirms a saved view with a message", async () => {
     const user = userEvent.setup();
     stubViews([]);
@@ -209,10 +261,10 @@ describe("a saved view the reader opened and then changed", () => {
 
   it("is offered an update beside a save as a new view", async () => {
     stubViews([VIP]);
-    wrap(
-      <SaveViewAction resource="contacts" state={{ query: changed }} />,
-      VIP.id,
-    );
+    wrap(<SaveViewAction resource="contacts" state={{ query: changed }} />, {
+      id: VIP.id,
+      version: VIP.version,
+    });
 
     expect(await screen.findByRole("button", { name: /^Update/ })).toBe(
       update(),
@@ -224,10 +276,10 @@ describe("a saved view the reader opened and then changed", () => {
   it("writes the list on screen over that view, at the version it was read", async () => {
     const user = userEvent.setup();
     const writes = stubViews([VIP]);
-    wrap(
-      <SaveViewAction resource="contacts" state={{ query: changed }} />,
-      VIP.id,
-    );
+    wrap(<SaveViewAction resource="contacts" state={{ query: changed }} />, {
+      id: VIP.id,
+      version: VIP.version,
+    });
 
     await user.click(await screen.findByRole("button", { name: /^Update/ }));
 
@@ -255,10 +307,10 @@ describe("a saved view the reader opened and then changed", () => {
   it("says why when the update is refused", async () => {
     const user = userEvent.setup();
     stubViews([VIP], true);
-    wrap(
-      <SaveViewAction resource="contacts" state={{ query: changed }} />,
-      VIP.id,
-    );
+    wrap(<SaveViewAction resource="contacts" state={{ query: changed }} />, {
+      id: VIP.id,
+      version: VIP.version,
+    });
 
     await user.click(await screen.findByRole("button", { name: /^Update/ }));
 
@@ -268,10 +320,9 @@ describe("a saved view the reader opened and then changed", () => {
 
   it("offers no update for an opened tab that is not one of the saved views", async () => {
     stubViews([VIP]);
-    wrap(
-      <SaveViewAction resource="contacts" state={{ query: changed }} />,
-      "preset:list.viewMine",
-    );
+    wrap(<SaveViewAction resource="contacts" state={{ query: changed }} />, {
+      id: "preset:list.viewMine",
+    });
 
     await screen.findByRole("button", { name: en["views.manage"] });
     expect(update()).toBeNull();
@@ -299,5 +350,112 @@ describe("renaming a saved view", () => {
 
     expect(await screen.findByText(en["views.nameTaken"])).toBeTruthy();
     expect(writes).toEqual([]);
+  });
+});
+
+describe("a saved view another writer changed after the reader opened it", () => {
+  type Row = { id: string; name: string };
+  const emptyPage = async (): Promise<ListPage<Row>> => ({
+    data: [],
+    page: { next_cursor: null, has_more: false },
+  });
+  const BY_NAME_VIEW = {
+    ...VIP,
+    query: {
+      list: {
+        q: "",
+        sort: "name",
+        includeArchived: false,
+        filters: {},
+        perPage: 25,
+      },
+    },
+  };
+
+  function Contacts() {
+    const state = useListQuery<Row>({
+      key: "views-update",
+      fetchPage: emptyPage,
+    });
+    return (
+      <ListTable
+        state={state}
+        unit="nav.contacts"
+        columns={[
+          {
+            key: "name",
+            header: "contacts.name",
+            cell: (row: Row) => row.name,
+          },
+        ]}
+        rowKey={(row) => row.id}
+        views={[{ label: "list.viewAll" }]}
+        dataViews={useSavedViewTabs("contacts")}
+        saveView={<SaveViewAction resource="contacts" state={state} />}
+      />
+    );
+  }
+
+  // The server's /views: it holds one row, and refuses a write held to an
+  // older version than the one it holds, as If-Match does.
+  function stubServer() {
+    const server = { view: BY_NAME_VIEW, ifMatch: [] as (string | null)[] };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.method === "GET") {
+          return Response.json({
+            data: [server.view],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        const ifMatch = request.headers.get("If-Match");
+        server.ifMatch.push(ifMatch);
+        if (ifMatch !== String(server.view.version)) {
+          return Response.json(
+            { code: "version_skew", detail: "The view changed." },
+            { status: 409 },
+          );
+        }
+        return Response.json(server.view);
+      }),
+    );
+    return server;
+  }
+
+  it("holds the update to the version opened, though a refetch brought a newer one", async () => {
+    const user = userEvent.setup();
+    const server = stubServer();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    client.setQueryData(["me"], meFixture({ rowScope: "all" }));
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ToastProvider>
+            <Contacts />
+            <ToastRegion />
+          </ToastProvider>
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: VIP.name }));
+    await toggleArchived(user);
+    // Another writer renames the view; the rail reads it again.
+    server.view = { ...BY_NAME_VIEW, name: "VIP, renamed", version: 5 };
+    await client.invalidateQueries({ queryKey: [SAVED_VIEWS_KEY] });
+
+    const panel = await openView(user);
+    await user.click(
+      await within(panel).findByRole("button", {
+        name: "Update “VIP, renamed”",
+      }),
+    );
+
+    expect(await screen.findByText(en["common.versionSkew"])).toBeTruthy();
+    expect(server.ifMatch).toEqual(["4"]);
+    expect(screen.queryByText(/^View updated/)).toBeNull();
   });
 });

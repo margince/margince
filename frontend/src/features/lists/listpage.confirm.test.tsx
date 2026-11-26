@@ -93,6 +93,21 @@ function page() {
   );
 }
 
+// The pointer rests on the toast, which holds its clock (WCAG 2.2.1), so it
+// cannot time out between a check and the next step on a slow machine.
+async function heldToast(
+  user: ReturnType<typeof userEvent.setup>,
+  said: string,
+) {
+  const text = await screen.findByText(said);
+  await user.hover(text);
+  const toast = text.closest("output");
+  if (toast === null) {
+    throw new Error(`"${said}" is not inside a toast`);
+  }
+  return toast;
+}
+
 const more = () =>
   screen.findByRole("button", {
     name: en["filters.library.rowMore"].replace("{name}", shortlist.name),
@@ -107,11 +122,14 @@ describe("archiving a list", () => {
     await user.click(await more());
     await user.click(screen.getByRole("button", { name: en["lists.archive"] }));
 
-    expect(await screen.findByText(en["lists.archivedDone"])).toBeVisible();
+    const toast = await heldToast(user, en["lists.archivedDone"]);
+    expect(toast).toBeVisible();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(writes).toEqual(["archive"]);
 
-    await user.click(screen.getByRole("button", { name: en["common.undo"] }));
+    await user.click(
+      within(toast).getByRole("button", { name: en["common.undo"] }),
+    );
     await waitFor(() => expect(writes).toEqual(["archive", "restore"]));
   });
 
@@ -128,10 +146,11 @@ describe("archiving a list", () => {
       await within(dialog).findByRole("button", { name: en["lists.archive"] }),
     );
 
-    expect(await screen.findByText(en["lists.archivedDone"])).toBeVisible();
+    const toast = await heldToast(user, en["lists.archivedDone"]);
+    expect(toast).toBeVisible();
     expect(writes).toEqual(["archive"]);
     expect(
-      screen.queryByRole("button", { name: en["common.undo"] }),
+      within(toast).queryByRole("button", { name: en["common.undo"] }),
     ).toBeNull();
   });
 });
@@ -146,7 +165,7 @@ describe("restoring a list", () => {
       await screen.findByRole("button", { name: en["lists.restore"] }),
     );
 
-    expect(await screen.findByText(en["lists.restored"])).toBeVisible();
+    expect(await heldToast(user, en["lists.restored"])).toBeVisible();
     expect(writes).toEqual(["restore"]);
   });
 });
@@ -173,7 +192,7 @@ describe("editing a list", () => {
 
     await saveName(user);
 
-    expect(await screen.findByText(en["lists.settingsSaved"])).toBeVisible();
+    expect(await heldToast(user, en["lists.settingsSaved"])).toBeVisible();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 

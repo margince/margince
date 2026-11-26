@@ -162,7 +162,14 @@ export function useSelectAll<Row>({
     // Rows match that the limit leaves out of the selection.
     capped: atLimit && (canLoad || held.length > count),
     pending: walking,
-    progress: walkProgress(walking, heldCount, limit, total),
+    // The server counts every matching row, so a list that leaves some out of
+    // the selection has no known end: its walk shows the count alone.
+    progress: walkProgress(
+      walking,
+      heldCount,
+      limit,
+      selection?.selectable === undefined ? total : undefined,
+    ),
     run: () => {
       askedAt.current = -1;
       setWalkFrom(rows.length);

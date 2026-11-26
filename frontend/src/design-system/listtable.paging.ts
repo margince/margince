@@ -264,15 +264,10 @@ const PAGE_WINDOW = 3;
  */
 export type PagerSlot = number | "gap" | "room";
 
-/** Page one stays reachable because a lost reader goes back there. A gap marks
- *  only skipped pages: Next speaks for pages the cursor could still fetch.
- *  A known end is numbered too, so the strip says how long the list is.
- *  One slot count at every position, so Next never slides out between clicks. */
-export function pagerSlots(
-  current: number,
-  lastPage: number,
-  endKnown = false,
-): PagerSlot[] {
+/** Page one stays reachable because a lost reader goes back there, and the
+ *  last page is numbered so the strip says how long the list is. Seven slots
+ *  at every position, so Next never slides out between clicks. */
+export function pagerSlots(current: number, lastPage: number): PagerSlot[] {
   const first = Math.min(
     Math.max(1, current - Math.floor(PAGE_WINDOW / 2)),
     Math.max(1, lastPage - PAGE_WINDOW + 1),
@@ -280,17 +275,11 @@ export function pagerSlots(
   const span = Math.min(PAGE_WINDOW, lastPage - first + 1);
   const window = Array.from({ length: span }, (_, index) => first + index);
   const last = first + span - 1;
-  const lead: PagerSlot[] = [
+  return [
     first > 1 ? 1 : "room",
     first > 2 ? "gap" : "room",
     ...window,
     ...Array.from({ length: PAGE_WINDOW - span }, () => "room" as const),
-  ];
-  if (!endKnown) {
-    return [...lead, last < lastPage ? "gap" : "room"];
-  }
-  return [
-    ...lead,
     last < lastPage - 1 ? "gap" : "room",
     last < lastPage ? lastPage : "room",
   ];

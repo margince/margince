@@ -29,7 +29,7 @@ const emptyPage = async (): Promise<ListPage<Row>> => ({
 });
 
 function Opened() {
-  return <output>{useContext(OpenedViewContext) ?? "none"}</output>;
+  return <output>{useContext(OpenedViewContext)?.id ?? "none"}</output>;
 }
 
 function Rail() {
@@ -51,6 +51,7 @@ function Rail() {
           sort: "name",
           filters: {},
           includeArchived: false,
+          version: 1,
         },
       ]}
       saveView={<Opened />}

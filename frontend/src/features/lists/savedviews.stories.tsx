@@ -152,7 +152,9 @@ export const OpenedViewChanged: Story = {
   render: () => {
     routesWithListView();
     return (
-      <OpenedViewContext.Provider value={BY_OWNER.id}>
+      <OpenedViewContext.Provider
+        value={{ id: BY_OWNER.id, version: BY_OWNER.version }}
+      >
         <SaveViewAction
           resource="contacts"
           state={{ query: { ...NARROWED, sort: "full_name" } }}

@@ -6811,8 +6811,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.undoneDeals_other": "Đã khôi phục {count} deal.",
   "bulk.doneTasks_one": "Đã tạo {count} việc.",
   "bulk.doneTasks_other": "Đã tạo {count} việc.",
-  "bulk.undoneTasks_one": "Đã lưu trữ {count} việc.",
-  "bulk.undoneTasks_other": "Đã lưu trữ {count} việc.",
+  "bulk.undoneTasks_one": "Đã chuyển {count} việc vào kho lưu trữ.",
+  "bulk.undoneTasks_other": "Đã chuyển {count} việc vào kho lưu trữ.",
   "bulk.undoLeftBehind_one":
     "{count} liên kết, thẻ hoặc mục trong danh sách không thể khôi phục.",
   "bulk.undoLeftBehind_other":

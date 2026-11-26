@@ -110,7 +110,7 @@ export type ViewSpec = {
  *
  * `perPage` is optional because a stored blob need not claim one: a view that
  * saved a page size asks for it, and a view that saved none leaves the reader's
- * own choice alone.
+ * own choice alone. `version` is the row's, read with it, for an update of it.
  */
 export type SavedViewTab = Readonly<{
   id: string;
@@ -120,6 +120,7 @@ export type SavedViewTab = Readonly<{
   filters: Readonly<Record<string, string>>;
   includeArchived: boolean;
   perPage?: number;
+  version: number;
 }>;
 
 /**
@@ -134,6 +135,8 @@ export type RailView = ListView &
     q: string;
     includeArchived: boolean;
     perPage?: number;
+    /** A saved view's row version; a preset is no row and has none. */
+    version?: number;
   }>;
 
 /** The codes a list read's `sort` field error carries for a sort it does not take. */

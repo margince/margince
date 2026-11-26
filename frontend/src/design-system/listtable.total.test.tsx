@@ -53,7 +53,8 @@ describe("the pager's page numbers", () => {
     expect(pageButton(176)).toBeNull();
   });
 
-  it("stop at the pages in hand while the server sends no total", () => {
+  // The pages in hand would read as the whole list, so Next speaks alone.
+  it("give way to Previous and Next while the server sends no total", () => {
     render(
       <ListTable
         rows={testRows(50)}
@@ -63,8 +64,13 @@ describe("the pager's page numbers", () => {
         hasMore
       />,
     );
-    expect(pageButton(2)).toBeTruthy();
-    expect(pageButton(3)).toBeNull();
+    expect(pageButton(1)).toBeNull();
+    expect(pageButton(2)).toBeNull();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Next" })).toHaveProperty(
+      "disabled",
+      false,
+    );
   });
 
   it("name the last page of a list whose every row is in hand", () => {

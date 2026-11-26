@@ -93,9 +93,10 @@ export function useActiveView(
   views: readonly RailView[],
   query: ListQuery,
   opening: ListOpening,
-): [number, (index: number) => void, string | null] {
+): [number, (index: number) => void, OpenedView | null] {
   const [pickedId, setPickedId] = useState<string | null>(null);
-  const [openedId, setOpenedId] = useState<string | null>(null);
+  const [opened, setOpened] = useState<OpenedView | null>(null);
+  const [litId, setLitId] = useState<string | null>(null);
   const matched = views.findIndex((spec) => matchesView(spec, query));
   const pinned = views.findIndex((spec) => spec.id === pickedId);
   const pinnedView = views[pinned];
@@ -103,39 +104,53 @@ export function useActiveView(
     pinnedView !== undefined && matchesView(pinnedView, query)
       ? pinned
       : matched;
-  // The opened view is the tab last lit or pressed. With no tab lit the reader
-  // is changing that view, until the list is back to how it opens.
-  const litId =
-    views[view]?.id ?? (isNarrowed(query, opening) ? openedId : null);
-  if (litId !== openedId) {
-    setOpenedId(litId);
+  // The opened view is the tab last lit or pressed, at the version it lit
+  // with. With no tab lit the reader is changing that view, so a refetch that
+  // brings a newer version leaves it alone, until the list is back to how it
+  // opens.
+  const lit = views[view];
+  if ((lit?.id ?? null) !== litId) {
+    setLitId(lit?.id ?? null);
+    if (lit !== undefined) {
+      setOpened(openedOf(lit));
+    }
+  }
+  if (lit === undefined && opened !== null && !isNarrowed(query, opening)) {
+    setOpened(null);
   }
   // The press reports an index into the rail just rendered, which is where the
   // id it names comes from. A press on nothing (the surface's own "clear
   // everything" reports index 0 against an empty rail) unpins rather than
   // pinning a view that is not there.
   const pick = (index: number) => {
-    const id = views[index]?.id ?? null;
-    setPickedId(id);
-    setOpenedId(id);
+    const picked = views[index];
+    setPickedId(picked?.id ?? null);
+    setOpened(picked === undefined ? null : openedOf(picked));
   };
-  return [view, pick, openedId];
+  return [view, pick, opened];
+}
+
+/** The view the reader opened, and the version they opened it at. */
+export type OpenedView = Readonly<{ id: string; version?: number }>;
+
+function openedOf(view: RailView): OpenedView {
+  return { id: view.id, version: view.version };
 }
 
 /**
- * The id of the view the reader opened and may since have changed, for the
- * Save view verbs in the View panel. A preset's id names no saved view.
+ * The view the reader opened and may since have changed, for the Save view
+ * verbs in the View panel. A preset's id names no saved view.
  */
-export const OpenedViewContext = createContext<string | null>(null);
+export const OpenedViewContext = createContext<OpenedView | null>(null);
 
 /** A surface's save verbs, told which view the reader opened. */
 export function withOpenedView(
   saveView: ReactNode,
-  openedId: string | null,
+  opened: OpenedView | null,
 ): ReactNode {
   return (
     saveView &&
-    createElement(OpenedViewContext.Provider, { value: openedId }, saveView)
+    createElement(OpenedViewContext.Provider, { value: opened }, saveView)
   );
 }
 

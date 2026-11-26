@@ -166,6 +166,26 @@ describe("selecting every row of a list", () => {
     ).toBeInTheDocument();
   });
 
+  // The total counts rows the verbs cannot act on, so it is no end to walk to.
+  it("names no target while some matching rows cannot be selected", async () => {
+    const user = userEvent.setup();
+    render(
+      <PagedList
+        total={1000}
+        perRead={50}
+        limit={500}
+        counted
+        inFlight={[]}
+        selectable={(row) => row.value % 2 === 0}
+      />,
+    );
+    await user.click(screen.getByRole("checkbox", { name: "Select Row 02" }));
+    await user.click(screen.getByRole("button", { name: selectAll }));
+    expect(
+      screen.getByText(en["bulk.selecting_other"].replace("{count}", "25")),
+    ).toBeInTheDocument();
+  });
+
   it("drops the progress line once the rows are ticked", async () => {
     const user = userEvent.setup();
     render(<PagedList total={130} perRead={50} limit={500} counted />);

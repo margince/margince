@@ -58,7 +58,7 @@ export const AskedPage: Story = {
   },
 };
 
-// No count: the strip numbers the pages in hand and Next fetches the next.
+// No count: Previous and Next alone, since the pages in hand are not the list.
 export const NotCounted: Story = {
   args: { ...shared, current: 2, lastPage: 2, hasMore: true },
 };

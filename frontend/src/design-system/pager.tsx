@@ -15,8 +15,8 @@ import { Select } from "./select";
  * pages them in memory, the way a list's own footer does.
  *
  * The pager: the pages as numbers, prev/next either side, and the page size on
- * the right. Next stays enabled on the last page while the cursor still has
- * rows to give, which is how the set grows without a total.
+ * the right. While the end is not known it draws Prev and Next alone: the
+ * pages in hand would read as the whole list, and Next fetches the next one.
  */
 export function Pager({
   current,
@@ -31,7 +31,7 @@ export function Pager({
   current: number;
   lastPage: number;
   hasMore: boolean;
-  /** `lastPage` is the list's real end, so it is numbered. Default: no more rows. */
+  /** `lastPage` is the list's real end, so the pages are numbered. Default: no more rows. */
   endKnown?: boolean;
   /** The page being fetched; its number shows as busy until it is drawn. */
   asked?: number;
@@ -55,7 +55,7 @@ export function Pager({
         >
           {t("table.prev")}
         </button>
-        {pagerSlots(current, lastPage, endKnown).map((slot, index) =>
+        {(endKnown ? pagerSlots(current, lastPage) : []).map((slot, index) =>
           typeof slot === "number" ? (
             <button
               type="button"
