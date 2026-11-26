@@ -9,8 +9,8 @@ import "context"
 // through: `tx.Core().LinkSuggestions().Propose(…)`.
 //
 // A proposal attaches nothing. It waits in a review queue until a reader
-// accepts or rejects it, and only an accept files the message. Core makes no
-// suggestion of its own, so the queue holds what units supplied.
+// accepts or rejects it, and only an accept files the message. Core's only
+// suggestions are its "which deal" questions, each for one colleague.
 type LinkSuggestionRepo interface {
 	// Propose suggests one record for one message, under the caller's own rights.
 	//

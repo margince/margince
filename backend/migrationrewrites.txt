@@ -302,3 +302,7 @@
 1795665583_a_zalo_message_can_name_its_channel.down.sql | * | the down migration is a single SELECT 1; the provider remains available to historical foreign keys and no row changes
 1795672904_the_edge_precision_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795675479_an_extension_counts_its_stored_objects.up.sql | * | creates a new empty table and its two text guards; the guards act on later writes only, and no row exists to change
+1795687894_a_link_suggestion_may_ask_one_colleague.down.sql | activity_link_suggestion | deletes only the suggestions Margince itself made, a small set of deal questions
+1795687896_open_which_deal_tasks_move_into_the_link_suggestion_queue.up.sql | *, activity, activity_link_suggestion | the WITH statement is the insert of the moved questions; only open "which deal" question tasks of live full-seat colleagues are read and closed, at most one per conversation and colleague, with one suggestion row per deal each offered
+1795687896_open_which_deal_tasks_move_into_the_link_suggestion_queue.down.sql | activity_link_suggestion | deletes only the suggestions Margince itself made, the same small set of deal questions
+1795687897_the_link_suggestion_producer_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

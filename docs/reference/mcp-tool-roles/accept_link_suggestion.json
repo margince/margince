@@ -1,0 +1,15 @@
+{
+  "tool": "change_activities",
+  "action": "accept_link_suggestion",
+  "verb": "accept_link_suggestion",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

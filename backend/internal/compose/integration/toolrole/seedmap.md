@@ -105,6 +105,7 @@ Each kind of record the role sweep hands a call, the function that seeds it, the
 | `lead_suppression` | `toolrolecompliance_integration_test.go complianceSeeders` |  |  |  |
 | `legal_entity` | `toolroleseed_integration_test.go configSeeders` | `/v1/legal-entities` |  |  |
 | `legal_review` | `toolroleseedsales_integration_test.go salesSeeders` | `/v1/deals/` |  |  |
+| `link_suggestion` | `toolroleseedwork_integration_test.go workSeeders` |  |  |  |
 | `linkable_contact` | `toolroleseedsales_integration_test.go leadSeeders` | `/v1/companies` `/v1/contacts` |  |  |
 | `list` | `toolroleseed_integration_test.go configSeeders` | `/v1/lists` |  |  |
 | `live_channel` | `toolrolecapture_integration_test.go captureSeeders` |  |  |  |

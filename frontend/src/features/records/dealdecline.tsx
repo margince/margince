@@ -6,12 +6,12 @@ import { Badge, Button } from "../../design-system/atoms";
 import { undoAction, useToast } from "../../design-system/toast";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { unitWords } from "../../lib/extensions";
+import { problemMessageOf } from "../../lib/problem";
 import {
   type DealRelevanceInput,
   useDealRelevance,
-} from "../../lib/dealdecline";
-import { unitWords } from "../../lib/extensions";
-import { problemMessageOf } from "../../lib/problem";
+} from "./dealdecline.queries";
 
 type Activity = components["schemas"]["Activity"];
 type Relevance = DealRelevanceInput["relevance"];
