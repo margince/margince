@@ -4,7 +4,7 @@
     1,
     2
   ],
-  "passed": 0,
+  "passed": 2,
   "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
@@ -13,28 +13,32 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "a07831aa1b353c64",
-    "tools": "bb43c0cbad588045",
-    "instructions": "c5c644eee9719be0",
+    "scenario": "e2119f69253f6af6",
+    "tools": "ca0811ab27491c81",
+    "instructions": "d707a123fe53827f",
     "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
-    "ran_at": "2026-11-22T09:14:04Z",
-    "graded_commit": "43efe5d1f04ce6aea932838d625278cfa438cc2f",
-    "graded_at": "2026-11-22T15:30:25Z"
+    "harness": "0fe690d35efcc703",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "ran_at": "2026-11-26T04:29:32Z",
+    "graded_commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "graded_at": "2026-11-26T04:29:32Z"
   },
   "usage": {
-    "input_tokens": 60575,
-    "output_tokens": 4786,
+    "input_tokens": 104901,
+    "output_tokens": 3132,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 541952,
+    "cache_read_input_tokens": 493824,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
   },
   "tools_by_run": [
     {
-      "passed": false,
+      "passed": true,
       "tools": [
         "commit_import",
         "describe_import_format",
@@ -43,40 +47,58 @@
         "read_import",
         "read_import_report",
         "resolve_entities"
+      ],
+      "refused": [
+        "find_records"
       ]
     },
     {
-      "passed": false,
+      "passed": true,
       "tools": [
-        "create_record",
-        "describe_record_fields",
+        "commit_import",
+        "describe_import_format",
         "find_records",
-        "read_workspace",
+        "preview_import",
+        "read_import",
+        "read_import_report",
         "resolve_entities"
+      ],
+      "refused": [
+        "find_records"
       ]
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 12.5,
+      "median": 6,
       "min": 6,
-      "max": 19
+      "max": 6
     },
     "refused": {
-      "median": 7,
+      "median": 1,
       "min": 1,
-      "max": 13
+      "max": 1
+    },
+    "retries": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
     },
     "prompt_tokens": {
-      "median": 301263.5,
-      "min": 232104,
-      "max": 370423
+      "median": 299362.5,
+      "min": 285989,
+      "max": 312736
     },
     "output_tokens": {
-      "median": 2393,
-      "min": 1582,
-      "max": 3204
+      "median": 1566,
+      "min": 1518,
+      "max": 1614
     }
   }
 }
