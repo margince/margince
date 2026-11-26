@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 355 |
-| Columns | 4359 |
+| Columns | 4360 |
 | Foreign keys | 618 |
 | Owning areas | 40 |
 
@@ -209,7 +209,7 @@ erDiagram
 | [`capture_counterparty_hold`](capture.md#capture_counterparty_hold) | capture | 6 | 0 |
 | [`capture_exclusion`](capture.md#capture_exclusion) | capture | 8 | 0 |
 | [`capture_freemail_domain`](capture.md#capture_freemail_domain) | capture | 4 | 0 |
-| [`capture_import`](capture.md#capture_import) | capture | 15 | 0 |
+| [`capture_import`](capture.md#capture_import) | capture | 16 | 0 |
 | [`capture_owner_identity`](capture.md#capture_owner_identity) | capture | 7 | 0 |
 | [`capture_owner_identity_withdrawn`](capture.md#capture_owner_identity_withdrawn) | capture | 10 | 0 |
 | [`capture_party_source`](capture.md#capture_party_source) | capture | 12 | 0 |

@@ -1163,6 +1163,22 @@ func (stubs) UpdateWhatsAppConnectionVisibility(w nethttp.ResponseWriter, r *net
 	httperr.NotImplemented(w, r, "UpdateWhatsAppConnectionVisibility")
 }
 
+func (stubs) ListZaloOAConnections(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListZaloOAConnections")
+}
+
+func (stubs) CreateZaloOAConnection(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateZaloOAConnection")
+}
+
+func (stubs) DisconnectZaloOAConnection(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DisconnectZaloOAConnection")
+}
+
+func (stubs) UpdateZaloOAConnectionVisibility(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateZaloOAConnectionVisibility")
+}
+
 func (stubs) DisconnectChannel(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DisconnectChannel")
 }
@@ -1181,6 +1197,10 @@ func (stubs) VerifyWhatsAppWebhook(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) ReceiveWhatsAppWebhook(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ReceiveWhatsAppWebhook")
+}
+
+func (stubs) ReceiveZaloOAWebhook(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReceiveZaloOAWebhook")
 }
 
 func (stubs) UnlinkChannel(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
@@ -2617,6 +2637,18 @@ func (stubs) RotateAgentClientSecret(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) GetAuthenticationPolicy(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAuthenticationPolicy")
+}
+
+func (stubs) DeleteGoogleDirectory(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DeleteGoogleDirectory")
+}
+
+func (stubs) GetGoogleDirectory(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetGoogleDirectory")
+}
+
+func (stubs) SetGoogleDirectory(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SetGoogleDirectory")
 }
 
 func (stubs) GetInstallationConfiguration(w nethttp.ResponseWriter, r *nethttp.Request) {

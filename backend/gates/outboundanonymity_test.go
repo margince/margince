@@ -59,14 +59,15 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	// API key, or a service account's signed assertion — which is the account
 	// the provider bills, rate-limits and revokes; an agent beside it names
 	// software the provider has no lever over.
-	"internal/modules/ai/anthropic.go:func send":            "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/gemini.go:func post":               "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/ollama.go:func post":               "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",
-	"internal/modules/ai/openai.go:func postRaw":            "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/openaicompat.go:func postFor":      "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/decisionwire.go:func Decide":       "carries the customer's own provider key to a decision endpoint, or reaches a decision runner the operator runs on a host they configured — either way the other end already knows what is calling it",
-	"internal/modules/ai/decisionprobe.go:func wireProbe":   "the key test's empty decision request: the same caller as Decide, carrying the customer's own key to the endpoint they bound, or reaching a runner they configured",
-	"internal/modules/ai/vertexcredential.go:func exchange": "presents an assertion signed by the customer's own service account, which is the identity Google checks",
+	"internal/modules/ai/anthropic.go:func send":                "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/gemini.go:func post":                   "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/ollama.go:func post":                   "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",
+	"internal/modules/ai/openai.go:func postRaw":                "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/openaicompat.go:func postFor":          "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/decisionwire.go:func Decide":           "carries the customer's own provider key to a decision endpoint, or reaches a decision runner the operator runs on a host they configured — either way the other end already knows what is calling it",
+	"internal/modules/ai/decisionprobe.go:func wireProbe":       "the key test's empty decision request: the same caller as Decide, carrying the customer's own key to the endpoint they bound, or reaching a runner they configured",
+	"internal/platform/googlejwt/exchange.go:func Exchange":     "presents an assertion signed by the customer's own service account, which is the identity Google checks",
+	"internal/modules/identity/googlegroups.go:func groupsPage": "carries a token minted for the customer's own service account, which names the caller to Google more precisely than an agent could",
 	// One builder for all five vendors' model-list endpoint, on the same ground
 	// as their completion calls above: the request that asks a vendor what it
 	// serves carries the same credential as the request that then calls it.
@@ -85,6 +86,7 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"internal/modules/capture/graph/sendclient.go:func SendMIME":    "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/graphcal/client.go:func get":          "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/oauthflow/oauthflow.go:func token":    "exchanges a code against a token endpoint using this app's registered client id, which is the identity that endpoint checks",
+	"internal/modules/capture/zalo/client.go:func request":          "calls Zalo under the Official Account's own app id and tokens, and that account IS the identity Zalo checks and revokes",
 	"internal/modules/capture/whatsapp/graph.go:func do":            "calls the Graph API under the business's own system-user token, and that account IS the identity Meta bills and revokes",
 	"internal/modules/capture/telegram/api.go:func request":         "calls a bot API under the bot's own token, and the bot IS the identity there",
 	"internal/modules/capture/telegram/sendfiles.go:func SendFiles": "calls a bot API under the bot's own token, and the bot IS the identity there",

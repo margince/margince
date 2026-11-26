@@ -14581,6 +14581,57 @@ func (e GmailSignatureImportState) Valid() bool {
 	}
 }
 
+// Defines values for GoogleDirectoryStatusLastReason.
+const (
+	GoogleDirectoryStatusLastReasonBadAnswer         GoogleDirectoryStatusLastReason = "bad_answer"
+	GoogleDirectoryStatusLastReasonDelegationRefused GoogleDirectoryStatusLastReason = "delegation_refused"
+	GoogleDirectoryStatusLastReasonKeyInvalid        GoogleDirectoryStatusLastReason = "key_invalid"
+	GoogleDirectoryStatusLastReasonMemberNotFound    GoogleDirectoryStatusLastReason = "member_not_found"
+	GoogleDirectoryStatusLastReasonPermissionDenied  GoogleDirectoryStatusLastReason = "permission_denied"
+	GoogleDirectoryStatusLastReasonTimeout           GoogleDirectoryStatusLastReason = "timeout"
+	GoogleDirectoryStatusLastReasonUnavailable       GoogleDirectoryStatusLastReason = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the GoogleDirectoryStatusLastReason enum.
+func (e GoogleDirectoryStatusLastReason) Valid() bool {
+	switch e {
+	case GoogleDirectoryStatusLastReasonBadAnswer:
+		return true
+	case GoogleDirectoryStatusLastReasonDelegationRefused:
+		return true
+	case GoogleDirectoryStatusLastReasonKeyInvalid:
+		return true
+	case GoogleDirectoryStatusLastReasonMemberNotFound:
+		return true
+	case GoogleDirectoryStatusLastReasonPermissionDenied:
+		return true
+	case GoogleDirectoryStatusLastReasonTimeout:
+		return true
+	case GoogleDirectoryStatusLastReasonUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GoogleDirectoryStatusLastResult.
+const (
+	GoogleDirectoryStatusLastResultFailed GoogleDirectoryStatusLastResult = "failed"
+	GoogleDirectoryStatusLastResultOk     GoogleDirectoryStatusLastResult = "ok"
+)
+
+// Valid indicates whether the value is a known member of the GoogleDirectoryStatusLastResult enum.
+func (e GoogleDirectoryStatusLastResult) Valid() bool {
+	switch e {
+	case GoogleDirectoryStatusLastResultFailed:
+		return true
+	case GoogleDirectoryStatusLastResultOk:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -29983,6 +30034,45 @@ func (e WrittenBy) Valid() bool {
 	}
 }
 
+// Defines values for ZaloOAConnectionMailVisibility.
+const (
+	ZaloOAConnectionMailVisibilityHeld   ZaloOAConnectionMailVisibility = "held"
+	ZaloOAConnectionMailVisibilityShared ZaloOAConnectionMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the ZaloOAConnectionMailVisibility enum.
+func (e ZaloOAConnectionMailVisibility) Valid() bool {
+	switch e {
+	case ZaloOAConnectionMailVisibilityHeld:
+		return true
+	case ZaloOAConnectionMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ZaloOAConnectionStatus.
+const (
+	ZaloOAConnectionStatusConnected      ZaloOAConnectionStatus = "connected"
+	ZaloOAConnectionStatusDisconnected   ZaloOAConnectionStatus = "disconnected"
+	ZaloOAConnectionStatusReauthRequired ZaloOAConnectionStatus = "reauth_required"
+)
+
+// Valid indicates whether the value is a known member of the ZaloOAConnectionStatus enum.
+func (e ZaloOAConnectionStatus) Valid() bool {
+	switch e {
+	case ZaloOAConnectionStatusConnected:
+		return true
+	case ZaloOAConnectionStatusDisconnected:
+		return true
+	case ZaloOAConnectionStatusReauthRequired:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AnchorRecordType.
 const (
 	AnchorRecordTypeActivity AnchorRecordType = "activity"
@@ -42286,8 +42376,11 @@ type Company360 struct {
 	// AttentionWithheld The reader may not read this account's activities, so no `attention` was derived on any deal or project row. The rows themselves are still listed and still true — this says the reasons behind them are missing, which a card must show rather than let an unexplained row read as a settled one.
 	AttentionWithheld *bool `json:"attention_withheld,omitempty"`
 
-	// BillingContacts Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld.
+	// BillingContacts Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`. A contact outside the caller's row scope is not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
 	BillingContacts *[]BillingContact `json:"billing_contacts,omitempty"`
+
+	// BillingContactsHidden The billing entries the caller's contact row scope withheld from `billing_contacts`. Absent exactly when `billing_contacts` is.
+	BillingContactsHidden *HiddenRecords `json:"billing_contacts_hidden,omitempty"`
 
 	// Company A company. Mirrors the `company` table.
 	Company  Company `json:"company"`
@@ -42295,6 +42388,9 @@ type Company360 struct {
 		Data []Company360Contact `json:"data"`
 		Page PageInfo            `json:"page"`
 	} `json:"contacts,omitempty"`
+
+	// ContactsHidden The account's current employees the caller may not see, by the contact row scope or by the employment tie's own read scope. Absent exactly when `contacts` is.
+	ContactsHidden *HiddenRecords `json:"contacts_hidden,omitempty"`
 
 	// Deals The account's open deals plus the two lifetime figures the header needs.
 	Deals *Company360Deals `json:"deals,omitempty"`
@@ -43744,9 +43840,12 @@ type CompanyFactListResponse struct {
 // account is healthy on the strength of a missing connector.
 type CompanyFinanceSummary struct {
 	// BillingContacts Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
-	// Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
-	BillingContacts *[]BillingContact  `json:"billing_contacts,omitempty"`
-	CompanyId       openapi_types.UUID `json:"company_id"`
+	// Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
+	BillingContacts *[]BillingContact `json:"billing_contacts,omitempty"`
+
+	// BillingContactsHidden The billing entries the caller's contact row scope withheld from `billing_contacts`, the same answer the company page gives. Absent exactly when `billing_contacts` is.
+	BillingContactsHidden *HiddenRecords     `json:"billing_contacts_hidden,omitempty"`
+	CompanyId             openapi_types.UUID `json:"company_id"`
 
 	// CoverageEnd The issue date of the NEWEST mirrored invoice. On a live account it is recent and the trailing windows below mean what they say; on an account that stopped buying it is the answer to "when did this end", and it is what makes a 365-day figure readable as the historical number it is.
 	CoverageEnd *openapi_types.Date `json:"coverage_end,omitempty"`
@@ -49078,6 +49177,27 @@ type CreateWorkspaceEmailDomainRequest struct {
 	Domain string `json:"domain"`
 }
 
+// CreateZaloOAConnectionRequest defines model for CreateZaloOAConnectionRequest.
+type CreateZaloOAConnectionRequest struct {
+	// AccessToken The Official Account's access token. Sealed into the credential store on arrival and never echoed back.
+	AccessToken string `json:"accessToken"`
+	AppId       string `json:"appId"`
+
+	// AppSecret The Zalo app's secret key, used to renew the tokens. Sealed into the credential store on arrival and never echoed back.
+	AppSecret   string `json:"appSecret"`
+	DisplayName string `json:"displayName"`
+	OaId        string `json:"oaId"`
+
+	// OaSecretKey The OA secret key that signs each webhook event. Sealed into the credential store on arrival and never echoed back.
+	OaSecretKey string `json:"oaSecretKey"`
+
+	// ReaderTeamId The team that reads the account's messages. The account's seat starts `held`: only this team reads them until an admin shares them.
+	ReaderTeamId openapi_types.UUID `json:"readerTeamId"`
+
+	// RefreshToken The Official Account's refresh token. It is single use; the renewal job replaces it. Sealed into the credential store on arrival and never echoed back.
+	RefreshToken string `json:"refreshToken"`
+}
+
 // CustomField A workspace-defined runtime field on an existing core object. Mirrors the
 // `custom_field` catalog table — the system-of-record for every runtime-added
 // column (CUSTOM-FIELDS-SCHEMA-1). `column_name` is the physical `cf_`-prefixed
@@ -53915,6 +54035,36 @@ type GmailSignatureImport struct {
 // GmailSignatureImportState defines model for GmailSignatureImport.State.
 type GmailSignatureImportState string
 
+// GoogleDirectoryInput defines model for GoogleDirectoryInput.
+type GoogleDirectoryInput struct {
+	// AdminSubject The Workspace admin the service account acts for. The Directory API refuses a delegated read that names no admin.
+	AdminSubject *openapi_types.Email `json:"admin_subject,omitempty"`
+
+	// ServiceAccountJson The service account's JSON key file, as Google issues it.
+	ServiceAccountJson *string `json:"service_account_json,omitempty"`
+}
+
+// GoogleDirectoryStatus Whether the Google directory credential is stored and how the newest check went. Carries neither the key nor the admin address.
+type GoogleDirectoryStatus struct {
+	// Configured A credential is stored, or a boot source sets one.
+	Configured bool `json:"configured"`
+
+	// LastCheckedAt When the newest check ran. Absent before any check.
+	LastCheckedAt *time.Time `json:"last_checked_at,omitempty"`
+
+	// LastReason Why the newest check failed, present only when `last_result` is `failed`. A closed vocabulary, never Google's own words. `delegation_refused` is the common setup mistake: the service account's client ID has no domain-wide delegation for the read-only group scope, or the admin address is wrong.
+	LastReason *GoogleDirectoryStatusLastReason `json:"last_reason,omitempty"`
+
+	// LastResult How the newest check ended. Absent before any check.
+	LastResult *GoogleDirectoryStatusLastResult `json:"last_result,omitempty"`
+}
+
+// GoogleDirectoryStatusLastReason Why the newest check failed, present only when `last_result` is `failed`. A closed vocabulary, never Google's own words. `delegation_refused` is the common setup mistake: the service account's client ID has no domain-wide delegation for the read-only group scope, or the admin address is wrong.
+type GoogleDirectoryStatusLastReason string
+
+// GoogleDirectoryStatusLastResult How the newest check ended. Absent before any check.
+type GoogleDirectoryStatusLastResult string
+
 // GrowthFitBand How well this company fits what we sell (DOSS-PARAM-8).
 //
 // `unknown` is the ABSTENTION, not a low score. It says the assembly did not have
@@ -54501,6 +54651,21 @@ type HiddenBacklogRows struct {
 
 // HiddenBacklogRowsRule Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
 type HiddenBacklogRowsRule string
+
+// HiddenRecordHolder defines model for HiddenRecordHolder.
+type HiddenRecordHolder struct {
+	DisplayName string             `json:"display_name"`
+	UserId      openapi_types.UUID `json:"user_id"`
+}
+
+// HiddenRecords What the caller's row scope withheld from one list on a record page, so a short list never reads as the whole one. It states how many entries were withheld and which live colleagues own them, so the reader knows whom to ask. A withheld record's name, value and every other field stay withheld. Count 0 with no holders when nothing was withheld.
+type HiddenRecords struct {
+	// Count How many entries the list would have shown under an unbounded scope and did not. It includes entries owned by a colleague who has left, who is not in `holders`.
+	Count int `json:"count" minimum:"0"`
+
+	// Holders The live colleagues who own at least one withheld entry, each once, by name.
+	Holders []HiddenRecordHolder `json:"holders"`
+}
 
 // HistoryEdge Set when this history entry changed a LINK between two records rather than a field
 // of this one, and null on every ordinary row.
@@ -77071,6 +77236,61 @@ type WorkspaceQueryResult struct {
 // deciding how much to trust a sentence needs to know which wrote it.
 type WrittenBy string
 
+// ZaloOAConnection One Zalo Official Account connected to the workspace. No secret is part of it.
+type ZaloOAConnection struct {
+	// AppId The Zalo app that serves the Official Account.
+	AppId       string             `json:"appId"`
+	ConnectedAt time.Time          `json:"connectedAt"`
+	DisplayName string             `json:"displayName"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// MailVisibility What the seat asks of the account's messages. Changed with `PATCH /channel-connections/zalo-oa/{id}/visibility`.
+	MailVisibility *ZaloOAConnectionMailVisibility `json:"mailVisibility,omitempty"`
+
+	// OaId Zalo's id of the Official Account, the key a webhook event is matched to its connection by.
+	OaId string `json:"oaId"`
+
+	// ReaderTeamId The team that reads the account's messages.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
+
+	// SeatId The seat the account's messages file through.
+	SeatId *openapi_types.UUID `json:"seatId,omitempty"`
+
+	// Status `reauth_required` when Zalo refused the refresh token, so the Official Account must be disconnected and connected again with fresh tokens.
+	Status ZaloOAConnectionStatus `json:"status"`
+}
+
+// ZaloOAConnectionMailVisibility What the seat asks of the account's messages. Changed with `PATCH /channel-connections/zalo-oa/{id}/visibility`.
+type ZaloOAConnectionMailVisibility string
+
+// ZaloOAConnectionStatus `reauth_required` when Zalo refused the refresh token, so the Official Account must be disconnected and connected again with fresh tokens.
+type ZaloOAConnectionStatus string
+
+// ZaloOAConnectionListResponse defines model for ZaloOAConnectionListResponse.
+type ZaloOAConnectionListResponse struct {
+	Data []ZaloOAConnection `json:"data"`
+}
+
+// ZaloWebhookEvent One event from Zalo, as the signature covers it. The route reads the raw body and the server decodes it, so only the fields every event carries are named here.
+type ZaloWebhookEvent struct {
+	AppId *string `json:"app_id,omitempty"`
+
+	// EventName For example `user_send_text` or `oa_send_text`.
+	EventName string `json:"event_name"`
+
+	// Timestamp Milliseconds since the epoch, as the text the signature covers.
+	Timestamp string `json:"timestamp"`
+}
+
+// ZaloWebhookReceipt defines model for ZaloWebhookReceipt.
+type ZaloWebhookReceipt struct {
+	// Skipped Events not kept: a follow, unfollow, seen or reaction event, an Official Account that is not connected, an erased customer, or an event that could not be decoded.
+	Skipped int `json:"skipped" minimum:"0"`
+
+	// Stored Messages kept and queued for filing. A retried delivery counts again and is stored once.
+	Stored int `json:"stored" minimum:"0"`
+}
+
 // AiWritten defines model for AiWritten.
 type AiWritten = bool
 
@@ -87104,6 +87324,12 @@ type CreateWhatsAppConnectionJSONRequestBody = CreateWhatsAppConnectionRequest
 // UpdateWhatsAppConnectionVisibilityJSONRequestBody defines body for UpdateWhatsAppConnectionVisibility for application/json ContentType.
 type UpdateWhatsAppConnectionVisibilityJSONRequestBody = UpdateTelegramBusinessConnectionVisibilityRequest
 
+// CreateZaloOAConnectionJSONRequestBody defines body for CreateZaloOAConnection for application/json ContentType.
+type CreateZaloOAConnectionJSONRequestBody = CreateZaloOAConnectionRequest
+
+// UpdateZaloOAConnectionVisibilityJSONRequestBody defines body for UpdateZaloOAConnectionVisibility for application/json ContentType.
+type UpdateZaloOAConnectionVisibilityJSONRequestBody = UpdateTelegramBusinessConnectionVisibilityRequest
+
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
 
@@ -87112,6 +87338,9 @@ type ReceiveDispactChannelEventJSONRequestBody = DispactChannelEvent
 
 // ReceiveWhatsAppWebhookJSONRequestBody defines body for ReceiveWhatsAppWebhook for application/json ContentType.
 type ReceiveWhatsAppWebhookJSONRequestBody = WhatsAppWebhookDelivery
+
+// ReceiveZaloOAWebhookJSONRequestBody defines body for ReceiveZaloOAWebhook for application/json ContentType.
+type ReceiveZaloOAWebhookJSONRequestBody = ZaloWebhookEvent
 
 // SetChannelVerbosityJSONRequestBody defines body for SetChannelVerbosity for application/json ContentType.
 type SetChannelVerbosityJSONRequestBody = SetChannelVerbosityRequest
@@ -87544,6 +87773,9 @@ type RegisterAgentClientJSONRequestBody = RegisterAgentClientRequest
 
 // UpdateAgentClientJSONRequestBody defines body for UpdateAgentClient for application/json ContentType.
 type UpdateAgentClientJSONRequestBody = UpdateAgentClientRequest
+
+// SetGoogleDirectoryJSONRequestBody defines body for SetGoogleDirectory for application/json ContentType.
+type SetGoogleDirectoryJSONRequestBody = GoogleDirectoryInput
 
 // SetOauthAppJSONRequestBody defines body for SetOauthApp for application/json ContentType.
 type SetOauthAppJSONRequestBody = ConnectorAppInput
@@ -102754,6 +102986,18 @@ type ServerInterface interface {
 	// Change who may read a WhatsApp number's messages.
 	// (PATCH /channel-connections/whatsapp/{id}/visibility)
 	UpdateWhatsAppConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
+	// List the Zalo Official Accounts connected to the workspace.
+	// (GET /channel-connections/zalo-oa)
+	ListZaloOAConnections(w http.ResponseWriter, r *http.Request)
+	// Connect a Zalo Official Account to the workspace.
+	// (POST /channel-connections/zalo-oa)
+	CreateZaloOAConnection(w http.ResponseWriter, r *http.Request)
+	// Disconnect a Zalo Official Account from the workspace.
+	// (DELETE /channel-connections/zalo-oa/{id})
+	DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request, id Id)
+	// Change who may read a Zalo Official Account's messages.
+	// (PATCH /channel-connections/zalo-oa/{id}/visibility)
+	UpdateZaloOAConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
 	// Disconnect a messaging channel (archives the binding and destroys the credential).
 	// (DELETE /channel-connections/{id})
 	DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id)
@@ -102769,6 +103013,9 @@ type ServerInterface interface {
 	// Take a signed WhatsApp Business webhook delivery (anonymous).
 	// (POST /channel-events/whatsapp)
 	ReceiveWhatsAppWebhook(w http.ResponseWriter, r *http.Request)
+	// Take a signed Zalo Official Account webhook event (anonymous).
+	// (POST /channel-events/zalo-oa)
+	ReceiveZaloOAWebhook(w http.ResponseWriter, r *http.Request)
 	// Stop syncing a record with its chat channel.
 	// (DELETE /channel-links/{record_type}/{id})
 	UnlinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
@@ -103846,6 +104093,15 @@ type ServerInterface interface {
 	// Which sign-in methods this installation offers.
 	// (GET /installation/authentication-policy)
 	GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request)
+	// Remove the Google directory credential.
+	// (DELETE /installation/authentication-policy/google-directory)
+	DeleteGoogleDirectory(w http.ResponseWriter, r *http.Request)
+	// Whether the Google directory connection is set up, and how its last check went.
+	// (GET /installation/authentication-policy/google-directory)
+	GetGoogleDirectory(w http.ResponseWriter, r *http.Request)
+	// Store or replace the Google directory credential.
+	// (PUT /installation/authentication-policy/google-directory)
+	SetGoogleDirectory(w http.ResponseWriter, r *http.Request)
 	// Every setting the programs read, with its value and source (admin/ops).
 	// (GET /installation/configuration)
 	GetInstallationConfiguration(w http.ResponseWriter, r *http.Request)
@@ -107083,6 +107339,30 @@ func (_ Unimplemented) UpdateWhatsAppConnectionVisibility(w http.ResponseWriter,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the Zalo Official Accounts connected to the workspace.
+// (GET /channel-connections/zalo-oa)
+func (_ Unimplemented) ListZaloOAConnections(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Connect a Zalo Official Account to the workspace.
+// (POST /channel-connections/zalo-oa)
+func (_ Unimplemented) CreateZaloOAConnection(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disconnect a Zalo Official Account from the workspace.
+// (DELETE /channel-connections/zalo-oa/{id})
+func (_ Unimplemented) DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change who may read a Zalo Official Account's messages.
+// (PATCH /channel-connections/zalo-oa/{id}/visibility)
+func (_ Unimplemented) UpdateZaloOAConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Disconnect a messaging channel (archives the binding and destroys the credential).
 // (DELETE /channel-connections/{id})
 func (_ Unimplemented) DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id) {
@@ -107110,6 +107390,12 @@ func (_ Unimplemented) VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Requ
 // Take a signed WhatsApp Business webhook delivery (anonymous).
 // (POST /channel-events/whatsapp)
 func (_ Unimplemented) ReceiveWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take a signed Zalo Official Account webhook event (anonymous).
+// (POST /channel-events/zalo-oa)
+func (_ Unimplemented) ReceiveZaloOAWebhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -109264,6 +109550,24 @@ func (_ Unimplemented) RotateAgentClientSecret(w http.ResponseWriter, r *http.Re
 // Which sign-in methods this installation offers.
 // (GET /installation/authentication-policy)
 func (_ Unimplemented) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove the Google directory credential.
+// (DELETE /installation/authentication-policy/google-directory)
+func (_ Unimplemented) DeleteGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether the Google directory connection is set up, and how its last check went.
+// (GET /installation/authentication-policy/google-directory)
+func (_ Unimplemented) GetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Store or replace the Google directory credential.
+// (PUT /installation/authentication-policy/google-directory)
+func (_ Unimplemented) SetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -124888,6 +125192,110 @@ func (siw *ServerInterfaceWrapper) UpdateWhatsAppConnectionVisibility(w http.Res
 	handler.ServeHTTP(w, r)
 }
 
+// ListZaloOAConnections operation middleware
+func (siw *ServerInterfaceWrapper) ListZaloOAConnections(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListZaloOAConnections(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateZaloOAConnection operation middleware
+func (siw *ServerInterfaceWrapper) CreateZaloOAConnection(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateZaloOAConnection(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectZaloOAConnection operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectZaloOAConnection(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateZaloOAConnectionVisibility operation middleware
+func (siw *ServerInterfaceWrapper) UpdateZaloOAConnectionVisibility(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateZaloOAConnectionVisibility(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DisconnectChannel operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectChannel(w http.ResponseWriter, r *http.Request) {
 
@@ -125032,6 +125440,20 @@ func (siw *ServerInterfaceWrapper) ReceiveWhatsAppWebhook(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReceiveWhatsAppWebhook(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReceiveZaloOAWebhook operation middleware
+func (siw *ServerInterfaceWrapper) ReceiveZaloOAWebhook(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReceiveZaloOAWebhook(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -141677,6 +142099,66 @@ func (siw *ServerInterfaceWrapper) GetAuthenticationPolicy(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAuthenticationPolicy(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteGoogleDirectory operation middleware
+func (siw *ServerInterfaceWrapper) DeleteGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteGoogleDirectory(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetGoogleDirectory operation middleware
+func (siw *ServerInterfaceWrapper) GetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetGoogleDirectory(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetGoogleDirectory operation middleware
+func (siw *ServerInterfaceWrapper) SetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetGoogleDirectory(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -163979,6 +164461,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/channel-connections/whatsapp/{id}/visibility", wrapper.UpdateWhatsAppConnectionVisibility)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-connections/zalo-oa", wrapper.ListZaloOAConnections)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-connections/zalo-oa", wrapper.CreateZaloOAConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/channel-connections/zalo-oa/{id}", wrapper.DisconnectZaloOAConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/channel-connections/zalo-oa/{id}/visibility", wrapper.UpdateZaloOAConnectionVisibility)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-connections/{id}", wrapper.DisconnectChannel)
 	})
 	r.Group(func(r chi.Router) {
@@ -163992,6 +164486,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-events/whatsapp", wrapper.ReceiveWhatsAppWebhook)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-events/zalo-oa", wrapper.ReceiveZaloOAWebhook)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.UnlinkChannel)
@@ -165069,6 +165566,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/authentication-policy", wrapper.GetAuthenticationPolicy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/installation/authentication-policy/google-directory", wrapper.DeleteGoogleDirectory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/authentication-policy/google-directory", wrapper.GetGoogleDirectory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/installation/authentication-policy/google-directory", wrapper.SetGoogleDirectory)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/configuration", wrapper.GetInstallationConfiguration)

@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/capture/whatsapp"
+	"github.com/margince/margince/backend/internal/modules/capture/zalo"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -68,7 +69,7 @@ func connectedBusinessLinkTx(ctx context.Context, tx pgx.Tx, bot ids.UUID, busin
 
 // chatLinkProviders are the providers whose approved account rows file a stored
 // message through a seat.
-const chatLinkProviders = `('` + telegram.BusinessProvider + `', '` + whatsapp.Provider + `')`
+const chatLinkProviders = `('` + telegram.BusinessProvider + `', '` + whatsapp.Provider + `', '` + zalo.Provider + `')`
 
 // LockLiveChatLinkTx reads the account and ownership of the connection a stored
 // message was admitted through. It holds the row FOR SHARE until the caller's

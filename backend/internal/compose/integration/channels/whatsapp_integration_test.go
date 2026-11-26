@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -280,13 +279,7 @@ func TestAHeldNumberKeepsMessagesFromColleaguesAndSharingOpensTheNextOne(t *test
 	if status := c.Call(t, http.MethodPatch, path, integration.AnyMap{"mail_visibility": "shared", "confirm": true}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("shared without the workspace opt-in → %d, want 422", status)
 	}
-	on := true
-	settings := capture.NewSettings(compose.NewSettingsStore(c.Pool), compose.StoredConfig(c.Pool))
-	actor, _ := principal.Actor(c.adminCtx(t))
-	actor.Permissions = integration.AdminPerms
-	if _, err := settings.Update(principal.WithActor(c.adminCtx(t), actor), capture.SettingsPatch{SharedPostureAllowed: &on}); err != nil {
-		t.Fatalf("opting the workspace in: %v", err)
-	}
+	c.allowSharedPosture(t)
 	var changed struct{ MailVisibility string }
 	if status := c.Call(t, http.MethodPatch, path, integration.AnyMap{"mail_visibility": "shared", "confirm": true}, nil, &changed); status != http.StatusOK || changed.MailVisibility != "shared" {
 		t.Fatalf("sharing → %d %q, want 200 shared", status, changed.MailVisibility)

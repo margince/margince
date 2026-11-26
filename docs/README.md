@@ -112,10 +112,10 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [set-up-windows-wsl-development.md](how-to/set-up-windows-wsl-development.md): work on the code
   on Windows, in WSL.
 - [move-frontend-code.md](how-to/move-frontend-code.md): put a frontend file in the folder that owns it.
-- [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
-  and calendar capture need.
+- [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up mailbox and calendar capture providers.
 - [connect-a-shared-mailbox.md](how-to/connect-a-shared-mailbox.md): set up IMAP, Microsoft 365 or Google
   Workspace for a mailbox one team reads, and connect it.
+- [connect-google-groups.md](how-to/connect-google-groups.md): set up Google lookups for the role map.
 - [measure-mail-import.md](how-to/measure-mail-import.md): measure a mail import.
 - [profile-mail-import.md](how-to/profile-mail-import.md): profile a mail import.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local model on Ollama or vLLM.
@@ -126,7 +126,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [set-up-outbound-mail.md](how-to/set-up-outbound-mail.md): which mail goes out through which server.
 - [connect-telegram.md](how-to/connect-telegram.md): set up the Telegram bot, and read what each error means.
 - [connect-dispact.md](how-to/connect-dispact.md): connect the Dispact bot, and read what each error means.
-- [connect-whatsapp.md](how-to/connect-whatsapp.md): connect a WhatsApp Business number, and set up its webhook.
+- [connect-whatsapp.md](how-to/connect-whatsapp.md): connect a WhatsApp Business number, and set up its webhook. Zalo is [connect-zalo-oa.md](how-to/connect-zalo-oa.md).
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md): import a CSV file of
   companies over MCP or REST.
 - [run-import-jobs.md](how-to/run-import-jobs.md): run the import worker, and read an import that

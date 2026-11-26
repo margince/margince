@@ -123,7 +123,7 @@ func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, 
 		Record: func(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
 			return c.recordOnTimeline(ctx, tx, decision)
 		},
-		AsOwner: ownersAgentTx(c.users, decision.owner, marginceActorID),
+		AsOwner: agentForTx(c.users, decision.owner, marginceActorID),
 	})
 }
 
