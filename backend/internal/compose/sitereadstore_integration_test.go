@@ -114,7 +114,7 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 
 	// Finish records the whole crawl report in one terminal write.
 	stopped := "page_cap"
-	proposal := ids.NewV7()
+	proposal := stageApprovalForTask(t, e).UUID
 	err = store.FinishSiteRead(worker, read.ID, contacts.FinishSiteReadInput{
 		Status: "partial",
 		Pages: []contacts.SiteReadPage{
