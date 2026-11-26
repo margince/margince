@@ -10,11 +10,11 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 32 | 423 | 30 | 38 | 18 |
+| [activities](activities.md) | 33 | 425 | 30 | 39 | 19 |
 | [agents](agents.md) | 3 | 28 | 0 | 5 | 1 |
 | [ai](ai.md) | 12 | 194 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 24 | 0 | 2 | 0 |
-| [approvals](approvals.md) | 3 | 53 | 4 | 8 | 2 |
+| [approvals](approvals.md) | 3 | 53 | 6 | 8 | 2 |
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
 | [assurance](assurance.md) | 9 | 86 | 0 | 7 | 5 |
 | [automation](automation.md) | 3 | 32 | 1 | 2 | 0 |
@@ -25,7 +25,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [comms](comms.md) | 1 | 47 | 5 | 6 | 1 |
 | [compose](compose.md) | 42 | 390 | 3 | 30 | 26 |
 | [consent](consent.md) | 23 | 319 | 2 | 42 | 23 |
-| [contacts](contacts.md) | 50 | 730 | 75 | 36 | 13 |
+| [contacts](contacts.md) | 51 | 732 | 75 | 37 | 14 |
 | [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |

@@ -108,7 +108,7 @@ func (r TranscriptRead) Live() bool {
 }
 
 const transcriptReadColumns = `id, activity_id, status, status_detail, line_count,
-	proposal_ids, outcome, requested_by, started_at, finished_at, created_at, attempt, attempt_at`
+	` + transcriptReadProposalsSQL + `, outcome, requested_by, started_at, finished_at, created_at, attempt, attempt_at`
 
 func scanTranscriptRead(r pgx.Row) (TranscriptRead, error) {
 	var read TranscriptRead

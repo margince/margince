@@ -199,10 +199,6 @@ func (s *Store) FinishSiteRead(ctx context.Context, readID ids.UUID, in FinishSi
 	if err != nil {
 		return fmt.Errorf("contacts: site-read skips: %w", err)
 	}
-	proposals := in.ProposalIDs
-	if proposals == nil {
-		proposals = []ids.UUID{} // the column is NOT NULL: no proposals is the empty set
-	}
 	profileFields, err := marshalSiteReadList(in.ProfileFields)
 	if err != nil {
 		return fmt.Errorf("contacts: site-read profile fields: %w", err)
@@ -227,17 +223,17 @@ func (s *Store) FinishSiteRead(ctx context.Context, readID ids.UUID, in FinishSi
 		finished, err := scanSiteRead(tx.QueryRow(ctx, `
 			UPDATE site_read
 			SET status = $2, pages = $3, skipped = $4, stopped_reason = $5,
-			    fact_count = $6, proposal_ids = $7, profile_fields = $8, facts = $9,
-			    contacts = $10, warnings = $11, proposal_hash = $12,
-			    legal_entities = $14,
-			    status_code = NULLIF($15, ''), status_detail = NULLIF($16, ''),
-			    next_attempt_at = $17,
-			    draft_version = draft_version + 1, pages_read = $13, phase = NULL,
+			    fact_count = $6, profile_fields = $7, facts = $8,
+			    contacts = $9, warnings = $10, proposal_hash = $11,
+			    legal_entities = $13,
+			    status_code = NULLIF($14, ''), status_detail = NULLIF($15, ''),
+			    next_attempt_at = $16,
+			    draft_version = draft_version + 1, pages_read = $12, phase = NULL,
 			    finished_at = now(), updated_at = now()
 			WHERE id = $1 AND status = 'running'
-			  AND ($18::timestamptz IS NULL OR started_at = $18)
+			  AND ($17::timestamptz IS NULL OR started_at = $17)
 			RETURNING `+siteReadColumns,
-			readID, in.Status, pages, skipped, in.StoppedReason, in.FactCount, proposals,
+			readID, in.Status, pages, skipped, in.StoppedReason, in.FactCount,
 			profileFields, facts, contacts, warnings, in.ProposalHash, len(in.Pages), entities,
 			in.StatusCode, in.StatusDetail, in.NextAttemptAt, in.ClaimedAt))
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -246,6 +242,30 @@ func (s *Store) FinishSiteRead(ctx context.Context, readID ids.UUID, in FinishSi
 		if err != nil {
 			return fmt.Errorf("finish site read: %w", err)
 		}
+		if err := storeSiteReadProposals(ctx, tx, readID, in.ProposalIDs); err != nil {
+			return err
+		}
+		finished.ProposalIDs = in.ProposalIDs
 		return logSiteReadActivity(ctx, tx, finished, 0)
 	})
+}
+
+// siteReadProposalsSQL reads the approvals a dossier staged, in the order it
+// staged them, as one column of siteReadColumns.
+const siteReadProposalsSQL = `ARRAY(SELECT p.approval_id FROM site_read_proposal p
+	WHERE p.site_read_id = site_read.id ORDER BY p.position) AS proposal_ids`
+
+// storeSiteReadProposals replaces the approvals a dossier lists with proposals,
+// keeping their order. The caller holds the site_read row lock, so two writers
+// never interleave their lists.
+func storeSiteReadProposals(ctx context.Context, tx pgx.Tx, readID ids.UUID, proposals []ids.UUID) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM site_read_proposal WHERE site_read_id = $1`, readID); err != nil {
+		return fmt.Errorf("clear the site read's proposals: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO site_read_proposal (site_read_id, approval_id, position)
+		SELECT $1, staged.approval_id, staged.n FROM unnest($2::uuid[]) WITH ORDINALITY AS staged(approval_id, n)`,
+		readID, proposals); err != nil {
+		return fmt.Errorf("store the site read's proposals: %w", err)
+	}
+	return nil
 }

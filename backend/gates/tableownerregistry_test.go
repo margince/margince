@@ -132,6 +132,7 @@ var tableOwners = map[string]string{
 	// authorizes rather than with the capture path that asks the question.
 	"company_domain_disposition": "internal/modules/contacts",
 	"site_read":                  "internal/modules/contacts",
+	"site_read_proposal":         "internal/modules/contacts",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
 	"dedupe_candidate":  "internal/modules/contacts",
 	"dedupe_scan_state": "internal/modules/contacts",
@@ -205,10 +206,11 @@ var tableOwners = map[string]string{
 	"sales_initiative_enrolment": "internal/modules/initiatives",
 	"offer_template":             "internal/modules/deals",
 	// activities
-	"activity":              "internal/modules/activities",
-	"transcript_read":       "internal/modules/activities",
-	"attachment_extraction": "internal/modules/activities",
-	"activity_link":         "internal/modules/activities",
+	"activity":                 "internal/modules/activities",
+	"transcript_read":          "internal/modules/activities",
+	"transcript_read_proposal": "internal/modules/activities",
+	"attachment_extraction":    "internal/modules/activities",
+	"activity_link":            "internal/modules/activities",
 	// The evidence that qualified an activity for the statutory retention
 	// floor (A165/ADR-0114). It hangs off `activity` and is written by the
 	// stamp, so it belongs to the module that owns the row it substantiates.

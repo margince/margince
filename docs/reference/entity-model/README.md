@@ -30,9 +30,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 354 |
-| Columns | 4359 |
-| Foreign keys | 619 |
+| Tables | 356 |
+| Columns | 4363 |
+| Foreign keys | 623 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -52,7 +52,7 @@ Ranked by how many foreign keys point at them.
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 30 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 14 | 9 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 8 | 8 |
-| [`attachment`](activities.md#attachment) | [activities](activities.md) | 27 | 6 |
+| [`approval`](approvals.md#approval) | [approvals](approvals.md) | 38 | 6 |
 
 ```mermaid
 erDiagram
@@ -88,13 +88,18 @@ erDiagram
     app_user ||--o{ project : source_author_id
     app_user ||--o{ passport : granted_by
     app_user ||--o{ passport : on_behalf_of
+    app_user ||--o{ approval : decided_by
+    app_user ||--o{ approval : on_behalf_of
+    passport ||--o{ approval : passport_id
+    app_user ||--o{ approval : requested_decider_id
+    app_user ||--o{ approval : staged_in_conversation_of
 ```
 
 ## The pages
 
 | Area | Tables |
 |---|--:|
-| [activities](activities.md) | 32 |
+| [activities](activities.md) | 33 |
 | [agents](agents.md) | 3 |
 | [ai](ai.md) | 12 |
 | [aiactivity](aiactivity.md) | 1 |
@@ -109,7 +114,7 @@ erDiagram
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 42 |
 | [consent](consent.md) | 23 |
-| [contacts](contacts.md) | 50 |
+| [contacts](contacts.md) | 51 |
 | [continuity](continuity.md) | 1 |
 | [contracts](contracts.md) | 1 |
 | [customfields](customfields.md) | 1 |
@@ -175,7 +180,7 @@ erDiagram
 | [`ai_usage`](ai.md#ai_usage) | ai | 7 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 14 | 0 |
 | [`app_user`](identity.md#app_user) | identity | 39 | 150 |
-| [`approval`](approvals.md#approval) | approvals | 38 | 4 |
+| [`approval`](approvals.md#approval) | approvals | 38 | 6 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 4 | 1 |
@@ -441,7 +446,8 @@ erDiagram
 | [`signal`](signals.md#signal) | signals | 31 | 3 |
 | [`signal_resolution`](signals.md#signal_resolution) | signals | 12 | 0 |
 | [`signal_thread_scan`](compose.md#signal_thread_scan) | compose | 10 | 0 |
-| [`site_read`](contacts.md#site_read) | contacts | 35 | 4 |
+| [`site_read`](contacts.md#site_read) | contacts | 34 | 5 |
+| [`site_read_proposal`](contacts.md#site_read_proposal) | contacts | 3 | 0 |
 | [`stage`](deals.md#stage) | deals | 11 | 5 |
 | [`stage_exit_criterion`](deals.md#stage_exit_criterion) | deals | 12 | 1 |
 | [`stored_object_intent`](platform.md#stored_object_intent) | platform | 5 | 0 |
@@ -463,7 +469,8 @@ erDiagram
 | [`team_weekly_review_rep_funnel`](compose.md#team_weekly_review_rep_funnel) | compose | 13 | 0 |
 | [`team_weekly_review_rep_pattern`](compose.md#team_weekly_review_rep_pattern) | compose | 5 | 0 |
 | [`technical_lookup_cache`](contacts.md#technical_lookup_cache) | contacts | 6 | 0 |
-| [`transcript_read`](activities.md#transcript_read) | activities | 13 | 0 |
+| [`transcript_read`](activities.md#transcript_read) | activities | 12 | 1 |
+| [`transcript_read_proposal`](activities.md#transcript_read_proposal) | activities | 3 | 0 |
 | [`user_mfa`](identity.md#user_mfa) | identity | 5 | 1 |
 | [`user_record_view`](compose.md#user_record_view) | compose | 8 | 0 |
 | [`vault_secret`](platform.md#vault_secret) | platform | 4 | 0 |

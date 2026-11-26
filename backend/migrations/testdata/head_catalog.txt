@@ -10466,7 +10466,6 @@ public.site_read.pages_read integer NOT NULL gen=- def=0
 public.site_read.phase text gen=- def=-
 public.site_read.profile_fields jsonb NOT NULL gen=- def='[]'::jsonb
 public.site_read.proposal_hash text NOT NULL gen=- def=''::text
-public.site_read.proposal_ids uuid[] NOT NULL gen=- def='{}'::uuid[]
 public.site_read.requested_by text NOT NULL gen=- def=-
 public.site_read.seed_url text NOT NULL gen=- def=-
 public.site_read.site_read_attempt_check CHECK ((attempt >= 1))
@@ -10491,6 +10490,18 @@ public.site_read.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE
 public.site_read.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.site_read.warnings jsonb NOT NULL gen=- def='[]'::jsonb
 public.site_read_pkey CREATE UNIQUE INDEX site_read_pkey ON public.site_read USING btree (id)
+public.site_read_proposal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.site_read_proposal.approval_id uuid NOT NULL gen=- def=-
+public.site_read_proposal.position integer NOT NULL gen=- def=-
+public.site_read_proposal.site_read_id uuid NOT NULL gen=- def=-
+public.site_read_proposal.site_read_proposal_approval_fkey FOREIGN KEY (approval_id) REFERENCES approval(id) ON DELETE CASCADE
+public.site_read_proposal.site_read_proposal_pkey PRIMARY KEY (site_read_id, approval_id)
+public.site_read_proposal.site_read_proposal_position_check CHECK (("position" >= 1))
+public.site_read_proposal.site_read_proposal_position_key UNIQUE (site_read_id, "position")
+public.site_read_proposal.site_read_proposal_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE CASCADE
+public.site_read_proposal_approval_ix CREATE INDEX site_read_proposal_approval_ix ON public.site_read_proposal USING btree (approval_id)
+public.site_read_proposal_pkey CREATE UNIQUE INDEX site_read_proposal_pkey ON public.site_read_proposal USING btree (site_read_id, approval_id)
+public.site_read_proposal_position_key CREATE UNIQUE INDEX site_read_proposal_position_key ON public.site_read_proposal USING btree (site_read_id, "position")
 public.stage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.stage.archived_at timestamp with time zone gen=- def=-
 public.stage.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -11113,7 +11124,6 @@ public.transcript_read.finished_at timestamp with time zone gen=- def=-
 public.transcript_read.id uuid NOT NULL gen=- def=uuidv7()
 public.transcript_read.line_count integer NOT NULL gen=- def=0
 public.transcript_read.outcome jsonb gen=- def=-
-public.transcript_read.proposal_ids uuid[] NOT NULL gen=- def='{}'::uuid[]
 public.transcript_read.requested_by text NOT NULL gen=- def=-
 public.transcript_read.started_at timestamp with time zone gen=- def=-
 public.transcript_read.status text NOT NULL gen=- def='queued'::text
@@ -11127,6 +11137,18 @@ public.transcript_read.transcript_read_started_shape CHECK ((((status = 'queued'
 public.transcript_read.transcript_read_status CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text])))
 public.transcript_read.transcript_read_terminal_shape CHECK ((((status = ANY (ARRAY['done'::text, 'failed'::text])) AND (finished_at IS NOT NULL)) OR ((status = ANY (ARRAY['queued'::text, 'running'::text])) AND (finished_at IS NULL))))
 public.transcript_read_pkey CREATE UNIQUE INDEX transcript_read_pkey ON public.transcript_read USING btree (id)
+public.transcript_read_proposal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.transcript_read_proposal.approval_id uuid NOT NULL gen=- def=-
+public.transcript_read_proposal.position integer NOT NULL gen=- def=-
+public.transcript_read_proposal.transcript_read_id uuid NOT NULL gen=- def=-
+public.transcript_read_proposal.transcript_read_proposal_approval_fkey FOREIGN KEY (approval_id) REFERENCES approval(id) ON DELETE CASCADE
+public.transcript_read_proposal.transcript_read_proposal_pkey PRIMARY KEY (transcript_read_id, approval_id)
+public.transcript_read_proposal.transcript_read_proposal_position_check CHECK (("position" >= 1))
+public.transcript_read_proposal.transcript_read_proposal_position_key UNIQUE (transcript_read_id, "position")
+public.transcript_read_proposal.transcript_read_proposal_transcript_read_fkey FOREIGN KEY (transcript_read_id) REFERENCES transcript_read(id) ON DELETE CASCADE
+public.transcript_read_proposal_approval_ix CREATE INDEX transcript_read_proposal_approval_ix ON public.transcript_read_proposal USING btree (approval_id)
+public.transcript_read_proposal_pkey CREATE UNIQUE INDEX transcript_read_proposal_pkey ON public.transcript_read_proposal USING btree (transcript_read_id, approval_id)
+public.transcript_read_proposal_position_key CREATE UNIQUE INDEX transcript_read_proposal_position_key ON public.transcript_read_proposal USING btree (transcript_read_id, "position")
 public.trg_activity_last_activity() secdef=false cfg=- acl=- 
 DECLARE
   l record;
