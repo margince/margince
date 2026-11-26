@@ -75,6 +75,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_call_terminal_trace_idx`: `btree (occurred_at DESC, id DESC) WHERE is_terminal`
 - `idx_ai_call_agent_run`: `btree (agent_run_id)`
 - `idx_ai_call_correlation`: `btree (correlation_id)`
+- `idx_ai_call_negative_tokens`: `btree (id) WHERE ((tokens_in < 0) OR (tokens_out < 0) OR (reasoning_tokens < 0) OR (cached_tokens < 0) OR (cache_write_tokens < 0))`
 - `idx_ai_call_occurred`: `btree (occurred_at DESC)`
 
 **Triggers**

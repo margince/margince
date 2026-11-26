@@ -31,6 +31,18 @@ func WithParticipantAddressCheckLifted(t *testing.T, mutate func(pgx.Tx) error) 
 	withChecksLifted(t, []string{"activity_participant_address_is_canonical"}, mutate)
 }
 
+// negativeCountFloors are the floors an upgraded database holds `NOT VALID`,
+// so rows written before them may hold a negative count.
+var negativeCountFloors = []string{"activity_duration_not_negative"}
+
+// WithNegativeCountFloorsLifted runs mutate with every negative count floor
+// dropped, then adds each back. The rows it plants hold a count as older
+// writers stored it.
+func WithNegativeCountFloorsLifted(t *testing.T, mutate func(pgx.Tx) error) {
+	t.Helper()
+	withChecksLifted(t, negativeCountFloors, mutate)
+}
+
 // withChecksLifted runs mutate with the named checks dropped, then adds each
 // back from its own catalog definition, in one owner transaction.
 func withChecksLifted(t *testing.T, names []string, mutate func(pgx.Tx) error) {
