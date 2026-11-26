@@ -133,6 +133,35 @@ export const AudienceOpen: Story = {
   },
 };
 
+/** A captured chat message: the thread dialog, saying it changes the whole conversation. */
+export const ChatThreadAudienceOpen: Story = {
+  args: {
+    activity: {
+      ...BASE,
+      kind: "message",
+      channel_provider: "whatsapp",
+      captured_by: "connector:whatsapp:u1",
+      thread_key: "chat:abc",
+      mailbox_imported: true,
+      thread_audience_yours: true,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions for Angebot Q4 — Rückfragen",
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Visibility" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Who may read this conversation?",
+    });
+    await within(dialog).findByText(/whole conversation, not one message/);
+  },
+};
+
 /** Captured mail on a deal's timeline, marked not about it: the mark, and "About this deal" in the menu. */
 export const NotAboutThisDeal: Story = {
   args: {

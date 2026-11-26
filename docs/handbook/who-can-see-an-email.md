@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/settings/sharedmailboxes.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/historynarrowing.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering frontend/src/features/settings/internalmailsettings.tsx frontend/src/features/settings/internalmailhistoryscope.tsx frontend/src/features/capture/internalmailhistorychoice.tsx backend/internal/modules/capture/internalmailpolicy.go backend/internal/modules/capture/internalmailcapture.go backend/internal/modules/capture/internalmailhistory.go backend/internal/modules/activities/internalmail.go backend/internal/modules/capture/sharedmailbox.go backend/internal/platform/auth/sharedmailboxreader.go -->
+<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/records/timelineactions.tsx frontend/src/features/settings/sharedmailboxes.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/historynarrowing.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering frontend/src/features/settings/internalmailsettings.tsx frontend/src/features/settings/internalmailhistoryscope.tsx frontend/src/features/capture/internalmailhistorychoice.tsx backend/internal/modules/capture/internalmailpolicy.go backend/internal/modules/capture/internalmailcapture.go backend/internal/modules/capture/internalmailhistory.go backend/internal/modules/activities/internalmail.go backend/internal/modules/capture/sharedmailbox.go backend/internal/platform/auth/sharedmailboxreader.go -->
 # Who can see an email
 
 Two things decide who can read an email in Margince, and **a "no" from either is a
@@ -282,6 +282,14 @@ To share an email thread in Margince, open the captured message from a timeline 
 Or choose **Preview and change sharing** on the thread under **Mail not shared with the team**, in Settings → **Connections** → **Activity**. It opens the email.
 Only the mailbox owner can share. If a colleague also holds it, you see how many other seats still do.
 Also called: release an email, unhide a thread, make an email public.
+
+### How do I change who can read a captured chat?
+To change who can read a captured chat, open the message's row menu on a timeline and choose **Visibility**. The dialog says it changes who can read the whole conversation, not one message.
+1. Open the **More actions** menu on the chat message and press **Visibility**.
+2. Choose **Everyone in the company** or **Only me and the people in the conversation**, then press **Save visibility**.
+
+The menu shows **Visibility** only on a chat message your own connection captured. If a colleague also holds the conversation, you see how many other seats still do.
+Also called: make a WhatsApp chat private, share a Telegram thread.
 
 ### How do I find a contact's mail that is not shared with the team?
 To find mail with one contact that your mailbox holds back, open the contact's timeline. On a held email, choose **Show held mail with this contact**. It opens **Mail not shared with the team** with only that contact's threads; **Show all threads** drops the filter.

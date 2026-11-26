@@ -101,6 +101,9 @@ type activityScan struct {
 	senderIsMachine bool
 	version         int64
 	audience        string
+	// mailboxImported and threadAudienceYours are the two capture_import facts a
+	// row control needs, both withheld with the content.
+	mailboxImported, threadAudienceYours bool
 	// contentAvailable is the caller's audience test, evaluated per row: it
 	// decides whether the content columns above reach the caller at all.
 	contentAvailable bool
@@ -175,6 +178,8 @@ var activityProjection = []activityColumn{
 	{"a.audience", func(s *activityScan) any { return &s.audience }},
 	{"a.audience_reason", func(s *activityScan) any { return &s.audienceReason }},
 	{"a.raw", func(s *activityScan) any { return &s.raw }},
+	{mailboxImportedColumn, func(s *activityScan) any { return &s.mailboxImported }},
+	{threadAudienceYoursColumn, func(s *activityScan) any { return &s.threadAudienceYours }},
 	{"", func(s *activityScan) any { return &s.a.CanShareInternal }},
 	{"", func(s *activityScan) any { return &s.contentAvailable }},
 }
@@ -255,9 +260,17 @@ func activityColumns(ctx context.Context, contentArm string, arg func(any) int) 
 	if err != nil {
 		return "", err
 	}
+	yours, err := threadAudienceYoursSQL(ctx, "a", arg)
+	if err != nil {
+		return "", err
+	}
 	out := make([]string, len(activityProjection))
 	for i, c := range activityProjection {
 		switch c.sql {
+		case mailboxImportedColumn:
+			out[i] = importRowExistsSQL("a.id") + " AS mailbox_imported"
+		case threadAudienceYoursColumn:
+			out[i] = yours + " AS thread_audience_yours"
 		case replyChannel:
 			out[i] = storekit.ReplyChannelSQL("a", sourceAudience)
 		case "a.body":
@@ -359,6 +372,9 @@ func (s *activityScan) record(ctx context.Context) crmcontracts.Activity {
 	s.projectStatuses(&a)
 	a.ThreadKey = threadKey
 	a.AudienceReason = audienceReason
+	if s.contentAvailable {
+		a.MailboxImported, a.ThreadAudienceYours = &s.mailboxImported, &s.threadAudienceYours
+	}
 	if captureLabel != nil {
 		label := crmcontracts.ActivityCaptureLabel(*captureLabel)
 		a.CaptureLabel = &label
@@ -485,6 +501,7 @@ func (s *activityScan) contentProjection(ctx context.Context, a *crmcontracts.Ac
 		a.Subject, a.Body, a.SourceId = nil, nil, nil
 		a.CanShareInternal = nil
 		a.Language = nil
+		s.mailboxImported, s.threadAudienceYours = false, false
 		threadKey, captureLabel, audienceReason = nil, nil, nil
 	}
 	a.ContentState = &state

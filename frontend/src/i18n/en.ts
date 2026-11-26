@@ -5142,6 +5142,12 @@ export const en = {
   "compose.threadShare": "Share with the company",
   "compose.threadMakePrivate": "Make private",
   "compose.threadScope": "Applies to the whole thread.",
+  "compose.threadAudience": "Visibility",
+  "compose.threadAudienceTitle": "Who may read this conversation?",
+  "compose.threadAudienceLegend": "Conversation visibility",
+  "compose.threadAudiencePrivate": "Only me and the people in the conversation",
+  "compose.threadAudienceNote":
+    "This changes who can read the whole conversation, not one message.",
   "compose.threadStillHeld_one":
     "{count} other seat has not shared this thread",
   "compose.threadStillHeld_other":

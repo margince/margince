@@ -41760,6 +41760,14 @@ components:
           type: boolean
           readOnly: true
           description: Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
+        mailbox_imported:
+          type: boolean
+          readOnly: true
+          description: Whether any seat's connection imported this activity. The per-message audience write refuses such a row. Absent when the content is withheld.
+        thread_audience_yours:
+          type: boolean
+          readOnly: true
+          description: Whether this caller imported this activity, so that the thread audience write finds it. Absent when the content is withheld.
         writable:
           type: boolean
           readOnly: true
