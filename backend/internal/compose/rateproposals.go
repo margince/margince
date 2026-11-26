@@ -87,17 +87,23 @@ func stageRateProposal(ctx context.Context, svc *approvals.Service, kind, target
 	return err
 }
 
-// rateRefreshActor binds the system principal a rate-refresh effect applies
-// under (bypasses auth.Require), on behalf of the deciding admin.
+// rateRefreshAgentID is the agent that reads rates and writes an approved one,
+// each time for one named admin.
+const rateRefreshAgentID = "agent:rate-refresh"
+
+// rateRefreshActor binds the agent a rate-refresh effect applies under, acting
+// for the deciding admin with the admin's grants. A decider who may not write
+// the rate sheet gets the effect refused, and the approval records it.
 func rateRefreshActor(ctx context.Context) (context.Context, error) {
 	decider, ok := principal.Actor(ctx)
 	if !ok {
 		return nil, errors.New("compose: rate refresh effect without a deciding principal")
 	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "agent:rate-refresh",
-		UserID: decider.UserID, OnBehalfOf: decider.UserID,
-	}), nil
+	agent, err := agentPrincipalFor(decider, rateRefreshAgentID)
+	if err != nil {
+		return nil, err
+	}
+	return principal.WithActor(ctx, agent), nil
 }
 
 func fxRateAcceptEffect(svc *approvals.Service, store *deals.Store) approvals.ApprovedEffect {
