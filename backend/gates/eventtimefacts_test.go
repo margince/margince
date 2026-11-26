@@ -36,11 +36,8 @@ var (
 func productSources(t *testing.T) map[string]string {
 	t.Helper()
 	out := map[string]string{}
-	root, err := filepath.Abs("..")
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	root := gatekit.ModuleRoot(t)
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -68,6 +65,26 @@ func productSources(t *testing.T) map[string]string {
 		t.Fatal(err)
 	}
 	return out
+}
+
+func TestEventTimeSourcesBelongToTheBackendModule(t *testing.T) {
+	sources := productSources(t)
+	if _, found := sources[arrivalStampOwner]; !found {
+		t.Fatalf("the backend source census misses %s", arrivalStampOwner)
+	}
+	root := gatekit.ModuleRoot(t)
+	for path, body := range sources {
+		if !filepath.IsLocal(path) {
+			t.Fatalf("source %s is outside the backend module", path)
+		}
+		current, err := gatekit.ReadFile(filepath.Join(root, path))
+		if err != nil {
+			t.Fatalf("reading backend source %s: %v", path, err)
+		}
+		if string(current) != body {
+			t.Errorf("source %s differs from the backend module's file", path)
+		}
+	}
 }
 
 func TestEveryStageMoveWriterRecordsTheStageOrderAtTheMove(t *testing.T) {
