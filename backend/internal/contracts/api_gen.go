@@ -14581,6 +14581,57 @@ func (e GmailSignatureImportState) Valid() bool {
 	}
 }
 
+// Defines values for GoogleDirectoryStatusLastReason.
+const (
+	GoogleDirectoryStatusLastReasonBadAnswer         GoogleDirectoryStatusLastReason = "bad_answer"
+	GoogleDirectoryStatusLastReasonDelegationRefused GoogleDirectoryStatusLastReason = "delegation_refused"
+	GoogleDirectoryStatusLastReasonKeyInvalid        GoogleDirectoryStatusLastReason = "key_invalid"
+	GoogleDirectoryStatusLastReasonMemberNotFound    GoogleDirectoryStatusLastReason = "member_not_found"
+	GoogleDirectoryStatusLastReasonPermissionDenied  GoogleDirectoryStatusLastReason = "permission_denied"
+	GoogleDirectoryStatusLastReasonTimeout           GoogleDirectoryStatusLastReason = "timeout"
+	GoogleDirectoryStatusLastReasonUnavailable       GoogleDirectoryStatusLastReason = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the GoogleDirectoryStatusLastReason enum.
+func (e GoogleDirectoryStatusLastReason) Valid() bool {
+	switch e {
+	case GoogleDirectoryStatusLastReasonBadAnswer:
+		return true
+	case GoogleDirectoryStatusLastReasonDelegationRefused:
+		return true
+	case GoogleDirectoryStatusLastReasonKeyInvalid:
+		return true
+	case GoogleDirectoryStatusLastReasonMemberNotFound:
+		return true
+	case GoogleDirectoryStatusLastReasonPermissionDenied:
+		return true
+	case GoogleDirectoryStatusLastReasonTimeout:
+		return true
+	case GoogleDirectoryStatusLastReasonUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GoogleDirectoryStatusLastResult.
+const (
+	GoogleDirectoryStatusLastResultFailed GoogleDirectoryStatusLastResult = "failed"
+	GoogleDirectoryStatusLastResultOk     GoogleDirectoryStatusLastResult = "ok"
+)
+
+// Valid indicates whether the value is a known member of the GoogleDirectoryStatusLastResult enum.
+func (e GoogleDirectoryStatusLastResult) Valid() bool {
+	switch e {
+	case GoogleDirectoryStatusLastResultFailed:
+		return true
+	case GoogleDirectoryStatusLastResultOk:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -53894,6 +53945,36 @@ type GmailSignatureImport struct {
 // GmailSignatureImportState defines model for GmailSignatureImport.State.
 type GmailSignatureImportState string
 
+// GoogleDirectoryInput defines model for GoogleDirectoryInput.
+type GoogleDirectoryInput struct {
+	// AdminSubject The Workspace admin the service account acts for. The Directory API refuses a delegated read that names no admin.
+	AdminSubject *openapi_types.Email `json:"admin_subject,omitempty"`
+
+	// ServiceAccountJson The service account's JSON key file, as Google issues it.
+	ServiceAccountJson *string `json:"service_account_json,omitempty"`
+}
+
+// GoogleDirectoryStatus Whether the Google directory credential is stored and how the newest check went. Carries neither the key nor the admin address.
+type GoogleDirectoryStatus struct {
+	// Configured A credential is stored, or a boot source sets one.
+	Configured bool `json:"configured"`
+
+	// LastCheckedAt When the newest check ran. Absent before any check.
+	LastCheckedAt *time.Time `json:"last_checked_at,omitempty"`
+
+	// LastReason Why the newest check failed, present only when `last_result` is `failed`. A closed vocabulary, never Google's own words. `delegation_refused` is the common setup mistake: the service account's client ID has no domain-wide delegation for the read-only group scope, or the admin address is wrong.
+	LastReason *GoogleDirectoryStatusLastReason `json:"last_reason,omitempty"`
+
+	// LastResult How the newest check ended. Absent before any check.
+	LastResult *GoogleDirectoryStatusLastResult `json:"last_result,omitempty"`
+}
+
+// GoogleDirectoryStatusLastReason Why the newest check failed, present only when `last_result` is `failed`. A closed vocabulary, never Google's own words. `delegation_refused` is the common setup mistake: the service account's client ID has no domain-wide delegation for the read-only group scope, or the admin address is wrong.
+type GoogleDirectoryStatusLastReason string
+
+// GoogleDirectoryStatusLastResult How the newest check ended. Absent before any check.
+type GoogleDirectoryStatusLastResult string
+
 // GrowthFitBand How well this company fits what we sell (DOSS-PARAM-8).
 //
 // `unknown` is the ABSTENTION, not a low score. It says the assembly did not have
@@ -87519,6 +87600,9 @@ type RegisterAgentClientJSONRequestBody = RegisterAgentClientRequest
 // UpdateAgentClientJSONRequestBody defines body for UpdateAgentClient for application/json ContentType.
 type UpdateAgentClientJSONRequestBody = UpdateAgentClientRequest
 
+// SetGoogleDirectoryJSONRequestBody defines body for SetGoogleDirectory for application/json ContentType.
+type SetGoogleDirectoryJSONRequestBody = GoogleDirectoryInput
+
 // SetOauthAppJSONRequestBody defines body for SetOauthApp for application/json ContentType.
 type SetOauthAppJSONRequestBody = ConnectorAppInput
 
@@ -103820,6 +103904,15 @@ type ServerInterface interface {
 	// Which sign-in methods this installation offers.
 	// (GET /installation/authentication-policy)
 	GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request)
+	// Remove the Google directory credential.
+	// (DELETE /installation/authentication-policy/google-directory)
+	DeleteGoogleDirectory(w http.ResponseWriter, r *http.Request)
+	// Whether the Google directory connection is set up, and how its last check went.
+	// (GET /installation/authentication-policy/google-directory)
+	GetGoogleDirectory(w http.ResponseWriter, r *http.Request)
+	// Store or replace the Google directory credential.
+	// (PUT /installation/authentication-policy/google-directory)
+	SetGoogleDirectory(w http.ResponseWriter, r *http.Request)
 	// Every setting the programs read, with its value and source (admin/ops).
 	// (GET /installation/configuration)
 	GetInstallationConfiguration(w http.ResponseWriter, r *http.Request)
@@ -109238,6 +109331,24 @@ func (_ Unimplemented) RotateAgentClientSecret(w http.ResponseWriter, r *http.Re
 // Which sign-in methods this installation offers.
 // (GET /installation/authentication-policy)
 func (_ Unimplemented) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove the Google directory credential.
+// (DELETE /installation/authentication-policy/google-directory)
+func (_ Unimplemented) DeleteGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether the Google directory connection is set up, and how its last check went.
+// (GET /installation/authentication-policy/google-directory)
+func (_ Unimplemented) GetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Store or replace the Google directory credential.
+// (PUT /installation/authentication-policy/google-directory)
+func (_ Unimplemented) SetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -141660,6 +141771,66 @@ func (siw *ServerInterfaceWrapper) GetAuthenticationPolicy(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteGoogleDirectory operation middleware
+func (siw *ServerInterfaceWrapper) DeleteGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteGoogleDirectory(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetGoogleDirectory operation middleware
+func (siw *ServerInterfaceWrapper) GetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetGoogleDirectory(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetGoogleDirectory operation middleware
+func (siw *ServerInterfaceWrapper) SetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetGoogleDirectory(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetInstallationConfiguration operation middleware
 func (siw *ServerInterfaceWrapper) GetInstallationConfiguration(w http.ResponseWriter, r *http.Request) {
 
@@ -165043,6 +165214,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/authentication-policy", wrapper.GetAuthenticationPolicy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/installation/authentication-policy/google-directory", wrapper.DeleteGoogleDirectory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/authentication-policy/google-directory", wrapper.GetGoogleDirectory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/installation/authentication-policy/google-directory", wrapper.SetGoogleDirectory)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/configuration", wrapper.GetInstallationConfiguration)

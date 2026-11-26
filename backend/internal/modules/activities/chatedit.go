@@ -129,7 +129,7 @@ func emitProviderEdit(ctx context.Context, tx pgx.Tx, t editTarget, revision tim
 func writeProviderEdit(ctx context.Context, tx pgx.Tx, id ids.UUID, change connector.ChatChange, revision time.Time) (written, replyCleared bool, err error) {
 	err = tx.QueryRow(ctx, `
 		WITH old AS (SELECT reply_verdict FROM activity WHERE id = $1)
-		UPDATE activity a SET body = $2, source_revision = $3, source_revision_seq = $4,
+		UPDATE activity a SET body = $2, body_own_end = NULL, source_revision = $3, source_revision_seq = $4,
 		       raw_capture_id = COALESCE($5, a.raw_capture_id), language = NULL,
 		       capture_label = NULL, capture_labeled_at = NULL,
 		       `+declineStampsClearedWhen("true")+`,

@@ -89,9 +89,12 @@ type OIDCClaims struct {
 	EmailVerified bool
 	// Groups is the token's standard `groups` claim, feeding the additive
 	// group→role grants (OidcGroupRoleMap). An absent claim is an EMPTY list,
-	// never an error: most Google tokens carry none, and a token with no
-	// groups simply grants nothing.
+	// never an error. Google's tokens carry none, so Google's groups come from
+	// the directory lookup instead (googledirectory.go).
 	Groups []string
+	// HostedDomain is Google's `hd` claim: the Workspace domain that vouches
+	// for the account, empty for a personal account and for other providers.
+	HostedDomain string
 	// GivenName is the `given_name` claim, empty when the provider sends none.
 	// Google sends it under the `profile` scope; Microsoft only when the app
 	// registration asks for it. It fills an empty greeting name and nothing else.
