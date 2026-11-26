@@ -155,9 +155,10 @@ the line **Works at** and the company's name. They come after the contacts whose
 own name matched. A result that came from a connected system is marked **From a
 connected system**.
 
-Each contact, company, deal and activity stands in its own box. A deal shows its
-stage, amount and close date. An activity shows the words that matched, and opens
-beside the results.
+Each contact, company, deal and activity stands in its own box. An open deal
+shows its stage, amount and close date. A won or lost deal says so in place of
+its stage, and shows no close date. A detail the deal does not have is left out.
+An activity shows the words that matched, and opens beside the results.
 
 An email is found by its subject and by the words its sender wrote. An email quoted under a reply
 does not find it. Three cases still find an email through quoted text:
