@@ -70864,7 +70864,7 @@ components:
       required: [display_name, email, expected_updated_at]
       properties:
         display_name: { type: string, minLength: 1, maxLength: 120 }
-        email: { type: string, maxLength: 254, format: email, description: May change only before the account has been used to sign in. }
+        email: { type: string, format: email, description: 'May change only before the account has been used to sign in. A new address holds at most 254 characters; an unchanged stored address may be longer.' }
         role: { type: string, description: Omit to keep the current roles. }
         team_ids:
           type: array
@@ -71263,11 +71263,12 @@ components:
       properties:
         email:
           type: string
-          maxLength: 254
           format: email
           description: >-
             Their work address as the source system spelled it. It is the identity the
             seat is keyed on, so a second record for the same address is refused.
+            A new address holds at most 254 characters. A longer stored address may
+            still resolve a merged member to its survivor.
         display_name: { type: string, minLength: 1, maxLength: 120 }
         role:
           type: string
@@ -82509,7 +82510,7 @@ components:
       type: object
       required: [email]
       properties:
-        email: { type: string, maxLength: 254, format: email }
+        email: { type: string, format: email, description: 'Looks up an existing participant; stored addresses past the current write limit are accepted.' }
       additionalProperties: false
 
     BuyerRoomAccess:

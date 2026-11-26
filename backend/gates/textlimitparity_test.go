@@ -114,8 +114,7 @@ var emailPaths = [][]string{
 	schemaProperty("CreateLeadRequest", "email"), schemaProperty("UpdateLeadRequest", "email"),
 	schemaProperty("CreateCompanyRequest", "email"), schemaProperty("UpdateCompanyRequest", "email"),
 	schemaProperty("InviteDealRoomParticipantRequest", "email"), schemaProperty("UpdateDealRoomParticipantRequest", "email"),
-	schemaProperty("DealRoomLinkRequest", "email"), schemaProperty("InviteUserRequest", "email"),
-	schemaProperty("FormerMemberRequest", "email"), schemaProperty("UpdateMemberRequest", "email"),
+	schemaProperty("InviteUserRequest", "email"),
 }
 
 // sharedCapLimits are the caps one shared function applies to many bodies.
@@ -178,6 +177,21 @@ func TestReplaceSetSchemasAdmitStoredListsPastTheCreateCap(t *testing.T) {
 		path[2] = "Update" + strings.TrimPrefix(path[2], "Create")
 		if _, bounded := textLimitSchema(t, doc, path)["maxItems"]; bounded {
 			t.Errorf("%v has maxItems: remove the unconditional ceiling so oversized stored lists can shrink", path)
+		}
+	}
+}
+
+func TestEmailReferenceSchemasAdmitStoredAddressesPastTheWriteCap(t *testing.T) {
+	t.Parallel()
+	doc := textLimitsContract(t)
+	for _, path := range [][]string{
+		schemaProperty("UpdateMemberRequest", "email"),
+		schemaProperty("FormerMemberRequest", "email"),
+		schemaProperty("DealRoomLinkRequest", "email"),
+		corpusBody("post", "/auth/forgot-password", "email"),
+	} {
+		if _, bounded := textLimitSchema(t, doc, path)["maxLength"]; bounded {
+			t.Errorf("%v has maxLength: existing addresses must reach their lookup or unchanged-value check", path)
 		}
 	}
 }

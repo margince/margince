@@ -25,30 +25,12 @@ import (
 // actor.hasRole("admin")); the handler resolves the acting Identity the
 // middleware bound and returns the resulting member row.
 
-// seatIdentity reads the two fields every route that CREATES a seat carries: the
-// address the seat is keyed on, and the name a colleague is shown by.
-//
-// It exists because the contract's `format: email` and `maxLength` are
-// documentation — the generated binding enforces neither, so a route that
-// skipped these checks would take a malformed address or an empty name and
-// create a member from it. Both routes need exactly the same two refusals, and
-// the second one was a copy of the first until this was extracted.
-//
-// It takes the two strings rather than a request, because the two requests are
-// different generated types that happen to agree on these fields; a parameter
-// naming one of them would make the other one's route convert into a shape it
-// is not.
-//
-// Writes its own refusal and answers false, in the idiom h.actor uses: a caller
-// that gets false has already answered the request and returns.
+// The shared decoder does not validate names or address syntax. Both seat
+// routes check them before the service admits a new or existing address.
 func seatIdentity(
 	w http.ResponseWriter, r *http.Request, rawEmail, rawName string,
 ) (values.Email, string, bool) {
-	email, perr := values.ParseEmail(rawEmail)
-	if limited, ok := errors.AsType[*values.ParseError](perr); ok && limited.Max > 0 {
-		httperr.Write(w, r, perr)
-		return values.Email{}, "", false
-	}
+	email, perr := values.ParseEmailReference(rawEmail)
 	if perr != nil {
 		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
 		return values.Email{}, "", false

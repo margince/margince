@@ -4,8 +4,11 @@
 package consent
 
 import (
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestAProofIsKeptThreeYearsPastTheEndOfTheYearItWasAnsweredIn(t *testing.T) {
@@ -36,6 +39,7 @@ func TestAProofIsKeptThreeYearsPastTheEndOfTheYearItWasAnsweredIn(t *testing.T) 
 
 func TestTheRequesterAddressComesFromTheOfficerThenTheLinkThenTheReference(t *testing.T) {
 	stated, mailed := "Officer@Stated.test", "link@mailed.test"
+	legacy := strings.Repeat("a", values.EmailMaxCharacters) + "@legacy.test"
 	cases := []struct {
 		name             string
 		stated, mailedTo *string
@@ -44,6 +48,8 @@ func TestTheRequesterAddressComesFromTheOfficerThenTheLinkThenTheReference(t *te
 		{"the officer's address wins", &stated, &mailed, "ref@subject.test", "officer@stated.test"},
 		{"then the address the link went to", nil, &mailed, "ref@subject.test", "link@mailed.test"},
 		{"then a reference that is an address", nil, nil, "ref@subject.test", "ref@subject.test"},
+		{"the stored link address keeps its original length", nil, &legacy, "ref@subject.test", legacy},
+		{"a stored subject address keeps its original length", nil, nil, legacy, legacy},
 		{"a contact id is no address", nil, nil, "0190a1b2-0000-7000-8000-000000000000", ""},
 	}
 	for _, c := range cases {

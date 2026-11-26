@@ -50908,6 +50908,7 @@ type DealRoomInvitationIssued struct {
 
 // DealRoomLinkRequest defines model for DealRoomLinkRequest.
 type DealRoomLinkRequest struct {
+	// Email Looks up an existing participant; stored addresses past the current write limit are accepted.
 	Email openapi_types.Email `json:"email"`
 }
 
@@ -54192,7 +54193,7 @@ type ForecastSufficiencyBasis string
 type FormerMemberRequest struct {
 	DisplayName string `json:"display_name"`
 
-	// Email Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused.
+	// Email Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused. A new address holds at most 254 characters. A longer stored address may still resolve a merged member to its survivor.
 	Email openapi_types.Email `json:"email"`
 
 	// LeftAt When they left, when the source system knows it. Recorded on the audit row.
@@ -73213,7 +73214,7 @@ type UpdateLossReasonRequest struct {
 type UpdateMemberRequest struct {
 	DisplayName string `json:"display_name"`
 
-	// Email May change only before the account has been used to sign in.
+	// Email May change only before the account has been used to sign in. A new address holds at most 254 characters; an unchanged stored address may be longer.
 	Email             openapi_types.Email `json:"email"`
 	ExpectedUpdatedAt time.Time           `json:"expected_updated_at"`
 

@@ -112,9 +112,8 @@ func (h Handlers) RequestDealRoomLink(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// Parsed the way an invite parses it, so the lookup compares one spelling
-	// against the lowercased column rather than whatever the form sent.
-	email, err := values.ParseEmail(string(req.Email))
+	// Lookups must still reach stored addresses past the current write bound.
+	email, err := values.ParseEmailReference(string(req.Email))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
