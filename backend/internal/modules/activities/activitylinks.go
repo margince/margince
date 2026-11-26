@@ -67,62 +67,23 @@ func (e *TooManyLinksError) FieldFault() (field, code, message string) {
 	return fieldLinks, "too_many_links", e.Error()
 }
 
-// insertActivityLinks writes the polymorphic link rows. The last_activity_at
-// clocks on deal, contact and company move with them, but not from here:
-// migration 1787032690 keeps them on the activity_link row itself (a trigger
-// recomputing from the timeline), because this is one of several writers of
-// that row — capture, ensure, relink and message identity insert links too —
-// and the reach set also moves with no link written at all (an employment
-// starts or ends, a deal moves account, an activity is archived or re-dated).
+// An FK proves existence, not row-scope visibility, so each link needs a probe.
+// Clocks stay in database triggers because capture and relinking write links too.
 //
-// The FK alone is not enough: it is
-// checked as the table owner, bypassing RLS, so it would accept a
-// guessed cross-tenant or out-of-scope UUID as a link target — every
-// target passes the row-scope link check first.
-//
-// A repeated (type, id) is written ONCE. uq_activity_link already says a link
-// is one row per record, so a caller that named the same company twice was
-// answered with a unique violation — a 500 at the end of a send or a booking,
-// and for an agent's approved retry a 500 that consumed the human's one-shot
-// approval on a message that then never left. Deduplicating here rather than in
-// each caller is what makes that true of every transport at once.
-//
-// The count is BOUNDED here for the same reason: the list is the caller's to
-// choose, every entry costs its own row-scope probe and its own insert, and
-// this is the one statement every writer passes through — the timeline's link
-// vocabulary describes what a message or meeting is ABOUT, and a record set
-// larger than this is about nothing.
-//
-// A PROJECT link additionally requires activity.UPDATE, which the create grant
-// alone does not confer. Filing under a project classifies the correspondence
-// as commercial (D5), and relinking away does not lift that classification —
-// only the undo of a project filing does — so it is a heavier act than creating a row, and
-// the capture ladder already refuses it on exactly these terms
-// (capture/sinkproject.go: "a principal that may create captured mail but not
-// change it attributes nothing"). Two doors onto one act must not disagree
-// about who may perform it; before this the create door was the cheaper way in.
+// Project filing classifies correspondence as commercial, so it also needs
+// activity update permission; create permission alone does not authorize it.
 func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, in LogActivityInput, inherited ids.UUID) error {
 	links, kind, fromRequest := in.Links, in.Kind, in.LinksFromRequest
 	if len(links) > maxActivityLinks {
 		return &TooManyLinksError{Count: len(links)}
 	}
-	// The whole reach locked once, before the first probe: sorting the links
-	// below orders the firings, but not what each firing reaches through a
-	// contact or a deal, nor the probe's share the trigger then upgrades.
+	// Lock the complete reach before probes; their share locks would otherwise
+	// need an upgrade after a trigger has locked a different target.
 	if err := storekit.LockLastActivityTargets(ctx, tx, linkLockTargets(links, inherited)); err != nil {
 		return err
 	}
-	// SORTED, and the order is the one the last-activity trigger locks in.
-	//
-	// Each link's insert fires the last-activity trigger, which takes a
-	// FOR UPDATE on every record it reaches. Inserting in the caller's order
-	// meant two writers naming the same records through different lists locked
-	// them in different sequences — one logging [deal D, contact X] and another
-	// [contact X, deal D] deadlock, and Postgres aborts one. The trigger orders
-	// the records inside one firing; only the writer can order the firings.
-	//
-	// It changes which error a caller with two bad links is told about first,
-	// and that is the honest cost: neither was ever promised.
+	// Stable target order makes probe failures deterministic when the caller
+	// names several invalid links.
 	ordered := slices.Clone(links)
 	slices.SortStableFunc(ordered, func(a, b ActivityLinkInput) int {
 		if c := cmp.Compare(a.EntityType, b.EntityType); c != 0 {
@@ -144,10 +105,8 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 			return linkRefusal(fromRequest, err)
 		}
 		column := linkColumn(link.EntityType)
-		// AFTER the target probe, not before it. A caller naming a company they
-		// cannot see must get the answer their row scope gives — the same
-		// not-found every other unreachable target gets — rather than a
-		// modelling refusal that tells them the id was real enough to judge.
+		// Probe first so an invisible target gets the row-scope refusal rather
+		// than a kind refusal that reveals the record exists.
 		if err := CheckActivityLinkKind(kind, link); err != nil {
 			return err
 		}
