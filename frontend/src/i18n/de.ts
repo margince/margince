@@ -8994,8 +8994,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.commitment":
     "Erstellt aus einer Zusage, die aus einem Gespräch gelesen wurde.",
   "tasks.origin.email_request": "Erstellt aus einer Anfrage in einer E-Mail.",
-  "tasks.origin.which_deal":
-    "Erstellt, weil eine erfasste E-Mail zu mehr als einem offenen Deal passt. Wähle den Deal, zu dem sie gehört, oder „Keiner dieser Deals“.",
   "tasks.origin.system":
     "Von einer Automatisierung erstellt, nicht von einem Teammitglied eingegeben.",
 

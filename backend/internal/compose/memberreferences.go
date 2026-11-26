@@ -46,6 +46,7 @@ var memberReferences = map[string]memberReference{
 	"activity_participant.roster_seat":         {disposition: referenceRetain},
 	"activity_participant.user_id":             {disposition: referenceRetain},
 	"activity_reader_state.reader_id":          {disposition: referenceRetain},
+	"activity_link_suggestion.for_user":        {disposition: referenceRetain},
 	"activity_retention_evidence.decided_by":   {disposition: referenceRetain},
 	"agent_standing_grant.user_id":             {disposition: referenceRetain},
 	"ai_task_run.actor_user_id":                {disposition: referenceRetain},

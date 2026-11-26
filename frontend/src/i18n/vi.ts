@@ -8754,8 +8754,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.commitment":
     "Việc này được tạo từ một cam kết đọc được trong một cuộc trao đổi.",
   "tasks.origin.email_request": "Việc này được tạo từ một yêu cầu trong email.",
-  "tasks.origin.which_deal":
-    "Việc này được tạo vì một email đã thu thập khớp với nhiều deal đang mở. Chọn deal mà email này thuộc về, hoặc chọn “Không thuộc deal nào”.",
   "tasks.origin.system":
     "Một quy trình tự động đã tạo việc này, không phải đồng nghiệp nhập vào.",
 

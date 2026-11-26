@@ -141,7 +141,7 @@ func ProposeLinkSuggestionTx(ctx context.Context, tx pgx.Tx, in LinkSuggestionIn
 
 func validateLinkSuggestion(in *LinkSuggestionInput) error {
 	if (in.Unit == "") == in.ForUser.IsZero() {
-		return fmt.Errorf("activities: a link suggestion names either its unit or the one colleague it asks: %w", apperrors.ErrInvalidArgument)
+		return fmt.Errorf("A link suggestion names either the unit that made it or the one colleague it asks: %w", apperrors.ErrInvalidArgument)
 	}
 	if !slices.Contains(linkSuggestionTargets, in.EntityType) {
 		return &values.ParseError{

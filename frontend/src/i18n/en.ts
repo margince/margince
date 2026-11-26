@@ -8967,8 +8967,6 @@ export const en = {
   "tasks.origin.commitment":
     "Created from a commitment read out of a conversation.",
   "tasks.origin.email_request": "Created from a request in an email.",
-  "tasks.origin.which_deal":
-    "Created because a captured email fits more than one open deal. Choose the deal it belongs to, or choose “None of these deals”.",
   "tasks.origin.system": "Created by an automation, not typed by a colleague.",
 
   "analytics.sub":
