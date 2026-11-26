@@ -489,7 +489,6 @@ function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
       logo={company?.logo_url}
       position={facts.length > 0 ? facts.join(" · ") : undefined}
       aside={
-        // An open deal can outlive its account; the card says the account is gone.
         company?.archived_at ? (
           <Badge tone="warning">{t("record.archived")}</Badge>
         ) : (
