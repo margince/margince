@@ -14,12 +14,12 @@ import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useProviderHealth } from "../../lib/ai-provider-health";
 import { useCan, useCanWrite } from "../../lib/capability";
-import { useCompanyZone } from "../../lib/companyzone";
 import {
   isVersionSkewOf,
   problemFieldSentencesOf,
   unwrap,
 } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { AiFeaturesWithheldPanel, useAiStatus } from "./ai-admin";
 import { AiFeatureTable } from "./ai-feature-table";
 import { useAiHealth } from "./ai-health";
@@ -121,7 +121,7 @@ function TeamRulesEditor({ rules }: Readonly<{ rules: TeamRules }>) {
   const { locale } = useLocale();
   const client = useQueryClient();
   const canEdit = useCanWrite("ai_team_rules", "update");
-  const zone = useCompanyZone();
+  const zone = useViewerZone();
   const [edit, setEdit] = useState<TeamRulesEdit | null>(null);
   const [skewed, setSkewed] = useState(false);
   const text = edit?.text ?? rules.text;

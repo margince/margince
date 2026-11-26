@@ -1,5 +1,6 @@
 {
   "systemJob.proposal_stage": "Hỏi có chuyển deal sau khi gửi đề xuất không",
+  "systemJob.google_directory": "Đọc nhóm Google của thành viên",
   "systemJob.legal_review_desk": "Rà soát pháp lý",
   "systemJob.import_identity_links": "Liên kết email đã nhập",
   "systemJob.history_narrowing": "Thu hẹp thư trước đó",

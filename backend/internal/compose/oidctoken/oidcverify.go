@@ -199,6 +199,9 @@ type Claims struct {
 	// sign-in adapters hand on, never an error, because most Google tokens
 	// carry no such claim and a token naming no groups simply grants nothing.
 	Groups []string `json:"groups"`
+	// Hd is Google's hosted-domain claim: the Workspace domain that vouches for
+	// the account, absent for a personal account.
+	Hd string `json:"hd"`
 	// GivenName is the standard `given_name` claim; absent decodes as "".
 	GivenName string `json:"given_name"`
 	// Picture is the standard `picture` claim. Only the Google adapter hands it

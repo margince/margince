@@ -1,5 +1,6 @@
 {
   "systemJob.proposal_stage": "Fragen, ob ein gesendetes Angebot den Deal verschiebt",
+  "systemJob.google_directory": "Google-Gruppen eines Mitglieds lesen",
   "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
   "systemJob.history_narrowing": "Einschränkung früherer E-Mails",

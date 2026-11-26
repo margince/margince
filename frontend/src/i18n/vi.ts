@@ -15,6 +15,7 @@ import type { MessageKey } from "./en";
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.proposal_stage": "Hỏi có chuyển deal sau khi gửi đề xuất không",
+  "systemJob.google_directory": "Đọc nhóm Google của thành viên",
   "systemJob.legal_review_desk": "Rà soát pháp lý",
   "systemJob.import_identity_links": "Liên kết email đã nhập",
   "systemJob.history_narrowing": "Thu hẹp thư trước đó",
@@ -17061,7 +17062,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tài khoản này cũng cần thiết lập đăng nhập hai bước khi đăng nhập bằng mật khẩu.",
   "groupRoles.title": "Cấp vai trò theo nhóm",
   "groupRoles.sub":
-    "Khi ai đó bạn đã mời đăng nhập bằng Google hoặc Microsoft, họ nhận vai trò được ánh xạ với một nhóm họ thuộc về trong thư mục công ty bạn. Không ai vào được nếu chưa được mời.",
+    "Khi ai đó bạn đã mời đăng nhập bằng Microsoft, họ nhận vai trò được ánh xạ với một nhóm họ thuộc về trong thư mục công ty bạn. Google không gửi nhóm, nên với Google, ánh xạ chỉ có tác dụng khi phần tra cứu nhóm Google bên dưới đã được kết nối. Không ai vào được nếu chưa được mời.",
   "groupRoles.grantOnlyTitle": "Nhóm chỉ thêm vai trò, không bao giờ gỡ",
   "groupRoles.grantOnly":
     "Đưa ai đó ra khỏi một nhóm thư mục không thu hồi vai trò ở đây. Hãy đổi vai trò trong mục của họ ở Thành viên.",
@@ -17081,6 +17082,37 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tên nhóm không được bắt đầu hay kết thúc bằng khoảng trắng. Tên phải khớp chính xác với thư mục của bạn.",
   "groupRoles.duplicateGroup": "Mỗi nhóm chỉ được ánh xạ một lần.",
   "groupRoles.tooMany": "Chỉ có thể ánh xạ tối đa 64 nhóm.",
+  "googleDirectory.title": "Tra cứu nhóm Google",
+  "googleDirectory.sub":
+    "Đăng nhập Google không gửi kèm các nhóm của thành viên. Kết nối này đọc chúng từ thư mục Google của bạn khi một thành viên đăng nhập bằng Google. Hãy tạo một tài khoản dịch vụ, cấp cho nó quyền ủy quyền toàn miền với phạm vi chỉ đọc nhóm trong thư mục, rồi lưu khóa của nó ở đây cùng địa chỉ của một quản trị viên Google mà nó hoạt động thay mặt. Google gọi một nhóm bằng địa chỉ email của nó, nên hãy ánh xạ nhóm ở trên đúng như Google liệt kê, ví dụ sales@example.com. Chỉ các nhóm mà thành viên là thành viên trực tiếp mới được tính, không tính nhóm lồng trong nhóm khác.",
+  "googleDirectory.state.none":
+    "Chưa kết nối. Thành viên đăng nhập bằng Google không nhận vai trò nào từ ánh xạ.",
+  "googleDirectory.state.unchecked": "Đã kết nối. Chưa có lần tra cứu nào.",
+  "googleDirectory.state.ok":
+    "Đã kết nối. Lần tra cứu gần nhất thành công vào {time}.",
+  "googleDirectory.state.failedTitle":
+    "Lần tra cứu Google gần nhất đã thất bại vào {time}",
+  "googleDirectory.state.failedEffect":
+    "Cho đến khi sửa xong, thành viên đăng nhập bằng Google không nhận vai trò nào từ ánh xạ. Không ai mất vai trò đang có.",
+  "googleDirectory.reason.key_invalid":
+    "Không thể dùng tệp khóa đã lưu để ký yêu cầu. Hãy lưu lại khóa.",
+  "googleDirectory.reason.delegation_refused":
+    "Google đã từ chối ủy quyền. Hãy kiểm tra ID khách của tài khoản dịch vụ có ủy quyền toàn miền cho phạm vi chỉ đọc nhóm trong thư mục, và địa chỉ quản trị viên là đúng.",
+  "googleDirectory.reason.permission_denied":
+    "Google từ chối liệt kê nhóm. Địa chỉ quản trị viên phải thuộc một quản trị viên miền Google có quyền đọc nhóm.",
+  "googleDirectory.reason.member_not_found":
+    "Google không biết địa chỉ của thành viên vừa đăng nhập.",
+  "googleDirectory.reason.timeout": "Google không trả lời kịp.",
+  "googleDirectory.reason.unavailable":
+    "Không kết nối được tới Google hoặc Google đang giới hạn yêu cầu.",
+  "googleDirectory.reason.bad_answer":
+    "Google trả lời ở dạng mà máy chủ này không đọc được.",
+  "googleDirectory.admin": "Quản trị viên Google mà khóa hoạt động thay mặt",
+  "googleDirectory.adminHint":
+    "Tài khoản dịch vụ đọc thư mục với tư cách quản trị viên này. Hãy dùng địa chỉ của một quản trị viên Google thật.",
+  "googleDirectory.needBoth": "Thêm tệp khóa và địa chỉ quản trị viên.",
+  "googleDirectory.save": "Kiểm tra và lưu",
+  "googleDirectory.remove": "Gỡ kết nối",
   "oauthApp.google.title": "Ứng dụng Google",
   "oauthApp.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",

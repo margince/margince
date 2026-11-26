@@ -107,8 +107,8 @@ func (w *Worker[T]) file(ctx context.Context, connection, rawID ids.UUID, msg wh
 	return err
 }
 
-// change applies an edit or a revoke to the message it names, through the one
-// function every chat network changes a message through. The stored item is the
+// change applies an edit or a revoke to the message it names, through
+// capture.ChangeChatMessage, which every chat network changes a message through. The stored item is the
 // message's original when the edit lands, and is deleted when it changes
 // nothing. An edit whose original has not landed fails the job, so River
 // retries it after the original.
