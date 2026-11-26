@@ -122,7 +122,7 @@ const (
 	// Raised by 76 production and 459 test lines for the row scope of an owned
 	// extension kind and its cases. They drive the unexported report runner,
 	// History query, boot owner check and filter preview handler.
-	// Raised by 130 production and 31 test lines when main's managed corpus port
+	// Raised by 105 production and 31 test lines when main's managed corpus port
 	// and its cases met develop in the sync. The port wraps the unexported call runtime.
 	// Raised by 44 production and 99 test lines for the agent-for-a-colleague
 	// seam, the finance card's hidden billing count and their cases.
@@ -131,8 +131,10 @@ const (
 	// company route and a quiet reason carry, and their cases.
 	// Raised by 259 production and 267 test lines for the seat-bound deal reads
 	// and the stored-object ledger wiring, and the cases that drive them.
-	composeRootProductionLines = 232_004
-	composeRootTestLines       = 362_687
+	// Raised by 14 production and 14 test lines for the date-only precision the
+	// close silence and the customer-progress reads carry, and their case.
+	composeRootProductionLines = 231_993
+	composeRootTestLines       = 362_701
 )
 
 // A read under these floors stopped early or read the wrong place, and would
