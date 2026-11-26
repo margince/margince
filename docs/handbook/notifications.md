@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/notification-settings.tsx frontend/src/features/settings/notifications.queries.ts backend/internal/modules/notices/preference.go backend/internal/modules/notices/centre.go frontend/src/features/settings/settings.tsx frontend/src/features/brief/briefdelivery.tsx -->
+<!-- describes: frontend/src/features/settings/notification-settings.tsx frontend/src/features/settings/notifications.queries.ts backend/internal/modules/notices/preference.go backend/internal/modules/notices/centre.go backend/internal/modules/notices/handlers.go frontend/src/features/settings/settings.tsx frontend/src/features/brief/briefdelivery.tsx -->
 # Notifications
 
 The **Notifications** page in Settings, under **You**, decides how each kind of notice reaches you. The choice is yours alone. No colleague, and no admin, can change it for you.
@@ -34,6 +34,9 @@ Not every row offers every choice. Margince leaves out a choice it cannot keep:
 - **Daily digest** is on the menu for every kind.
 - **Nudges from colleagues** has no **Off**. A colleague's words always reach you.
 
+### What if this installation sends no email?
+Then the page says "Email is not set up" above the rows. **Email**, **Daily digest** and the **Email summaries** reach no mailbox, and every notice still shows in the app. A row offers neither **Email** nor **Daily digest**, unless it already holds one. An admin also gets **How to set up email**.
+
 ### How do I save a change?
 Pick a choice on one or more rows. Then choose **Save** in the bar at the foot of the page.
 **Discard** puts every row back as it was.
@@ -51,4 +54,4 @@ This row needs no **Save**. Your browser holds the answer.
 ### Where are the morning brief and weekly review settings?
 They sit lower on the same page, under **Email summaries**. See [Your own settings](your-own-settings.md#how-do-i-change-my-notifications) for each row.
 
-Also called: email notifications, turn off emails, alerts, daily digest, browser notifications.
+Also called: email notifications, turn off emails, alerts, daily digest, browser notifications, email not set up.

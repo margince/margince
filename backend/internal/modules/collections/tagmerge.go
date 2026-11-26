@@ -120,8 +120,7 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID, expecte
 		if _, err := tx.Exec(ctx, `DELETE FROM taggable WHERE tag_id = $1`, source); err != nil {
 			return err
 		}
-		// The survivor is kept on the row, so the merged tag reads as merged
-		// rather than retired and can point a reader at the word that took over.
+		// The row names the survivor, so the merged tag reads as merged, not retired.
 		if _, err := tx.Exec(ctx, `
 			UPDATE tag SET archived_at = now(), merged_into_id = $2
 			 WHERE id = $1 AND archived_at IS NULL`, source, target); err != nil {

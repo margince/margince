@@ -5685,6 +5685,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tagAdmin.usedBy_one": "{count} hồ sơ",
   "tagAdmin.usedBy_other": "{count} hồ sơ",
   "tagAdmin.retired": "Đã ngừng dùng",
+  "tagAdmin.mergedInto": "Đã gộp vào {name}",
   "tagAdmin.retiredToast": "Đã ngừng dùng {name}",
   "tagAdmin.restoredToast": "Đã khôi phục {name}",
   "tags.archived": "trong kho lưu trữ",
@@ -5751,6 +5752,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tagResult.resultsTitle": "Hồ sơ có thẻ này",
   "tagResult.nothingCarries":
     "Chưa có hồ sơ nào gắn thẻ này. Gắn thẻ từ bất kỳ liên hệ, công ty, deal hoặc lead nào.",
+  "tagResult.retiredNothing":
+    "Không có hồ sơ nào gắn thẻ này. Thẻ đã ngừng dùng nên không thể gắn vào hồ sơ.",
+  "tagResult.mergedBody":
+    "Thẻ này đã được gộp vào {name}. Các hồ sơ từng có thẻ này giờ mang thẻ {name}.",
+  "tagResult.openKept": "Mở {name}",
   "tagResult.loadingRows": "Đang tải {kind}…",
   "tagResult.noneLeft": "Không còn hồ sơ nào gắn thẻ này",
   "tagResult.unnamed": "Chưa đặt tên",
@@ -11705,6 +11711,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.delivery.in_app": "Trong ứng dụng",
   "notifications.delivery.email": "Qua email",
   "notifications.delivery.digest": "Bản tổng hợp hằng ngày",
+  "notifications.noMailTitle": "Chưa thiết lập email",
+  "notifications.noMail":
+    "Bản cài đặt này không gửi email, nên Qua email, Bản tổng hợp hằng ngày và các bản tóm tắt qua email không đến hộp thư nào. Mọi thông báo vẫn hiện trong ứng dụng.",
+  "notifications.noMailGuide": "Cách thiết lập email",
   "privacynotice.title": "Thông tin đang lưu về quý khách",
   "privacynotice.intro":
     "Thông báo này cho quý khách biết về việc xử lý dữ liệu cá nhân của quý khách. Quý khách không cần trả lời hay làm gì.",

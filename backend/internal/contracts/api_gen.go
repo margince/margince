@@ -60768,7 +60768,12 @@ type NotificationPreference struct {
 // NotificationPreferenceList The calling seat's whole set — one entry per class the product sends, always all of them,
 // so a screen rendering one row per class never has to take the others from its own memory.
 type NotificationPreferenceList struct {
-	Items []NotificationPreference `json:"items"`
+	// EmailDeliveryAvailable Whether this installation sends its own mail. False means `email` and `digest` reach
+	// no mailbox: the notice still lands in the app, and no message leaves. A screen says
+	// so beside the choices rather than offering mail that will not arrive. It answers the
+	// caller's own delivery, so every seat that reads its settings is told.
+	EmailDeliveryAvailable bool                     `json:"email_delivery_available"`
+	Items                  []NotificationPreference `json:"items"`
 }
 
 // OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
@@ -70297,7 +70302,11 @@ type Tag struct {
 	CreatedAt   *time.Time         `json:"created_at,omitempty"`
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
-	Name        string             `json:"name"`
+
+	// MergedInto The tag a merge folded this one into, named as it reads now. Present only on a tag
+	// archived by a merge: such a tag cannot be restored, and its records carry this one.
+	MergedInto *RowTag `json:"merged_into,omitempty"`
+	Name       string  `json:"name"`
 
 	// Suggestible Whether captured mail and meeting notes may suggest this tag. A suggestible tag
 	// carries a description of what interest looks like, and that description is what
@@ -70317,7 +70326,11 @@ type TagDetail struct {
 	CreatedAt   *time.Time         `json:"created_at,omitempty"`
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
-	Name        string             `json:"name"`
+
+	// MergedInto The tag a merge folded this one into, named as it reads now. Present only on a tag
+	// archived by a merge: such a tag cannot be restored, and its records carry this one.
+	MergedInto *RowTag `json:"merged_into,omitempty"`
+	Name       string  `json:"name"`
 
 	// Suggestible Whether captured mail and meeting notes may suggest this tag. A suggestible tag
 	// carries a description of what interest looks like, and that description is what

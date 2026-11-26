@@ -7,6 +7,7 @@ import { Building2, Contact, Handshake, UserPlus } from "lucide-react";
 import { useEffect } from "react";
 
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -35,6 +36,8 @@ import "./tagresult.css";
  * page names records, it does not become a fourth table.
  */
 const PREVIEW_ROWS = 5;
+
+type MergedInto = components["schemas"]["RowTag"];
 
 export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
   const t = useT();
@@ -91,7 +94,9 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
           {tag.data.name}
           {tag.data.archived_at && (
             <span className="tagresult-retired t-sub">
-              {t("tags.archived")}
+              {tag.data.merged_into
+                ? t("tagAdmin.mergedInto", { name: tag.data.merged_into.name })
+                : t("tagAdmin.retired")}
             </span>
           )}
         </Heading>
@@ -110,10 +115,18 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
       {tag.data.description && (
         <p className="tagresult-note">{tag.data.description}</p>
       )}
-      {total === 0 ? (
+      {tag.data.merged_into ? (
+        <MergedAway kept={tag.data.merged_into} />
+      ) : total === 0 ? (
         <Panel title={t("tagResult.resultsTitle")}>
           <PanelBody>
-            <p className="tagresult-note">{t("tagResult.nothingCarries")}</p>
+            <p className="tagresult-note">
+              {t(
+                tag.data.archived_at
+                  ? "tagResult.retiredNothing"
+                  : "tagResult.nothingCarries",
+              )}
+            </p>
           </PanelBody>
         </Panel>
       ) : (
@@ -149,6 +162,26 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
         </div>
       )}
     </div>
+  );
+}
+
+/** A merge moved every record onto the kept word, so the page sends the reader there. */
+function MergedAway({ kept }: Readonly<{ kept: MergedInto }>) {
+  const t = useT();
+  return (
+    <Panel title={t("tagResult.resultsTitle")}>
+      <PanelBody>
+        <p className="tagresult-note">
+          {t("tagResult.mergedBody", { name: kept.name })}
+        </p>
+        <AppLink
+          className="btn btn-ghost"
+          href={`#/tags/${encodeURIComponent(kept.tag_id)}`}
+        >
+          {t("tagResult.openKept", { name: kept.name })}
+        </AppLink>
+      </PanelBody>
+    </Panel>
   );
 }
 

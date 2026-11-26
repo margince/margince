@@ -49029,11 +49029,18 @@ components:
       description: |
         The calling seat's whole set — one entry per class the product sends, always all of them,
         so a screen rendering one row per class never has to take the others from its own memory.
-      required: [items]
+      required: [items, email_delivery_available]
       properties:
         items:
           type: array
           items: { $ref: '#/components/schemas/NotificationPreference' }
+        email_delivery_available:
+          type: boolean
+          description: |
+            Whether this installation sends its own mail. False means `email` and `digest` reach
+            no mailbox: the notice still lands in the app, and no message leaves. A screen says
+            so beside the choices rather than offering mail that will not arrive. It answers the
+            caller's own delivery, so every seat that reads its settings is told.
     NotificationItem:
       type: object
       description: |
