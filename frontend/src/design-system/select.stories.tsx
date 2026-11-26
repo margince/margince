@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Search } from "lucide-react";
 import { type CSSProperties, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Field } from "./atoms";
+import { IconAction } from "./iconaction";
 import { MultiSelect, Select, type SelectOption } from "./select";
 import { SelectPopup } from "./selectpopup";
 import { TAG_TONES } from "./tagpill";
@@ -387,6 +389,54 @@ export const AsAButtonDark: Story = {
       />
     </div>
   ),
+};
+
+const CUTS: readonly SelectOption[] = [
+  { value: "all", label: "All activity" },
+  { value: "email", label: "Emails" },
+  { value: "meeting", label: "Meetings" },
+  { value: "changes", label: "Field changes" },
+];
+
+function CardHeadFilter() {
+  const [cut, setCut] = useState("all");
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <IconAction label="Search history" icon={<Search aria-hidden />} />
+      <div style={{ inlineSize: "9rem" }}>
+        <Select
+          appearance="compact"
+          aria-label="History"
+          options={CUTS}
+          value={cut}
+          onChange={setCut}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The compact face: the field's box on the button height, for a view filter in
+ * a card head. It stands as tall as the `IconAction` beside it, and it is not
+ * the filled button a record's one value wears.
+ */
+export const Compact: Story = {
+  render: () => <CardHeadFilter />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const filter = canvas.getByRole("combobox", { name: "History" });
+    const search = canvas.getByRole("button", { name: "Search history" });
+    await expect(filter.getBoundingClientRect().height).toBe(
+      search.getBoundingClientRect().height,
+    );
+  },
+};
+
+/** The compact face in the dark theme. */
+export const CompactDark: Story = {
+  globals: { theme: "dark" },
+  render: () => <CardHeadFilter />,
 };
 
 /**

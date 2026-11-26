@@ -106,8 +106,9 @@ export type SelectProps = Readonly<{
   // record and stands beside its name, where a field box reads as a form that
   // wandered into the header and a pale chip reads as metadata nobody can act
   // on. The listbox, the keyboard contract and the ARIA are the same either
-  // way; only the face changes.
-  appearance?: "field" | "button";
+  // way; only the face changes. `compact` is the field face at
+  // `--controlHeight`, for a view filter in a card head beside 32px controls.
+  appearance?: "field" | "button" | "compact";
   // Busy, as opposed to refused: a write the pick started has not answered.
   // The field face pairs it with the caller's `disabled`; the button face
   // hands it to Button as `pending`, which refuses the press while keeping
@@ -330,7 +331,7 @@ function TriggerButton({
   field: Readonly<{
     id?: string;
     className?: string;
-    appearance?: "field" | "button";
+    appearance?: "field" | "button" | "compact";
     testId?: string;
     disabled?: boolean;
     required?: boolean;
@@ -431,7 +432,12 @@ function TriggerButton({
     <button
       type="button"
       {...trigger}
-      className={["input", "select-control", field.className ?? ""]
+      className={[
+        "input",
+        "select-control",
+        field.appearance === "compact" ? "select-compact" : "",
+        field.className ?? "",
+      ]
         .filter(Boolean)
         .join(" ")}
       aria-busy={field["aria-busy"]}

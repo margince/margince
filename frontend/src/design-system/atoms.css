@@ -1353,6 +1353,12 @@ span.error-line {
   padding: 0 var(--controlPaddingX);
   font-weight: var(--fontWeightMedium);
 }
+/* The compact face: the same field on the button height, for a view filter in
+   a card head, where it stands beside 32px controls and not in a form column.
+   After `.select-control`, so it wins on source order as that rule does. */
+.select-compact {
+  min-block-size: var(--controlHeight);
+}
 /* Nor is it a well: a face rather than a hole, at the resting depth a button
    takes. Two classes here, for the opposite reason to the rule above — this one
    has to outrank `.input`'s own `--shadow-well` while still losing to the hover

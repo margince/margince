@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { join } from "node:path";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { declaredValues, rulesOf } from "../../scripts/lib/css-rules";
 import { stable } from "../format/collate";
 import { Field } from "./atoms";
 import type { SelectOption, SelectProps } from "./select";
@@ -265,6 +267,38 @@ describe("the button appearance", () => {
     await user.keyboard(" ");
     await user.keyboard("{ArrowDown}");
     expect(screen.queryByRole("listbox")).toBeNull();
+  });
+});
+
+describe("the compact appearance", () => {
+  it("wears the field's box on the button height, and stays a combobox", async () => {
+    const user = userEvent.setup();
+    const { trigger, changes } = renderSelect({
+      appearance: "compact",
+      value: "qualify",
+    });
+    expect(trigger.classList.contains("select-control")).toBe(true);
+    expect(trigger.classList.contains("select-compact")).toBe(true);
+    expect(trigger.classList.contains("btn")).toBe(false);
+    await pickOption(user, trigger, "Won");
+    expect(changes).toEqual(["won"]);
+  });
+
+  // `.select-control` sets the field height with one class, so the compact
+  // rule wins only by coming after it in the same sheet.
+  it("takes --controlHeight in the sheet that holds the field height, after it", () => {
+    const rules = rulesOf([join(__dirname, "atoms.css")]);
+    const field = rules.findIndex(
+      (rule) => rule.selector === ".select-control",
+    );
+    const compact = rules.findIndex(
+      (rule) => rule.selector === ".select-compact",
+    );
+    expect(field).toBeGreaterThanOrEqual(0);
+    expect(compact).toBeGreaterThan(field);
+    expect(
+      declaredValues(rules[compact]?.body ?? "", "min-block-size"),
+    ).toEqual(["var(--controlHeight)"]);
   });
 });
 
