@@ -157,7 +157,7 @@ const (
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.
 	// Raised by 48 test lines for main's gate that keeps an agent's offered text
-	// from naming a tool it is not offered, met with develop's in the sync.
+	// from naming a tool it is not offered.
 	composeRootTestLines = 363_792
 )
 
