@@ -106,6 +106,9 @@ func plainWords(m modelCoverage, titles map[string]string) string {
 		}
 		held += "; not yet: " + strings.Join(names, "; ")
 	}
+	if m.CasesOnEarlierListing > 0 {
+		held += fmt.Sprintf(". %d of them measured on an earlier listing", m.CasesOnEarlierListing)
+	}
 	if m.Search == "lexical" {
 		held += ". Measured with search working on word matches only, which is harder than a real setup"
 	}
@@ -120,7 +123,8 @@ func writeCoverageJobs(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not reliably " +
 		"yet, and a dash means not tried yet. What a good answer must do is in the second column, and " +
 		"whose access the assistant was given is in the third. " +
-		"A result can be older than the tools it measured: `make e2e-llm-report` says which still hold.\n\n")
+		"A mark followed by *earlier listing* was measured on tools, instructions or a grader that have " +
+		"changed since; the engineering table below names what changed.\n\n")
 	cli, _ := splitByHarness(r.Models)
 	writeJobTable(p, r.Cases, cli, r.Criteria)
 }
@@ -150,6 +154,9 @@ func jobMark(c caseRow, model string) string {
 			}
 			if run.Regraded {
 				mark += " re-graded"
+			}
+			if len(run.EarlierListing) > 0 {
+				mark += " earlier listing"
 			}
 			return mark
 		}

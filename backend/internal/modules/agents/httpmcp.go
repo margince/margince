@@ -205,11 +205,11 @@ func WithInputStateKey(key string) HTTPOption {
 	return func(d *Dispatcher) { d.inputState = newInputStateSigner([]byte(key)) }
 }
 
-// WithConfirmGuard lets a call that waits for its own user be confirmed in the
-// conversation, spending each code once through guard. It needs the input-state
-// key too; without either, such calls stage into the approval inbox.
-func WithConfirmGuard(guard ConfirmGuard) HTTPOption {
-	return func(d *Dispatcher) { d.confirmGuard = guard }
+// WithReplayGuard spends each confirm code and each answered chat question once.
+// It needs the input-state key too. Without either, no tool asks in the chat,
+// and a call that waits for its own user stages into the approval inbox.
+func WithReplayGuard(guard ReplayGuard) HTTPOption {
+	return func(d *Dispatcher) { d.replayGuard = guard }
 }
 
 // WithHeldViews tells the tool surface which `ui://` documents are actually
@@ -251,9 +251,16 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	start := time.Now()
 	ctx, err := h.authenticate(r)
 	if refusal, refused := errors.AsType[EdgeRefusal](err); refused {
-		refusal.WriteRefusal(w, r)
+		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		refusal.WriteRefusal(sw, r)
+		// A refusal past authentication, such as pacing, keeps its caller.
+		if ctx != nil {
+			r = r.WithContext(ctx) //nolint:contextcheck // ctx is derived from r.Context() inside the injected authenticate closure
+		}
+		h.recordRefusal(r, start, sw.status)
 		return
 	}
 	if errors.Is(err, ErrAuthUnavailable) {
@@ -268,6 +275,7 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Code:   "authentication_unavailable",
 			Detail: "This server cannot verify credentials right now. Retry with the same token.",
 		})
+		h.recordRefusal(r, start, http.StatusServiceUnavailable)
 		return
 	}
 	if err != nil {
@@ -276,6 +284,7 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// there is no unauthenticated teardown path.
 		w.Header().Set("WWW-Authenticate", h.challenge(r))
 		httperr.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid_token"})
+		h.recordRefusal(r, start, http.StatusUnauthorized)
 		return
 	}
 
@@ -311,9 +320,12 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // request, and the framing decides how a call is parsed — never what it may
 // do, which is the registry's business either way.
 func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	body, release, err := h.readBody(w, r)
 	if err != nil {
-		h.writeBodyRefusal(w, r, err)
+		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		h.writeBodyRefusal(sw, r, err)
+		h.recordRefusal(r, start, sw.status)
 		return
 	}
 	defer release()
@@ -329,7 +341,7 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 		if servesAsModern(declaredTransportVersion(r.Header)) {
 			status = http.StatusBadRequest
 		}
-		writeRPCResponse(w, r,
+		h.answer(w, r, start, req,
 			rpcResponse{JSONRPC: jsonRPCVersion, Error: &rpcError{Code: codeParseError, Message: "parse error"}},
 			status)
 		return
@@ -339,7 +351,7 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 	// rather than a plain 4xx so a modern client recognizes it as this server
 	// refusing rather than as a legacy server to fall back to.
 	if duplicatedVersionHeader(r.Header) {
-		writeRPCResponse(w, r, rpcResponse{
+		h.answer(w, r, start, req, rpcResponse{
 			JSONRPC: jsonRPCVersion, ID: req.ID,
 			Error: &rpcError{
 				Code: codeHeaderMismatch,
@@ -358,11 +370,11 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 		// JSON-RPC error, which is the pair a dual-era client reads: the status
 		// alone would send it back to the handshake, and the body alone would
 		// not be seen.
-		writeRPCResponse(w, r, rpcResponse{JSONRPC: jsonRPCVersion, ID: req.ID, Error: refusal},
+		h.answer(w, r, start, req, rpcResponse{JSONRPC: jsonRPCVersion, ID: req.ID, Error: refusal},
 			http.StatusBadRequest)
 		return
 	}
-	if !fr.modern && !h.legacyVersionServed(w, r, req) {
+	if !fr.modern && !h.legacyVersionServed(w, r, start, req) {
 		return
 	}
 	if req.ID == nil {
@@ -376,7 +388,7 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 		return
 	}
-	h.exchange(w, r, req, fr)
+	h.exchange(w, r, start, req, fr)
 }
 
 // legacyVersionServed refuses a handshake-era request that names a revision
@@ -389,12 +401,12 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 // retry with. initialize is exempt: it negotiates through its own body, and a
 // client has no version to put in this header until initialize has answered
 // one.
-func (h *httpMCPHandler) legacyVersionServed(w http.ResponseWriter, r *http.Request, req rpcRequest) bool {
+func (h *httpMCPHandler) legacyVersionServed(w http.ResponseWriter, r *http.Request, start time.Time, req rpcRequest) bool {
 	v := r.Header.Get(headerProtocolVersion)
 	if req.Method == methodInitialize || v == "" || slices.Contains(legacyProtocolVersions, v) {
 		return true
 	}
-	writeRPCResponse(w, r,
+	h.answer(w, r, start, req,
 		rpcResponse{JSONRPC: jsonRPCVersion, ID: req.ID, Error: unsupportedProtocolVersion(v)},
 		http.StatusBadRequest)
 	return false
@@ -402,9 +414,11 @@ func (h *httpMCPHandler) legacyVersionServed(w http.ResponseWriter, r *http.Requ
 
 // exchange dispatches one request and writes its answer under the status its
 // framing pins.
-func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, req rpcRequest, fr framing) {
+func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, start time.Time, req rpcRequest, fr framing) {
 	if refusal := seatlessRefusal(r.Context(), req.Method); refusal != nil {
-		refusal.WriteRefusal(w, r)
+		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		refusal.WriteRefusal(sw, r)
+		h.recordRefusal(r, start, sw.status)
 		return
 	}
 	// A dynamic tool call can block on a model call, which modules/ai
@@ -439,5 +453,5 @@ func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, req rp
 	// on its Bearer passport, and the volume the session implicitly bounded is
 	// now bounded per Passport in Redis (ADR-0092 §6). What the header cost was
 	// real: it pinned a conversation to the process that answered initialize.
-	writeRPCResponse(w, r, resp, status)
+	h.answer(w, r.WithContext(ctx), start, req, resp, status)
 }

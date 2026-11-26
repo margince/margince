@@ -51,26 +51,27 @@ A CLI starts with nothing of yours: `e2e/llm/clean.py` starts it, and the judge,
 
 Before each run of the lane on this route, it installs again when what is installed is not what `e2e/llm/sdk-runner/package.json` pins. It checks the registry signatures, and runs `npm run selfcheck` there. That folder keeps no lockfile, so the source SBOM never lists the Agent SDK.
 
-Gemini runs through the Antigravity CLI (`E2E_LLM_CANDIDATE=gemini`, after you run `agy` once and sign in). Each run gets an empty folder that holds one agent file. That agent names the lane's server as its only MCP server, and turns off your own servers, rules and skill files. In print mode `agy` refuses any action it would ask you about, and `--settings` allows only the lane's server.
+Gemini runs through the Antigravity CLI (`E2E_LLM_CANDIDATE=gemini`, after you run `agy` once and sign in). Each run gets an empty folder that holds one agent file. That agent names the lane's server as its only MCP server, and turns off your own servers, rules and skill files. In print mode `agy` refuses any action it would ask you about, and `--settings` allows only the lane's server. Each run also gets a home folder of its own (`agy_home` in `e2e/llm/clean.py`), so `agy` reads none of your own `agy` settings or past chats. On macOS `agy` keeps its sign-in under `~/Library/Keychains` and `~/Library/Application Support/antigravity`, so that home holds two links, to those folders.
 
-`agy` does not list MCP tools to the model. The model reads the schema of a tool from a file under `~/.gemini/antigravity-cli/`. It reads a long result back from a file there too. The lane allows those reads and stops a run on any other tool. `e2e/llm/tests/test_agy.py` checks how it starts.
+`agy` does not list MCP tools to the model. The model reads the schema of a tool from a file in the run's home. It reads a long result back from a file there too. The lane allows any read inside that home or the run's folder. It stops a run on a read in any other place, through those links too, and on any other tool. `e2e/llm/tests/test_agy.py` checks how it starts.
 
 Records made before this check did not measure a model that knows nothing about Margince. A Claude CLI run read the `CLAUDE.md` and `AGENTS.md` of this repository, and your own settings. Measure those records again before you compare them with a new one. A codex record is in question too if your codex home held plugins, hooks, `memories`, `skills` or an `AGENTS.md`. `ls backend/internal/compose/aicert/records/mcp_e2e*/*@{claude,codex}-cli/` lists them.
 
-**Five passports.** Every scenario runs on a passport that holds `read` and
-`write`, which is what most jobs need. A scenario that sends mail, writes drafts or sets up meetings
+**Five passports.** Every scenario runs on a passport that holds `read` and `write`, which is what most jobs need. A scenario that sends mail, writes drafts or sets up meetings
 says `passport: wide`. Then the lane gives a second passport that adds the
 `draft` and `send` scopes; `passport: research` adds `enrich`, for AI work. Without
 them, these tools are never in the list the model sees.
 
-The admin mints those three. Two more measure a user with fewer rights.
-`passport: rep` is minted by a seeded seat with the `rep` role, with `read` and `write`. That
+The admin connects those three. Two more measure a user with fewer rights.
+`passport: rep` is connected by a seeded seat with the `rep` role, with `read` and `write`. That
 role writes only the records the seat owns, and another seat owns every seeded deal, so a write
 on a deal is refused. `passport: readonly` is the admin's, with `read` alone, so no tool that
 writes is offered.
 
 On these two, the lane reads the end state through the admin's passport. The narrow seat does
 not see every record a case names.
+
+**Every passport is connected through OAuth**, as a chat client connects one. `e2e/llm/oauthconnect.py` gives consent with the seat's session, with no browser. Some calls wait for their own user, such as filing a mail under a project. On a passport minted over REST, such a call waits in the approval inbox. On a connected passport it answers a preview and a `confirm_code`, and the model asks the user in the chat.
 
 The stack of the lane has no connected mailbox and no Telegram bot. So
 a send is refused after the model calls it, and before any data leaves. The
@@ -93,10 +94,7 @@ candidate of the judge's own family says `self_judged: true`, and the coverage p
 
 ## 2. Give the stack a search that works
 
-The scenarios need `search_context`, and it ranks by meaning only when an
-embedding model serves the stack. In most cases, the `.env.local` of a worktree has no
-embedding key. The lane **refuses to sweep** a stack whose search now matches only shared words.
-Then every candidate would be measured on a degraded tool.
+The scenarios need `search_context`, and it ranks by meaning only when an embedding model serves the stack. In most cases, the `.env.local` of a worktree has no embedding key. The lane **refuses to sweep** a stack whose search now matches only shared words. Then every candidate would be measured on a degraded tool.
 
 Put `GEMINI_API_KEY` in the `.env.local` of the checkout you run from
 (the binding of the dev stack itself). Or set the binding of the stack of the lane to a committed preset:
@@ -214,23 +212,23 @@ A scenario that fails lists what failed to hold. That can be a tool it never cal
 a fact it never said, or something it must not say. It can be a judged criterion, with the
 reason of the judge in one sentence. It can also be a record that the run put in the wrong state.
 
+### The server's record of each call
+
+The lane starts its stack with `mcp.call_log` set to a file in its work folder. The setting is for dev and debugging only: a production install refuses to boot with it. The api writes one JSON line there for each `/mcp` call, with secrets stripped. A line holds the caller, the tool, the arguments, the outcome and the answer. Each run's lines are cut out beside its transcript as `<transcript>.calls`, and both are kept in `e2e/llm/records/`.
+
+Where that file is there, `check.py` reads from it which calls were made, which worked and what each answered. A client that drops `isError` or moves a long answer to a file can then no longer change a verdict. The judge also reads the server's answers, cut to size, to tell whether what the answer states is true. The REST way in writes no such file, so its runs are graded from the transcript as before. Each line's `correlation_id` is the one in the `trace` of its `event_outbox` rows, which name their `audit_log` rows. So a write can be followed after a restore.
+
 ### How directly a run finished
 
-A good model needs fewer rounds, so the lane counts them. After each scenario it prints an
-`efficiency:` line, and the verdict keeps an `efficiency` object. Each count is given as the middle
-value of the runs, with the least and the most.
+A good model needs fewer rounds, so the lane counts them. After each scenario it prints an `efficiency:` line, and the verdict keeps an `efficiency` object. Each count is given as the middle value of the runs, with the least and the most.
 
-The counts are tool calls, model turns, refused calls, prompt tokens and output tokens. How long a
-run lasted is there too when the transcript carries `duration_ms`. A refused call includes a bare tool
-name that the CLI turned away. A run with no last result is left out, and `runs` says how many runs
-are behind the numbers.
+The counts are tool calls, model turns, refused calls, retries, prompt tokens and output tokens. How long a run lasted is there too when the transcript carries `duration_ms`. A refused call includes a bare tool name that the CLI turned away.
+
+A retry is a refused call made once more, with the same tool and action. So a model that learns from one refusal scores one retry, and one that keeps trying scores more. Where the server's record is there, `refused by the client` counts the calls in the transcript that never reached the server. A run with no last result is left out, and `runs` says how many runs are behind the numbers.
 
 A turn is one request to the model, and a Gemini run counts its agent's answers. The codex CLI reports no such count. So a GPT verdict has no turns, and the page shows `-`.
 
-These numbers never fail a case and never change the exit code. A scenario can set
-`expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true`
-and the `efficiency:` line ends with `slow`. The page shows the calls and turns for each case and
-model, and the calls per case for each model. A verdict from before this measure shows `-`.
+These numbers never fail a case and never change the exit code. A scenario can set `expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true` and the `efficiency:` line ends with `slow`. The page shows the calls, turns, refused calls and retries for each case and model, and the middle value of each for each model. A verdict from before this measure shows `-`.
 
 ### The end state
 
@@ -238,7 +236,7 @@ A case that writes can name the state it must leave behind:
 
 ```yaml
 must_end_with:
-  - company "Emsland Ventilbau GmbH" lifecycle=prospect
+  - company "Emsland Ventilbau GmbH" status=prospect
 ```
 
 After each run, `e2e/llm/endstate.py` reads the records back before the lane puts back the snapshot.
@@ -272,6 +270,8 @@ PY
 `python3 e2e/llm/why.py <scenario>` puts the tools that a scenario requires next to
 what each run could call, and what it called.
 
+For a case with a `setup:`, each run also keeps `<scenario>.run<n>.world.txt` beside its transcript. It holds the approvals the run left, with their `audit_log` and `event_outbox` rows, read before the restore removes them. A setup that fails keeps one too.
+
 Before you call a red scenario a product regression, rule out the harness:
 
 | Sign | Cause | Fix |
@@ -282,6 +282,8 @@ Before you call a red scenario a product regression, rule out the harness:
 | `the stack refused the reindex (HTTP …)` | The `.env.local` of the checkout has no key for the provider of the preset, so no case is scored | section 2 |
 | `CERTIFICATE_VERIFY_FAILED` | A Python with no CA bundle | The bridge uses the system bundle instead; check that it exists |
 | OpenRouter 404 `No endpoints found that can handle the requested parameters` | `require_parameters` routing, and a parameter that no endpoint declares | Remove the parameter from the request of the bridge |
+| `HARNESS: agy: authentication failed or timed out` | `agy` has no sign-in it can reach from the run's own home | On macOS, run `agy` once and sign in. On another system, find where `agy` keeps its sign-in, and link that place into the home in `agy_home` |
+| Codex writes at once on an `ask_user_first` act the prompt asked for in other words | The prompt of Codex puts what the user asked for above the text of a tool, and the lane approves its own server for Codex | Accepted for now: [choose-how-a-tool-asks-first.md](choose-how-a-tool-asks-first.md#how-codex-acts). Codex follows a hold |
 | `agy used a tool outside the lane's MCP server: read_file …` | The model reached for its own file tool, most often when the prompt is not clear | A harness stop, never a score. Run the case again; if it happens again, the prompt is not clear enough for Gemini |
 | `codex refused to call …: MCP tool call requires approval` | Codex in `exec` mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`). This stop means the installed codex no longer accepts that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (it refuses an unknown key before any model call), and set it in `run_codex` in `e2e/llm/drive.py` |
 | `the stack did not answer an authenticated call after the restore` | The snapshot restore between runs cuts every database connection, and the api still answered 503 after 30 seconds | A harness stop, never a score. Read `make dev-logs DEV_SLUG=<slug> FOLLOW=0 N=500` before the next boot replaces the log |
@@ -289,8 +291,7 @@ Before you call a red scenario a product regression, rule out the harness:
 | Turn cap reached | The model makes one tool call per turn | A finding, not a bug: the cap is the same for every candidate |
 | `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) ended part of the way through a run. A CLI that exits with an error code, under a result that reports no error, stops the lane in the same way | A harness stop, never a score. Every driver writes a last result when the model ends the run, at the turn cap too. The stop prints the last lines the driver wrote to stderr |
 
-Always run a control (the same scenario, on a model that passes it) before
-you decide that your own change caused it.
+Always run a control (the same scenario, on a model that passes it) before you decide that your own change caused it.
 
 ## 7. Try another effort or another model
 
@@ -329,7 +330,7 @@ The stamp then holds `graded_commit` and `graded_at` too. Where the two commits 
 A verdict whose stamp no longer matches the tree, or that has none, is stale.
 `make e2e-llm-report` names what moved. A pull request that makes a verdict
 stale gets a comment that lists it (`mcp-e2e-stale.yml`). List those verdicts in the PR body when you
-do not run them again.
+do not run them again. The coverage page still shows a stale verdict, marked `earlier listing`, and its case table names what moved. So a change that makes a verdict stale also generates the page again, with the command above.
 
 `mcp-sweep.yml` sweeps every case in parts, side by side, with `claude-sonnet-5-5` over the Claude CLI. Its header comment says what it needs.
 It uploads verdicts only when every case has a new one from a stack whose search ranks by meaning. Each part keeps its transcripts as an `e2e-llm-transcripts-*` artifact.

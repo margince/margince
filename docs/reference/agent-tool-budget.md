@@ -15,15 +15,15 @@ anything. This page shows what each declared agent pays, how much room that leav
 what to check before adding a tool. Each tool's own cost is the Prompt tokens column of
 [mcp-info.md](mcp-info.md#index).
 
-The heaviest menu is `overnight_at_risk_sweep`: 6705 of the window's 32768 tokens per step (20%).
+The heaviest menu is `overnight_at_risk_sweep`: 6722 of the window's 32768 tokens per step (20%).
 
 ## The declared agents
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 48 | 2055 | 1653 | 4439 | 13% | 18771 | 0 | 4 |
-| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3354 | 2620 | 6705 | 20% | 16505 | 4 | 4 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 53399 |  |  | 162% |  |  |  |
+| `morning_brief` | 5 | 5 of 48 | 2048 | 1646 | 4424 | 13% | 11960 | 0 | 4 |
+| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3363 | 2629 | 6722 | 20% | 9662 | 4 | 5 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 54056 |  |  | 164% |  |  |  |
 
 ### `morning_brief`
 
@@ -40,8 +40,8 @@ there are no items, finish without inventing a brief. A tool refusal means the f
 saved: correct it before claiming completion.
 ```
 
-Attaches 5 tools and pays 4439 tokens on every step (2055 listing, 1653 step schema), leaving
-18771 of its budget and 28329 tokens of the
+Attaches 5 tools and pays 4424 tokens on every step (2048 listing, 1646 step schema), leaving
+11960 of its budget and 28344 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -65,8 +65,8 @@ body states the finding and the evidence (cite the records you read). A note wit
 refused. Do not advance stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 6705 tokens on every step (3354 listing, 2620 step schema), leaving
-16505 of its budget and 26063 tokens of the
+Attaches 7 tools and pays 6722 tokens on every step (3363 listing, 2629 step schema), leaving
+9662 of its budget and 26046 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -100,7 +100,7 @@ the site's `tools:` are the only tools that run is offered. Read the numbers bel
 before adding one.
 
 The window is 32768 tokens. What an agent's step pays before its transcript (the frame,
-the listing and the step schema) may take 23210 of them (17/24).
+the listing and the step schema) may take 16384 of them (1/2).
 
 ## No run is offered the whole catalog
 
@@ -145,7 +145,7 @@ menu. Lowering it is not always an improvement either: a tool its goal needs rai
 this count whenever its copy names a neighbour.
 
 **Temptation weight** sums, over an agent's tools, how many of that agent's own
-certification scenarios (of 7 in the corpus) name the tool as the wrong reach. Each
+certification scenarios (of 8 in the corpus) name the tool as the wrong reach. Each
 scenario certifies one scheduled agent's window (its goal and its tools), so a near
 miss is a tool that run can see and reach for.
 

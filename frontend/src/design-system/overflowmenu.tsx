@@ -1,5 +1,6 @@
 import { MoreHorizontal } from "lucide-react";
 import {
+  type ComponentPropsWithRef,
   createContext,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
@@ -13,7 +14,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useAnchoredToTrigger } from "./anchored";
-import { Button } from "./button";
+import { Button, RefusalLines } from "./button";
+import { ChipFace, chipClass } from "./chipface";
 import {
   coveredByDialog,
   panelsOpenedFrom,
@@ -128,8 +130,8 @@ export function OverflowMenu({
   label: string;
   /** A trigger that prints its verb after the glyph, as a pill; `label` stays its full name and starts with it. */
   text?: string;
-  /** How a `text` trigger is drawn: a `pill` over a picture, or a `button` beside other buttons, its word before the glyph. */
-  face?: "pill" | "button";
+  /** How a `text` trigger is drawn: a `pill` over a picture, or a `button` beside other buttons, its word first. A `chip` sits in a line of chips. */
+  face?: "pill" | "button" | "chip";
   /** The write an item started is out: the trigger shows it as `Button pending` does. */
   pending?: boolean;
   /** Where the panel hangs: off the trigger's `end` (a mark at a row's end), its `start`, or its `center`. */
@@ -285,7 +287,11 @@ export function OverflowMenu({
           worse than announcing the expandable region we do. */}
       {/* `iconOnly`: the ellipsis is the whole label, so the control is the
           catalog's --controlHeight square and its geometry is the button's. */}
-      {text === undefined ? (
+      {text !== undefined && face === "chip" ? (
+        <ChipTrigger {...triggerProps} icon={icon}>
+          {text}
+        </ChipTrigger>
+      ) : text === undefined ? (
         <Button iconOnly {...triggerProps}>
           {icon}
           {word && (
@@ -348,11 +354,38 @@ export function OverflowMenu({
             </p>
           ))}
           <CloseMenu.Provider value={close}>
-            {(keepMounted || everOpened) && layer !== null && children}
+            <RefusalLines>
+              {(keepMounted || everOpened) && layer !== null && children}
+            </RefusalLines>
           </CloseMenu.Provider>
         </div>,
         layer ?? document.body,
       )}
     </div>
+  );
+}
+
+/** A chip that opens the menu: a fact in a line of chips that is also a verb,
+ *  such as a task's reminder. While a write it started is out, it refuses the
+ *  press but keeps focus, which a chosen item hands back to it. */
+function ChipTrigger({
+  icon,
+  pending,
+  children,
+  onClick,
+  ...button
+}: Omit<ComponentPropsWithRef<"button">, "children"> &
+  Readonly<{ icon: ReactNode; pending: boolean; children: ReactNode }>) {
+  return (
+    <button
+      type="button"
+      {...button}
+      className={`${chipClass({ "chip-dense": true })} chip-link`}
+      aria-disabled={pending || undefined}
+      aria-busy={pending || undefined}
+      onClick={pending ? undefined : onClick}
+    >
+      <ChipFace mark={icon}>{children}</ChipFace>
+    </button>
   );
 }

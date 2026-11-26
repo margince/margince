@@ -174,6 +174,9 @@ print("")' "$email"
 # worth spending: a row a reader finds in a failing transcript says which lane
 # put it there.
 FIXTURE_SOURCE="seed:llm-fixtures"
+# A company, contact, deal, offer, project and partner take only one of six
+# channels as source, so their fixture rows name the channel they came through.
+CHANNEL_SOURCE="api"
 
 # with_source adds FIXTURE_SOURCE to a record's create body that names none,
 # because every record create requires a source.
@@ -185,8 +188,9 @@ with_source() {
   esac
   printf '%s' "$body" | FIXTURE_SOURCE="$FIXTURE_SOURCE" python3 -c 'import json,os,sys
 row=json.load(sys.stdin)
-row.setdefault("source", os.environ["FIXTURE_SOURCE"])
-print(json.dumps(row, ensure_ascii=False))'
+channel = sys.argv[1] in ("/companies", "/contacts", "/deals", "/projects", "/offers", "/partners")
+row.setdefault("source", "api" if channel else os.environ["FIXTURE_SOURCE"])
+print(json.dumps(row, ensure_ascii=False))' "$path"
 }
 
 create_or_die() {
@@ -652,7 +656,7 @@ else:
   else
     body="$body$(printf '"amount_minor":%s,"currency":"EUR",' "$amount")"
   fi
-  body="$body$(printf '"expected_close_date":"%s","source":"%s"}' "$close_date" "$FIXTURE_SOURCE")"
+  body="$body$(printf '"expected_close_date":"%s","source":"%s"}' "$close_date" "$CHANNEL_SOURCE")"
   create_or_die "/deals" "$body" "$name" >/dev/null
 }
 # THE CLOSE DATES ARE DERIVED, and a fixed offset is what made that necessary.
@@ -778,7 +782,7 @@ else:
     echo "  $name already won"
     return 0
   fi
-  created="$(api POST /deals "$(printf '{"name":"%s","pipeline_id":"%s","stage_id":"%s","owner_id":"%s","amount_minor":%s,"currency":"EUR","expected_close_date":"%s","source":"%s"}'     "$name" "$pipeline" "$stage" "$colleague" "$amount" "$close_date" "$FIXTURE_SOURCE")")"
+  created="$(api POST /deals "$(printf '{"name":"%s","pipeline_id":"%s","stage_id":"%s","owner_id":"%s","amount_minor":%s,"currency":"EUR","expected_close_date":"%s","source":"%s"}'     "$name" "$pipeline" "$stage" "$colleague" "$amount" "$close_date" "$CHANNEL_SOURCE")")"
   id="$(id_of "$created")"
   [[ -n "$id" ]] || { echo "could not create the won deal $name: $created" >&2; exit 1; }
   # purchase_order: the commonest honest answer in a CRM whose paper lives in
@@ -1100,7 +1104,7 @@ else:
     print("")')"
 if [[ -z "$project" ]]; then
   body="$(printf '{"name":"Elbwerk Rollout","company_id":"%s","owner_id":"%s","source":"%s","description":"Austausch der Kälteregelung an zwei Standorten."}' \
-    "$elbwerk" "$me" "$FIXTURE_SOURCE")"
+    "$elbwerk" "$me" "$CHANNEL_SOURCE")"
   project="$(create_or_die "/projects" "$body" "the Elbwerk project")"
 
   # THE PHASE HISTORY is the whole point of the fixture. A project is created in
@@ -1159,10 +1163,10 @@ fi
 
 # --- CASE 43: four fair leads, one of whose stage a human already chose -----
 #
-# All four are created by the admin's own session and none is sent a lifecycle,
+# All four are created by the admin's own session and none is sent a status,
 # so each starts at the column default 'unknown'. The fourth then gets 'target'
 # through a PATCH from the same session, so a human is the last writer of that
-# lifecycle. The agent's change over it applies at once and its answer names the
+# status. The agent's change over it applies at once and its answer names the
 # value it replaced, which is what case 43 asks the assistant to report.
 #
 # Owned by the caller, because these are the caller's own leads.
@@ -1177,10 +1181,10 @@ seed_fair_lead "Kieler Pumpenwerk GmbH" "Pumpentechnik" >/dev/null
 seed_fair_lead "Rhön Hydraulik AG" "Hydraulik" >/dev/null
 seed_fair_lead "Altmark Fördertechnik GmbH" "Fördertechnik" >/dev/null
 emsland="$(seed_fair_lead "Emsland Ventilbau GmbH" "Armaturen")"
-# A repeat still leaves a human as lifecycle's last writer, so a re-run converges.
-code="$(status_of PATCH "/companies/$emsland" '{"lifecycle":"target"}')"
+# A repeat still leaves a human as status's last writer, so a re-run converges.
+code="$(status_of PATCH "/companies/$emsland" '{"status":"target"}')"
 [[ "$code" = "200" ]] || {
-  echo "setting Emsland Ventilbau's lifecycle as a human answered HTTP $code" >&2; exit 1; }
+  echo "setting Emsland Ventilbau's status as a human answered HTTP $code" >&2; exit 1; }
 
 # --- CASES 44-49: the untried action tools ------------------------------------
 #
@@ -1462,7 +1466,7 @@ else:
     print("")')"
 if [[ -z "$goslar" ]]; then
   body="$(printf '{"name":"Leitstand Goslar","company_id":"%s","owner_id":"%s","source":"%s","description":"Neuer Leitstand für das Werk Goslar."}' \
-    "$harzer" "$me" "$FIXTURE_SOURCE")"
+    "$harzer" "$me" "$CHANNEL_SOURCE")"
   goslar="$(create_or_die "/projects" "$body" "the Leitstand Goslar project")"
   body="$(printf '{"company_id":"%s","project_id":"%s","title":"Servicevertrag Leitstand Goslar","contract_number":"HST-2026-014"}' \
     "$harzer" "$goslar")"
@@ -1534,7 +1538,7 @@ else:
     print("")')"
 if [[ -z "$project" ]]; then
   body="$(printf '{"name":"Hafenkran Retrofit","company_id":"%s","owner_id":"%s","source":"%s","description":"Steuerung von zwei Hafenkränen erneuern."}' \
-    "$kranwerk" "$me" "$FIXTURE_SOURCE")"
+    "$kranwerk" "$me" "$CHANNEL_SOURCE")"
   project="$(create_or_die "/projects" "$body" "the Hafenkran project")"
   create_or_die "/projects/$project/advance" '{"to_phase":"pursuing","reason":"Angebot angenommen."}' \
     "the pursuing entry in the Hafenkran project's history" >/dev/null

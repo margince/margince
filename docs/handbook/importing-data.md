@@ -34,13 +34,15 @@ To import a file, open **Settings → Data import** and drop the file on **Uploa
 4. **Importing** shows each file as it goes. **Result** shows what was written.
 5. To take the import back, choose **Undo this import** on the result, or **Undo** in **Recent imports**.
 
+After **Fix and re-upload**, a file with the same columns keeps what you chose. That is **Import as**, the source name, the tag and the field of each column. A file with other columns starts again.
+
 A column named like a field starts with that field chosen. Its name may be in any language of the app, or a common name such as **Website**. An **ID** column starts as **Margince ID** only when the first values read from it are Margince IDs.
 Also called: upload a CSV, import steps, import a ZIP.
 
 ### What does the test run tell me?
 **Test run** reads the whole file and writes nothing. For each record type it counts the rows that are new, the rows that update a record, and the rows that stay the same.
 
-It lists each problem with its file, row and column. Each problem has a kind, such as **Broken link**, **Invalid value**, **Unknown owner** or **New tag**. **problems.csv** downloads the list. Its columns are file, row, column, problem and value.
+It lists each problem with its file, row and column. A row with several wrong values lists each of them, so one upload shows all you need to fix. Each problem has a kind, such as **Broken link**, **Invalid value**, **Unknown owner** or **New tag**. **problems.csv** downloads the list. Its columns are file, row, column, problem and value.
 
 The test run also counts the deals that land as closed history. **Stop test** ends a test that is still running.
 
@@ -63,7 +65,7 @@ These skip the row:
 
 A company row whose domain belongs to one company you may edit lands on that company. Its `ref` then names that company. Contacts that link to the `ref` keep their employer. The row fills only the fields that company has empty. It never renames the company or changes a stored value, also on a later import. The test run lists what it kept.
 
-A contact row with **First name** and **Last name** filled takes its full name from those two. This holds even when the file also has a **Full name** column. A contact you add or edit in Margince keeps the full name you type. A name-only CSV contact is kept, with a warning to add an email, phone or LinkedIn profile link; the import summary counts that warning.
+A contact row with **First name** and **Last name** filled takes its full name from those two. This holds even when the file also has a **Full name** column. A contact you add or edit in Margince keeps the full name you type. A name from a file that runs over two lines is read as one line. A name-only CSV contact is kept, with a warning to add an email, phone or LinkedIn profile link; the import summary counts that warning.
 
 These stop nothing. The row lands, and the problem is listed:
 - an owner email that no user has (**Unknown owner**): you become the owner, except for a lead, which stays unassigned;
@@ -72,13 +74,15 @@ These stop nothing. The row lands, and the problem is listed:
 Also called: rows skipped, import errors, why was my row not imported.
 
 ### What does **Import anyway** do?
-**Import anyway** lands the rows that have a broken link, without the link. It appears when the test run finds one. Tick the box, and the test runs again. The button then says **Import {count} rows anyway**, with the rows it lands counted.
+**Import anyway** lands the rows that have a broken link, without the link. It appears when the test run finds one. Tick the box, and the test runs again. The button then says **Import {count} rows anyway**, with the rows it lands counted. Each such row then says it will be imported without the link.
 
 The result lists every link that was left out as **Link left out**. A row with another problem is still skipped.
 Also called: keep rows with broken links, import without the company link.
 
 ### How long does an import take, and can I leave the page?
 You can leave the page. An import runs on its own once it starts. **Recent imports** shows when it is done, and its file name opens it again. A canceled draft is not listed, so a CSV whose **Import as** you changed shows as one draft. An address that names no import, or one that was removed, says **Import not found**.
+
+Each import in **Recent imports** has its date and time, its rows and its status. A **Draft** counts the rows of its file. **Test run ready** means the test is done and nothing is written yet. Both have **Continue**. A finished import says how many rows it wrote, as in **18 of 49 imported**.
 
 While it runs, **Importing** shows the rows done and the rows in all. It also shows the rows per second, the time passed and the minutes left. The time left shows only after the import has run for about 10 seconds, and it is a guess, not a promise.
 
@@ -137,8 +141,8 @@ A `deals.csv` row is one deal. Each row needs a `ref`. A new deal also needs a `
 |---|---|
 | `pipeline` | The pipeline's name. Empty means the default pipeline. |
 | `stage` | The stage's name in that pipeline. Case does not matter. |
-| `amount` and `currency` | The value as a plain number, and its three-letter currency code. An amount needs a currency. |
-| `close_date` | `YYYY-MM-DD`. An open deal's date cannot be in the past. |
+| `amount` and `currency` | The value as a plain number, and its three-letter currency code. An amount needs a currency. It cannot be below zero, and it is written the way its currency counts, such as `12000.50` in `EUR` and `12000` in `JPY`. `XXX` and `XTS` are refused: they are the codes for no currency and for tests. |
+| `close_date` | `YYYY-MM-DD`. An open deal's date cannot be in the past. A date more than 50 years away lands, and the test run asks you to check it. |
 | `company_ref` | The deal's company, found as a contact's is. |
 | `contact_ref` | A contact on the deal, by `ref`, email or Margince ID. The contact becomes a stakeholder. |
 | `lost_reason` | Needed when the stage is a lost one. Written only when the row creates the deal. |

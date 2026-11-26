@@ -68,6 +68,10 @@ const extSecretsStoreDir = "internal/platform/extsecrets"
 // those was short by two, which is what the derivation replaced.
 const keyVaultStoreDir = "internal/platform/keyvault"
 
+// generatedSummaryStoreDir holds the store the summary writers, the erasure
+// and the record merges share, so one package writes generated_summary.
+const generatedSummaryStoreDir = "internal/platform/generatedsummary"
+
 // jobsStoreDir runs the River fleet, and is where river_job is written from —
 // discovered by platformStoreDirs rather than named here; the constant exists
 // so tableOwners can point at it in one spelling.
@@ -212,9 +216,7 @@ type tableWrite struct {
 // a struct field rather than a name this walker can read, each with the tables
 // the field can actually hold. Ratified, not discovered: the reason must name
 // them, so the exception is re-checkable against the construction sites.
-var indirectTableArg = gatekit.Waive(map[string]string{
-	"internal/modules/contacts:w.table": "the evidence writer is one shape over two sidecars; the field is set at four struct literals in this package, to the company_fact constant and to company_profile_field, and contacts owns both",
-})
+var indirectTableArg = gatekit.Waive(map[string]string{})
 
 // tableArgText reads a storekit table argument: a string literal, or an
 // identifier declared as a string constant in the same package.

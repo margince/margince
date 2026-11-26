@@ -4,7 +4,7 @@
     1
   ],
   "passed": 2,
-  "runs": 2,
+  "runs": 3,
   "pass_at": 2,
   "driver": "claude:cli",
   "effort": "thinking off",
@@ -14,23 +14,27 @@
   "self_judged": true,
   "stamp": {
     "scenario": "0cfb69b78546b245",
-    "tools": "88f5bc2960c9e9f2",
-    "instructions": "c5c644eee9719be0",
+    "tools": "0267515677193081",
+    "instructions": "d707a123fe53827f",
     "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:09:47Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:28:53Z"
+    "harness": "0fe690d35efcc703",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "63922f0d5214101ce8fd648757b5dce3558da74d",
+    "ran_at": "2026-11-26T02:57:41Z",
+    "graded_commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "graded_at": "2026-11-26T03:55:15Z"
   },
   "usage": {
-    "input_tokens": 12,
-    "output_tokens": 2902,
-    "cache_creation_input_tokens": 9897,
-    "cache_read_input_tokens": 491352,
-    "runs_measured": 2,
-    "runs_costed": 2,
-    "cost_usd": 0.1178
+    "input_tokens": 26,
+    "output_tokens": 4342,
+    "cache_creation_input_tokens": 91632,
+    "cache_read_input_tokens": 943883,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.5044
   },
   "tools_by_run": [
     {
@@ -38,10 +42,26 @@
       "tools": [
         "find_records",
         "list_records",
-        "read_deal_lines",
-        "read_details",
         "search_records",
         "whoami"
+      ],
+      "refused": []
+    },
+    {
+      "passed": false,
+      "tools": [
+        "describe_router_actions",
+        "find_records",
+        "list_records",
+        "read_deal_lines",
+        "read_details",
+        "read_workspace",
+        "search_records",
+        "send_outbound",
+        "update_deal_room"
+      ],
+      "refused": [
+        "find_records"
       ]
     },
     {
@@ -49,43 +69,47 @@
       "tools": [
         "find_records",
         "list_records",
-        "read_deal_lines",
-        "read_details",
         "search_records"
-      ]
+      ],
+      "refused": []
     }
   ],
   "efficiency": {
-    "runs": 2,
+    "runs": 3,
     "calls": {
-      "median": 6.5,
-      "min": 6,
-      "max": 7
+      "median": 5,
+      "min": 5,
+      "max": 10
     },
     "turns": {
-      "median": 7.5,
-      "min": 7,
-      "max": 8
+      "median": 6,
+      "min": 6,
+      "max": 11
     },
     "refused": {
       "median": 0,
       "min": 0,
-      "max": 0
+      "max": 3
+    },
+    "retries": {
+      "median": 0,
+      "min": 0,
+      "max": 3
     },
     "prompt_tokens": {
-      "median": 250630.5,
-      "min": 250446,
-      "max": 250815
+      "median": 237607,
+      "min": 237561,
+      "max": 560373
     },
     "output_tokens": {
-      "median": 1451,
-      "min": 1405,
-      "max": 1497
+      "median": 1216,
+      "min": 1055,
+      "max": 2071
     },
     "duration_ms": {
-      "median": 13085,
-      "min": 12386,
-      "max": 13784
+      "median": 10054,
+      "min": 9415,
+      "max": 20669
     }
   }
 }

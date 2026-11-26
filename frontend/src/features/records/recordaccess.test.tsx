@@ -284,29 +284,6 @@ describe("RecordAccess — handing the record over", () => {
   });
 });
 
-describe("RecordAccess — asking a colleague's owner", () => {
-  it("offers edit access as the one primary ask, and the handover as a link", async () => {
-    const user = userEvent.setup();
-    stub();
-    drawContact({
-      ...base,
-      visibility: "workspace",
-      writable: false,
-      owner_id: "u-owner",
-    });
-    const panel = await open(user);
-    const editAccess = await within(panel).findByRole("button", {
-      name: en["editAccess.ask"].replace("{owner}", "Mira Voss"),
-    });
-    const handover = await within(panel).findByRole("button", {
-      name: en["handover.ask"].replace("{owner}", "Mira Voss"),
-    });
-    expect(editAccess.className).toContain("btn-primary");
-    expect(handover.className).toContain("btn-link");
-    expect(panel.querySelectorAll(".btn-primary")).toHaveLength(1);
-  });
-});
-
 describe("RecordAccess — who the sentence names", () => {
   it("tells the owner the contact is theirs and their sharers'", async () => {
     const user = userEvent.setup();
@@ -785,13 +762,13 @@ describe("RecordAccess — a reader who may not change it", () => {
         seat_type: "full",
         objects: { contact: { read: true, update: false } },
       },
-      en["contact.notYoursToChange"],
+      en["record.roleReadsOnly"],
     ],
     [
       "a read seat",
       { writable: true, owner_id: "u1" },
       { ...mayWrite, seat_type: "read" },
-      en["contact.notYoursToChange"],
+      en["record.roleReadsOnly"],
     ],
     [
       "an archived contact",
@@ -800,16 +777,18 @@ describe("RecordAccess — a reader who may not change it", () => {
       en["contact.rail.archivedReadOnly"],
     ],
   ])(
-    "says why instead of offering the switch: %s",
+    "offers no switch, and leaves why to the View only pill: %s",
     async (_, row, seat, why) => {
       const user = userEvent.setup();
       stub({ seat });
       drawContact({ ...base, visibility: "workspace", ...row });
       const panel = await open(user);
-      // The page's own sentence for its other writes, so the header cannot give
-      // a reason the page beside it does not.
-      expect(await within(panel).findByText(why)).toBeTruthy();
+      await within(panel).findByRole("button", {
+        name: en["recordAccess.manage"],
+      });
       expect(within(panel).queryByRole("radio")).toBeNull();
+      // The head's View only pill states the refusal, once for the page.
+      expect(within(panel).queryByText(why)).toBeNull();
       // The way to the full answer stays; only the switch goes.
       expect(
         within(panel).getByRole("button", { name: en["recordAccess.manage"] }),
@@ -881,7 +860,7 @@ describe("RecordAccess — a company", () => {
     ).toBeNull();
   });
 
-  it("gives the company page's own refusal on a company not theirs", async () => {
+  it("offers no switch on a company not theirs, and no second refusal", async () => {
     const user = userEvent.setup();
     stub();
     drawCompany({
@@ -892,9 +871,12 @@ describe("RecordAccess — a company", () => {
     });
     const panel = await open(user, "company");
     expect(
-      await within(panel).findByText(en["record.notYoursToChange"]),
+      await within(panel).findByRole("button", {
+        name: en["recordAccess.manage"],
+      }),
     ).toBeTruthy();
     expect(within(panel).queryByRole("radio")).toBeNull();
+    expect(within(panel).queryByText(en["record.notYoursToChange"])).toBeNull();
   });
 
   it("draws nothing at all when the server sent no visibility", () => {

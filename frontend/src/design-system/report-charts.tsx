@@ -279,6 +279,7 @@ export function BulletChart({
           <li key={reading.key}>
             <Button
               variant="link"
+              align="start"
               className="report-chart-row"
               data-tone={reading.tone}
               onClick={() => onSelect?.(reading.key)}
@@ -352,6 +353,7 @@ export function RangeChart({
           <li key={reading.key}>
             <Button
               variant="link"
+              align="start"
               className="report-chart-row"
               onClick={() => onSelect?.(reading.key)}
               disabled={!onSelect}

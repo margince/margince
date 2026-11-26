@@ -5,10 +5,11 @@
 
 package gates
 
-// A column that names a kind of record accepts an extension's kind. A closed
-// CHECK list is what kept an extension from adding a kind of its own. This
-// stops a new column from closing the set again. The corpus is the committed
-// head catalog, so a later table is read without being listed here.
+// A column that names a kind of record accepts an extension's kind only when
+// a writer puts one there. A column no writer fills with `ext:<unit>:<kind>`
+// keeps core's closed list, so the database refuses a row nothing should
+// produce. The corpus is the committed head catalog, so a later table is read
+// without being listed here.
 
 import (
 	"path/filepath"
@@ -26,38 +27,40 @@ var kindListCheck = regexp.MustCompile(`^public\.(\w+)\.\w+ CHECK .*?\b(entity_t
 // extensionKindPattern is what a CHECK carries to accept an extension kind.
 const extensionKindPattern = "^ext:"
 
-// notRecordKinds are the columns whose list is not core's record vocabulary.
-var notRecordKinds = gatekit.Waive(map[string]string{
-	"activity_link.entity_type":            "names a core record an activity is filed under, and no activity is filed on an extension record",
-	"activity_link_suggestion.entity_type": "names a core record a message may be filed under, and the relink that an accept runs files under core records only",
-	"bulk_operation.record_type":           "names what a bulk change may touch, and `worklist_item` is no record; an extension kind is not offered a bulk change",
+// acceptsExtensionKind are the columns that accept `ext:<unit>:<kind>`, each
+// with the writer that puts one there. A listed column whose CHECK refuses the
+// form matches nothing, and AssertAllMatched fails it.
+var acceptsExtensionKind = gatekit.Waive(map[string]string{
+	"list.entity_type":              "collections.Store.CreateList admits a declared kind through acceptsEntityType",
+	"list_member.entity_type":       "collections adds members of the list's kind",
+	"list_live_member.entity_type":  "collections' live evaluation writes members of the list's kind",
+	"list_member_event.entity_type": "collections records each membership change of the list's kind",
+	"taggable.entity_type":          "collections.Store.ApplyTag admits a declared kind through acceptsEntityType",
+	"saved_view.resource":           "collections saves a view over a declared kind (extvocab.go)",
+	"record_grant.record_type":      "row access for extension records is not decided, so the column stays open",
 })
 
-func TestEveryColumnNamingAKindOfRecordAcceptsAnExtensionKind(t *testing.T) {
+func TestOnlyTheNamedColumnsAcceptAnExtensionKind(t *testing.T) {
 	t.Parallel()
-	defer notRecordKinds.AssertAllMatched(t)
+	defer acceptsExtensionKind.AssertAllMatched(t)
 	body, err := gatekit.ReadFile(filepath.Join(gatekit.ModuleRoot(t), "migrations", "testdata", "head_catalog.txt"))
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
-	seen := 0
+	seen := map[string]bool{}
 	for line := range strings.SplitSeq(string(body), "\n") {
 		found := kindListCheck.FindStringSubmatch(line)
 		if found == nil || (!strings.Contains(found[3], "'contact'") && !strings.Contains(found[3], "'contacts'")) {
 			continue
 		}
-		seen++
-		if strings.Contains(line, extensionKindPattern) {
-			continue
-		}
 		subject := found[1] + "." + found[2]
-		if notRecordKinds.Waived(t, subject) {
-			continue
+		seen[subject] = true
+		if strings.Contains(line, extensionKindPattern) && !acceptsExtensionKind.Waived(t, subject) {
+			t.Errorf("%s accepts an extension's `ext:<unit>:<kind>`, and no writer is named for it: keep core's "+
+				"closed list, or add the column to acceptsExtensionKind with the writer that fills it.\n\t%s", subject, line)
 		}
-		t.Errorf("%s restates a closed list of record kinds and refuses an extension's `ext:<unit>:<kind>`: "+
-			"accept the pattern beside the core words, as the record-kind migration does.\n\t%s", subject, line)
 	}
-	if seen < 14 {
-		t.Fatalf("the census read %d kind CHECKs, want at least the 14 this gate was written against: the catalog or the pattern changed shape", seen)
+	if len(seen) < 14 {
+		t.Fatalf("the census read %d kind CHECKs, want at least the 14 this gate was written against: the catalog or the pattern changed shape", len(seen))
 	}
 }

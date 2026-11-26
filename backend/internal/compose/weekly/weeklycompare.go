@@ -161,7 +161,7 @@ func openedInWeek(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
-	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	scope, err := standingDealScope(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func closedInWeek(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
-	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	scope, err := standingDealScope(ctx, arg)
 	if err != nil {
 		return nil, nil, gaps, err
 	}

@@ -65,11 +65,19 @@ Replace `grading-rule-13` with the rule the records carry. The tool grades a rec
 - The judge of the record is the default judge, and its wire rule is this build's.
 
 It also refuses a record that the new rule would run again, and a rule pair that `restampableRules` does
-not list. A reviewer adds a pair after reading a change that moved only how rows pool and grade. Do not add
-one after a change to how a judge reply becomes a score, or to which runs count. Those rows are not what
-this build would record.
+not list. A reviewer adds a pair after reading a change that moved only how rows pool and grade.
+
+Code that decides which runs a record holds, or how a judge reply becomes a score, has its own version,
+`collectionRule`. A gate fails an edit to that code until the version moves
+(`go test ./internal/compose/aicert -run TheCollectionRule -update-collection-rule`). The tool refuses
+a `FROM` rule that ran under another `collectionRule`, because those rows are not what this build
+would record. Add each new `gradingRule` to `collectionOfRule` with the version it runs under.
 
 A record that fails a check stays stale, and the list says why. Those need the sweep below.
+
+A change to how a site check is hashed, and not to what it grades, is re-stamped the same way. Name
+the earlier file: `make e2e-ai-restamp SITE_CHECKS_FROM=<earlier site_checks.golden>`. The tool
+refuses a pair of files that `restampableSiteChecks` does not list.
 
 ## 2. Run both preset sweeps
 
@@ -186,6 +194,9 @@ what the model was sent and what it answered
 For example, `enrich` failed 3/3 with `no surviving title`. The model filed the
 title under `role`, a key that the prompt gave next to `title`, with nothing to
 choose between them. And no column holds a copy of that key.
+
+A band that does not move after a fix may come from two rules in the prompt that disagree. See
+[hunt-for-prompt-conflicts.md](hunt-for-prompt-conflicts.md).
 
 ## 4. Fix, or flag
 

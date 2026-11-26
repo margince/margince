@@ -42,7 +42,7 @@ func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessa
 	case operationAdvanceProjectPhase:
 		return map[string]json.RawMessage{fieldPhase: args["to_phase"]}, true, nil
 	case lifecycleProposalKind:
-		return map[string]json.RawMessage{previewLifecycle: args["proposed_lifecycle"]}, true, nil
+		return map[string]json.RawMessage{previewFieldStatus: args["proposed_lifecycle"]}, true, nil
 	case "assign_owner":
 		owner, present := args[bulkParamOwner]
 		if !present {

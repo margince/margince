@@ -1,11 +1,11 @@
 // How a view renders a value it did not produce: a missing or malformed one
 // reads as the em dash, never as "NaN", "undefined" or "0".
 
+import { ABSENT } from "../format/absent";
 import { minorUnitDigits, toMajorUnits } from "../format/minorunits";
 import { asFiniteNumber, asText } from "./types";
 
-/** What a view shows for a value it does not have. Never "NaN", never "0". */
-export const ABSENT = "—";
+export { ABSENT };
 
 /** percent renders a proportion, or the em dash for a value it cannot read. */
 export function percent(value: unknown): string {

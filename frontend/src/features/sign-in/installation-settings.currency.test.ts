@@ -12,6 +12,7 @@ import {
   type Words,
 } from "../../i18n";
 import { currencyNote } from "../../lib/installation-settings.currency";
+import { type FieldProblem, faultSentence } from "../../lib/problem";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 
@@ -83,22 +84,22 @@ describe("currencyNote words the lock facts in the reader's language", () => {
     [
       "en",
       sheet(1),
-      "1 currency rate converts into CHF. Clear the currency rates first to change the base currency.",
+      "1 currency rate converts into CHF. Remove every currency from the rate sheet first to change the base currency.",
     ],
     [
       "en",
       sheet(3),
-      "3 currency rates convert into CHF. Clear the currency rates first to change the base currency.",
+      "3 currency rates convert into CHF. Remove every currency from the rate sheet first to change the base currency.",
     ],
     [
       "en",
       unnamed(1),
-      "1 currency rate converts into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+      "1 currency rate converts into a base currency that is not on record. Remove every currency from the rate sheet first to change the base currency.",
     ],
     [
       "en",
       unnamed(3),
-      "3 currency rates convert into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+      "3 currency rates convert into a base currency that is not on record. Remove every currency from the rate sheet first to change the base currency.",
     ],
     [
       "de",
@@ -113,22 +114,22 @@ describe("currencyNote words the lock facts in the reader's language", () => {
     [
       "de",
       sheet(1),
-      "1 Wechselkurs rechnet in CHF um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+      "1 Wechselkurs rechnet in CHF um. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
     ],
     [
       "de",
       sheet(3),
-      "3 Wechselkurse rechnen in CHF um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+      "3 Wechselkurse rechnen in CHF um. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
     ],
     [
       "de",
       unnamed(1),
-      "1 Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+      "1 Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
     ],
     [
       "de",
       unnamed(3),
-      "3 Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+      "3 Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
     ],
     [
       "vi",
@@ -138,12 +139,12 @@ describe("currencyNote words the lock facts in the reader's language", () => {
     [
       "vi",
       sheet(3),
-      "3 tỷ giá đang quy đổi sang CHF. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+      "3 tỷ giá đang quy đổi sang CHF. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
     ],
     [
       "vi",
       unnamed(3),
-      "3 tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+      "3 tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
     ],
   ];
   for (const [locale, lock, sentence] of cases) {
@@ -218,4 +219,68 @@ describe("currencyNote falls back for an older or newer server", () => {
       catalogs.en["installationSettings.baseCurrencyHint"],
     );
   });
+});
+
+describe("a refused base currency words its lock as the field's hint does", () => {
+  const prose = "3 rate(s) in the sheet convert into EUR";
+  const refusal = (params?: Record<string, string>): FieldProblem => ({
+    field: "installation.base_currency",
+    code: "setting_frozen",
+    message: prose,
+    ...(params ? { params } : null),
+  });
+  const cases: [Record<string, string>, BaseCurrencyLock][] = [
+    [
+      { reason: "rates_frozen", count: "3" },
+      { reason: "rates_frozen", count: 3 },
+    ],
+    [
+      { reason: "rate_sheet", count: "1", base_currency: "CHF" },
+      { reason: "rate_sheet", count: 1, base_currency: "CHF" },
+    ],
+    [
+      { reason: "rate_sheet", count: "1204" },
+      { reason: "rate_sheet", count: 1204 },
+    ],
+  ];
+  for (const locale of ["en", "de", "vi"] as const) {
+    for (const [params, lock] of cases) {
+      it(`${params.reason}, ${params.count}, ${params.base_currency ?? "no base"}, in ${locale}`, () => {
+        expect(faultSentence(refusal(params), locale)).toBe(
+          currencyNote(locked({ base_currency_lock: lock }), wordsFor(locale)),
+        );
+      });
+    }
+  }
+
+  const unread: [string, FieldProblem][] = [
+    ["no params", refusal()],
+    [
+      "a reason this build does not know",
+      refusal({ reason: "ledger_sealed", count: "2" }),
+    ],
+    ["no count", refusal({ reason: "rates_frozen" })],
+    [
+      "a count that is not a whole number",
+      refusal({ reason: "rates_frozen", count: "3.5" }),
+    ],
+    [
+      "another setting",
+      {
+        ...refusal({ reason: "rates_frozen", count: "3" }),
+        field: "installation.timezone",
+      },
+    ],
+  ];
+  for (const [what, fault] of unread) {
+    it(`keeps the server's sentence in English for ${what}`, () => {
+      expect(faultSentence(fault, "en")).toBe(`${prose}.`);
+    });
+
+    it(`keeps the generic sentence in German for ${what}`, () => {
+      expect(faultSentence(fault, "de")).toBe(
+        translate("de", "common.fieldInvalid"),
+      );
+    });
+  }
 });

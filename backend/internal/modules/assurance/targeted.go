@@ -87,6 +87,10 @@ func (s *Scanner) scanOneDeal(
 		return s.store.FinishRun(ctx, tx, runID, Eligible{}, 0, out.Status, out.Readiness)
 	}
 	pass := askEveryRule(now, subjects, s.cfg, coverage)
+	if err := s.askPairs(ctx, tx, now, []ids.UUID{deal}, &pass); err != nil {
+		out.Status, out.Readiness = StatusIncomplete, ReadinessChecksIncomplete
+		return s.store.FinishRun(ctx, tx, runID, Eligible{}, 0, out.Status, out.Readiness)
+	}
 	out.EligibleDeals, out.Findings = pass.eligible, len(pass.raised)
 	for _, r := range pass.raised {
 		if err := s.store.UpsertException(ctx, tx, r.finding, r.owner); err != nil {
@@ -101,6 +105,13 @@ func (s *Scanner) scanOneDeal(
 	}
 	if out.Cleared, err = s.store.CloseCleared(ctx, tx, clearableTypes(coverage), pass.deals, pass.seen); err != nil {
 		return err
+	}
+	if s.pairs != nil {
+		pairs, err := s.store.closeClearedPairsOf(ctx, tx, deal, pass.seen)
+		if err != nil {
+			return err
+		}
+		out.Cleared += pairs
 	}
 	if out.Departed, err = s.store.CloseDeparted(ctx, tx, &deal, pass.deals); err != nil {
 		return err

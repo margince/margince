@@ -6,7 +6,7 @@ The 1 table owned by `continuity`, as the migrations build them. [Back to the en
 
 ## restore_drill
 
-8 columns · primary key `(id)` · referenced by 0 foreign keys
+7 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -17,7 +17,6 @@ The 1 table owned by `continuity`, as the migrations build them. [Back to the en
 | `outcome` | `text`, default `'running'::text` | yes | One of `running`, `passed`, `failed`. |
 | `restored_to` | `timestamp with time zone` | yes | The point in time the backup was restored to. |
 | `started_at` | `timestamp with time zone`, default `now()` | yes |  |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Rules**
 

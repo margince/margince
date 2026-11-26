@@ -111,7 +111,7 @@ func companyLifecycleEnums(t *testing.T, members map[string][]string, judged []s
 			out[enum] = values
 		}
 	}
-	if _, ok := out["CompanyLifecycle"]; !ok {
+	if _, ok := out["CompanyStatus"]; !ok {
 		t.Fatalf("no enum under %s holds the company lifecycle; the census found %v, so the derivation is broken", contractsPkgDir, slices.Sorted(maps.Keys(out)))
 	}
 	return out

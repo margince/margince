@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 	"testing"
 
@@ -73,6 +74,42 @@ func TestValidateCarriesTheOwningModulesReason(t *testing.T) {
 	// operator what to type instead.
 	if !strings.Contains(err.Error(), "three ISO-4217 letters") {
 		t.Errorf("refusal lost the module's reason: %v", err)
+	}
+}
+
+func TestAFrozenRefusalCarriesOnlyTheFactsItsModuleNamed(t *testing.T) {
+	sentence := Define[string]("installation.probe", "capture_settings", "update", "EUR", nil).
+		WithFreeze(func(context.Context, pgx.Tx) (bool, string, error) { return true, "held by the ledger", nil })
+	facts := Define[string]("installation.probe", "capture_settings", "update", "EUR", nil).
+		WithFreezeFacts(func(context.Context, pgx.Tx) (bool, Freeze, error) {
+			return true, Freeze{Reason: "3 rates convert into EUR", Params: map[string]string{"count": "3"}}, nil
+		})
+	for name, tc := range map[string]struct {
+		entry  *Entry[string]
+		reason string
+		params map[string]string
+	}{
+		"a module with only its sentence": {sentence, "held by the ledger", nil},
+		"a module that names its facts":   {facts, "3 rates convert into EUR", map[string]string{"count": "3"}},
+	} {
+		frozen, why, err := tc.entry.Frozen(context.Background(), nil)
+		if err != nil || !frozen {
+			t.Fatalf("%s: Frozen() = %v, %v, want frozen", name, frozen, err)
+		}
+		var fault interface {
+			apperrors.FieldFault
+			FieldParams() map[string]string
+		}
+		if !errors.As(fmt.Errorf("write: %w", FrozenValue{Setting: tc.entry.Key(), Freeze: why}), &fault) {
+			t.Fatalf("%s: the refusal states no params", name)
+		}
+		field, code, message := fault.FieldFault()
+		if field != "installation.probe" || code != "setting_frozen" || message != tc.reason {
+			t.Errorf("%s: refusal = %s/%s/%q, want installation.probe/setting_frozen/%q", name, field, code, message, tc.reason)
+		}
+		if got := fault.FieldParams(); !maps.Equal(got, tc.params) {
+			t.Errorf("%s: params = %v, want %v", name, got, tc.params)
+		}
 	}
 }
 

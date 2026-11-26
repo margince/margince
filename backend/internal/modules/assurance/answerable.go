@@ -5,7 +5,9 @@ package assurance
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -50,7 +52,42 @@ func AnswerableFindings(ctx context.Context, tx pgx.Tx, found []Exception) (map[
 			out[e.ID] = writable[e.SubjectID]
 		}
 	}
-	return out, nil
+	return out, narrowPairAnswers(ctx, tx, found, out)
+}
+
+// narrowPairAnswers takes the answer away from a pair finding whose second deal
+// the caller may not write. Its id is absent when the caller may not see it.
+// The answer is "separate", which needs authority over both deals.
+func narrowPairAnswers(ctx context.Context, tx pgx.Tx, found []Exception, out map[ids.UUID]bool) error {
+	partners := map[ids.UUID]ids.UUID{}
+	var named []ids.UUID
+	for _, e := range found {
+		if e.Type != TypeDuplicateMotion || !out[e.ID] {
+			continue
+		}
+		var observed map[string]any
+		if err := json.Unmarshal(e.Observed, &observed); err != nil {
+			return fmt.Errorf("assurance: reading a pair finding: %w", err)
+		}
+		id, err := ids.Parse(fmt.Sprint(observed[SlotOtherDealID]))
+		if err != nil {
+			out[e.ID] = false
+			continue
+		}
+		partners[e.ID] = id
+		named = append(named, id)
+	}
+	if len(named) == 0 {
+		return nil
+	}
+	writable, err := auth.WritableSubset(ctx, tx, subjectKindDeal, named)
+	if err != nil {
+		return err
+	}
+	for finding, partner := range partners {
+		out[finding] = writable[partner]
+	}
+	return nil
 }
 
 // answerableBesideDeals asks each signal and call by its own rule, filling

@@ -28,20 +28,26 @@ package contacts
 // entry point probes the record live first, so a caller reaching an archived
 // company here has been overtaken by the archive mid-apply, and a stale write
 // silently declining is the same residue the column write leaves.
-const upsertCompanyProfileField = `
-	INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url, confidence, source, captured_by, source_activity_id)
-	SELECT $1, $2, $3, $4, $5, $6, $7, $8, $10
+var upsertCompanyProfileField = `
+	INSERT INTO field_provenance (object_type, object_id, field_name, value, evidence_snippet, evidence_ref,
+	       confidence, source, captured_by, source_activity_id)
+	SELECT 'company', $1, $2, $3, $4, $5, $6, $7, $8, $10
 	  FROM company o
 	 WHERE o.id = $1 AND o.archived_at IS NULL
-	ON CONFLICT (company_id, field)
+	ON CONFLICT (object_type, object_id, field_name, value_key) WHERE value IS NOT NULL
 	DO UPDATE SET value = EXCLUDED.value, evidence_snippet = EXCLUDED.evidence_snippet,
-	              source_url = EXCLUDED.source_url, confidence = EXCLUDED.confidence,
+	              evidence_ref = EXCLUDED.evidence_ref, confidence = EXCLUDED.confidence,
 	              source = EXCLUDED.source, source_activity_id = EXCLUDED.source_activity_id,
 	              captured_by = EXCLUDED.captured_by, captured_at = now()
-	WHERE $9 OR ` + companyProfileReplaceableSQL
+	WHERE $9 OR ` + companyEvidenceReplaceableSQL(tableEvidence)
 
 // humanAuthoredConfidence is what a contact's own answer about their own company
 // scores. They are not guessing about themselves.
 const humanAuthoredConfidence = float32(1)
 
-const companyProfileReplaceableSQL = "company_profile_field.source NOT IN ('human', 'agent')"
+// companyEvidenceReplaceableSQL holds while the evidence row of the named table
+// or alias is a machine's, which a later machine read may refresh. The upsert's
+// conflict arm and the preview that predicts it read it alike.
+func companyEvidenceReplaceableSQL(row string) string {
+	return row + ".source NOT IN ('human', 'agent')"
+}

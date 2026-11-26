@@ -163,7 +163,7 @@ func anchorRenameDoors(d *twoDoors, anchor string) map[string]renameDoor {
 		"PATCH the record": rest("/v1/companies/"+anchor, "display_name"),
 		"PATCH the field":  rest("/v1/companies/"+anchor+"/profile-fields/display_name", "value"),
 		"update_record": tool("update_record", func(name string) map[string]any {
-			return map[string]any{"record_type": "company", "id": anchor, "fields": map[string]any{"display_name": name}}
+			return map[string]any{"why": "A test asks for this change.", "record_type": "company", "id": anchor, "fields": map[string]any{"display_name": name}}
 		}),
 		"change_record_parts": tool("change_record_parts", func(name string) map[string]any {
 			return map[string]any{"action": "update_company_profile_field", "company_id": anchor, "field": "display_name", "value": name}

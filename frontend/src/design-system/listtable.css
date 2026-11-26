@@ -174,11 +174,12 @@
   padding: 0 var(--space-3);
   min-block-size: var(--controlHeight);
   background: var(--bgField);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-full);
 }
 .lt-search:focus-within {
-  border-color: var(--accent);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
   color: var(--accentText);
 }
 
@@ -186,7 +187,7 @@
  * rather than the engine's: the app reset hands a form control the body FAMILY
  * and nothing else, which left this box at the browser's default size beside a
  * `.input` sized by the house. The shell around it owns the box. */
-.lt-search-input {
+.lt-search .lt-search-input {
   border: 0;
   outline: 0;
   font: inherit;
@@ -211,7 +212,6 @@
 .lt-tools input.input {
   width: auto;
   border-radius: var(--r-full);
-  border-color: var(--borderSubtle);
 }
 
 /* The toolbar's verbs carry a pill silhouette so the row reads as one kind of
@@ -342,9 +342,10 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-/* Save view and Manage views share the footer's width, on a phone as above. */
+/* Each button grows from its label's width, and wraps below when both do not
+   fit. Not a zero basis: an even split lets a long label run past its button. */
 .lt-vfoot > .btn {
-  flex: 1 1 0;
+  flex: 1 1 auto;
 }
 /* A Save view with nothing to save draws nothing, and its rule goes too. */
 .lt-vfoot:empty {
@@ -611,7 +612,7 @@
   min-block-size: var(--inputHeight);
   padding: var(--inputPaddingY) var(--inputPaddingX);
   font: inherit;
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-sm);
   background: var(--bgPage);
   color: inherit;
@@ -620,8 +621,13 @@
   color: var(--textSecondary);
 }
 .lt-fsearch-input:focus {
-  outline: 0;
-  border-color: var(--accent);
+  outline: var(--focus-ring-forced);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
+}
+.lt-fsearch-input:disabled {
+  background: var(--bgInset);
+  border-color: var(--borderStrong);
 }
 
 /* ONE ENTRY, and it stands --controlHeight tall like every other option row in
@@ -1305,7 +1311,6 @@
  * trigger in the product. */
 .lt-perpage .select-control {
   background: var(--bgField);
-  border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   cursor: pointer;
 }
@@ -1410,10 +1415,8 @@
   /* The identity cell is the card's heading: no label, full width, and it reads
    * as the thing you tapped rather than as one field among several.
    *
-   * Nothing is frozen in a stack — there is no sideways scroll for a cell to
-   * slide under — so the desktop column's chrome comes off here. Its opaque
-   * ground was still being painted over the card's translucent one, which put a
-   * patch of a slightly different white behind every card's title. */
+   * A stack scrolls nothing sideways, so nothing is frozen and the desktop
+   * column's chrome comes off here. */
   .lt-table:where(:not(.lt-phonerows)) td.lt-identity {
     display: block;
     position: static;

@@ -21,6 +21,8 @@ func visitsUnit() extension.Extension {
 	return extension.Extension{Name: "visits", Settings: []extension.Setting{
 		{Key: "live", Label: "Live", Kind: extension.SettingSwitch},
 		{Key: "region", Label: "Region", Hint: "Where visits happen", Kind: extension.SettingText},
+		{Key: "tone", Label: "Tone", Kind: extension.SettingText, Initial: "formal"},
+		{Key: "notify", Label: "Notify", Kind: extension.SettingSwitch, Initial: "true"},
 	}}
 }
 
@@ -44,11 +46,23 @@ func TestDeclaredChangesRefuseAKeyTheUnitNeverDeclaredAndAValueItsKindCannotHold
 
 func TestDeclaredViewShowsTheSavedValueOrTheDefault(t *testing.T) {
 	view := declaredView(visitsUnit(), map[string]string{"visits/region": "eu-west", "other/region": "elsewhere"})
-	if len(view) != 2 || view[0].Key != "live" || view[0].Value != "false" || view[1].Value != "eu-west" {
+	if len(view) != 4 || view[0].Key != "live" || view[0].Value != "false" || view[1].Value != "eu-west" {
 		t.Fatalf("view = %+v, want live at its default and region as saved", view)
+	}
+	if view[2].Value != "formal" || view[3].Value != "true" {
+		t.Errorf("view = %+v, want tone and notify at the initial values their unit declares", view)
 	}
 	if *view[1].Hint != "Where visits happen" || *view[0].Kind != crmcontracts.DeclaredExtensionSettingKind("switch") {
 		t.Errorf("view does not carry the declared hint and kind: %+v", view)
+	}
+}
+
+// A saved value wins over the declared initial one, an empty line included,
+// so an admin's change outlives every restart and every new unit version.
+func TestASavedValueWinsOverTheDeclaredInitialValue(t *testing.T) {
+	view := declaredView(visitsUnit(), map[string]string{"visits/tone": "", "visits/notify": "false"})
+	if view[2].Value != "" || view[3].Value != "false" {
+		t.Errorf("view = %+v, want the admin's empty tone and switched-off notify", view)
 	}
 }
 

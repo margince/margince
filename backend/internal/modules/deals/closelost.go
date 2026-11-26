@@ -236,7 +236,7 @@ func (s *Store) revertStageCorrection(
 		return err
 	}
 	history := *c.StageHistoryID
-	reopened, err := s.advanceOnTx(ctx, tx, c.DealID, AdvanceDealInput{
+	_, err = s.advanceOnTx(ctx, tx, c.DealID, AdvanceDealInput{
 		ToStageID: from, ReversalOf: &history, auditEvidence: evidence,
 		// The deal goes back to the open stage it left, so the move claims no win.
 		WonWithoutContractReason: nil,
@@ -251,7 +251,7 @@ func (s *Store) revertStageCorrection(
 	if err != nil {
 		return err
 	}
-	stamped, err := markReversed(ctx, tx, c.ID, reopened.AuditLogID, by)
+	stamped, err := markReversed(ctx, tx, c.ID, by)
 	if err != nil {
 		return err
 	}

@@ -286,14 +286,13 @@ func telegramConnectionVersion(t *testing.T, e *integration.Env, conn capture.Ch
 	return version
 }
 
-// rawCaptureCount counts the raw rows one update left behind, keyed through
-// telegramRawSourceID — the production spelling, so an assertion here can never
-// pass against a key shape the poller has stopped writing.
+// rawCaptureCount counts the raw rows one update left behind. It keys through
+// telegram.RawSourceID, so it cannot pass against a key shape the poller dropped.
 func rawCaptureCount(t *testing.T, e *integration.Env, conn capture.ChannelConnection, updateID int64) int {
 	t.Helper()
 	return e.WsCount(t,
 		`SELECT count(*) FROM raw_capture WHERE source_system = 'telegram' AND source_id = $1`,
-		telegramRawSourceID(conn.ChannelID, updateID))
+		telegram.RawSourceID(conn.ChannelID, updateID))
 }
 
 // telegramEnqueuedRawIDs is the raw row each of one connection's ingest jobs was
@@ -325,6 +324,13 @@ func workOneIngestJob(t *testing.T, e *integration.Env, worker *telegramIngestWo
 		TelegramIngestArgs{}.Kind(), rawID).Scan(&args); err != nil {
 		t.Fatalf("reading the enqueued args for raw row %s: %v", rawID, err)
 	}
+	workIngestArgs(t, worker, args)
+}
+
+// workIngestArgs runs the worker on args with no workspace on the context, as a
+// queued job has none.
+func workIngestArgs(t *testing.T, worker *telegramIngestWorker, args TelegramIngestArgs) {
+	t.Helper()
 	if err := worker.Work(context.Background(), &river.Job[TelegramIngestArgs]{Args: args}); err != nil {
 		t.Fatalf("ingest Work: %v", err)
 	}

@@ -118,7 +118,7 @@ func updateDoors(collection, recordType, fields string) bothDoorsFixture {
 			return doorRequest(http.MethodPatch, "/v1/"+collection+"/"+primary.String(), primary, fields)
 		},
 		args: func(primary, _ ids.UUID) string {
-			return `{"record_type":"` + recordType + `","id":"` + primary.String() + `","fields":` + fields + `}`
+			return `{"record_type":"` + recordType + `","id":"` + primary.String() + `","fields":` + fields + `,"why":"A test asks for this change."}`
 		},
 	}
 }
@@ -245,7 +245,7 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 			return doorRequest(http.MethodPut, "/v1/offer-templates/"+primary.String(), primary, offerTemplateBody)
 		},
 		args: func(primary, _ ids.UUID) string {
-			return `{"record_type":"offer_template","id":"` + primary.String() + `","fields":` + offerTemplateBody + `}`
+			return `{"record_type":"offer_template","id":"` + primary.String() + `","fields":` + offerTemplateBody + `,"why":"A test asks for this change."}`
 		},
 	},
 

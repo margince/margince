@@ -18,8 +18,8 @@ func TestOnlyABuiltInBuyingRoleIsNamed(t *testing.T) {
 		stored, language, wantInput, wantRole string
 	}{
 		{"contact", "en", "", "with no buying role recorded"},
-		{"Key contact", "de", "", "ohne erfasste Rolle"},
-		{" Champion ", "de", "champion", "Erfasst als Fürsprecher"},
+		{"Key contact", "de", "", "Eine Rolle im Buying Center ist nicht erfasst"},
+		{" Champion ", "de", "champion", "Erfasst als Champion"},
 		{"economic_buyer", "en", "economic_buyer", "recorded economic buyer"},
 	}
 	for _, c := range cases {

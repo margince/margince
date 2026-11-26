@@ -145,6 +145,9 @@ export function dealEditFields(
     masked: readonly string[];
     // Won or lost: the stage fixes the probability.
     closed: boolean;
+    // The deal carries a price now. A closed deal keeps it: the server refuses
+    // removing it, and the form says so before Save.
+    priced?: boolean;
     me: string;
     currentOwner: string | null;
     currency: string;
@@ -175,7 +178,11 @@ export function dealEditFields(
       required: true,
       maxLength: TEXT_LIMITS.label,
     },
-    amountField({ key: "amount", label: "create.amount" }, money),
+    closedKeepsAmount(
+      amountField({ key: "amount", label: "create.amount" }, money),
+      Boolean(opts.closed && opts.priced),
+      t,
+    ),
     // The recurring half of the price, annual, in the same currency as the
     // amount above. Beside it, not in a section of its own: the two are one
     // money value on the row. They share the currency field below, and the
@@ -252,4 +259,21 @@ export function editProjectFields(
     opts.company,
     opts.owner,
   );
+}
+
+// A won or lost deal's price is what the close froze, so a blank Amount is
+// refused in words that say how to remove it.
+function closedKeepsAmount(
+  field: CreateField,
+  keeps: boolean,
+  t: (key: MessageKey) => string,
+): CreateField {
+  if (!keeps) return field;
+  return {
+    ...field,
+    validate: (value, values, rows) =>
+      value.trim() === ""
+        ? t("deal.closedAmountKept")
+        : field.validate?.(value, values, rows),
+  };
 }

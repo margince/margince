@@ -53,6 +53,19 @@ with no router:
 `progress_deal` does what `advance_deal` does, and `relink_activities` what `relink_thread` refuses to.
 `TestThePublishedToolCountStaysUnderItsCeiling` holds the count.
 
+A router's `action` enum lists every action, but its input schema may name fewer arguments. On a router
+that `read_workspace topic=actions` describes, only the actions the use-case lane uses keep theirs. That is
+an action a scenario requires, or one a recorded MCP run called.
+`listedActions` in `internal/modules/agents/routerlisting.go` names them.
+
+Only the MCP `tools/list` leaves arguments out (`Registry.ForListing`); the in-app runner keeps every
+one. A model reads any other action's arguments from `read_workspace topic=actions`, and the server
+instructions tell it so. That catalog lists only the routers and actions the caller's own `tools/list`
+offers. A call still hands every argument to the hidden tool, which checks them against
+its own schema.
+`TestTheToolListNamesTheArgumentsOfEveryActionTheLaneUses`
+(`internal/compose/mcpe2e/listedactions_test.go`) holds the set to the scenarios and the recorded runs.
+
 **Files on MCP and REST.** A passport lists a record's files and uploads one over MCP
 (`list_documents`, `attach_document`) or over REST (`listAttachments`, `listCompanyDocuments`,
 `listDealDocuments`, `uploadAttachment`). An upload carries the whole file in its input, and two
@@ -69,6 +82,10 @@ when that is smaller. A human's upload keeps the route's own limit. An agent rea
 `list_documents` by naming its `id`, or through the file actions of `read_details`. The answer is
 `content_base64`, up to `agents.MaxInlineFileBytes`; `routeAnswer`
 (`internal/compose/routeverbseam.go`) refuses a larger file.
+
+A UTF-8 `text/*` file also answers as `content_text`. An agent attaching a text file may send it the
+same way, as `content_text`, instead of base64. A model with no shell writes base64 by hand, and drops
+letters doing so.
 
 `TestNoAgentLoopAttachesAToolThatCarriesAFile` (`internal/compose/agentcatalog_test.go`) fails when a
 scheduled agent's tool list names any tool whose input bound is over 1 MiB. The size and type bounds

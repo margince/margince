@@ -66,9 +66,8 @@ var coachSubjects = map[crmcontracts.NoticeKind]string{
 // rep which kinds the vocabulary holds by answering 422 for a wrong one and 403
 // for a right one, which is a shape the contract publishes anyway but is not
 // this endpoint's to confirm.
-func (s *Store) RaiseCoachNotice(
-	ctx context.Context, mates Teammates, recipient ids.UserID, kind crmcontracts.NoticeKind, note string,
-) (Notice, error) {
+func (s *Store) RaiseCoachNotice(ctx context.Context, reach CoachReach, ask CoachAsk) (Notice, error) {
+	recipient, kind := ask.Recipient, ask.Kind
 	// May this seat coach at all. Refuses a system pass and a buyer as well as a
 	// rep: coaching is a thing a lead or their agent does.
 	if err := auth.RequireCoach(ctx); err != nil {
@@ -86,8 +85,7 @@ func (s *Store) RaiseCoachNotice(
 			Message: "a coaching notice names one of the kinds the contract lists",
 		}
 	}
-	subject, named := coachSubjects[kind]
-	if !named {
+	if _, named := coachSubjects[kind]; !named {
 		// The contract admitted a kind this map does not answer for. Refusing
 		// is the honest answer: the alternative is a notice whose headline is
 		// blank, which the write rejects one layer down as a server error.
@@ -103,12 +101,15 @@ func (s *Store) RaiseCoachNotice(
 			Message: "a coaching notice names who it is for",
 		}
 	}
-	note = strings.TrimSpace(note)
+	note := strings.TrimSpace(ask.Note)
 	if len([]rune(note)) > noteBound {
 		return Notice{}, &values.ParseError{
 			Field: "note", Code: "note_too_long",
 			Message: fmt.Sprintf("a coaching note is at most %d characters", noteBound),
 		}
+	}
+	if err := checkCoachDeal(ask); err != nil {
+		return Notice{}, err
 	}
 	if recipient.UUID == actor.UserID {
 		// Coaching yourself is not a refusal case worth a permission error, but
@@ -119,12 +120,16 @@ func (s *Store) RaiseCoachNotice(
 			Message: "a coaching notice goes to somebody else",
 		}
 	}
-	shares, err := mates.SharesLiveTeamWithCaller(ctx, recipient.UUID)
+	shares, err := reach.Mates.SharesLiveTeamWithCaller(ctx, recipient.UUID)
 	if err != nil {
 		return Notice{}, err
 	}
 	if !shares {
 		return Notice{}, apperrors.ErrPermissionDenied
+	}
+	headline, err := coachHeadline(ctx, reach.Deals, ask)
+	if err != nil {
+		return Notice{}, err
 	}
 
 	// What ACTUALLY admitted this write, recorded beside it.
@@ -138,9 +143,10 @@ func (s *Store) RaiseCoachNotice(
 	return s.insertNotice(ctx, NewNotice{
 		Recipient:  recipient,
 		Kind:       string(kind),
-		SystemText: &systemtext.Message{Version: 1, Subject: systemtext.Sentence(string(kind))},
-		Subject:    subject,
+		SystemText: &systemtext.Message{Version: 1, Subject: headline.sentence},
+		Subject:    headline.text,
 		Body:       note,
+		Target:     headline.target,
 		// No dedupe key: a coaching note is a human act, not the delivery of an
 		// event, so there is nothing to key on and two notes are two notices.
 	}, map[string]any{

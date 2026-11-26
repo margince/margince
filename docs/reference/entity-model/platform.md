@@ -6,7 +6,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 ## audit_log
 
-15 columns · primary key `(id)` · referenced by 2 foreign keys
+15 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -208,36 +208,49 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "vault_ref": 20000, "extension_name": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"extension_name":120,"key":20000,"vault_ref":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "vault_ref": 20000, "extension_name": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"extension_name":120,"key":20000,"vault_ref":20000}')`
 
-## field_provenance
+## generated_summary
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · no primary key · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `captured_at` | `timestamp with time zone`, default `now()` | yes |  |
-| `confidence` | `numeric(4,3)` |  |  |
-| `evidence_ref` | `text` |  |  |
-| `field_name` | `text` | yes |  |
-| `object_id` | `uuid` | yes |  |
-| `object_type` | `text` | yes |  |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `company_id` | `uuid` |  | Points at `company.id`. |
+| `contact_id` | `uuid` |  | Points at `contact.id`. |
+| `deal_id` | `uuid` |  | Points at `deal.id`. |
+| `fingerprint` | `text` | yes |  |
+| `generated_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `generated_by` | `text` | yes | One of `model`, `deterministic`. |
+| `kind` | `text` | yes | One of `company_brief`, `company_dossier`, `company_growth_fit`, `contact_brief`, `deal_status_card`. |
+| `payload` | `jsonb` | yes |  |
+| `user_id` | `uuid` | yes | Points at `app_user.id`. |
+
+**Points at**
+
+| Columns | Table | When the parent goes |
+|---|---|---|
+| `company_id` | `company` | deleting the parent deletes this row |
+| `contact_id` | `contact` | deleting the parent deletes this row |
+| `deal_id` | `deal` | deleting the parent deletes this row |
+| `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
 
-- `field_provenance_confidence_check`: `CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))`
-- `field_provenance_object_type_check`: `CHECK (((object_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant'])) OR (object_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
+- `generated_summary_generated_by_check`: `CHECK ((generated_by = ANY (ARRAY['model', 'deterministic'])))`
+- `generated_summary_kind_check`: `CHECK ((kind = ANY (ARRAY['company_brief', 'company_dossier', 'company_growth_fit', 'contact_brief', 'deal_status_card'])))`
+- `generated_summary_kind_names_its_record`: `CHECK (((num_nonnulls(company_id, contact_id, deal_id) = 1) AND ((contact_id IS NOT NULL) = (kind = 'contact_brief')) AND ((deal_id IS NOT NULL) = (kind = 'deal_status_card'))))`
+- `generated_summary_reader_kind_record_key`: `UNIQUE NULLS NOT DISTINCT (user_id, kind, company_id, contact_id, deal_id)`
 
 **Indexes**
 
-- `field_provenance_pkey`: `unique, btree (id)`
-- `idx_field_provenance_object`: `btree (object_type, object_id, field_name, captured_at DESC)`
+- `generated_summary_company_ix`: `btree (company_id) WHERE (company_id IS NOT NULL)`
+- `generated_summary_contact_ix`: `btree (contact_id) WHERE (contact_id IS NOT NULL)`
+- `generated_summary_deal_ix`: `btree (deal_id) WHERE (deal_id IS NOT NULL)`
+- `generated_summary_reader_kind_record_key`: `unique, btree (user_id, kind, company_id, contact_id, deal_id) NULLS NOT DISTINCT`
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "field_name": 120, "captured_by": 20000, "object_type": 20000, "evidence_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"field_name":120,"object_type":20000,"source":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "field_name": 120, "captured_by": 20000, "object_type": 20000, "evidence_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"field_name":120,"object_type":20000,"source":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "fingerprint": 20000, "generated_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000,"kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "fingerprint": 20000, "generated_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000,"kind":20000}')`
 
 ## installation_state
 

@@ -64,6 +64,9 @@ type Job struct {
 	// English rule, as every other certified site does, so two installations'
 	// scores stay comparable while the prompt stays the one a run sends.
 	LanguageRule string
+	// Outcome, when set, must accept a final answer before the run completes.
+	// Nil accepts every final answer.
+	Outcome OutcomeCheck
 }
 
 // Grounding is one provenance-stamped seed context item (§3): T2

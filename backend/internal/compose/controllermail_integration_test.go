@@ -431,7 +431,7 @@ func TestAPrivacyNoticeShowsTheCompanyLogoUntilItIsRemoved(t *testing.T) {
 		lane := setupConfirmLane(t)
 		blob := blobstore.NewMemory()
 		putPNG(t, blob, "logos/anchor.png")
-		lane.e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_origin, source, captured_by)
+		lane.e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_source, source, captured_by)
 			VALUES ($1, 'Northstar GmbH', true, 'logos/anchor.png', 'upload', 'manual', 'human:x')`, ids.NewV7())
 		if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
 			t.Fatal(err)

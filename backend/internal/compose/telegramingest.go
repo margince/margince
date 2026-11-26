@@ -63,6 +63,10 @@ type TelegramIngestArgs struct {
 	ConnectionID string `json:"connection_id"`
 	BotID        string `json:"bot_id"`
 	RawCaptureID string `json:"raw_capture_id"`
+	// BusinessLinkID is the approved Telegram Business link the poll admitted
+	// the update through, empty for an update to the bot itself. It travels for
+	// the same reason BotID does: it is a fact about the arrival.
+	BusinessLinkID string `json:"business_link_id,omitempty"`
 }
 
 // Kind names this job to River.
@@ -154,70 +158,48 @@ func (w *telegramIngestWorker) Work(ctx context.Context, job *river.Job[Telegram
 		return jobs.FaultContext(ctx, w.applyMembership(actorCtx, job.Args.BotID, membership))
 	}
 
-	records, err := telegram.Normalize(actorCtx, raw)
-	if err != nil {
-		if errors.Is(err, connector.ErrSkip) {
-			// A deliberate exclusion — an update kind neither the membership
-			// classification above nor Normalize itself parses as a message
-			// (an edited_message, say) — counted, never a fault.
-			return nil
-		}
-		return jobs.FaultContext(ctx, fmt.Errorf("telegram_ingest: normalizing: %w", err))
-	}
-
-	return jobs.FaultContext(ctx, w.captureRecords(actorCtx, rawID, records))
+	return jobs.FaultContext(ctx, w.fileChatUpdate(actorCtx, job.Args.BusinessLinkID, rawID, raw))
 }
 
-// captureRecords hands every normalized record to the one guarded Sink,
-// translating the Fields type on the way.
-func (w *telegramIngestWorker) captureRecords(
-	actorCtx context.Context, storedOriginal ids.UUID, records []connector.NormalizedRecord,
-) error {
-	for _, rec := range records {
-		// The poll stored the update before this job existed, so the sink has
-		// no bytes to store and no id to derive. Saying which row it was is
-		// what lets a retention purge destroy the original: the poll keys
-		// raw_capture by the provider's redelivery key and the activity by the
-		// chat and message, so nothing joins them but this.
-		rec.StoredOriginal = storedOriginal
-		// Normalize returns its own package-local mirror of
-		// capture.ActivityFields (normalize.go explains why: capture already
-		// imports capture/telegram, so the reverse import would cycle). This
-		// is the one place that legitimately imports both, so the 1:1
-		// translation into the concrete type Sink.Upsert's switch recognizes
-		// happens here, immediately before the record reaches it.
-		fields, ok := rec.Fields.(telegram.ActivityFields)
-		if !ok {
-			// Discarding the assertion here would translate an unrecognized
-			// Fields type into a zero-valued activity: a captured message with
-			// no body, no direction and no occurrence time, committed as though
-			// it were real. Failing names the type instead.
-			return fmt.Errorf("telegram_ingest: normalized record carries %T, want telegram.ActivityFields", rec.Fields)
+// fileChatUpdate files one stored chat update. A business update is filed only
+// while its link is still live, and its original is destroyed when it is not.
+func (w *telegramIngestWorker) fileChatUpdate(actorCtx context.Context, businessLinkID string, rawID ids.UUID, raw connector.RawRecord) error {
+	if businessLinkID == "" {
+		return w.parseAndFile(actorCtx, raw, nil, rawID)
+	}
+	live, err := capture.FileThroughLiveBusinessLink(actorCtx, w.pool, businessLinkID, rawID, func(link telegram.BusinessLink) error {
+		return w.parseAndFile(actorCtx, raw, &link, rawID)
+	})
+	if err == nil && !live {
+		w.log.InfoContext(actorCtx, "telegram_ingest: discarded a business message whose link is no longer connected")
+	}
+	return err
+}
+
+func (w *telegramIngestWorker) parseAndFile(actorCtx context.Context, raw connector.RawRecord, link *telegram.BusinessLink, rawID ids.UUID) error {
+	binding, msg, err := telegram.ParseChatMessage(raw, link)
+	if err != nil {
+		if errors.Is(err, connector.ErrSkip) {
+			// An update kind that is no message, such as an edited_message: never a fault.
+			return nil
 		}
-		rec.Fields = capture.ActivityFields{
-			Kind: fields.Kind, ChannelProvider: fields.ChannelProvider,
-			Body: fields.Body, OccurredAt: fields.OccurredAt, Direction: fields.Direction,
+		return fmt.Errorf("telegram_ingest: normalizing: %w", err)
+	}
+	// The poll stored the update before this job existed. Naming its row is what
+	// lets a retention purge destroy the original, because raw_capture and the
+	// activity are keyed differently and nothing else joins them.
+	msg.StoredOriginal = rawID
+	if _, err := capture.FileChatMessage(actorCtx, w.sink, binding, msg); err != nil {
+		if errors.Is(err, connector.ErrSkip) {
+			// The Sink refuses a record naming an erased account. That is not a
+			// fault: a job error would retry, then fail differently once the raw
+			// row is purged. The log names the job, never the record.
+			w.log.InfoContext(actorCtx, "telegram_ingest: refused a record naming an erased channel account")
+			return nil
 		}
-		if _, err := w.sink.Upsert(actorCtx, rec); err != nil {
-			if errors.Is(err, connector.ErrSkip) {
-				// A deliberate refusal, counted like Normalize's above and like
-				// every other connector's — not a fault. The Sink refuses a
-				// record naming an account on the erasure suppression list, and
-				// returning that as a job error would retry it, fail the retry
-				// differently once the raw row is purged, and leave an operator
-				// a permanently errored job that reads like an outage.
-				//
-				// The log names the job, never the record: a channel record's
-				// natural key embeds the account id, which is precisely what the
-				// erasure removed.
-				w.log.InfoContext(actorCtx, "telegram_ingest: refused a record naming an erased channel account")
-				continue
-			}
-			// River persists returned job errors. A Telegram natural key contains
-			// the private-chat id, which is the customer's account id, so it must
-			// not leave this worker even when capture itself failed.
-			return fmt.Errorf("telegram_ingest: capturing an update: %w", err)
-		}
+		// River persists returned job errors, and the natural key holds the
+		// customer's account id, so the key stays out of this error.
+		return fmt.Errorf("telegram_ingest: capturing an update: %w", err)
 	}
 	return nil
 }

@@ -3,20 +3,15 @@
 
 package main
 
-const developmentOnlyMarker = "margince:development-only"
+import "github.com/margince/margince/backend/internal/platform/unitset"
 
-// Selection precedes fetching and every generated artifact, so excluded examples
-// contribute no code, contracts, screens or migrations to a production build.
-func selectedInstanceUnits(root string) ([]unitSource, error) {
+const developmentOnlyMarker = unitset.DevelopmentOnlyMarker
+
+// selectedInstanceUnits is the set this run composes: see unitset.Select.
+func selectedInstanceUnits(root string) ([]unitset.Unit, error) {
 	units, err := instanceUnits(root)
 	if err != nil {
 		return nil, err
 	}
-	selected := units[:0]
-	for _, unit := range units {
-		if !unit.developmentOnly || *includeDevelopment {
-			selected = append(selected, unit)
-		}
-	}
-	return selected, nil
+	return unitset.Select(units, *includeDevelopment), nil
 }

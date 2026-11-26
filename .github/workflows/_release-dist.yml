@@ -78,6 +78,16 @@ jobs:
           persist-credentials: false
           # The tag is checked against main, which a shallow checkout lacks.
           fetch-depth: 0
+      # `make check` leaves the release scripts' tests out, so the release
+      # proves the scripts it calls before it uses them. release.yml can serve
+      # a tag cut before the lane existed; that tag's own `make check` ran the
+      # tests, and its Makefile has no check-release target.
+      - name: The release scripts pass their own tests
+        run: |
+          set -euo pipefail
+          if grep -q '^check-release:' Makefile; then
+            make check-release
+          fi
       - name: Read the tag
         id: version
         env:
@@ -264,13 +274,13 @@ jobs:
             }
           skip-extraction: ${{ steps.mount-cache.outputs.cache-hit }}
       # ghcr only for pulling the release-management CLI image; the baked
-      # images go to the constellation registry as the registry publisher.
+      # images go to the publisher's registry as the registry publisher.
       - name: Log in to ghcr.io
         env:
           GHCR_TOKEN: ${{ secrets.RELEASE_TOOL_GHCR_TOKEN }}
           GHCR_USER: ${{ vars.RELEASE_TOOL_GHCR_USER }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-      - name: Log in to the constellation registry
+      - name: Log in to the publisher's registry
         env:
           PUBLISHER_TOKEN: ${{ inputs.target == 'production' && secrets.MARGINCE_PRODUCTION_AUTH_PUBLISHER_TOKEN || inputs.target != 'production' && secrets.MARGINCE_AUTH_PUBLISHER_TOKEN || '' }}
         run: |

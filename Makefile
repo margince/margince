@@ -21,13 +21,19 @@ ifeq (,$(findstring -trimpath,$(GOFLAGS)))
 override GOFLAGS += -trimpath
 export GOFLAGS
 endif
+# -trimpath leaves runtime.GOROOT empty in a `go run` tool such as gen-composition,
+# so the root of the same go is passed in the environment.
+ifeq ($(GOROOT),)
+GOROOT := $(shell $(GO) env GOROOT)
+export GOROOT
+endif
 endif
 
 # The deterministic script gates `check-root-gates` fans out. One list, one
 # consumer — see the comment on check-root-gates for why they are not that
 # target's prerequisites.
 ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-env-local test-api-entrypoint \
-  test-dev-cleanup test-disk-headroom test-dev-ready test-compose-recreate-guard \
+  test-dev-cleanup test-disk-headroom test-dev-ready test-composed-units test-compose-recreate-guard \
   test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict \
   test-review-coverage test-home-budget-compare test-repeat-changed-tests \
   test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts check-image-pins check-early-pipe-readers check-host-ports ci-doc-parity \
@@ -39,13 +45,18 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   no-jurisdiction test-no-jurisdiction \
   pkg-freeze test-pkg-freeze \
   test-dev-postgres-container test-e2e-llm-check test-gate-slot \
-  test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog \
-  test-docs-describing \
-  test-craft-review test-release-tag-version test-release-dist-version test-release-license-stamped \
-  test-release-policy-sources-fresh \
-  test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy \
-  test-release-notes test-release-bundle test-release-compose test-backend-notices embedded-binary-licenses third-party-files test-third-party-files \
+  test-closing-declaration test-docs-describing test-craft-review test-build-revision \
+  test-backend-notices embedded-binary-licenses third-party-files test-third-party-files \
   test-strict-lint-packages
+
+# The release scripts' own tests, which `check-release` fans out. Only the
+# release workflows run these scripts, so `make check` leaves them out; the
+# release workflows run the lane before they build, and CI runs it on a change
+# to a release script or workflow.
+RELEASE_SCRIPT_GATES := test-release-version-stamped test-release-patch-base test-release-changelog \
+  test-release-tag-version test-release-dist-version test-release-license-stamped \
+  test-release-policy-sources-fresh test-release-version-file test-release-tag-on-main \
+  test-release-tag-go-proxy test-release-notes test-release-bundle test-release-compose
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
 # CI runner and an 18-core laptop each get the width they have without anybody
@@ -83,7 +94,7 @@ MINIO_PORT ?= 29000
 
 .PHONY: gate-timings preflight
 .PHONY: repeat-changed-tests test-repeat-changed-tests
-.PHONY: help help-all install dev-fresh prod prod-stop check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe test-gate-slot dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards e2e-llm-report fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-dev-ready test-compose-recreate-guard test-api-entrypoint check-image-pins check-early-pipe-readers check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift policy-refresh contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-policy-sources-fresh test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh prod prod-stop check check-config check-all check-backend check-root-gates check-release check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe test-gate-slot dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards e2e-llm-report fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-dev-ready test-composed-units test-compose-recreate-guard test-api-entrypoint check-image-pins check-early-pipe-readers check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift policy-refresh contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-policy-sources-fresh test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -193,6 +204,11 @@ check-root-gates:
 	$(MAKE) -k -j$(GATE_JOBS) $(ROOT_SCRIPT_GATES)
 	@bash scripts/phase-timer.sh stop
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
+
+## check-release — the release scripts' own tests, side by side. Not part of
+## `make check`: run it after a change to a release script or workflow.
+check-release:
+	$(MAKE) -k -j$(GATE_JOBS) $(RELEASE_SCRIPT_GATES)
 
 # The steps of `make check` that rewrite files another step reads, measured
 # step by step: the frontend install (frontend/node_modules), composition
@@ -1308,6 +1324,12 @@ test-disk-headroom:
 test-dev-ready:
 	@bash scripts/lib-devready.test.sh
 
+## test-composed-units — prove verify-boot reads the transports of the units the
+## composer selected: a development unit on disk is not expected, and a missing
+## unit list or listed manifest fails instead of expecting nothing.
+test-composed-units:
+	@bash scripts/lib-composedunits.test.sh
+
 ## test-compose-recreate-guard — prove `make db-up` refuses to recreate a running
 ## shared dev container whose config differs from this checkout's, and lets
 ## DB_RECREATE=1, a stopped container or a first start through.
@@ -1991,7 +2013,7 @@ sbom-supplement:
 	@python3 scripts/third_party_files.py supplement $(SBOM_DIR) third-party-files.txt
 
 ## sbom-normalize — reconcile syft's three writers so all three SBOMs describe one
-## tree, the invariant the constellation dist gate enforces. syft scans the export
+## tree, the invariant the publisher's release gate enforces. syft scans the export
 ## at /src/$(SBOM_SRC), and its writers then disagree: CycloneDX names every file
 ## with that absolute scan-root prefix while SPDX names are repo-relative, and the
 ## SPDX writers additionally emit a pseudo-entry per directory (lone zero SHA1) plus

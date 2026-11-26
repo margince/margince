@@ -143,6 +143,15 @@ func TestExportBundleCompleteAndValidOpenFormat(t *testing.T) {
 		}
 	}
 
+	// A search value is the text of the row in another form. The bundle carries
+	// the text once, whether the database generates the value or a trigger does.
+	for _, member := range []string{"activity.csv", "contact.csv", "company.csv", "deal.csv"} {
+		header, _, _ := bytes.Cut(entries[member], []byte("\n"))
+		if bytes.Contains(header, []byte("search_tsv")) {
+			t.Errorf("%s exports the search value: %s", member, header)
+		}
+	}
+
 	// The admin (row_scope=all) sees both reps' rows — completeness.
 	if got := len(CSVColumn(t, entries["contact.csv"], "id")); got != 2 {
 		t.Fatalf("contact.csv has %d rows, want 2 (both reps)", got)

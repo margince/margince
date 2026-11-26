@@ -26,6 +26,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/compose/invitationsenders"
 	"github.com/margince/margince/backend/internal/compose/meetingrosters"
+	"github.com/margince/margince/backend/internal/compose/offernetdeals"
+	"github.com/margince/margince/backend/internal/compose/participantaddresses"
 	"github.com/margince/margince/backend/internal/compose/provensenders"
 	"github.com/margince/margince/backend/internal/compose/qualifytasks"
 	"github.com/margince/margince/backend/internal/compose/recordsources"
@@ -39,11 +41,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const introductionValidationMigration = "core/1792842046"
@@ -81,16 +83,7 @@ func dataTaskFailureNotice(pool *pgxpool.Pool) func(context.Context, pgx.Tx, dat
 // dataTaskFailureWords names the correction that stopped and why, so an
 // operator knows which of several dozen tasks to look at before opening any.
 func dataTaskFailureWords(p datatask.Progress) (subject, body string, err error) {
-	message := dataTaskFailureMessage(p)
-	subject, err = message.Subject.Render(textlang.English)
-	if err != nil {
-		return "", "", err
-	}
-	body, err = message.Body.Render(textlang.English)
-	if err != nil {
-		return "", "", err
-	}
-	return subject, body, nil
+	return dataTaskFailureMessage(p).EnglishWords()
 }
 
 func dataTaskFailureMessage(p datatask.Progress) *systemtext.Message {
@@ -116,7 +109,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		heldMailDataTask(now), subjectMailDataTask(now), noticeSourceDataTask(now), homeRepairDataTask(pool, now), mailRecipientsDataTask(), machineAddressDataTask(), pastActivityClocksDataTask(), taskActivityClocksDataTask(),
 		unaskedcommitments.DataTask(), retiredstagecards.DataTask(), colleagueSenderDataTask(), deliveryReportsDataTask(pool, now), liftedAgentCallsDataTask(), mailDealsDataTask(pool), mailBodyCompletenessDataTask(),
 		machineSenderDataTask(), signatureTitleHistoryDataTask(pool), manualSignalNoEvidenceDataTask(), companyprofiles.IndustryTask(), contactEmployersDataTask(pool), unknownEmploymentDataTask(pool), leadScoresFollowOriginDataTask(now), phaseHistoryLinksDataTask(),
-		activities.MeetingNotesDataTask(activities.NewStore(InstallationDB(pool)).WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default()))), activities.CaptureLabelsDataTask(), membersOnlyMailDataTask(), signatureWindowDataTask(), unsplitAddressDataTask(), dedupeScanDataTask(),
+		activities.MeetingNotesDataTask(activities.NewStore(InstallationDB(pool)).WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default()))), activities.CaptureLabelsDataTask(), activities.SearchTextDataTask(), membersOnlyMailDataTask(), signatureWindowDataTask(), unsplitAddressDataTask(), dedupeScanDataTask(),
 		leadMailDataTask(pool), documentLinksDataTask(), requestProofDataTask(), ownDomainFoldDataTask(), participantEvidenceDataTask(), polymorphicKeysDataTask(), initialsNamesDataTask(), seatEmploymentDataTask(), meetingNoonStartsDataTask(), meetingHistoryPrecisionDataTask(), guessedMailboxSeatsDataTask(), matchedMeetingGuestsDataTask(pool),
 		meetingGuestAnswersDataTask(pool),
 		calendarDescriptionsDataTask(),
@@ -125,10 +118,12 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		meetingDuplicatesDataTask(pool),
 		meetingPairsDataTask(pool),
 		meetingSeriesSlotsDataTask(pool),
+		splitSeriesDataTask(pool), activities.ImportedMeetingCopiesDataTask(activities.NewStore(InstallationDB(pool))),
 		meetingOrganizerHostDataTask(pool),
 		linkedInIdentityDataTask(),
 		leadContactPairsDataTask(pool),
 		addressDomainFoldDataTask(),
+		deals.SeededStageNamesDataTask(),
 		geocodePointsDataTask(),
 		signaturePhonesDataTask(),
 		lossMappingDataTask(pool),
@@ -148,6 +143,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		stockLaddersDataTask(ai.NewRoutingStore(NewSettingsStore(pool), StoredConfig(pool)).AdoptStockTaskLaddersTx),
 		mailCopiesDataTask(pool),
 		answeredTasksDataTask(pool),
+		offernetdeals.DataTask(InstallationDB(pool), DealsInstallation(), notices.NewStore(InstallationDB(pool))),
 		halvedprobabilities.DataTask(halvedProbabilityStore(pool)),
 		falseMeetingCancelsDataTask(now),
 		provensenders.DataTask(),
@@ -162,7 +158,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
-		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(),
-		rolemailboxseats.DataTask(),
+		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), recordsources.SignalDataTask(), recordsources.PartyDataTask(), rolemailboxseats.DataTask(), participantaddresses.DataTask(),
+		activities.TeamLinksDataTask(activities.NewStore(InstallationDB(pool)).WithTeamRequestNotice(teamRequestNotice{}), now), contacts.LegacyEvidenceDataTask(),
 	}
 }

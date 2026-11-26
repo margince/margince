@@ -15,6 +15,7 @@ workflow is outside the gate:
 | `closing-declaration.yml` | pull request events | No |
 | `docs-describing.yml` | pull request events | No |
 | `mcp-e2e-stale.yml` | pull request events that touch the MCP catalog or the e2e lane | No |
+| `ai-records-stale.yml` | pull request events that touch `backend/`, `config/presets/`, this workflow or `.github/actions/go-build-cache/`; it comments which AI records the change makes stale, and never fails | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
 | `main-health.yml` | `pace.yml`, `main` every six hours, manual dispatch | No |
 | `pace.yml` | every push to `main` or `develop` | No (runs after the merge) |
@@ -165,10 +166,9 @@ its evidence from the environment, so a fixture can drive every case (`make test
 
 ## `mcp-e2e-stale.yml`
 
-What starts it: a pull request that changes `docs/reference/mcp-info.json`, `e2e/llm/`, the MCP verdict folders or `backend/internal/compose/mcpe2e/`. Each committed MCP use-case verdict carries a stamp of what it measured. The workflow holds every verdict against the stamps of the base tree and of the change. It lists the ones that were current before and are not now, with what moved. The list comes from the stamps, never from a list kept by hand.
+What starts it: a pull request that changes `docs/reference/mcp-info.json`, `e2e/llm/`, the MCP verdict folders or `backend/internal/compose/mcpe2e/`. Each committed MCP use-case verdict carries a stamp of what it measured. The base tree judges its own verdicts with its own code. The change's code judges the change's tree, so a change to how a stamp is made shows too. The workflow lists the verdicts that were current before and are not now, with what moved, and any verdict the change files already stale. The list comes from the stamps, never from a list kept by hand.
 
-It warns and never fails, and keeps one comment, deleted once nothing is stale. A base it cannot check out or stamp gives no comment.
-`make e2e-llm-report` prints the state of every verdict for a local branch.
+It warns and never fails, and keeps one comment, deleted once nothing is stale. A base it cannot check out or stamp gives no comment. `make e2e-llm-report` prints the state of every verdict for a local branch.
 
 ## `issue-closed.yml`
 
@@ -254,8 +254,8 @@ Notes on the jobs:
 - The backend gate on `main` runs in `main-health.yml`, not as a daily job here. It runs the same `make check-backend` on every health check, so a daily copy would only repeat it.
 - No rule a scan can apply finds the next test that needs the clock. "A fixed date in a file that never pins the clock" matches 129 files, and nearly all of them do no harm. So the gate is a second run.
 - Many backend test files read the wall clock, and `backend/gates/testdata/wallclockfixtures.txt` holds the count. Many more compare against the `now()` of Postgres, so the change must reach both clocks. Moving the clock of the runner is the only change that does, and `scripts/clock-drift-host.sh` says why.
-- Downloads finish before the clock moves. One shell moves it for one suite slice at a time: the unit passes and the integration shards, listed by `scripts/backend-clock-drift.sh slices`. Each slice gets 15 minutes, the clock goes back after every slice, on failure too, and the job stops at 170 minutes so that every slice fits. A runner whose clock stays moved 200 days for the whole run loses its link to GitHub after about an hour. Each slice logs how long its window lasted. Only a suite that failed at the moved clock files the calendar issue, and other red files "the backend clock-drift lane could not complete".
-- `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` runs the lane on a laptop with the weaker database applier. `backend/internal/shared/clockskew` says what each applier reaches.
+- Downloads finish before the clock moves. Each suite slice is its own job: the unit passes and the integration shards, listed by `scripts/backend-clock-drift.sh slices`. A job moves the clock once, runs its slice for at most 30 minutes, and puts the clock back, on failure too. A runner whose clock is moved stops renewing its job lock. GitHub drops such a runner about an hour after the job started, so each job stops at 45 minutes.
+- Each slice keeps a verdict file, and the job `backend clock drift (main, +200 days)` reads them all (`scripts/backend-clock-drift.sh verdict`). Only a suite that failed at the moved clock files the calendar issue. A slice with no verdict files "the backend clock-drift lane could not complete". A `calendar` verdict from another slice wins over that, so a missing slice does not hide it. On a laptop, `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` runs the lane with the weaker database applier. `backend/internal/shared/clockskew` says what each applier reaches.
 - The vendor live check needs the `SURFE_LIVE_KEY` secret. Without it, the job reports "not checked" and opens one issue that says so. That issue never closes the failure issue, because no call ran.
 
 The two weekly speed jobs record what they measure, and neither writes to `main`:
@@ -319,7 +319,7 @@ nobody can get. So a newer run takes over only before signing starts, while `sbo
 `_release-dist.yml` cuts a server release in a dist service: `dist.test.margince.com` or `dist.margince.com`.
 `release-tag.yml` calls it on a plain `vX.Y.Z` tag push, with target `test`. `release.yml` is a manual dispatch
 with a required `tag` input, such as `v1.0.0`, and a `target` input, `test` or `production`. Each run calls
-`_release-sbom.yml` first and hands its artifact to the dist lane.
+`_release-sbom.yml` first and hands its artifact to the dist lane. `make check` does not test the release scripts, so each release workflow runs `make check-release` before any job calls one. A tag cut before that target existed skips the step, because its own `make check` ran those tests.
 
 `scripts/release-dist-version.sh` refuses a pre-release part, build metadata or a leading zero
 (`make test-release-dist-version`). The dist version is the tag without its `v`. Either way the run builds the

@@ -36,6 +36,7 @@ const links = [
     to_name: "Warehouse renewal",
     link_type: "renews",
     created_at: "2026-10-08T09:00:00Z",
+    removable: true,
   },
   {
     id: IN_LINK,
@@ -47,6 +48,7 @@ const links = [
     to_name: "Warehouse rollout",
     link_type: "ext:finance-demo:follow_up_of",
     created_at: "2026-10-09T09:00:00Z",
+    removable: false,
   },
 ];
 
@@ -73,7 +75,7 @@ const hits = [
   { type: "contact", id: ORIGINAL, title: "Bob Buyer" },
 ];
 
-function mount(writable: boolean) {
+function mount(writable: boolean, rows = links, types = linkTypes) {
   const removed: string[] = [];
   installFetchStub({
     "GET /search": () =>
@@ -84,8 +86,8 @@ function mount(writable: boolean) {
         422,
       ),
     "GET /me": meRoute({ deal: ["read", "update"] } as never),
-    "GET /record-links": () => jsonResponse({ data: links }),
-    "GET /link-types": () => jsonResponse({ data: linkTypes }),
+    "GET /record-links": () => jsonResponse({ data: rows }),
+    "GET /link-types": () => jsonResponse({ data: types }),
     [`DELETE /record-links/${OUT_LINK}`]: () => {
       removed.push(OUT_LINK);
       return new Response(null, { status: 204 });
@@ -112,6 +114,16 @@ describe("DealLinksCard", () => {
     expect(
       screen.getByText("Company · To this deal: Follow-up of"),
     ).toBeInTheDocument();
+  });
+
+  it("names a type no unit declares with a neutral word, never its key", async () => {
+    mount(true, links, []);
+    expect(
+      await screen.findByText(
+        `Company · To this deal: ${en["deal.links.unknownType"]}`,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/ext:/)).toBeNull();
   });
 
   it("names each hit's kind and leaves the deal itself out", async () => {
@@ -181,12 +193,13 @@ describe("DealLinksCard", () => {
     history.replaceState(null, "", "/");
   });
 
-  it("removes a link when the reader may change the deal", async () => {
+  it("removes only the links the server marks removable", async () => {
     const { removed } = mount(true);
-    const [first] = await screen.findAllByRole("button", {
+    const buttons = await screen.findAllByRole("button", {
       name: en["deal.links.remove"],
     });
-    await userEvent.click(first);
+    expect(buttons).toHaveLength(1);
+    await userEvent.click(buttons[0]);
     await screen.findByText("Warehouse renewal");
     expect(removed).toEqual([OUT_LINK]);
     expect(
@@ -195,7 +208,10 @@ describe("DealLinksCard", () => {
   });
 
   it("offers no way to add or remove when the deal is not the reader's to change", async () => {
-    mount(false);
+    mount(
+      false,
+      links.map((link) => ({ ...link, removable: false })),
+    );
     await screen.findByText("Warehouse renewal");
     expect(
       screen.queryByRole("button", { name: en["deal.links.add"] }),

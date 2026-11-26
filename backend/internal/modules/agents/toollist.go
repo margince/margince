@@ -133,22 +133,51 @@ func askUserFirst(spec mcp.ToolSpec) string {
 		if !spec.AskUserFirst || spec.Tier == mcp.TierConfirmationRequired {
 			return ""
 		}
-		return askFirstOpening
+		return askFirstOpening + unlessPreview(spec.PreviewArgument)
 	}
-	var names []string
+	var asking []mcp.ToolAction
 	for _, a := range spec.Actions {
 		if a.AskUserFirst && a.Tier != mcp.TierConfirmationRequired {
-			names = append(names, a.Action)
+			asking = append(asking, a)
 		}
 	}
-	switch len(names) {
-	case 0:
+	if len(asking) == 0 {
 		return ""
-	case 1:
+	}
+	if spec.ActionField == "" {
+		return askFirstByArguments(spec.Actions, asking)
+	}
+	names := make([]string, 0, len(asking))
+	for _, a := range asking {
+		names = append(names, a.Action)
+	}
+	if len(names) == 1 {
 		return askFirstOpening + " for the action " + names[0]
 	}
 	slices.Sort(names)
 	return askFirstOpening + " for the actions " + strings.Join(names, ", ")
+}
+
+// askFirstByArguments is the note of a router a client steers by the arguments
+// it names: its target keys are no value a client can send.
+func askFirstByArguments(actions, asking []mcp.ToolAction) string {
+	if len(asking) == len(actions) && !slices.ContainsFunc(asking, func(a mcp.ToolAction) bool { return a.PreviewArgument != "" }) {
+		return askFirstOpening
+	}
+	clauses := make([]string, 0, len(asking))
+	for _, a := range asking {
+		clauses = append(clauses, "when you name "+a.PickedBy+unlessPreview(a.PreviewArgument))
+	}
+	slices.Sort(clauses)
+	return askFirstOpening + " " + strings.Join(clauses, "; ")
+}
+
+// unlessPreview exempts the call that, with argument true, writes nothing.
+func unlessPreview(argument string) string {
+	if argument == "" {
+		return ""
+	}
+	return ", unless " + argument + " is true"
 }
 
 // What a client tells the user before the yes: a write's change, a read's disclosure.
@@ -161,13 +190,19 @@ const (
 // governanceDefaults quotes it, so the instructions name the words the tools use.
 const askFirstOpening = "ask the user first"
 
-// governanceDefaults is what the server instructions say for every tool: the
-// default tier and scope, what the ask-first mark asks for, and the retry key.
+// governanceDefaults is what the server instructions say for every tool. It
+// names the default tier and scope, what the ask-first mark asks for, where a
+// router action's arguments are, and the retry key.
 const governanceDefaults = "A tool whose description names no governance runs immediately. A tool that " +
 	"names no passport scope needs \"read\" if it only reads and \"write\" if it changes anything. " +
 	"Where a description says to " + askFirstOpening + ", for the whole tool or for the actions it names, " +
 	"the user's yes is needed: tell them " + askConsequenceWrite + ", or for a tool that only reads, " +
-	askConsequenceRead + ", and " + askFirstGetYes + ". " + mcp.ReservedIdempotencyKeyRule
+	askConsequenceRead + ", and " + askFirstGetYes + ". " + routerArgumentsRule + " " + mcp.ReservedIdempotencyKeyRule
+
+// routerArgumentsRule says where a router action's arguments are when the MCP
+// listing leaves them out (Registry.ForListing).
+const routerArgumentsRule = "Where a tool's input schema does not name an action's arguments, read_workspace " +
+	"with topic=actions and router=<that tool> lists them."
 
 // actionGovernance says which of a router's actions run at once, which wait for
 // a human and which decide per call. Empty for a tool with no actions.
@@ -209,6 +244,7 @@ func (s *Dispatcher) toolList(ctx context.Context, fr framing) []map[string]any 
 	tools := make([]map[string]any, 0, len(specs))
 	actionTools := apps.ActionTools()
 	for _, spec := range specs {
+		spec = s.registry.ForListing(spec)
 		tool := map[string]any{
 			fieldName: spec.Name,
 			// Top-level title outranks annotations.title for display, and both

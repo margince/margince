@@ -1,49 +1,25 @@
 # Extension record kinds, links, signals and reports
 
-This package of work lets an extension bring its own record kinds, links between records, signals and reports into
-Margince. It is for those who build or run extensions. The table lists each feature and the section with its details.
+An extension can bring its own record kinds, links between records, signals and reports into Margince. This page says
+what core does with each. It is for those who build or run extensions. The steps to declare each are in
+[Add an extension](../how-to/add-an-extension.md).
 
-## How to read this page
-
-| Column | Meaning |
-|---|---|
-| **Feature** | One piece of the package, in build order. |
-| **What an extension can do** | What the feature gives an extension. |
-| **Page with the details** | Where the facts are. |
-
-| # | Feature | What an extension can do | Page with the details |
-|---|---|---|---|
-| 1 | Audited fix of signal evidence | Correct a signal's type and evidence. The old values stay in the audit log. | [Audited fix of signal evidence](#audited-fix-of-signal-evidence) |
-| 2 | Company type field | Declare a company type in an extension and set it on a company. See it in the company list and filter by it. | [Company type field](#company-type-field) |
-| 3 | Extension record kinds and link registry | Declare a record kind in an extension. Tag it, put it on a Shortlist and refuse access to it by default. Read the kinds you may see from `GET /v1/record-kinds`. | [Extension record kinds and link registry](#extension-record-kinds-and-link-registry) |
-| 4 | Extension report breakdowns and counts | Declare a count or a breakdown in an extension. See it on Reports, under the seat's row scope, field masks and the group floor. A multi-select custom field can be split by. | [Extension report breakdowns and counts](#extension-report-breakdowns-and-counts) |
-| 5 | Extension signal types with structured evidence | Declare a signal type in an extension, with an evidence layout that marks personal data. File a signal of it. The same event reported twice leaves one signal. Erasing a contact removes the personal members. | [Extension signal types with structured evidence](#extension-signal-types-with-structured-evidence) |
-| 6 | Panels and tabs on record pages | Draw a component of the unit's own on a contact, company or deal page, with the record the page shows. A reader needs `read` on the panel's object. | [Panels and tabs on record pages](#panels-and-tabs-on-record-pages) |
-| 7 | "Pick a record" field type | Add a custom field of type `record` that points at one record of a kind an extension declared. Set and read it on the record pages and in the settings table. | ["Pick a record" field type](#pick-a-record-field-type) |
-| 8 | Record page with merged history for extension kinds | Declare a timeline for a record kind. Its rows that reference a contact, company or deal, and the unit's signals about it, show in that record's History beside activities and field changes. | [Record page with merged history for extension kinds](#record-page-with-merged-history-for-extension-kinds) |
-| 9 | Search and lists for extension kinds | Find a kind's rows in search. List them in a Shortlist or a Live List, filter them in the Filters screen and keep a saved view over them. | [Search and lists for extension kinds](#search-and-lists-for-extension-kinds) |
-| 10 | Suggested-link resolver | Propose which deal, company, contact or project a message belongs to. A reader accepts or rejects each suggestion in a queue on the Worklist. Nothing is filed until they accept. | [Suggested-link resolver](#suggested-link-resolver) |
-| 11 | Typed links between core records | Link a deal, company or contact to another with a type from core or from an extension. See the links on the deal page, filter the deal list by link type and group deals by it in Reports. | [Typed links between core records](#typed-links-between-core-records) |
-| 12 | Let an unattended extension run land a signal through Ingest | Raise a signal of a declared type about a record from a scheduled job, as the member whose credential it holds. A repeat of the event is not raised twice. | [Land a signal](../how-to/land-companies-and-deals-from-an-extension.md#land-a-signal) |
-
-```mermaid
-flowchart LR
-    F1[1 Audited fix of signal evidence] --> F5[5 Extension signal types]
-    F1 --> F12[12 Land a signal through Ingest]
-    F2[2 Company type field] --> F3[3 Record kinds and link registry]
-    F3 --> F6[6 Panels and tabs]
-    F3 --> F7[7 Pick a record field]
-    F3 --> F8[8 Merged history]
-    F3 --> F9[9 Search and lists]
-    F3 --> F10[10 Suggested-link resolver]
-    F3 --> F11[11 Typed links between core records]
-    F3 --> F4[4 Report breakdowns and counts]
-    F5 --> F12
-```
+| Topic | What an extension can do | Section |
+|---|---|---|
+| Record kinds | Declare a record kind. Tag it, put it on a Shortlist and refuse access to it by default. Read the kinds you may see from `GET /v1/record-kinds`. | [Extension record kinds and link registry](#extension-record-kinds-and-link-registry) |
+| Company type | Declare a company type and set it on a company. See it in the company list and filter by it. | [Company type field](#company-type-field) |
+| Record fields | Add a custom field of type `record` that points at one record of a declared kind. | ["Pick a record" field type](#pick-a-record-field-type) |
+| Record pages | Draw a component of the unit's own on a contact, company or deal page. A reader needs `read` on the panel's object. | [Panels and tabs on record pages](#panels-and-tabs-on-record-pages) |
+| History | Declare a timeline for a kind. Its rows that reference a contact, company or deal, and the unit's signals about it, show in that record's History. | [Record page with merged history for extension kinds](#record-page-with-merged-history-for-extension-kinds) |
+| Search and lists | Find a kind's rows in search. List them in a Shortlist or a Live List, filter them and keep a saved view over them. | [Search and lists for extension kinds](#search-and-lists-for-extension-kinds) |
+| Signals | Declare a signal type with an evidence layout that marks personal data, and file a signal of it. Correct a signal's type and evidence later; the old values stay in the audit log. A scheduled job raises one through Ingest. | [Extension signal types with structured evidence](#extension-signal-types-with-structured-evidence), [Audited fix of signal evidence](#audited-fix-of-signal-evidence) and [Land a signal](../how-to/land-companies-and-deals-from-an-extension.md#land-a-signal) |
+| Reports | Declare a count or a breakdown. See it on Reports, under the seat's row scope, field masks and the group floor. | [Extension report breakdowns and counts](#extension-report-breakdowns-and-counts) |
+| Typed links | Link a deal, company or contact to another with a type from core or from an extension. | [Typed links between core records](#typed-links-between-core-records) |
+| Suggested links | Propose which record a message belongs to. A reader accepts or rejects each suggestion. | [Suggested-link resolver](#suggested-link-resolver) |
 
 ## Audited fix of signal evidence
 
-A signal can be corrected after it is filed. `PATCH /v1/signals/{id}` now accepts `kind` and `evidence` next to
+A signal can be corrected after it is filed. `PATCH /v1/signals/{id}` accepts `kind` and `evidence` next to
 `status`, `note` and `severity`. The request is `UpdateSignalRequest` in `backend/api/crm.yaml`.
 
 | Field | What it does |
@@ -57,7 +33,7 @@ kind and evidence, and its after image holds the new ones. An edit that changes 
 The old values live only in that audit row. The audit log view shows them to a user who may read it.
 An erasure of a contact writes an erase row against each signal about that contact. The history views then hold back
 every image written before that row, so the old kind and evidence are no longer served.
-The data-access export for a contact does not list signals, so these old values are not in it yet.
+The data-access export for a contact does not list signals, so these old values are not in it.
 
 The request contract accepts only those six kinds. The store also accepts the signal's current `kind` unchanged, even
 when it is outside the six, so a client can send back what it read. Any other change of `kind` is refused with a 422 on
@@ -95,8 +71,9 @@ a record in tags, Shortlists, the audit log and the places that name a kind, und
 declare one are in [Declare a record kind](../how-to/add-an-extension.md#declare-a-record-kind).
 
 A kind is named `ext:<unit>:<kind>`. The unit is the extension's name. The kind is a lower-case letter followed by up to
-31 lower-case letters, digits or underscores. The spelling is permanent once a row carries it, because every column
-that names a kind accepts it as a pattern.
+31 lower-case letters, digits or underscores. The spelling is permanent once a row carries it. The pattern is
+`extension.QualifiedNamePattern`, and `gates/extensionnamegrammar_test.go` holds every copy of it in the schema, the
+contract and the frontend to that source.
 
 | Part | What it does |
 |---|---|
@@ -104,26 +81,28 @@ that names a kind accepts it as a pattern.
 | Registry | The core keeps the declared kinds in memory, filled at boot. Tags, lists and the rights check ask it, so none of them imports a unit. |
 | Rights | Each kind is gated on its own RBAC object, `ext_<unit>_<kind>` with hyphens turned into underscores. A role holds nothing on it until the unit's starting grants or an admin give it. |
 | Row check | A link, a tag or a Shortlist member needs the kind's `read` right and a live row in the unit's table. A caller without the right gets not found, so the id is not disclosed. |
-| Natural key | The unit's table keeps a unique index over the declared fields and no others. The readiness probe fails while a declared table, a column or that index is missing. |
+| Natural key | The unit's table keeps a unique index over the declared fields and no others. The readiness probe fails while a declared table, a column or that index is missing, and while the indexes search and History read are missing (see [Declare a record kind](../how-to/add-an-extension.md#declare-a-record-kind)). |
 | Delete policy | `archive_only` (the default) keeps the row. `erasable` lets the row be erased through the erasure path. |
 | `GET /v1/record-kinds` | Lists the kinds the signed-in seat may read, with fields, natural key, the `view` the unit declared, delete policy and the actions the seat holds. |
 | Audit | A change to an extension record is written with the `ext:<unit>:<kind>` name as its entity type and the existing actions. No new action is needed. |
 | Frontend | `isExtensionEntityKind` reads the spelling and `useRecordKindDirectory` loads the declared kinds. A core page does not show an extension kind, so `recordRoute` names none. A notice about one opens the unit's screen at the kind's `view`. |
 
-The database accepts the spelling in every column that named a kind. The columns are listed in the table below. A gate
-fails a new column that restates a closed list.
+The database accepts the spelling only in the columns a writer fills with it. They are listed in the table below.
+`gates/recordkindopenlist_test.go` holds the list both ways: a kind column that accepts the spelling without a named
+writer fails, and so does a listed column that refuses it.
 
 | Table | Column |
 |---|---|
-| `attachment`, `embedding`, `list`, `list_member`, `list_live_member`, `list_member_event`, `taggable`, `user_record_view`, `signal` | `entity_type` |
-| `field_provenance` | `object_type` |
-| `record_grant` | `record_type` |
-| `dedupe_candidate` | `entity_type` (with `left_ext_id` and `right_ext_id`) |
+| `list`, `list_member`, `list_live_member`, `list_member_event`, `taggable` | `entity_type` |
 | `saved_view` | `resource` |
+| `record_grant` | `record_type` (kept open while row access for extension records is undecided) |
+
+The other kind columns keep core's closed list: `entity_type` on `attachment`, `embedding`, `dedupe_candidate`,
+`user_record_view` and `signal`, and `object_type` on `field_provenance`.
 
 No column gains a foreign key to an extension table, because an extension role cannot be referenced from core.
 
-What this feature does not do yet:
+What it leaves out:
 
 - An activity link names a core record only, so no activity is filed on an extension record.
 - The record page keeps core's kinds. Tag counts do not include extension records.
@@ -148,17 +127,17 @@ name.
 | Row scope | A unit's kind has no owner, so the kind's `read` right is its whole scope: a seat without it gets nothing and the report is left out. A core population keeps its own row scope. |
 | Field masks | A mask that reaches the kind or the population takes the rows out of every group. The answer carries how many in `excluded_by_permission`. |
 | Group floor | A group below the analytics group floor is withheld. The floor is the one the analytics questions use, five by default. The smallest remaining group goes with it, and so does the total. A count under the floor is withheld too. |
-| `GET /v1/extension-reports` | Answers every report the seat may read. A report whose custom field this installation does not define is left out. |
+| `GET /v1/extension-reports` | Answers every report the seat may read. A report whose custom field this installation does not define is left out. A report that fails to run is listed with `status: unavailable` and no figures, and the others still answer; the cause goes to the server log. |
 | Reports | The Reports Pipeline page draws each answer in a panel. |
 
 The frontend holds no list of registered names. The label and the groups come from the answer, so the screens cannot
 drift from the registry. The contract's `kind` values `count` and `breakdown` are held equal to the registry's by a
 unit test.
 
-What this feature does not do yet:
+What it leaves out:
 
-- A breakdown by a field of a signal's evidence is not offered. Evidence members are named now, but no report reads
-  them yet.
+- A breakdown by a field of a signal's evidence is not offered. No report reads evidence
+  members.
 - A report is not an entity of the analytics question builder, and has no drill-through.
 - A core population other than the deal's takes counts only.
 
@@ -203,7 +182,7 @@ free text a unit wrote, so both become `[erased]`. A layout member not marked `N
 unit declares loses all its members, because nothing says what is safe to keep. The provenance stays, because it names a
 unit and a seat and never the subject. Signals of core's own kinds are not rewritten by this path.
 
-What this feature does not do yet:
+What it leaves out:
 
 - A report does not read evidence members. See [the reports section](#extension-report-breakdowns-and-counts).
 - Signals about a contact are not in the data-access export, as noted for the audited fix of evidence.
@@ -253,11 +232,11 @@ published list that grows later breaks clients that switch on the old one. The g
 
 An extension that reads the field through `pkg/extension` sees `Type` `record` and the kind in `Options`.
 
-What this feature does not do yet:
+What it leaves out:
 
-- The value is not checked against the extension's table, so an id that names no row is stored. The check needs a
-  row lookup through the registry, and no page of its own or search exists for the kinds yet. See feature 9.
-- The control takes the id as text. A picker that lists the kind's records waits for search over extension kinds.
+- The value is not checked against the extension's table, so an id that names no row is stored. Nothing looks the id
+  up in the kind's table.
+- The control takes the id as text. No picker lists the kind's records.
 
 ## Record page with merged history for extension kinds
 
@@ -289,11 +268,11 @@ flowchart LR
 | Changes | The cut stays the record's own field changes. It reads no extension entry. |
 | Screens | An entry shows the kind `Extension` or `Signal`, its title and the kind's own name. |
 
-What this feature does not do yet:
+What it leaves out:
 
 - A lead or a project shows no extension entry, because a unit declares rows about contacts, companies and deals only.
 - The kind's declared display name is not on the entry. The entry shows the kind's short name.
-- An entry does not open anything. An extension kind has no page of its own yet.
+- An entry does not open anything. An extension kind has no page of its own.
 - The feed has no next page. Core reads the newest 50 of each source.
 
 ## Search and lists for extension kinds
@@ -320,7 +299,7 @@ flowchart LR
 
 | Part | What it does |
 |---|---|
-| Search branch | One per declared kind, built from the registry on each request. A title holds every word of the query. A title that starts with the first word ranks above one that only holds it. |
+| Search branch | One per declared kind, built from the registry on each request. A title holds every word of the query, matched with a `LIKE` on its lower-cased text that the kind's trigram index serves. A `%` or `_` in the query matches itself. A title that starts with the first word ranks above one that only holds it. |
 | Title | The `LabelField` of the kind's `Timeline`, or else the first `NaturalKey` field. A hit has no snippet. |
 | Who sees a hit | The kind's `read` right is the whole scope, because a row has no owner. An archived row is never a hit. |
 | `types` | Takes core's types and `ext:<unit>:<kind>`. A kind no unit declares is a 422 on `types`. Without `types`, `GET /v1/search` also covers every kind the seat may read. |
@@ -332,7 +311,7 @@ flowchart LR
 | Saved views | `resource` takes the kind, checked against the registry. A filter in the view is checked against the kind's declared fields. |
 | Frontend | The search results page groups a kind's hits after core's records, names the group from the kind directory and offers a filter pill for it. The Filters screen offers each kind the seat may read after the four core tabs, with the declared field labels as the preview's column headings, and saves the filter as a saved view. |
 
-What this feature does not do yet:
+What it leaves out:
 
 - Search ranks a kind by its title alone, with no stemming and no vector lane. A kind has no near-match names and no
   graph edges.
@@ -343,7 +322,7 @@ What this feature does not do yet:
 - The filter field picker shows the declared column name, not its label.
 - The filtered export and the saved view export refuse an extension kind.
 - The list members endpoint has no `exclude_ids`. It takes `entity_id`, which keeps only the ids named.
-- Every declared field is a text field. A kind cannot declare a number or a date field yet.
+- Every declared field is a text field. A kind cannot declare a number or a date field.
 
 ## Suggested-link resolver
 
@@ -365,19 +344,19 @@ flowchart LR
 | Author | A contact who sent the message (the `from` participant) is never stored as a suggestion for it. Core drops it, so a unit cannot suggest filing a message under its sender. |
 | Rights | The caller must be able to update the message and to attach to the target, and must be able to read both. A record the caller cannot see answers `ErrNotFound`. A scheduled job or a bus delivery has no caller and is refused with `ErrForbidden`, as for any core write. |
 | Rate | A unit may propose 120 times a minute. Past that the call answers `ErrRateLimited`. |
-| Queue | `GET /v1/link-suggestions` answers the pending suggestions, oldest first, at most 50. A suggestion is left out when the caller may not read its message or its target. |
+| Queue | `GET /v1/link-suggestions` answers the pending suggestions the caller may decide, oldest first, at most 50: the caller may update messages, may change this one, and may read its target. Deciding runs the same check. A caller who may decide none gets an empty queue. |
 | Decision | `POST /v1/link-suggestions/{id}/accept` files the message through the ordinary relink and closes the suggestion in one transaction. `POST /v1/link-suggestions/{id}/reject` closes it and attaches nothing. Deciding the same way twice is the same success. The opposite decision is a `409`. Both routes are for a signed-in reader, not an agent. |
 | Record | Each proposal and decision writes an audit row on the message and the event `activity.link_suggestion_changed`. The table is `activity_link_suggestion`. It holds the message, the target, the unit, the reason and the score, and nothing about a user. |
 | Frontend | The Worklist draws a **Suggested links** panel when the queue is not empty. |
 
-What this feature does not do yet:
+What it leaves out:
 
 - The seam is a door the unit calls, not a callback core runs. Core runs no resolver of its own on a new message. A unit
-  that wants to propose on arrival needs the unattended landing of feature 12, because a bus delivery cannot write
-  through core today.
+  that wants to propose on arrival does it from an unattended run, as in
+  [Land a signal](../how-to/land-companies-and-deals-from-an-extension.md#land-a-signal), because a bus delivery
+  cannot write through core.
 - Core's retired guess for projects (the table `project_link_candidate`) is not brought back. This queue is separate.
-- `Core` has no search door yet, so a unit cannot pass `exclude_ids` from a handler. Core drops the author on the proposal.
-- One piece the plan named as a dependency is not in the tree, and nothing here builds it. The seam uses what exists.
+- Core has no search door, so a unit cannot pass `exclude_ids` from a handler. Core drops the author on the proposal.
 - The queue shows at most 50 suggestions and has no paging.
 
 ## Typed links between core records
@@ -394,4 +373,4 @@ extension declares its own as `ext:<unit>:<type>`, in the registry the record ki
 | Archive and erase | Archiving an end hides the link. Erasing a contact deletes its links. |
 | Screens | A Links card on the deal Overview, a Linked as list filter and a Linked as report split. |
 
-Not done yet: a merge does not carry links to the record that stays, and the filter reads deal links only.
+Left out: a merge does not carry links to the record that stays, and the filter reads deal links only.

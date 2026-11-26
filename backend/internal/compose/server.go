@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/coachdeal"
 	"github.com/margince/margince/backend/internal/compose/legalreviewdesk"
 	"github.com/margince/margince/backend/internal/compose/legalreviewrecords"
 	"github.com/margince/margince/backend/internal/compose/vacuumhealth"
@@ -113,11 +114,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	srv.authHandlers = srv.WithAnalyticsStartup(srv.analyticsStartup)
 	// After the lists switch, so /me probes list_id through the resolvers the deal and lead lists hold.
 	srv.authHandlers = srv.WithRefusedDealFilters(srv.RefusedListFilters).WithRefusedLeadFilters(srv.RefusedLeadFilters)
-	// The tool registry is built HERE, after the options, on the Server that is
-	// actually served — so every engine an option installed is one the tools can
-	// reach. The rebuild each option performs keeps a half-configured Server
-	// coherent while the loop runs; this one is what the surface ends up with.
-	srv.rebuildToolRegistry(pool)
+	// Built once, after the last option, on the Server that is served. So the
+	// tools reach every engine an option installed, in any option order.
+	srv.buildToolRegistry(pool)
 	srv.authHandlers = srv.WithReachableAreas(reachableAreasOf(srv.toolRegistry))
 	// Bound here for the same reason, and on the same Server: deactivation has
 	// to be able to destroy the provider secrets it withdrew.
@@ -240,6 +239,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		automaticWorkHandlers:         automaticWorkHandlers{pool: pool, now: utcNow},
 		Endpoint:                      vacuumhealth.NewEndpoint(pool, utcNow),
 		extensionSettingsHandlers:     extensionSettingsHandlers{store: NewSettingsStore(pool)},
+		extensionsHandlers:            extensionsHandlers{pool: pool},
 		recoveryHealthHandlers: recoveryHealthHandlers{
 			ledger: continuity.NewStore(InstallationDB(pool)),
 			now:    func() time.Time { return time.Now().UTC() },
@@ -328,12 +328,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// api role's WithSchemaPool rebuilds this over the real pool.
 		customfieldsHandlers: customfields.NewHandlers(pool, nil),
 		module:               knowledge.NewHandlers(InstallationDB(pool)).WithUploadLimit(limits.KnowledgeDocument),
-		// The personal agent-activity read. Plain time.Now, NOT time.Now().UTC():
-		// the store bounds "today" at midnight in the clock's own location, and a
-		// UTC clock would name the wrong day on a non-UTC installation for the
-		// hours either side of local midnight.
+		// Plain time.Now, not UTC: the store bounds "today" at midnight in the
+		// clock's location, so a UTC clock names the wrong day near midnight.
 		aiActivityHandlers: aiactivity.NewHandlers(aiactivity.NewStore(InstallationDB(pool)), time.Now),
-		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool)), newTeammatesSeam(pool)),
+		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool)), coachdeal.Reach(newTeammatesSeam(pool), pool, deals.NewStore(InstallationDB(pool), DealsInstallation()))),
 		assignmentHandlers: assignments.NewHandlers(assignments.NewStore(InstallationDB(pool))),
 		// One clock, passed to both halves: the store stamps when each move
 		// happened and the transport works out when an unanswered ask goes

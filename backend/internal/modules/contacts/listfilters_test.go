@@ -28,7 +28,7 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 		"related_to": ids.NewV7().String(), "relationship_mark": "vendor_marketing", "shared_with_me": "true",
 	}))
 	assertEveryFilterNarrows(t, "company", companyListFilters, withListControls(map[string]string{
-		"domain": "kaercher-technik.example", "lifecycle": "customer", "owner_id": owner,
+		"domain": "kaercher-technik.example", "status": "customer", "owner_id": owner,
 		"relationship_type": "partner", "extension_relationship_type": "ext:acme:reseller",
 		"tag_id": ids.NewV7().String(), "tag_mode": "none",
 		"industry": "payments", "size_band": "51-200", "include_anchor": "true",
@@ -68,9 +68,9 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 			"owner_team_id", "related_to", "relationship_mark", "shared_with_me", "sort", "tag_id", "tag_mode", "unassigned",
 		}},
 		{datasource.EntityCompany, []string{
-			"ai_written", "captured_by_kind", "domain", "dormancy", "extension_relationship_type", "include_anchor", "include_archived", "industry", "lifecycle", "list_id",
+			"ai_written", "captured_by_kind", "domain", "dormancy", "extension_relationship_type", "include_anchor", "include_archived", "industry", "list_id",
 			"owner_id", "owner_team_id", "partner_kind", "partner_stage", "partner_stage_meaning", "relationship_type",
-			"size_band", "sort", "source_id", "source_system", "tag_id", "tag_mode", "unassigned",
+			"size_band", "sort", "source_id", "source_system", "status", "tag_id", "tag_mode", "unassigned",
 		}},
 		{datasource.EntityPartner, []string{
 			"cert_status", "partner_kind", "partner_role", "relationship_stage", "sort", "stage_meaning",

@@ -375,13 +375,18 @@ func RateStoredSinceSQL(since string) string {
 	return "EXISTS (SELECT 1 FROM fx_rate stored_rate /* every version */ WHERE stored_rate.created_at > " + since + ")"
 }
 
-// RateSheetRevision is the newest creation time among the current rate rows: the
-// revision of the sheet the caller's snapshot sees. A sheet with no rows answers
+// rateChangedAtSQL is the instant a fx_rate row last changed the sheet: when it
+// was written, or when a correction or removal replaced it. Every "the sheet
+// changed" token takes the max of it, so a removal moves them as a write does.
+const rateChangedAtSQL = "greatest(created_at, coalesce(superseded_at, created_at))"
+
+// RateSheetRevision is the newest change to the rate sheet, a removal included:
+// the revision of the sheet the caller's snapshot sees. A sheet with no rows answers
 // the epoch, so a handle pinned to it still reads no rate.
 func RateSheetRevision(ctx context.Context, tx pgx.Tx) (time.Time, error) {
 	var revision time.Time
 	if err := tx.QueryRow(ctx, `
-		SELECT coalesce(max(created_at), 'epoch'::timestamptz) FROM fx_rate WHERE `+RateVersionSQL("", "")).Scan(&revision); err != nil {
+		SELECT coalesce(max(`+rateChangedAtSQL+`), 'epoch'::timestamptz) FROM fx_rate /* every version */`).Scan(&revision); err != nil {
 		return time.Time{}, fmt.Errorf("read the rate sheet's revision: %w", err)
 	}
 	return revision, nil
@@ -393,7 +398,7 @@ func RateSheetRevision(ctx context.Context, tx pgx.Tx) (time.Time, error) {
 func rateSheetVersion(ctx context.Context, tx pgx.Tx, base string, day time.Time) (string, error) {
 	var version string
 	if err := tx.QueryRow(ctx, `
-		SELECT coalesce(max(created_at)::text, '') FROM fx_rate /* every version */
+		SELECT coalesce(max(`+rateChangedAtSQL+`)::text, '') FROM fx_rate /* every version */
 		WHERE to_currency = $1 AND rate_date <= $2
 		  AND from_currency IN (SELECT currency FROM deal WHERE status = 'open' AND archived_at IS NULL)`, base, day).Scan(&version); err != nil {
 		return "", fmt.Errorf("read the rate sheet's newest version: %w", err)

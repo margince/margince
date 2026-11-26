@@ -330,7 +330,7 @@ func TestReadingFreshnessRunsNoPass(t *testing.T) {
 
 func (e *freshnessEnv) scan(t *testing.T) error {
 	t.Helper()
-	_, err := assuranceScanner(e.Pool, e.store).Scan(e.passCtx(), e.at)
+	_, err := AssuranceScanner(e.Pool, e.store).Scan(e.passCtx(), e.at)
 	return err
 }
 

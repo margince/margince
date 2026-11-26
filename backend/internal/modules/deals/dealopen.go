@@ -251,17 +251,11 @@ func (s *Store) revertDealOpen(ctx context.Context, tx pgx.Tx, c DealCorrection,
 	if err := dismissOpenedSuggestion(ctx, tx, c.DealID); err != nil {
 		return err
 	}
-	var archived ids.UUID
-	if err := tx.QueryRow(ctx, `
-		SELECT id FROM audit_log WHERE entity_type = 'deal' AND entity_id = $1 AND action = 'archive'
-		 ORDER BY occurred_at DESC, id DESC LIMIT 1`, c.DealID).Scan(&archived); err != nil {
-		return fmt.Errorf("deals: reading the archive's audit row: %w", err)
-	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
-	stamped, err := markReversed(ctx, tx, c.ID, archived, by)
+	stamped, err := markReversed(ctx, tx, c.ID, by)
 	if err != nil {
 		return err
 	}
@@ -338,15 +332,11 @@ func dismissOpenedSuggestion(ctx context.Context, tx pgx.Tx, deal ids.DealID) er
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return err
 	}
-	actor, err := storekit.Actor(ctx)
-	if err != nil {
-		return err
-	}
 	var id ids.UUID
-	err = tx.QueryRow(ctx, `
-		UPDATE deal_suggestion SET state = 'dismissed', accepted_deal_id = NULL, decided_by = $2, decided_at = now()
-		 WHERE accepted_deal_id = $1 AND state = 'accepted' AND kind = $3
-		RETURNING id`, deal, storekit.UUIDOrNil(actor.UserID), SuggestionKindOpenDeal).Scan(&id)
+	err := tx.QueryRow(ctx, `
+		UPDATE deal_suggestion SET state = 'dismissed', accepted_deal_id = NULL, decided_at = now()
+		 WHERE accepted_deal_id = $1 AND state = 'accepted' AND kind = $2
+		RETURNING id`, deal, SuggestionKindOpenDeal).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}

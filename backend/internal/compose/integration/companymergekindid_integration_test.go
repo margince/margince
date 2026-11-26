@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/pkg/extension/reach"
 )
 
 // theKindIDFloor is the count below which the derivation is reading a smaller
@@ -42,7 +43,6 @@ var kindIDPairsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"report_edition_question_source.source_id": "a kept question answer is frozen evidence of the records a sent edition counted; its sources are the question's population, a deal, lead, project or activity, and a reader is shown the answer only while each still answers to it",
 	"record_link.from_id":                      "moved, but not by an UPDATE: the table is insert and delete only, so moveRecordLinks copies each end onto the survivor, keeps the survivor's own link where the pair already holds one, and deletes the retired record's rows",
 	"record_link.to_id":                        "the second end of the same link, moved by the same copy and delete in moveRecordLinks",
-	"field_provenance.object_id":               "carried field by field for exactly the values the survivor inherits, in carryFieldAuthors, through the stamp writer every other path uses",
 })
 
 // TestEveryCompanyKindIDReferenceJoinsTheMerge derives the pairs from the
@@ -52,7 +52,16 @@ var kindIDPairsTheMergeLeaves = gatekit.Waive(map[string]string{
 func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 	defer kindIDPairsTheMergeLeaves.AssertAllMatched(t)
 
-	written := tablesTheMergeWrites(t)
+	assertEveryKindIDReferenceJoinsTheMerge(t, reach.Company, mergePathFiles, nil)
+}
+
+// assertEveryKindIDReferenceJoinsTheMerge is the census for one record kind.
+// own holds the pairs only that kind's vocabulary reaches. One recordmerge path
+// moves the kind-and-id rows for every merge. The pairs a merge leaves are
+// therefore the same for every kind, and they read the same map.
+func assertEveryKindIDReferenceJoinsTheMerge(t *testing.T, kind reach.Record, files []string, own *gatekit.Waivers[string]) {
+	t.Helper()
+	written := tablesTheMergeWrites(t, files, kind)
 	if len(written) == 0 {
 		t.Fatal("the merge path's source yielded no written tables — the scan is broken, not the merge")
 	}
@@ -75,8 +84,8 @@ func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 		    WHERE ck.conrelid = a.attrelid AND ck.contype = 'c'
 		      AND k.attnum = ANY (ck.conkey)
 		      AND pg_get_constraintdef(ck.oid) ~ 'ARRAY'
-		      AND pg_get_constraintdef(ck.oid) !~ '''company''')
-		ORDER BY 1, 2`)
+		      AND pg_get_constraintdef(ck.oid) !~ ('''' || $1 || ''''))
+		ORDER BY 1, 2`, string(kind))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,12 +99,12 @@ func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 		}
 		seen++
 		key := table + "." + column
-		if written[key] || kindIDPairsTheMergeLeaves.Waived(t, key) {
+		if written[key] || kindIDPairsTheMergeLeaves.Waived(t, key) || (own != nil && own.Waived(t, key)) {
 			continue
 		}
-		t.Errorf("%s can name a company by kind and id and the merge never moves it.\n"+
+		t.Errorf("%s can name a "+string(kind)+" by kind and id and the merge never moves it.\n"+
 			"Left alone it names an archived record: nothing errors and the row is gone from the "+
-			"survivor's view. Move it in internal/modules/contacts/mergekindid.go, or declare "+
+			"survivor's view. Move it in internal/platform/recordmerge/kindid.go, or declare "+
 			"it in kindIDPairsTheMergeLeaves with what moving it would cost.", key)
 	}
 	if err := rows.Err(); err != nil {

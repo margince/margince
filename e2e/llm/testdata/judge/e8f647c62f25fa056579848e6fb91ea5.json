@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states plainly that there is no morning brief yet today, and it does not describe what a brief for today would contain.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says the user has no morning brief for today yet. Answer no if it reports what a brief for today contains, or never says whether there is one.",
+  "answer": "Vietnam Partner: Mai Nguyen still owes the appendix. There is no morning brief yet today."
+}

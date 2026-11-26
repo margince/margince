@@ -173,7 +173,8 @@ func TestTheGrowthFitCacheRowIsKeyedToTheReaderWhoAskedForIt(t *testing.T) {
 func cachedGrowthFitReaders(t *testing.T, e *apptest.AppEnv, companyID string) []ids.UUID {
 	t.Helper()
 	rows, err := e.Owner.Query(context.Background(),
-		`SELECT user_id FROM company_growth_fit WHERE company_id = $1 ORDER BY user_id`, companyID)
+		`SELECT user_id FROM generated_summary
+		  WHERE kind = 'company_growth_fit' AND company_id = $1 ORDER BY user_id`, companyID)
 	if err != nil {
 		t.Fatalf("reading the cached growth-fit rows: %v", err)
 	}
@@ -251,7 +252,8 @@ func cachedGrowthFitGeneratedAt(t *testing.T, e *apptest.AppEnv, companyID strin
 	t.Helper()
 	var at time.Time
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT max(generated_at) FROM company_growth_fit WHERE company_id = $1`, companyID).Scan(&at); err != nil {
+		`SELECT max(generated_at) FROM generated_summary
+		  WHERE kind = 'company_growth_fit' AND company_id = $1`, companyID).Scan(&at); err != nil {
 		t.Fatalf("reading the cached assessment's age: %v", err)
 	}
 	return at
@@ -289,8 +291,8 @@ func seedRequiredProfileFields(t *testing.T, e *apptest.AppEnv, companyID string
 	// now() on every write, so a backdated value cannot be produced by an
 	// UPDATE after the fact.
 	const insert = `
-		INSERT INTO company_profile_field (id, company_id, field, value, source, evidence_snippet, source_url, confidence, captured_by, updated_at)
-		VALUES ($1, $2, $3, $4, 'site_read', $5, 'https://voltaq.example/about', 0.9,
+		INSERT INTO field_provenance (object_type, id, object_id, field_name, value, source, evidence_snippet, evidence_ref, confidence, captured_by, updated_at)
+		VALUES ('company', $1, $2, $3, $4, 'site_read', $5, 'https://voltaq.example/about', 0.9,
 		        'site_read:seed', $6)`
 	now := time.Now().UTC()
 	for field, seed := range map[string]struct {
@@ -345,10 +347,10 @@ func giveTheCachedRowToAnotherReader(t *testing.T, e *apptest.AppEnv, companyID 
 		t.Fatalf("create the other reader: %v", err)
 	}
 	tag, err := e.Owner.Exec(context.Background(),
-		`UPDATE company_growth_fit
+		`UPDATE generated_summary
 		    SET user_id = $1,
 		        payload = jsonb_set(payload, '{band}', to_jsonb($2::text))
-		  WHERE company_id = $3 AND user_id = $4`,
+		  WHERE kind = 'company_growth_fit' AND company_id = $3 AND user_id = $4`,
 		other, otherReadersBand, companyID, acting)
 	if err != nil {
 		t.Fatalf("hand the cached row to the other reader: %v", err)

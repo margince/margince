@@ -155,7 +155,7 @@ func readVerdictPrivateMail(ctx context.Context, tx pgx.Tx, deal ids.UUID, read 
 
 func readVerdictOffers(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
 	rows, err := tx.Query(ctx, `
-		SELECT gross_minor, currency::text, status, accepted_at IS NOT NULL, updated_at
+		SELECT net_minor, currency::text, status, accepted_at IS NOT NULL, updated_at
 		  FROM offer WHERE deal_id = $1 AND archived_at IS NULL
 		 ORDER BY accepted_at NULLS FIRST, id`, deal)
 	if err != nil {
@@ -165,7 +165,7 @@ func readVerdictOffers(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *deal
 	for rows.Next() {
 		var offer dealverdict.Offer
 		var updated time.Time
-		if err := rows.Scan(&offer.GrossMinor, &offer.Currency, &offer.Status, &offer.Accepted, &updated); err != nil {
+		if err := rows.Scan(&offer.NetMinor, &offer.Currency, &offer.Status, &offer.Accepted, &updated); err != nil {
 			return err
 		}
 		read.in.Offers = append(read.in.Offers, offer)

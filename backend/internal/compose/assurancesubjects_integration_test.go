@@ -69,8 +69,8 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 	integration.LinkActivity(t, owner, task, "deal", deal)
 
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO offer (deal_id, offer_number, status, currency, net_minor, gross_minor, source, captured_by)
-		VALUES ($1, 'A-1', 'sent', 'EUR', 4300000, 4300000, 'manual', 'test')`, deal); err != nil {
+		INSERT INTO offer (deal_id, offer_number, status, currency, net_minor, tax_minor, gross_minor, source, captured_by)
+		VALUES ($1, 'A-1', 'sent', 'EUR', 4300000, 817000, 5117000, 'manual', 'test')`, deal); err != nil {
 		t.Fatalf("seeding the sent offer: %v", err)
 	}
 	// A second, newer offer in another currency must NOT become the total: a
@@ -167,9 +167,9 @@ func TestEveryRuleInputHasAnAssembledSource(t *testing.T) {
 		}
 	}
 
-	if got := *subject.OfferTotalMinor; got != 4300000 {
-		t.Errorf("offer total = %d, want the newest SAME-CURRENCY sent offer (4300000); "+
-			"a foreign-currency total would report an exchange rate as a discrepancy", got)
+	if got := *subject.OfferNetMinor; got != 4300000 {
+		t.Errorf("offer net = %d, want the newest SAME-CURRENCY sent offer's net (4300000), "+
+			"not its gross with tax and not a foreign-currency total", got)
 	}
 	if got := *subject.ContractTotalMinor; got != 4100000 {
 		t.Errorf("contract total = %d, want 4100000", got)

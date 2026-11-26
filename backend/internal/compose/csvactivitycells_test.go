@@ -14,13 +14,13 @@ var activityNow = cellClock{now: time.Date(2026, 10, 15, 12, 0, 0, 0, time.UTC),
 
 func activityProblem(t *testing.T, fields map[string]string) *cellProblem {
 	t.Helper()
-	_, problem := checkActivityCells(fields, nil, activityNow)
+	_, problem := firstOf(checkActivityCells(fields, nil, activityNow))
 	return problem
 }
 
 func TestAnActivityTypeMapsToItsKindAndMessageIsRefused(t *testing.T) {
 	for _, name := range []string{"note", "Call", " MEETING ", "email"} {
-		typed, problem := checkActivityCells(map[string]string{"type": name}, nil, activityNow)
+		typed, problem := firstOf(checkActivityCells(map[string]string{"type": name}, nil, activityNow))
 		if problem != nil {
 			t.Fatalf("type %q refused: %+v", name, problem)
 		}
@@ -57,7 +57,7 @@ func TestATimestampIsReadAsUTCAndNeverAsTheFuture(t *testing.T) {
 		"2026-03-02T10:00:00Z":      time.Date(2026, 3, 2, 10, 0, 0, 0, time.UTC),
 	}
 	for text, want := range cases {
-		typed, problem := checkActivityCells(map[string]string{"occurred_at": text}, nil, activityNow)
+		typed, problem := firstOf(checkActivityCells(map[string]string{"occurred_at": text}, nil, activityNow))
 		if problem != nil {
 			t.Fatalf("%q refused: %+v", text, problem)
 		}
@@ -83,7 +83,7 @@ func TestADurationOnANoteIsAProblemFromTheStoresOwnRule(t *testing.T) {
 	if problem == nil || problem.Why.Code != migration.ReasonDurationNotValidForKind || problem.Target != "duration_minutes" {
 		t.Fatalf("a duration on a note = %+v, want %s on the duration column", problem, migration.ReasonDurationNotValidForKind)
 	}
-	typed, problem := checkActivityCells(map[string]string{"type": "call", "duration_minutes": "30"}, nil, activityNow)
+	typed, problem := firstOf(checkActivityCells(map[string]string{"type": "call", "duration_minutes": "30"}, nil, activityNow))
 	if problem != nil || typed["duration_minutes"] != 1800 {
 		t.Fatalf("a 30 minute call = %v, %+v; want 1800 seconds", typed["duration_minutes"], problem)
 	}
@@ -131,11 +131,11 @@ func TestADayCellIsHeldAgainstTodayInTheInstallationZone(t *testing.T) {
 		t.Fatal(err)
 	}
 	morning := cellClock{now: time.Date(2026, 3, 9, 8, 0, 0, 0, york).UTC(), zone: york}
-	if _, problem := checkActivityCells(map[string]string{"occurred_at": "2026-03-09"}, nil, morning); problem != nil {
+	if _, problem := firstOf(checkActivityCells(map[string]string{"occurred_at": "2026-03-09"}, nil, morning)); problem != nil {
 		t.Errorf("today's date refused before noon: %+v", problem)
 	}
 	evening := cellClock{now: time.Date(2026, 3, 9, 22, 0, 0, 0, york).UTC(), zone: york}
-	_, problem := checkActivityCells(map[string]string{"occurred_at": "2026-03-10"}, nil, evening)
+	_, problem := firstOf(checkActivityCells(map[string]string{"occurred_at": "2026-03-10"}, nil, evening))
 	if problem == nil || problem.Why.Code != migration.ReasonOccurredAtFuture {
 		t.Errorf("tomorrow's date = %+v, want %s", problem, migration.ReasonOccurredAtFuture)
 	}

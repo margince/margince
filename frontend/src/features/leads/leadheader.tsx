@@ -16,10 +16,11 @@ import { fetchGrants } from "../../components/share.parts";
 import { Badge } from "../../design-system/atoms";
 import { ReadOnlyValue } from "../../design-system/readonlyvalue";
 import { useT } from "../../i18n";
-import { useCanWrite, useWriteRefusal } from "../../lib/capability";
+import { useCanWrite, useWriteBlock } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
+import { WRITE_BLOCK_REFUSAL } from "../../lib/writerefusal";
 import { LeadCompany } from "./leadcompany";
 import { leadStatusLabel } from "./leadpresentation";
 import type { LeadWriter } from "./leads";
@@ -136,18 +137,14 @@ export function LeadOwnerName({ lead }: Readonly<{ lead: Lead }>) {
 // way out of the unassigned queue. Grant and seat still bind; a closed lead does not move.
 function useOwnerRefusal(lead: Lead, writer: LeadWriter) {
   const t = useT();
-  const me = useMe();
   const mayAssign = useCanWrite("lead", "update");
-  const assignRefusal = useWriteRefusal("lead", "update", {
-    seat: t("settings.seatRefused"),
-    grant: t("record.actionRefused"),
-  });
+  const block = useWriteBlock("lead");
   if (lead.archived_at) {
     return { refused: true, reason: writer.readOnlyReason };
   }
   return {
     refused: !mayAssign,
-    reason: !mayAssign && me.data ? assignRefusal : undefined,
+    reason: block ? t(WRITE_BLOCK_REFUSAL[block]) : undefined,
   };
 }
 

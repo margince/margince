@@ -3,6 +3,7 @@ import type { components } from "../../../api/schema";
 import { Field, Textarea } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { Select } from "../../../design-system/select";
+import { PHASE_LABEL } from "../../../format/projectphase";
 import { useT } from "../../../i18n";
 import { useAgentTierMap, verbTier } from "../../../lib/autonomy";
 import { labelFor } from "../../../lib/labelfor";
@@ -20,6 +21,7 @@ import { LostReasonFields } from "../lostreasonfields";
 import { closeReason, isSavedDeal } from "./closereviewoffer";
 import { CloseTasksQuestion, useCloseTasks } from "./closetasks";
 import { useWinQuestion } from "./winevidence";
+import { MOVED_INTO_BY_A_WIN, useProjectMovedByWin } from "./winmovesproject";
 import "./deal360.css";
 
 type Deal = components["schemas"]["Deal"];
@@ -163,6 +165,7 @@ export function ConfirmAdvanceModal({
   // every rep must answer gets the same lie from every rep.
   const winQuestion = useWinQuestion(pending, refusedDealId, submitting);
   const needsWonReason = winQuestion.needed;
+  const movedProject = useProjectMovedByWin(pending);
   const detailMissing =
     wonReason === WON_REASON_NEEDING_DETAIL && !saysSomething(wonDetail);
   // Said beside Confirm rather than left to a grey button: the reader is told
@@ -251,6 +254,18 @@ export function ConfirmAdvanceModal({
           <p className="t-caption">
             {t("deals.confirmTerminal", { status: shown.toStage.semantic })}
           </p>
+          {movedProject && (
+            <p className="t-caption" data-testid="win-moves-project">
+              {movedProject.project === null
+                ? t("deals.confirmMovesUnreadProject", {
+                    phase: t(labelFor(PHASE_LABEL, MOVED_INTO_BY_A_WIN)),
+                  })
+                : t("deals.confirmMovesProject", {
+                    project: movedProject.project,
+                    phase: t(labelFor(PHASE_LABEL, MOVED_INTO_BY_A_WIN)),
+                  })}
+            </p>
+          )}
           {(needsLostReason || needsWonReason) && (
             <form className="form-stack" onSubmit={submit}>
               {needsLostReason && (

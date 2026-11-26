@@ -100,8 +100,7 @@ func (s *Service) DismissMoment(ctx context.Context, contactID ids.ContactID, in
 			INSERT INTO contact_moment_dismissal (user_id, contact_id, claim_key, evidence_fingerprint)
 			VALUES ($1, $2, $3, $4)
 			ON CONFLICT (user_id, contact_id, claim_key)
-			DO UPDATE SET evidence_fingerprint = EXCLUDED.evidence_fingerprint,
-			              dismissed_at = now()`,
+			DO UPDATE SET evidence_fingerprint = EXCLUDED.evidence_fingerprint`,
 			userID, contactID, in.ClaimKey, in.EvidenceFingerprint)
 		if err != nil {
 			// Wrapped: a bare pgx error carries the table and column it failed

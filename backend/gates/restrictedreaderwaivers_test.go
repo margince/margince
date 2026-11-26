@@ -10,6 +10,8 @@ import "github.com/margince/margince/backend/internal/shared/gatekit"
 const activityCorrectionMetadata = "system data-task progress counts only a capped primary-key page, never content. Immutable IDs stay in that scan so progress advances across every inspected record; the domain corrections exclude restricted rows before reading their content or writing them"
 
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/rawsubjectsql.go:linkedOriginalsSQL":                      "selects raw_capture ids of originals filed on one record. The export arm discloses through the content gate in the SAR section, and the erasing arm keeps what a legal hold covers, so no held row reaches a reader",
+	"internal/modules/capture/sinkassertedincumbent.go:assertedIncumbent":               "reads only captured_by of the row a capture collided with, as provenance and no content. A held row must answer too, or a replay onto a held meeting would be taken for a new one.",
 	"internal/modules/capture/threadboundary.go:Sink.mailHeldTx":                        "answers only whether a mail is stored already and whether its own key names a thread, as booleans and no content. A held row must count, or a replay would be filed as new and store its files a second time.",
 	"internal/modules/activities/systemtaskopen.go:SourceFiledOnTx":                     "System-only. Answers the id of an activity under one source key that is linked to one record, as the replay lookup does, and no content. A held row must count too, or its record gets a second task or summary.",
 	"internal/modules/activities/capturelabelrename.go:activitiesToInspectTx":           activityCorrectionMetadata,
