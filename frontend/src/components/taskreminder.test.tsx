@@ -98,7 +98,12 @@ describe("TaskRemindMenu", () => {
   it("offers Remove only on a task that has a reminder, and clears it", async () => {
     const user = userEvent.setup();
     renderMenu({ remind_at: "2026-03-04T08:00:00.000Z" });
-    await user.click(screen.getByRole("button", { name: "Remind me" }));
+    // The chip's name keeps the verb and adds the reading it shows.
+    await user.click(
+      screen.getByRole("button", {
+        name: /^Remind me \(reminder set for .+\)$/,
+      }),
+    );
     await user.click(screen.getByRole("button", { name: "Remove reminder" }));
     await waitFor(() => expect(patches()).toHaveLength(1));
     expect(patches()[0]?.body).toEqual({ remind_at: null });
