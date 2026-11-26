@@ -170,6 +170,13 @@ public.analytics_share.target document
 public.analytics_share.token_hash document
 public.app_user.avatar_object_key document
 public.app_user.avatar_origin document
+public.app_user.chat_telegram_code_hash document
+public.app_user.chat_telegram_user_id document
+public.app_user.chat_whatsapp_code_hash document
+public.app_user.chat_whatsapp_phone document
+public.app_user.chat_zalo_code_hash document
+public.app_user.chat_zalo_oa_id document
+public.app_user.chat_zalo_user_id document
 public.app_user.display_name exempt provider names and earlier account names retain their identity contract
 public.app_user.email document
 public.app_user.email_domain_folded document

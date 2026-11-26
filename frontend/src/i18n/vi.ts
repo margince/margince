@@ -17611,6 +17611,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "account.pictureEdit": "Sửa ảnh hồ sơ",
   "account.pictureSaved": "Đã lưu ảnh",
   "account.pictureRemoved": "Đã gỡ ảnh",
+  "account.chatWhatsapp": "Tài khoản WhatsApp",
+  "account.chatTelegram": "Tài khoản Telegram",
+  "account.chatZalo": "Tài khoản Zalo",
+  "account.chatHelp":
+    "Xác nhận tài khoản {network} của chính bạn. Tin nhắn của khách mà bạn chuyển tiếp từ đó đến tài khoản {network} của công ty sẽ được lưu cho khách đó, không bao giờ cho bạn.",
+  "account.chatCode":
+    "Trong 10 phút, hãy gửi mã này bằng tin nhắn từ tài khoản {network} của bạn đến tài khoản {network} của công ty: {code}",
+  "account.chatWaiting":
+    "Đang chờ mã. Hãy gửi mã từ tài khoản {network} của bạn đến tài khoản {network} của công ty, hoặc bắt đầu lại để nhận mã mới.",
+  "account.chatConfirmed": "Đã xác nhận: {account}",
+  "account.chatConfirm": "Xác nhận bằng mã",
+  "account.chatRemove": "Gỡ",
+  "account.chatRemoved": "Đã gỡ tài khoản",
+  "account.chatFailed": "Không thành công. Hãy thử lại.",
   "account.pictureWrongType":
     "Không thể tải ảnh lên. Hãy dùng tệp PNG, JPEG hoặc WebP.",
   "account.pictureTooLarge": "Không thể tải ảnh lên. Hãy dùng tệp tối đa 5 MB.",
