@@ -180,7 +180,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_activity_kind`: `btree (kind, occurred_at DESC) WHERE (archived_at IS NULL)`
 - `idx_activity_labeled`: `btree (capture_labeled_at) WHERE (capture_labeled_at IS NOT NULL)`
 - `idx_activity_meeting_host`: `btree (host_user_id, occurred_at) WHERE ((kind = 'meeting') AND (archived_at IS NULL))`
-- `idx_activity_negative_duration`: `btree (id) WHERE (duration_seconds < 0)`
+- `idx_activity_negative_duration`: `btree (id) WHERE ((duration_seconds < 0) AND (restricted_at IS NULL))`
 - `idx_activity_occurred_live`: `btree (occurred_at DESC) WHERE (archived_at IS NULL)`
 - `idx_activity_owed_ruleset`: `btree (owed_verdict_ruleset, occurred_at) WHERE ((owed_verdict IS NOT NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
 - `idx_activity_participants_by_reason`: `btree (audience_reason, occurred_at DESC, id) WHERE ((audience = 'participants') AND (restricted_at IS NULL) AND (archived_at IS NULL))`

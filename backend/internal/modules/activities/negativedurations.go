@@ -22,6 +22,10 @@ type clearedDuration struct {
 	Negative int64
 }
 
+// negativeDurationScope is the rows the correction may write. A restricted row
+// is immutable until its lift, and the lift's update clears its duration then.
+const negativeDurationScope = `duration_seconds < 0 AND restricted_at IS NULL`
+
 // CountNegativeDurations counts the activities still holding a negative
 // duration, up to maximum plus one.
 func CountNegativeDurations(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
@@ -29,7 +33,7 @@ func CountNegativeDurations(ctx context.Context, q datatask.Querier, maximum int
 		return 0, false, err
 	}
 	var left int64
-	if err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM activity WHERE duration_seconds < 0 LIMIT $1) negative`,
+	if err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM activity WHERE `+negativeDurationScope+` LIMIT $1) negative`,
 		maximum+1).Scan(&left); err != nil {
 		return 0, false, fmt.Errorf("activities: counting negative durations: %w", err)
 	}
@@ -50,7 +54,7 @@ func ClearNegativeDurationsTx(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	}
 	rows, err := tx.Query(ctx, `WITH page AS (
 		  SELECT id, duration_seconds FROM activity
-		   WHERE duration_seconds < 0 AND id > $1 ORDER BY id LIMIT $2 FOR UPDATE),
+		   WHERE `+negativeDurationScope+` AND id > $1 ORDER BY id LIMIT $2 FOR UPDATE),
 		cleared AS (UPDATE activity a SET duration_seconds = NULL FROM page WHERE a.id = page.id
 		  RETURNING a.id, page.duration_seconds)
 		SELECT id, duration_seconds FROM cleared ORDER BY id`, after, in.Limit)

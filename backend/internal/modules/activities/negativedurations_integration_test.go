@@ -125,3 +125,36 @@ func TestAnEditClearsAnOldNegativeDurationAndANewOneIsRefused(t *testing.T) {
 		t.Error("writing a negative duration over a cleared one succeeded, want the floor to refuse it")
 	}
 }
+
+// A restricted row is immutable, so the task passes it and finishes. The
+// erasure that lifts its restriction clears the duration in the same update.
+func TestARestrictedNegativeDurationWaitsForItsLift(t *testing.T) {
+	e := setupSend(t)
+	held := ids.NewV7()
+	testdb.WithNegativeCountFloorsLifted(t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(t.Context(), `INSERT INTO activity (id, kind, subject, occurred_at, duration_seconds, source, captured_by,
+			  retention_class, retention_class_at, archived_at, restricted_at, restricted_reason, restricted_until)
+			VALUES ($1, 'call', 'Contract call', now(), -60, 'manual', 'test',
+			  'commercial_correspondence', now(), now(), now(), 'statutory retention', now() + interval '6 years')`, held)
+		return err
+	})
+	measured := seedDurations(t, e, -30)[0]
+
+	if changed := clearDurations(t, e); changed != 1 {
+		t.Errorf("the task changed %d rows, want only the unrestricted one", changed)
+	}
+	if d := storedDuration(t, e, held); d == nil || *d != -60 {
+		t.Errorf("the restricted row's duration reads %v, want -60 left as the restriction holds it", d)
+	}
+	if d := storedDuration(t, e, measured); d != nil {
+		t.Errorf("the unrestricted row on the same run reads %d, want NULL", *d)
+	}
+	if _, err := e.owner.Exec(context.Background(), `UPDATE activity SET restricted_at = NULL, restricted_reason = NULL,
+		  restricted_until = NULL, body = NULL, raw = NULL, counterparty_email = NULL, source_author_name = NULL,
+		  subject = 'Erased' WHERE id = $1`, held); err != nil {
+		t.Fatalf("lifting the restriction: %v", err)
+	}
+	if d := storedDuration(t, e, held); d != nil {
+		t.Errorf("the lifted row's duration reads %d, want NULL", *d)
+	}
+}
