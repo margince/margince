@@ -21,6 +21,7 @@ import type {
   ConnectAccountInput,
   ImportWindow,
 } from "../../lib/connect-account";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { locationDouble } from "../../testing/locationdouble";
 import { ConnectionAccountRow } from "./connection-account";
 import { type PendingStop, StopConfirm } from "./connection-stop";
@@ -115,20 +116,19 @@ function requestsTo(calls: Request[], suffix: string, method: string) {
 function renderAccount(
   connections: CaptureConnection[],
   heldWindow: ImportWindow | null = null,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
 ) {
   const [account] = accountsOf(connections);
   return rtlRender(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ConnectionAccountRow
-          account={account}
-          heldWindow={heldWindow}
-          onImapReconnect={() => undefined}
-        />
+        <ViewerZoneProvider zone="Europe/Berlin">
+          <ConnectionAccountRow
+            account={account}
+            heldWindow={heldWindow}
+            onImapReconnect={() => undefined}
+          />
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -176,6 +176,33 @@ describe("the past email service", () => {
     );
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "DELETE")).toHaveLength(1),
+    );
+  });
+
+  // A stopped run may have settled the unread period, which only the
+  // connections roster carries.
+  it("reads the connections again once its import stops", async () => {
+    let run: BackfillStatus = running;
+    stubApi({
+      "GET /connectors/gmail/backfill": () => jsonResponse(run),
+      "DELETE /connectors/gmail/backfill": () => {
+        run = { ...running, state: "cancelled" };
+        return jsonResponse(run);
+      },
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidated = vi.spyOn(client, "invalidateQueries");
+    renderAccount([{ ...gmail, backfill: running }], null, client);
+    const service = await screen.findByTestId("connector-gmail-past-email");
+    expect(invalidated).not.toHaveBeenCalledWith({ queryKey: ["connectors"] });
+
+    await userEvent
+      .setup()
+      .click(within(service).getByRole("button", { name: "Stop" }));
+    await waitFor(() =>
+      expect(invalidated).toHaveBeenCalledWith({ queryKey: ["connectors"] }),
     );
   });
 
@@ -285,6 +312,47 @@ describe("the past email service", () => {
       within(service).queryByRole("button", { name: "Start import" }),
     ).toBeNull();
     expect(requestsTo(calls, "/backfill/preview", "POST")).toHaveLength(0);
+  });
+
+  it("does not call an import done while mail no sync read is still missing", async () => {
+    stubApi();
+    renderAccount([
+      {
+        ...gmail,
+        unread_period: {
+          from: "2026-06-01T09:00:00Z",
+          to: "2026-06-14T09:06:00Z",
+        },
+      },
+    ]);
+    const service = await screen.findByTestId("connector-gmail-past-email");
+
+    expect(within(service).getByRole("status").textContent).toBe(
+      "Mail missing",
+    );
+    expect(within(service).getByTestId("past-email-unread")).toHaveTextContent(
+      "Some mail from 01/06/2026, 11:00 to 14/06/2026, 11:06 may be missing. Import older email with a window that reaches back to 01/06/2026, 11:00.",
+    );
+  });
+
+  it("names the unread period before any import has run", async () => {
+    stubApi();
+    renderAccount([
+      {
+        ...gmail,
+        backfill: { state: "none" },
+        unread_period: {
+          from: "2026-06-01T09:00:00Z",
+          to: "2026-06-14T09:06:00Z",
+        },
+      },
+    ]);
+    const service = await screen.findByTestId("connector-gmail-past-email");
+
+    expect(within(service).getByText("Not imported")).toBeInTheDocument();
+    expect(
+      within(service).getByTestId("past-email-unread"),
+    ).toBeInTheDocument();
   });
 
   it("opens the import dialog from the menu, where the scope is counted", async () => {

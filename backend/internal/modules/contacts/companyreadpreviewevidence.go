@@ -33,7 +33,7 @@ func previewReadProfiles(ctx context.Context, tx pgx.Tx, id ids.CompanyID, field
 		}
 		var before string
 		replaceable := true
-		err := tx.QueryRow(ctx, `SELECT value, `+companyProfileReplaceableSQL+` FROM company_profile_field WHERE company_id=@company AND field=@field`, pgx.NamedArgs{companyEntity: id, evidenceFieldKey: field.Field}).Scan(&before, &replaceable)
+		err := tx.QueryRow(ctx, `SELECT value, `+companyEvidenceReplaceableSQL("company_profile_field")+` FROM company_profile_field WHERE company_id=@company AND field=@field`, pgx.NamedArgs{companyEntity: id, evidenceFieldKey: field.Field}).Scan(&before, &replaceable)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return nil, err
 		}
@@ -60,7 +60,7 @@ func previewReadFacts(ctx context.Context, tx pgx.Tx, in DeepReadProposal) ([]Co
 		}
 		var before string
 		replaceable := true
-		err := tx.QueryRow(ctx, `SELECT value, `+companyFactReplaceableSQL+` FROM company_fact WHERE company_id=@company AND category=@category AND field=@field AND value_key=@key`, pgx.NamedArgs{companyEntity: in.CompanyID, factCategoryKey: fact.Category, evidenceFieldKey: fact.Field, factValueKeyParam: fact.ValueKey}).Scan(&before, &replaceable)
+		err := tx.QueryRow(ctx, `SELECT value, `+companyEvidenceReplaceableSQL("company_fact")+` FROM company_fact WHERE company_id=@company AND category=@category AND field=@field AND value_key=@key`, pgx.NamedArgs{companyEntity: in.CompanyID, factCategoryKey: fact.Category, evidenceFieldKey: fact.Field, factValueKeyParam: fact.ValueKey}).Scan(&before, &replaceable)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return nil, err
 		}

@@ -343,9 +343,13 @@ func (s *Store) RetractFill(ctx context.Context, contactID ids.ContactID, fill F
 // removes its evidence rows. The column and number writes compare against the
 // value the pass wrote, so nothing somebody set since is touched.
 func retractField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fill FillRetraction, field string) error {
+	if err := moveLegacyEvidence(ctx, tx, entityContact, contactID.UUID); err != nil {
+		return err
+	}
 	rows, err := tx.Query(ctx, `
-		DELETE FROM contact_profile_field
-		 WHERE contact_id = $1 AND field = $2 AND source = $3 AND source_ref = $4
+		DELETE FROM field_provenance
+		 WHERE object_type = 'contact' AND object_id = $1 AND field_name = $2 AND value IS NOT NULL
+		   AND source = $3 AND evidence_ref = $4
 		RETURNING value`, contactID, field, fill.Source, fill.SourceRef)
 	if err != nil {
 		return fmt.Errorf("contacts: removing the %s the fill wrote: %w", field, err)
