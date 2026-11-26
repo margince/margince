@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
+import { foldForMatch } from "../format/collate";
 import { tabOfViewResource, type ViewResource } from "./filtersaddress";
 import { unwrap } from "./problem";
 import { decode, encode, type Node } from "./segmentpredicate";
@@ -120,6 +121,21 @@ export function filterStateFrom(
   kept: Readonly<Record<string, unknown>> = {},
 ): Record<string, unknown> {
   return { ...kept, [FILTER_KEY]: encode(tree) };
+}
+
+/**
+ * Whether one of `views` other than `exceptId` already carries `name`. Letter
+ * case and outer spaces do not tell two names apart on a tab.
+ */
+export function viewNameTaken(
+  views: readonly SavedView[],
+  name: string,
+  exceptId?: string,
+): boolean {
+  const wanted = foldForMatch(name.trim());
+  return views.some(
+    (view) => view.id !== exceptId && foldForMatch(view.name.trim()) === wanted,
+  );
 }
 
 /**

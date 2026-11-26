@@ -3720,7 +3720,7 @@ export const en = {
   "list.unowned": "Unassigned",
   "list.created": "Created",
   "list.lastActivity": "Last activity",
-  "list.filterOwnerMe": "Owned by you",
+  "list.filterOwnerMe": "You",
   "list.filterOwnerAll": "Any owner",
   "list.ownerDeactivated": "{name} (deactivated)",
   "list.ownerSuspended": "{name} (suspended)",
@@ -3732,6 +3732,10 @@ export const en = {
   "views.save": "Save view",
   "views.saveConfirm": "Save",
   "views.saveTitle": "Save this view",
+  "views.update": "Update “{name}”",
+  "views.updated": "View updated: “{name}”",
+  "views.nameTaken":
+    "A view with this name already exists. Choose another name.",
   "views.name": "Name",
   // Names the saved-view rail where the rail itself cannot: a failure notice
   // lands beside the list's own tools, and "this section did not load" under a
@@ -5844,7 +5848,8 @@ export const en = {
   "tags.moreUncounted": "more",
   "tags.moreUncountedTip":
     "Including {names}. Open the record for the full set.",
-  "tags.columnHeaderPartial": "Tags (partial list)",
+  "tags.filterLabel": "Tag",
+  "tags.filterLabelPartial": "Tag (partial list)",
   "tags.loading": "Loading tags…",
   "tags.panelTitle": "Tags",
   "tags.add": "Add tag",
@@ -5893,7 +5898,8 @@ export const en = {
     "No tag with that name. An administrator or operations user can add one.",
   "tagResult.gone":
     "This tag no longer exists. It may have been merged into another.",
-  "tagResult.totalVisible": "{count} visible assignments",
+  "tagResult.tagged_one": "{count} tagged record",
+  "tagResult.tagged_other": "{count} tagged records",
   "tagResult.contacts": "Contacts",
   "tagResult.companies": "Companies",
   "tagResult.deals": "Deals",
@@ -6938,6 +6944,10 @@ export const en = {
   "bulk.selectPage": "Select every row on this page",
   "bulk.selectAll": "Select all",
   "bulk.clearSelection": "Clear selection",
+  "bulk.selecting_one": "Selecting {count}…",
+  "bulk.selecting_other": "Selecting {count}…",
+  "bulk.selectingOf_one": "Selecting {count} of {total}…",
+  "bulk.selectingOf_other": "Selecting {count} of {total}…",
   "bulk.selectionLimit_one":
     "One change takes at most {count} record, so the selection stops there.",
   "bulk.selectionLimit_other":
@@ -7005,12 +7015,19 @@ export const en = {
   "bulk.undoneCompanies_other": "{count} companies put back.",
   "bulk.undoneDeals_one": "{count} deal put back.",
   "bulk.undoneDeals_other": "{count} deals put back.",
+  "bulk.doneTasks_one": "{count} task created.",
+  "bulk.doneTasks_other": "{count} tasks created.",
+  "bulk.undoneTasks_one": "{count} task archived.",
+  "bulk.undoneTasks_other": "{count} tasks archived.",
   "bulk.undoLeftBehind_one":
     "{count} link, tag or list membership could not come back.",
   "bulk.undoLeftBehind_other":
     "{count} links, tags or list memberships could not come back.",
-  "bulk.reason.no_change_list": "Already on or off the Shortlist",
-  "bulk.reason.no_change_tag": "Already has or lacks this tag",
+  "bulk.reason.no_change_listed": "Already on this Shortlist",
+  "bulk.reason.no_change_unlisted": "Not on this Shortlist",
+  "bulk.reason.no_change_tagged": "Already has this tag",
+  "bulk.reason.no_change_untagged": "Does not have this tag",
+  "bulk.reason.no_change_undo": "Not part of the change you are undoing",
   "bulk.tag": "Tag",
   "bulk.tagPick": "Pick a tag",
   "bulk.addTag": "Add tag",
@@ -7044,7 +7061,7 @@ export const en = {
   "bulk.confirmComplete": "Mark done",
   "bulk.stateDone": "Done",
   "bulk.stateOpen": "Open",
-  "bulk.reason.no_change_done": "Already in that state",
+  "bulk.reason.no_change_done": "Already done",
   "bulk.titleMoveStage": "Move the selected {unit} to {stage}?",
   "bulk.confirmMoveStage": "Move",
   "bulk.stateStageUnnamed": "A stage",
@@ -21109,6 +21126,11 @@ export const en = {
   "lists.editFilter": "Edit filter",
   "lists.filterCannotOpen": "This list’s filter cannot be opened here.",
   "lists.savedTo": "Saved to “{name}”",
+  "lists.settingsSaved": "List saved",
+  "lists.restored": "List restored",
+  "lists.archivedDone": "List archived",
+  "lists.addedTo": "Added to “{name}”",
+  "lists.addedToShortlist": "Added to the Shortlist",
   "lists.editingTitle": "Editing the filter of {name}",
   "lists.editingBody":
     "Save to the list to change which records it holds. To keep a copy instead, save the filter as a new view.",

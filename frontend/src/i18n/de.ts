@@ -3794,7 +3794,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.unowned": "Nicht zugewiesen",
   "list.created": "Erstellt",
   "list.lastActivity": "Letzte Aktivität",
-  "list.filterOwnerMe": "In deiner Verantwortung",
+  "list.filterOwnerMe": "Du",
   "list.filterOwnerAll": "Alle Verantwortlichen",
   "list.ownerDeactivated": "{name} (deaktiviert)",
   "list.ownerSuspended": "{name} (gesperrt)",
@@ -3806,6 +3806,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "views.save": "Ansicht speichern",
   "views.saveConfirm": "Speichern",
   "views.saveTitle": "Diese Ansicht speichern",
+  "views.update": "„{name}“ aktualisieren",
+  "views.updated": "Ansicht aktualisiert: „{name}“",
+  "views.nameTaken":
+    "Eine Ansicht mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "views.name": "Name",
   "views.rail": "Gespeicherte Ansichten",
   "views.loadFailed":
@@ -5917,7 +5921,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tags.moreUncounted": "weitere",
   "tags.moreUncountedTip":
     "Darunter {names}. Öffne den Datensatz für alle Tags.",
-  "tags.columnHeaderPartial": "Tags (unvollständig)",
+  "tags.filterLabel": "Tag",
+  "tags.filterLabelPartial": "Tag (unvollständig)",
   "tags.loading": "Tags werden geladen…",
   "tags.panelTitle": "Tags",
   "tags.add": "Tag hinzufügen",
@@ -5969,7 +5974,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kein Tag mit diesem Namen. Admins und Operations können eines erstellen.",
   "tagResult.gone":
     "Dieses Tag existiert nicht mehr. Das Tag wurde möglicherweise mit einem anderen Tag zusammengeführt.",
-  "tagResult.totalVisible": "Sichtbare Zuordnungen: {count}",
+  "tagResult.tagged_one": "{count} Datensatz mit diesem Tag",
+  "tagResult.tagged_other": "{count} Datensätze mit diesem Tag",
   "tagResult.contacts": "Kontakte",
   "tagResult.companies": "Unternehmen",
   "tagResult.deals": "Deals",
@@ -6977,6 +6983,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.selectPage": "Alle Zeilen dieser Seite auswählen",
   "bulk.selectAll": "Alle auswählen",
   "bulk.clearSelection": "Auswahl aufheben",
+  "bulk.selecting_one": "{count} wird ausgewählt…",
+  "bulk.selecting_other": "{count} werden ausgewählt…",
+  "bulk.selectingOf_one": "{count} von {total} wird ausgewählt…",
+  "bulk.selectingOf_other": "{count} von {total} werden ausgewählt…",
   "bulk.selectionLimit_one":
     "Eine Änderung umfasst höchstens {count} Datensatz, daher endet die Auswahl dort.",
   "bulk.selectionLimit_other":
@@ -7048,12 +7058,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.undoneCompanies_other": "{count} Unternehmen zurückgesetzt.",
   "bulk.undoneDeals_one": "{count} Deal zurückgesetzt.",
   "bulk.undoneDeals_other": "{count} Deals zurückgesetzt.",
+  "bulk.doneTasks_one": "{count} Aufgabe erstellt.",
+  "bulk.doneTasks_other": "{count} Aufgaben erstellt.",
+  "bulk.undoneTasks_one": "{count} Aufgabe archiviert.",
+  "bulk.undoneTasks_other": "{count} Aufgaben archiviert.",
   "bulk.undoLeftBehind_one":
     "{count} Verknüpfung, Tag oder Listenzugehörigkeit konnte nicht wiederhergestellt werden.",
   "bulk.undoLeftBehind_other":
     "{count} Verknüpfungen, Tags oder Listenzugehörigkeiten konnten nicht wiederhergestellt werden.",
-  "bulk.reason.no_change_list": "Schon auf oder nicht auf der Shortlist",
-  "bulk.reason.no_change_tag": "Hat diesen Tag schon oder hat ihn nicht",
+  "bulk.reason.no_change_listed": "Schon auf dieser Shortlist",
+  "bulk.reason.no_change_unlisted": "Nicht auf dieser Shortlist",
+  "bulk.reason.no_change_tagged": "Hat diesen Tag schon",
+  "bulk.reason.no_change_untagged": "Hat diesen Tag nicht",
+  "bulk.reason.no_change_undo": "War nicht Teil der Änderung",
   "bulk.tag": "Tag",
   "bulk.tagPick": "Tag wählen",
   "bulk.addTag": "Tag hinzufügen",
@@ -7088,7 +7105,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.confirmComplete": "Als erledigt markieren",
   "bulk.stateDone": "Erledigt",
   "bulk.stateOpen": "Offen",
-  "bulk.reason.no_change_done": "Bereits in diesem Zustand",
+  "bulk.reason.no_change_done": "Schon erledigt",
   "bulk.titleMoveStage": "Ausgewählte {unit} nach {stage} verschieben?",
   "bulk.confirmMoveStage": "Verschieben",
   "bulk.stateStageUnnamed": "Eine Phase",
@@ -21369,6 +21386,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.filterCannotOpen":
     "Der Filter dieser Liste lässt sich hier nicht öffnen.",
   "lists.savedTo": "In „{name}“ gespeichert",
+  "lists.settingsSaved": "Liste gespeichert",
+  "lists.restored": "Liste wiederhergestellt",
+  "lists.archivedDone": "Liste archiviert",
+  "lists.addedTo": "Zu „{name}“ hinzugefügt",
+  "lists.addedToShortlist": "Zur Shortlist hinzugefügt",
   "lists.editingTitle": "Du bearbeitest den Filter von {name}",
   "lists.editingBody":
     "Speichere in die Liste, um zu ändern, welche Datensätze sie enthält. Um stattdessen eine Kopie zu behalten, speichere den Filter als neue Ansicht.",
