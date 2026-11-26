@@ -382,21 +382,29 @@ func TestAnUncountedActivityAtTheClocksInstantDecidesNoPrecision(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Tied Clock GmbH", "source": "manual"})
 	project := createdID(t, e, "/v1/projects", AnyMap{"name": "Tied rollout", "company_id": company, "source": "manual"})
-	links := []AnyMap{{"entity_type": "company", "entity_id": company}, {"entity_type": "project", "entity_id": project}}
-	mustCall(t, e, "POST", "/v1/activities", AnyMap{
+	callShowingBody(t, e, "POST", "/v1/activities", AnyMap{
 		"kind": "note", "subject": "Met at the fair", "source": "manual",
-		"occurred_at": "2025-03-09T12:00:00Z", "occurred_precision": "day", "links": links,
-	}, http.StatusCreated, nil)
-	// A meeting is logged first and called off afterwards, the way a rep does it.
+		"occurred_at": "2025-03-09T12:00:00Z", "occurred_precision": "day",
+		"links": []AnyMap{{"entity_type": "company", "entity_id": company}, {"entity_type": "project", "entity_id": project}},
+	}, nil, http.StatusCreated)
+	// A meeting is with a person, never filed against a company, so it reaches
+	// the company through an employee whose job had begun by then.
+	buyer := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Tied Buyer", "source": "manual"})
+	callShowingBody(t, e, "POST", "/v1/relationships", AnyMap{
+		"kind": "employment", "contact_id": buyer, "company_id": company, "source": "manual",
+		"started_at": "2020-01-01", "is_current_primary": true,
+	}, nil, http.StatusCreated)
+	// It is logged first and called off afterwards, the way a rep does it.
 	var meeting versionedWire
-	mustCall(t, e, "POST", "/v1/activities", AnyMap{
-		"kind": "meeting", "subject": "Called off", "source": "manual",
-		"occurred_at": "2025-03-09T12:00:00Z", "links": links,
-	}, http.StatusCreated, &meeting)
-	if status := e.Call(t, "PATCH", "/v1/activities/"+meeting.ID, AnyMap{"meeting_status": "canceled"},
-		withIfMatch(nil, meeting.Version), nil); status != http.StatusOK {
-		t.Fatalf("calling the meeting off -> %d", status)
+	logged := callShowingBody(t, e, "POST", "/v1/activities", AnyMap{
+		"kind": "meeting", "subject": "Called off", "source": "manual", "occurred_at": "2025-03-09T12:00:00Z",
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": buyer}, {"entity_type": "project", "entity_id": project}},
+	}, nil, http.StatusCreated)
+	if err := json.Unmarshal(logged, &meeting); err != nil {
+		t.Fatalf("decoding the logged meeting %s: %v", logged, err)
 	}
+	callShowingBody(t, e, "PATCH", "/v1/activities/"+meeting.ID, AnyMap{"meeting_status": "canceled"},
+		withIfMatch(nil, meeting.Version), http.StatusOK)
 	var record, card struct {
 		Precision string `json:"last_activity_precision"`
 	}
@@ -414,4 +422,15 @@ func TestAnUncountedActivityAtTheClocksInstantDecidesNoPrecision(t *testing.T) {
 		t.Errorf("with a called-off meeting tied to the note, the company reads %q and its project %q, want day for both",
 			record.Precision, card.Precision)
 	}
+}
+
+// callShowingBody is a call that must answer want, and names the server's
+// answer when it does not, so a refused arrange step says why.
+func callShowingBody(t *testing.T, e *apptest.AppEnv, method, path string, body AnyMap, headers map[string]string, want int) json.RawMessage {
+	t.Helper()
+	var answer json.RawMessage
+	if status := e.Call(t, method, path, body, headers, &answer); status != want {
+		t.Fatalf("%s %s → %d, want %d: %s", method, path, status, want, answer)
+	}
+	return answer
 }
