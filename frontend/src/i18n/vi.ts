@@ -2249,6 +2249,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.voice_build": "Tiến trình phân tích văn phong",
   "systemJob.document_read": "Tiến trình đọc tài liệu",
   "systemJob.deep_read": "Đọc trang web",
+  "systemJob.transcript_read": "Đọc bản chép lời cuộc họp",
   "systemJob.company_name_promotion": "Cập nhật tên công ty",
   "systemJob.contact_share": "Yêu cầu chia sẻ liên hệ",
   "systemJob.task_due_date": "Câu hỏi về hạn",

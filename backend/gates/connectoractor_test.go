@@ -339,21 +339,17 @@ var actorKinds = map[string]string{
 	"system:":            "PrincipalSystem",
 }
 
-// agentJobsStillSystemTyped are the AI jobs that still bind PrincipalSystem
-// under their `agent:` id, keyed by file. auth.Require admits PrincipalSystem
-// without reading grants. A job converted to PrincipalAgent answers to the
-// grants it is given, and stops with no sound when they fall short. So each
-// converts on its own with a test through the real gate. A converted file that
-// keeps its entry fails AssertAllMatched.
+// agentJobsStillSystemTyped are the AI jobs that act for no one and still bind
+// PrincipalSystem under their `agent:` id, keyed by file. Every job that acts
+// for a named colleague runs as an agent under that colleague's grants. A
+// converted file that keeps its entry fails AssertAllMatched.
 var agentJobsStillSystemTyped = gatekit.Waive(map[string]string{
-	"internal/compose/commitmentparties.go":         forAColleague,
-	"internal/compose/jobs_transcript.go":           forAColleague,
-	"internal/compose/transcriptcommitment.go":      forAColleague,
 	"internal/compose/approvalpreviewcommitment.go": forNoOne,
 	"internal/compose/captureenrich.go":             forNoOne,
 	"internal/compose/captureenrichpending.go":      forNoOne,
 	"internal/compose/captureenrichrequests.go":     forNoOne,
 	"internal/compose/captureverdict.go":            forNoOne,
+	"internal/compose/commitmentparties.go":         forNoOne,
 	"internal/compose/commitmentrestatement.go":     forNoOne,
 	"internal/compose/commitmenttask.go":            forNoOne,
 	"internal/compose/confidentialityverdict.go":    forNoOne,
@@ -364,8 +360,6 @@ var agentJobsStillSystemTyped = gatekit.Waive(map[string]string{
 })
 
 const (
-	forAColleague = "acts for a named colleague; until it runs as an agent under that colleague's live grants, " +
-		"audit_log records it as a system act and no grant bounds what it writes"
 	forNoOne = "an AI job that acts for no one; an AI job keeps its agent: id, and it needs a fixed grant set " +
 		"of its own before it can run as an agent, so until then audit_log records it as a system act"
 )
