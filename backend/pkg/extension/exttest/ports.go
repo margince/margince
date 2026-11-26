@@ -96,3 +96,13 @@ func (objects) Get(context.Context, string) (extension.Object, error) {
 	return extension.Object{}, extension.ErrNotDeclared
 }
 func (objects) Delete(context.Context, string) error { return extension.ErrNotDeclared }
+
+type knowledgeStub struct{}
+
+func (knowledgeStub) UpsertDocument(context.Context, extension.KnowledgeDocument) (extension.KnowledgeResult, error) {
+	return extension.KnowledgeResult{}, extension.ErrNotDeclared
+}
+func (knowledgeStub) DeleteDocument(context.Context, string) error { return extension.ErrNotDeclared }
+func (knowledgeStub) ExternalIDs(context.Context) ([]string, error) {
+	return nil, extension.ErrNotDeclared
+}

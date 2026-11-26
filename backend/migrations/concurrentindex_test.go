@@ -13,6 +13,8 @@ import (
 	"io/fs"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // concurrentIndexBaseline is where this obligation starts in each namespace.
@@ -27,6 +29,13 @@ var concurrentIndexBaseline = map[string]string{
 	"core":   "1795639501",
 	"custom": "20261125190000",
 }
+
+// plainBuildsShipped are files above the pin that build a plain index, and
+// shipped before this gate caught them. A shipped migration is never edited.
+var plainBuildsShipped = gatekit.Waive(map[string]string{
+	"core/1795657800_a_google_docs_corpus_and_a_document_that_knows_its_source_id.up.sql knowledge_document": "shipped on main with a plain unique index build; " +
+		"knowledge_document holds one row per uploaded or synced document, so its writes wait for one short read",
+})
 
 func TestAnIndexOnAPreExistingTableIsBuiltConcurrently(t *testing.T) {
 	entries, err := fs.ReadDir(files, ".")
@@ -51,6 +60,7 @@ func TestAnIndexOnAPreExistingTableIsBuiltConcurrently(t *testing.T) {
 			checkConcurrentIndexBuilds(t, namespace, baseline, dir)
 		})
 	}
+	plainBuildsShipped.AssertAllMatched(t)
 }
 
 func checkConcurrentIndexBuilds(t *testing.T, namespace, baseline string, dir fs.FS) {
@@ -70,6 +80,9 @@ func checkConcurrentIndexBuilds(t *testing.T, namespace, baseline string, dir fs
 			return readErr
 		}
 		for _, table := range plainIndexBuilds(string(body)) {
+			if plainBuildsShipped.Waived(t, namespace+"/"+path+" "+table) {
+				continue
+			}
 			t.Errorf("%s/%s builds an index on %s, which it did not create, without CONCURRENTLY.\n"+
 				"A plain build blocks every write to that table until it has read all its rows. "+
 				"Move the build to a file of its own that says -- pgmigrate:no-transaction, and "+

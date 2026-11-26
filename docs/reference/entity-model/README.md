@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 354 |
-| Columns | 4354 |
+| Columns | 4356 |
 | Foreign keys | 618 |
 | Owning areas | 40 |
 
@@ -338,7 +338,7 @@ erDiagram
 | [`intro_request`](introductions.md#intro_request) | introductions | 31 | 0 |
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 10 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 11 | 1 |
-| [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 15 | 1 |
+| [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 17 | 1 |
 | [`lawful_basis_confirmation`](consent.md#lawful_basis_confirmation) | consent | 9 | 0 |
 | [`lead`](contacts.md#lead) | contacts | 49 | 20 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |

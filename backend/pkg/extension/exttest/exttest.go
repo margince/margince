@@ -95,6 +95,9 @@ func (Runtime) Companies() extension.Companies { return companies{} }
 // MailContent answers as the core answers a unit that holds nothing.
 func (Runtime) MailContent() extension.MailContents { return mailContents{} }
 
+// Knowledge answers as the core answers a unit that holds nothing.
+func (Runtime) Knowledge() extension.Knowledge { return knowledgeStub{} }
+
 // Models answers as the core answers a unit that holds nothing.
 func (Runtime) Models() extension.Models { return models{} }
 
