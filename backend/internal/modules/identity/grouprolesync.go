@@ -3,10 +3,11 @@
 
 package identity
 
-// Additive role grants from the corporate directory (OidcGroupRoleMap): at
-// federated sign-in the ID token's `groups` claim is intersected with the
-// admin's group→role map, and every mapped role the member does not yet hold
-// is granted. GRANT-ONLY by design: nothing here deletes or replaces an
+// Additive role grants from the corporate directory (OidcGroupRoleMap). At
+// federated sign-in the member's groups are intersected with the admin's
+// group→role map, and every mapped role the member lacks is granted. The groups
+// come from the ID token's `groups` claim. Google sends none, so its groups come
+// from the directory lookup in googledirectory.go. GRANT-ONLY by design: nothing here deletes or replaces an
 // assignment — leaving an IdP group revokes nothing, and revocation stays a
 // deliberate admin action (ChangeUserRole, DeactivateUser). No accounts are
 // created either: the grant runs strictly after resolveFederatedUser has

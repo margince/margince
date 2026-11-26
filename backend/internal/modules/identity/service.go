@@ -93,6 +93,9 @@ type Service struct {
 	// carried groups, so the common groupless login costs no extra query. See
 	// grouprolesync.go.
 	groupRoleMap func(ctx context.Context, tx pgx.Tx) (map[string]string, error)
+	// directory reads a Google member's groups at sign-in, because Google's ID
+	// tokens carry none. Nil when unwired: no lookup. See googledirectory.go.
+	directory *googleDirectory
 	// vault seals a member's TOTP secret at rest: the secret must be recoverable
 	// to verify a code (unlike a password, which is only ever compared), so it is
 	// sealed rather than hashed. Nil when unwired, which is what the MFA methods
