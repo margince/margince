@@ -425,7 +425,8 @@ jobs:
       - name: Unit tests with binary coverage
         run: |
           mkdir -p "$RUNNER_TEMP/covdata-unit"
-          pkgs=$(go list ./... | grep -Fxv "$(go list ./gates)")
+          gates=$(go list ./gates)
+          pkgs=$(go list ./... | grep -Fxv "$gates")
           [ -n "$pkgs" ] || { echo "go list found no coverage package; refusing an empty coverage pass" >&2; exit 1; }
           # shellcheck disable=SC2086 # one argument per package
           echo "test order: -shuffle=$TEST_SHUFFLE_SEED; replay one package with: go test -shuffle=$TEST_SHUFFLE_SEED <package>"
