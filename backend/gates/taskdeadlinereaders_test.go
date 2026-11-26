@@ -50,6 +50,8 @@ func rawActivityDeadlines(sql string) bool {
 	return tableQualifiedDeadline.MatchString(sql)
 }
 
+// A reader of an activity's deadline asks storekit.TaskDueSQL, never the stored
+// due_at, so every screen and job agrees on when a task is due.
 func TestActivityDeadlineReadersUseTheTaskPolicy(t *testing.T) {
 	t.Parallel()
 	defer rawTaskDateReads.AssertAllMatched(t)

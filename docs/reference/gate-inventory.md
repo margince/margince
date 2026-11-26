@@ -536,7 +536,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `systemtextproducer_test.go` | H2 | _(no doc comment)_ |
 | `tablelistpointer_test.go` | H1 | Every module names its entity-model page as its table list, and no Go comment copies that list. |
 | `tableownershipdiscovery_test.go` | H2 | Which packages the ownership gate walks, derived rather than remembered. |
-| `taskdeadlinereaders_test.go` | H2 | _(no doc comment)_ |
+| `taskdeadlinereaders_test.go` | H2 | A reader of an activity's deadline asks storekit.TaskDueSQL, never the stored due\_at, so every screen and job agrees on when a task is due. |
 | `textbounds_test.go` | H2 | The column must sit in the condition's bounds and in the refusal's. |
 | `tokenhashformat_test.go` | H2 | A column that stores the hash of a token states its format with a CHECK. |
 | `toolongcarriesmax_test.go` | H2 | Every too\_long field refusal states the limit it refused at, so the screen can say "at most 2,000 characters" in the reader's language. |
