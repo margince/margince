@@ -4,7 +4,7 @@
 // Why one task is on the list, written from that task's own records.
 //
 // The server writes it once per reader and keeps it until the task, its
-// message or the relationship moves, so it is asked for only when the details
+// message or the relationship moves. So it is asked for only when the details
 // open. Facts are what happened, the assessment is what waiting costs, and the
 // recommendation is the next step. A section the server left unsaid is not
 // drawn, because no sentence here may fit any other task.

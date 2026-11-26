@@ -37756,6 +37756,8 @@ export interface components {
              */
             as_of: string;
             company: components["schemas"]["Company"];
+            /** @description Absent until an activity was read, or when this reader may not open one it was written from. */
+            standing_line?: components["schemas"]["StandingLine"];
             /**
              * @description The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's contacts — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
              *     The schema is `ContactMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose promise it is.
@@ -38124,6 +38126,8 @@ export interface components {
              */
             as_of: string;
             contact: components["schemas"]["Contact"];
+            /** @description Absent until an activity was read, or when this reader may not open one it was written from. */
+            standing_line?: components["schemas"]["StandingLine"];
             /**
              * @description Who created the contact, from its earliest create audit row: for an agent, the
              *     colleague it worked for and the tool it was typed through, each when the row
@@ -38799,6 +38803,18 @@ export interface components {
             generated_by: components["schemas"]["WrittenBy"];
             /** @description Facts say what happened, an assessment what is at stake if nothing is done, a recommendation the one next step. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited. */
             sentences: components["schemas"]["CompanyBriefSentence"][];
+        };
+        /**
+         * @description Where a record stands after its latest activity, in one sentence the model wrote in
+         *     the background when that activity landed. Shared by the record's readers, and served
+         *     only to a reader who may open every activity it was written from.
+         */
+        StandingLine: {
+            text: string;
+            /** @description Every activity the sentence was written from, newest first. */
+            activity_ids: string[];
+            /** Format: date-time */
+            written_at: string;
         };
         /**
          * @description Facts recorded for this contact, per purpose and channel, with their reason.
@@ -42908,6 +42924,8 @@ export interface components {
              */
             as_of: string;
             project: components["schemas"]["Project"];
+            /** @description Absent until an activity was read, or when this reader may not open one it was written from. */
+            standing_line?: components["schemas"]["StandingLine"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
             sections_omitted: components["schemas"]["Project360Section"][];
             company?: components["schemas"]["Project360Company"];

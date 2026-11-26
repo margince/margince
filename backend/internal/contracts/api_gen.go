@@ -42214,6 +42214,11 @@ type Company360 struct {
 	// the 360 never advances the baseline — `POST /companies/{id}/view-ack` does.
 	SinceLastVisit *Company360SinceLastVisit `json:"since_last_visit,omitempty"`
 
+	// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
+	// the background when that activity landed. Shared by the record's readers, and served
+	// only to a reader who may open every activity it was written from.
+	StandingLine *StandingLine `json:"standing_line,omitempty"`
+
 	// StateStrip The three readings a company page leads with (AC-company-13, PO-F-4). Each half is
 	// independently gated: a caller who may read the account but not its mail gets the account
 	// half and a null engagement, because a state inferred from data they were not allowed to see
@@ -45696,6 +45701,11 @@ type Contact360 struct {
 	// SinceLastVisit What changed on this contact since the caller last acknowledged seeing them.
 	// Read-only: the 360 never advances the baseline — `POST /contacts/{id}/view-ack` does.
 	SinceLastVisit *Contact360SinceLastVisit `json:"since_last_visit,omitempty"`
+
+	// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
+	// the background when that activity landed. Shared by the record's readers, and served
+	// only to a reader who may open every activity it was written from.
+	StandingLine *StandingLine `json:"standing_line,omitempty"`
 
 	// Strength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
 	// interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
@@ -62443,6 +62453,11 @@ type Project360 struct {
 		Data []Project360Stakeholder `json:"data"`
 		Page PageInfo                `json:"page"`
 	} `json:"stakeholders,omitempty"`
+
+	// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
+	// the background when that activity landed. Shared by the record's readers, and served
+	// only to a reader who may open every activity it was written from.
+	StandingLine *StandingLine `json:"standing_line,omitempty"`
 }
 
 // Project360Commitment defines model for Project360Commitment.
@@ -70109,6 +70124,16 @@ type StageTransitionRecord struct {
 
 	// UnsafeRate The safety number, held to a ceiling rather than a floor.
 	UnsafeRate float64 `json:"unsafe_rate" maximum:"1" minimum:"0"`
+}
+
+// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
+// the background when that activity landed. Shared by the record's readers, and served
+// only to a reader who may open every activity it was written from.
+type StandingLine struct {
+	// ActivityIds Every activity the sentence was written from, newest first.
+	ActivityIds []openapi_types.UUID `json:"activity_ids"`
+	Text        string               `json:"text"`
+	WrittenAt   time.Time            `json:"written_at"`
 }
 
 // StandingOverride A recorded exception for one contact, message category and sending company.

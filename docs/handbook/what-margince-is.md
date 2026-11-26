@@ -126,6 +126,8 @@ Also called: leads page gone, deals menu missing, feature turned off.
 
 ### How do I see the last message on a contact, company or deal?
 To see the last word on a record in Margince, open it and look under the verdict on its **How it stands** card. **Latest** shows the newest note, call, meeting notes or message, who wrote it and when. **Open in History** opens it on the timeline.
+
+The sentence under the word on **How it stands** says where things stand after the newest mail, meeting or note, such as "In her last mail Anna Weber confirmed the plan and asked for the draft by Friday." Margince checks it each time an activity lands on a contact, company or project, and the **Margince** badge counts the activities it read. You see it only when you may open each of them; until then the card shows its own reading.
 Also called: last message, most recent note, last update, last contact.
 
 ### How do I search for something?

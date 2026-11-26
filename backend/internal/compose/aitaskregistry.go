@@ -80,6 +80,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskSummarize, "contact_brief", contactBriefCases{})
 	oneShot(ai.TaskSummarize, "deal_room_brief", roomBriefCases{})
 	oneShot(ai.TaskSummarize, "task_explanation", taskExplainCases{})
+	oneShot(ai.TaskSummarize, "standing_line", standingLineCases{})
 	oneShot(ai.TaskTranscriptPropose, "next_steps", transcriptProposeCases{})
 	oneShot(ai.TaskDocumentExtract, "fields", documentFieldsCases{})
 	oneShot(ai.TaskDocumentExtract, "cards", cardphoto.CertCases{})

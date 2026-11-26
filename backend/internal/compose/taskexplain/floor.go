@@ -16,10 +16,10 @@ type phrase = langcopy.Phrase
 
 // floorPhrases are whole sentences per language; only a name or a quote slots in.
 var floorPhrases = struct {
-	NamedSaid, BareSaid           phrase // name, quote / quote
-	NamedSubject, BareSubject     phrase // name, subject / subject
-	TheyLast, YouLast, OtherLast  phrase // name, quote / quote / quote
-	NothingSince                  phrase
+	NamedSaid, BareSaid          phrase // name, quote / quote
+	NamedSubject, BareSubject    phrase // name, subject / subject
+	TheyLast, YouLast, OtherLast phrase // name, quote / quote / quote
+	NothingSince                 phrase
 }{
 	NamedSaid:    phrase{En: "%s wrote: “%s”", De: "%s schrieb: „%s“", Vi: "%s đã viết: “%s”"},
 	BareSaid:     phrase{En: "The message behind this task says: “%s”", De: "Die Nachricht hinter dieser Aufgabe sagt: „%s“", Vi: "Tin nhắn dẫn đến việc này viết: “%s”"},

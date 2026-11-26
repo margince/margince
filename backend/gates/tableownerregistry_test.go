@@ -610,6 +610,9 @@ var tableOwners = map[string]string{
 	// One reader's generated summaries of a company, a contact or a deal:
 	// derived content, rebuilt from the record, read by no other reader.
 	"generated_summary": generatedSummaryStoreDir,
+	// Each record's status line, shared by its readers and served only to one
+	// who may open every activity it was written from.
+	"standing_line": generatedSummaryStoreDir,
 }
 
 // sqlTarget is one write a literal performs: which table, by which verb, and

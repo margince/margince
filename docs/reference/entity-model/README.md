@@ -30,9 +30,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 354 |
-| Columns | 4350 |
-| Foreign keys | 617 |
+| Tables | 355 |
+| Columns | 4358 |
+| Foreign keys | 618 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -42,8 +42,8 @@ Ranked by how many foreign keys point at them.
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 150 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 91 | 50 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 49 | 50 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 91 | 49 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 49 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 53 | 31 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 49 | 20 |
@@ -57,16 +57,16 @@ Ranked by how many foreign keys point at them.
 ```mermaid
 erDiagram
     team ||--o{ app_user : routine_mail_team_id
-    lead ||--o{ contact : converted_from_lead_id
-    activity ||--o{ contact : created_from_activity_id
-    app_user ||--o{ contact : owner_id
-    app_user ||--o{ contact : source_author_id
     app_user ||--o{ activity : assignee_id
     app_user ||--o{ activity : host_user_id
     app_user ||--o{ activity : invitation_sender
     legal_entity ||--o{ activity : legal_entity_id
     app_user ||--o{ activity : sent_by_colleague
     app_user ||--o{ activity : source_author_id
+    lead ||--o{ contact : converted_from_lead_id
+    activity ||--o{ contact : created_from_activity_id
+    app_user ||--o{ contact : owner_id
+    app_user ||--o{ contact : source_author_id
     legal_entity ||--o{ company : assess_against_entity_id
     app_user ||--o{ company : owner_id
     app_user ||--o{ company : source_author_id
@@ -124,7 +124,7 @@ erDiagram
 | [knowledge](knowledge.md) | 3 |
 | [migration](migration.md) | 2 |
 | [notices](notices.md) | 3 |
-| [platform](platform.md) | 14 |
+| [platform](platform.md) | 15 |
 | [privacy](privacy.md) | 2 |
 | [projects](projects.md) | 3 |
 | [recordlinks](recordlinks.md) | 1 |
@@ -139,7 +139,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 91 | 49 |
+| [`activity`](activities.md#activity) | activities | 91 | 50 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_commitment_admission`](activities.md#activity_commitment_admission) | activities | 13 | 0 |
@@ -322,7 +322,7 @@ erDiagram
 | [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 34 | 0 |
 | [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 40 | 2 |
 | [`fx_rate`](deals.md#fx_rate) | deals | 7 | 0 |
-| [`generated_summary`](platform.md#generated_summary) | platform | 9 | 0 |
+| [`generated_summary`](platform.md#generated_summary) | platform | 10 | 0 |
 | [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
 | [`geocode_country_cache`](contacts.md#geocode_country_cache) | contacts | 4 | 0 |
 | [`graph_contact_edge`](search.md#graph_contact_edge) | search | 9 | 0 |
@@ -444,6 +444,7 @@ erDiagram
 | [`site_read`](contacts.md#site_read) | contacts | 35 | 3 |
 | [`stage`](deals.md#stage) | deals | 11 | 5 |
 | [`stage_exit_criterion`](deals.md#stage_exit_criterion) | deals | 12 | 1 |
+| [`standing_line`](platform.md#standing_line) | platform | 7 | 0 |
 | [`stored_object_intent`](platform.md#stored_object_intent) | platform | 5 | 0 |
 | [`suggestion_dismissal`](compose.md#suggestion_dismissal) | compose | 4 | 0 |
 | [`system_log`](platform.md#system_log) | platform | 8 | 0 |

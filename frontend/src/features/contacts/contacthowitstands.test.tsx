@@ -119,3 +119,35 @@ it("opens a figure's tab through the page's own tab move", () => {
   fireEvent.click(lastReply);
   expect(onOpenTab).toHaveBeenCalledWith("timeline");
 });
+
+it("says what the newest mail said once a status line is written", () => {
+  const line =
+    "Dana Buyer accepted the revised offer and asked for the contract draft by Friday.";
+  const { container } = render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <ContactHowItStands
+          view={{
+            ...VIEW,
+            relationship_direction: "two_way",
+            standing_line: {
+              text: line,
+              activity_ids: ["a-1", "a-2"],
+              written_at: AS_OF,
+            },
+          }}
+          onOpenTab={() => undefined}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  const sentence = container.querySelector(".standing-sheet-sentence");
+  expect(sentence?.textContent).toBe(line);
+  expect(container.textContent).not.toContain("Both sides have written.");
+  expect(container.textContent).toContain("Margince · 2 sources");
+});
+
+it("keeps the page's own reading while no status line is written", () => {
+  const text = standingText({ ...VIEW, relationship_direction: "two_way" });
+  expect(text).toContain("Both sides have written.");
+});

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package taskexplain writes why one open task is on its reader's list: what
-// happened, what it costs if nothing is done, and the one next step.
+// Package taskexplain writes why one open task is on its reader's list. It
+// says what happened, what it costs if nothing is done, and the next step.
 //
 // It is the contact brief turned on a task. The input is the task, the message
 // it came from, and the contact brief's own projection of the relationship, all

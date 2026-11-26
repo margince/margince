@@ -53140,6 +53140,9 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         company: { $ref: '#/components/schemas/Company' }
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         moment:
           description: >-
             The ONE thing this account needs today, selected server-side by the same rule the
@@ -53574,6 +53577,9 @@ components:
           format: date-time
           description: The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not promise one snapshot across sections.
         contact: { $ref: '#/components/schemas/Contact' }
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         created_by:
           allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
           description: |
@@ -54639,6 +54645,21 @@ components:
             recommendation the one next step. A sentence whose citations cannot be resolved is
             dropped whole rather than shown uncited.
           items: { $ref: '#/components/schemas/CompanyBriefSentence' }
+
+    StandingLine:
+      type: object
+      description: |
+        Where a record stands after its latest activity, in one sentence the model wrote in
+        the background when that activity landed. Shared by the record's readers, and served
+        only to a reader who may open every activity it was written from.
+      required: [text, activity_ids, written_at]
+      properties:
+        text: { type: string }
+        activity_ids:
+          type: array
+          description: Every activity the sentence was written from, newest first.
+          items: { type: string, format: uuid }
+        written_at: { type: string, format: date-time }
 
     ContactConsentGuard:
       type: object
@@ -59448,6 +59469,9 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         project: { $ref: '#/components/schemas/Project' }
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         sections_omitted:
           type: array
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".

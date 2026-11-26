@@ -3,7 +3,7 @@
 
 package taskexplain
 
-import "strings"
+import "github.com/margince/margince/backend/internal/compose/claims"
 
 // stockPhrases are what a sentence says when it would fit any task. A reply
 // that leans on one has explained nothing, so the sentence is dropped.
@@ -21,11 +21,5 @@ var stockPhrases = []string{
 
 // Generic says whether a sentence is stock copy rather than about this task.
 func Generic(text string) bool {
-	lower := strings.ToLower(text)
-	for _, phrase := range stockPhrases {
-		if strings.Contains(lower, phrase) {
-			return true
-		}
-	}
-	return false
+	return claims.SaysStock(text, stockPhrases)
 }

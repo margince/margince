@@ -7,9 +7,9 @@ package compose
 // taskexplain.ExplainRequest builds and reads the reply with
 // taskexplain.ParseExplanation, the two the service calls.
 //
-// It measures what the grounding filter cannot: that the explanation read the
-// message the task turns on, names what only that message says, and ends on
-// one next step rather than a sentence any task could carry.
+// It measures what the grounding filter cannot. The explanation must read the
+// message the task turns on and name what only that message says. It must end
+// on one next step, never a sentence any task could carry.
 
 import (
 	"context"

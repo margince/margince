@@ -13,6 +13,7 @@ import { useCompanyZone } from "../../lib/companyzone";
 import type { ContactTab } from "../../lib/contacttab";
 import { navigate } from "../../lib/router";
 import { latestWord } from "../../lib/standinglatest";
+import { withStandingLine } from "../../lib/standingline";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { contactDims, contactVerdict } from "./contactstanding";
@@ -59,14 +60,18 @@ export function ContactHowItStands({
     { t, plural, locale, zone, companyZone },
     openHistory,
   );
-  const verdict = contactVerdict(view, t) ?? {
-    word: t("record.notShown"),
-    tone: "neutral" as const,
-  };
+  const { verdict, sources } = withStandingLine(
+    contactVerdict(view, t) ?? {
+      word: t("record.notShown"),
+      tone: "neutral" as const,
+    },
+    view.standing_line,
+  );
   const dims = contactDims(view, t, locale, { zone, companyZone });
   return (
     <HowItStands
       date={formatDayMonth(view.as_of, locale, zone)}
+      sources={sources}
       verdict={verdict}
       latest={latestWord(history.activities, {
         ...words,
