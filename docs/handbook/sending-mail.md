@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/modules/consent/instructioncorrection.go backend/internal/modules/consent/instructionconsume.go backend/internal/modules/activities/wordingcorrection.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/activityfiling.ts frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/modules/consent/instructioncorrection.go backend/internal/modules/consent/instructionconsume.go backend/internal/modules/activities/wordingcorrection.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/activityfiling.ts frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go backend/internal/compose/bounceresend.go backend/internal/modules/comms/resend.go frontend/src/features/worklist/worklist.acknowledge.tsx -->
 # Writing and sending mail
 
 ### How do I send an email to a contact?
@@ -353,6 +353,18 @@ If the details come from the contact, the review ends. Data from someone else ma
 
 This mail never goes through your connected mailbox. It carries a private link to the contact's own record, which must not sit in your sent mail. Ask your administrator to set up the installation's own mail. Until then, tell the contact another way and press **End the duty…**.
 Also called: privacy notice not sent, cannot send notice.
+
+### What do I do when an email bounces?
+A hard bounce shows on your Worklist as the email's subject, with the address that refused it and the reason the other side gave. Open the contact to fix the address yourself, or press **Send again** on the row.
+
+1. Press **Send again** on the bounced email's row.
+2. Type the corrected address and press **Save**.
+3. Margince replaces the address that refused the email on the contact, and sends the same email to the new one.
+
+The email is the one you wrote, with the same subject, text, files and copies. It is filed under the same records and sent for the same reason, so the consent check asks the same question about the new address. If the contact has since withdrawn consent or been suppressed, the email is refused, and the row says why. The address on the contact is still replaced.
+
+A bounce can be sent again once. If the corrected address also bounces, the row offers **Open** only: fix the address on the contact. **Send again** is not offered for emails sent before Margince kept the text you wrote, nor for emails that someone else sent. Only a person can press it. An agent cannot.
+Also called: resend a bounced email, fix a bounced address, undeliverable email.
 
 ### Which mailbox does Margince send from?
 Mail you write in Margince goes out from your own connected mailbox, so the contact sees your address.

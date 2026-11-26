@@ -22997,6 +22997,59 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /attention/bounces/{id}/send-again:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Brief]
+      operationId: sendBouncedMessageAgain
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security   # rewrites a contact's address and sends a message a person wrote
+      summary: Send a bounced message again to a corrected address.
+      description: |
+        The `send_again` verb of a bounce row. `{id}` is the bounced delivery's id, which is the
+        row's `id`. The same message goes to the new address: the same subject, text, files, cc
+        and bcc, filed under the same records, under the consent purpose the first send went out
+        with. Nothing is inferred and nothing is chosen for the sender.
+
+        It is the one send. Authorization refuses before the consent gate answers, the gate is
+        asked the same question about the same purpose for the corrected address, and a
+        withdrawn consent, a suppression or a missing grant refuses the send exactly as it
+        refuses any other.
+
+        In order:
+
+        * the bounced address on the contact the message is filed under is replaced by `address`,
+          keeping its type, and the replaced address is archived. A caller who may not change the
+          contact is refused before anything is sent. A contact already holding `address` is
+          not written again;
+        * the message goes out to `address` wherever the bounced address stood, in To, cc or bcc.
+
+        A bounce can be sent again once. A repeat that bounces carries no `send_again`, and a
+        second request for the same bounce answers 404, as does a bounce of another user's, a
+        soft bounce, one filed under no contact the caller can read, and a message sent before
+        its text was recorded. `address` equal to the address that refused answers 422.
+
+        Humans only: it changes a contact's address and sends a message a person wrote, and an
+        agent has the `send_email` tool for its own mail.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BounceSendAgainRequest' }
+      responses:
+        '202':
+          description: Accepted for send (queued); the resulting outbound activity is logged.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Activity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/SendRefused' }
+        '422': { $ref: '#/components/responses/SendValidationError' }
+
 
   /magic:
     get:
@@ -85233,7 +85286,7 @@ components:
             telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel], x-extensible-enum: true }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel, send_again], x-extensible-enum: true }
           description: |
             What this item offers. `decide` and `merge` mean the verb is irreversible and a
             contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
@@ -85253,12 +85306,27 @@ components:
             domain. Reopening retries identification without settling identity. These verbs route
             to `/capture/domain-questions/{domain}/…`.
 
+            `send_again` is offered on a bounced message that may be sent once more. The reader
+            types a corrected address and the same message goes out to it, through
+            `POST /attention/bounces/{id}/send-again`.
+
             `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
             to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
             to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
             snooze moves a due date the rep agreed to, while a brief item's hides a
             suggestion until later in the day. One word for both would make a client that
             handles `snooze` generically write the wrong endpoint.
+
+    BounceSendAgainRequest:
+      type: object
+      required: [address]
+      additionalProperties: false
+      properties:
+        address:
+          type: string
+          format: email
+          maxLength: 320
+          description: The corrected address. It replaces the address that refused, and it must differ from it.
 
     AttentionPair:
       type: object
@@ -87149,7 +87217,7 @@ components:
             telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel], x-extensible-enum: true }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel, send_again], x-extensible-enum: true }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string

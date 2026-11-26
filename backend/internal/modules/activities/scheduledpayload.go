@@ -48,6 +48,10 @@ type scheduledPayload struct {
 	// FromConnection is the mailbox the sender chose. A payload with none
 	// leaves the choice to the fire, as an unchosen send does.
 	FromConnection string `json:"from_connection,omitempty"`
+	// ResentFrom is the bounced delivery this message repeats. A repeat that a
+	// gate holds and a person later releases is still that bounce's one repeat,
+	// so the release stamps it and the bounce cannot be sent again beside it.
+	ResentFrom string `json:"resent_from,omitempty"`
 }
 
 // frozenEvidence is the evidence block as it sits on a scheduled row. Ids as
@@ -187,6 +191,7 @@ func freezePayload(in SendEmailInput) scheduledPayload {
 		Evidence:         freezeEvidence(in.Evidence),
 		SendingEntity:    idText(in.SendingEntity),
 		FromConnection:   idText(in.FromConnection),
+		ResentFrom:       idText(in.ResentFrom),
 	}
 }
 
@@ -208,6 +213,10 @@ func (p scheduledPayload) thaw() (SendEmailInput, error) {
 		return SendEmailInput{}, err
 	}
 	from, err := frozenID("sending mailbox", p.FromConnection)
+	if err != nil {
+		return SendEmailInput{}, err
+	}
+	resent, err := frozenID("bounced delivery", p.ResentFrom)
 	if err != nil {
 		return SendEmailInput{}, err
 	}
@@ -238,6 +247,7 @@ func (p scheduledPayload) thaw() (SendEmailInput, error) {
 		Evidence:         evidence,
 		SendingEntity:    entity,
 		FromConnection:   from,
+		ResentFrom:       resent,
 	}, nil
 }
 

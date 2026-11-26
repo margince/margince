@@ -72,6 +72,32 @@ func TestABouncedSendNamesItselfAndOpensTheContact(t *testing.T) {
 	}
 }
 
+func TestABounceOffersSendAgainExactlyWhenTheStoreSaysItMayBeSentAgain(t *testing.T) {
+	contact := ids.NewV7()
+	cases := map[string]struct {
+		send BouncedSend
+		want []crmcontracts.AttentionItemActions
+	}{
+		"may be sent again": {
+			BouncedSend{ID: ids.NewV7(), ContactID: contact, CanSendAgain: true},
+			[]crmcontracts.AttentionItemActions{actionOpen, actionSendAgain},
+		},
+		"already sent again, or itself a repeat": {
+			BouncedSend{ID: ids.NewV7(), ContactID: contact},
+			[]crmcontracts.AttentionItemActions{actionOpen},
+		},
+		"filed under no contact": {
+			BouncedSend{ID: ids.NewV7(), CanSendAgain: true},
+			[]crmcontracts.AttentionItemActions{},
+		},
+	}
+	for name, tc := range cases {
+		if got := bounceItem(tc.send).Actions; !slices.Equal(got, tc.want) {
+			t.Errorf("%s: actions = %v, want %v", name, got, tc.want)
+		}
+	}
+}
+
 func TestARefusedBounceReadIsNamedAsWithheld(t *testing.T) {
 	out, err := bounceLaneService(&stubBounces{err: apperrors.ErrPermissionDenied}).Assemble(pageReader())
 	if err != nil {

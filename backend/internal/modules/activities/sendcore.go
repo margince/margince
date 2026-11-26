@@ -16,6 +16,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -197,6 +198,7 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 	if err != nil {
 		return PreparedSend{}, err
 	}
+	authoredHTML := safeHTML
 	// A template signs in markup, so a plain message gains an HTML part that
 	// carries its own text and the formatted sign-off under it.
 	if safeHTML == "" && sign.HTML != "" {
@@ -228,6 +230,8 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 			links:           links,
 			provider:        provider,
 			connection:      connection,
+			authoredBodyLen: utf8.RuneCountInString(sign.authored(in.Body)),
+			authoredHTMLLen: utf8.RuneCountInString(authoredHTML),
 		},
 	}, nil
 }

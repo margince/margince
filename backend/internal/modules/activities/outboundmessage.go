@@ -66,6 +66,10 @@ type outboundMessage struct {
 	provider string
 	// connection is the sender's mailbox of provider the send goes out from.
 	connection ids.UUID
+	// authoredBodyLen and authoredHTMLLen are how many characters at the front of
+	// body and htmlBody are the author's own words; see DeliveryRequest.
+	authoredBodyLen int
+	authoredHTMLLen int
 }
 
 // redactedMeetingLink stands in for a guest's management link in the copy the
@@ -184,6 +188,9 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin S
 		SplitFromThread: chain.splitFrom,
 		AnswersActivity: chain.answers,
 		ListUnsubscribe: m.listUnsubscribe,
+		AuthoredBodyLen: m.authoredBodyLen,
+		AuthoredHTMLLen: m.authoredHTMLLen,
+		ResentFrom:      m.in.ResentFrom,
 	}
 }
 

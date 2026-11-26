@@ -6,17 +6,24 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../../api/client";
-import { useNoticeRead } from "../../components/taskactions";
+import {
+  useBounceSendAgain,
+  useNoticeRead,
+} from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
+import { FieldEditDialog } from "../../design-system/fieldeditdialog";
+import { InlineTextControl } from "../../design-system/inlinetext";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { invalidateApprovalViews } from "../../lib/approvals.queries";
 import { unwrap } from "../../lib/problem";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
-// The rows the reader takes off their list by saying they have seen them: a
-// notice, and an approved change that did not run.
+// The rows the reader answers where they stand: a notice and an approved
+// change that did not run are taken off the list by saying they were seen, and
+// a bounced message is sent again to a corrected address.
 
 /**
  * Saying the failure has been seen, so it leaves this reader's list. It names
@@ -151,5 +158,38 @@ export function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
     >
       {t("worklist.verb.acknowledge")}
     </Button>
+  );
+}
+
+// A bounced message's one verb. The reader types the corrected address and the
+// server sends the same message to it, so the dialog asks for nothing else.
+// What the send refuses (consent withdrawn, a suppression, a seat that may not
+// send) comes back as the server's own sentence on the address field.
+export function BounceSendAgain({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const toast = useToast();
+  const send = useBounceSendAgain([worklistKey]);
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button aria-haspopup="dialog" onClick={() => setOpen(true)}>
+        {t("worklist.verb.sendAgain")}
+      </Button>
+      <FieldEditDialog
+        open={open}
+        label={t("worklist.verb.sendAgainAddress")}
+        hint={t("worklist.verb.sendAgainHint")}
+        value=""
+        absent
+        settle={(draft) => draft.trim()}
+        onClose={() => setOpen(false)}
+        onSave={async (address) => {
+          await send.mutateAsync({ id: item.id, address });
+          toast.show(t("worklist.verb.sentAgain"));
+        }}
+      >
+        {(field) => <InlineTextControl field={field} type="email" />}
+      </FieldEditDialog>
+    </>
   );
 }

@@ -62,6 +62,34 @@ export function useAutomationRetry(invalidateKeys: readonly QueryKey[]) {
 }
 
 /**
+ * Sending a bounced message again to a corrected address.
+ *
+ * The server replaces the bounced address on the contact and sends the same
+ * message through the one send, so a refusal (consent withdrawn, a suppression,
+ * a seat that may not send) throws with the server's own sentence. The reader
+ * sees it on the address field and can correct it.
+ */
+export function useBounceSendAgain(invalidateKeys: readonly QueryKey[]) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (send: { id: string; address: string }) =>
+      unwrap(
+        await api.POST("/attention/bounces/{id}/send-again", {
+          params: { path: { id: send.id } },
+          body: { address: send.address },
+        }),
+        t,
+      ),
+    onSuccess: () => {
+      for (const queryKey of invalidateKeys) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+    },
+  });
+}
+
+/**
  * Recording how a meeting went.
  *
  * Its own hook, not a wider `useTaskUpdate`, whose body is task-shaped (is_done,

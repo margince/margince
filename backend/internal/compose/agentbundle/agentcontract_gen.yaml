@@ -59073,7 +59073,7 @@ components:
             The way back from work that was APPLIED rather than approved.
         actions:
           type: array
-          items: {type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel]}
+          items: {type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel, send_again]}
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string

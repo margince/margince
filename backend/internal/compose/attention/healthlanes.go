@@ -147,6 +147,9 @@ type BouncedSend struct {
 	// when the send carries none, and the card then says nothing about where it
 	// was aimed rather than guessing.
 	Recipient string
+	// CanSendAgain says the caller may send this message again to a corrected
+	// address, and the row then offers `send_again`. The comms store decides it.
+	CanSendAgain bool
 }
 
 // AutomationHealth is the automations whose recent firings failed or were

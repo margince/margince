@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // HardBounce is one send of the caller's that did not arrive: what it was
@@ -30,6 +31,9 @@ type HardBounce struct {
 	// Recipient is the address that refused it, so a reader knows WHICH of a
 	// contact's addresses is dead. Empty when the send carries none.
 	Recipient string
+	// CanSendAgain is true when the caller may send this message again to a
+	// corrected address: see resendable.
+	CanSendAgain bool
 }
 
 // bounceLane is the lane's three words: the receiving side's own refusal, the
@@ -48,12 +52,32 @@ func (s *Store) HardBouncesFor(ctx context.Context, since time.Time, limit int) 
 	if err != nil {
 		return nil, err
 	}
+	again, err := s.sendAgainAmong(ctx, sends)
+	if err != nil {
+		return nil, err
+	}
 	bounced := make([]HardBounce, 0, len(sends))
 	for _, send := range sends {
 		bounced = append(bounced, HardBounce{
 			ID: send.ID, Subject: send.Subject, Reason: send.Reason,
 			BouncedAt: send.At, ContactID: send.ContactID, Recipient: send.Recipient,
+			CanSendAgain: !send.ContactID.IsZero() && again[send.ID],
 		})
 	}
 	return bounced, nil
+}
+
+// sendAgainAmong asks which of the lane's sends may be sent again. The lane
+// already holds the caller's own sends, so the caller is read from the context
+// the same way.
+func (s *Store) sendAgainAmong(ctx context.Context, sends []laneSend) (map[ids.UUID]bool, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return map[ids.UUID]bool{}, nil
+	}
+	bounced := make([]ids.UUID, 0, len(sends))
+	for _, send := range sends {
+		bounced = append(bounced, send.ID)
+	}
+	return s.sendAgainFrom(ctx, actor.UserID, bounced)
 }

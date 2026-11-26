@@ -2949,6 +2949,8 @@ public.comms_outbound.activity_id uuid NOT NULL gen=- def=-
 public.comms_outbound.answers_activity_id uuid gen=- def=-
 public.comms_outbound.attachments jsonb NOT NULL gen=- def='[]'::jsonb
 public.comms_outbound.attempts integer NOT NULL gen=- def=0
+public.comms_outbound.authored_body_len integer gen=- def=-
+public.comms_outbound.authored_html_len integer gen=- def=-
 public.comms_outbound.bcc jsonb gen=- def=-
 public.comms_outbound.body text NOT NULL gen=- def=-
 public.comms_outbound.bounce_kind text gen=- def=-
@@ -2977,6 +2979,7 @@ public.comms_outbound.comms_outbound_pkey PRIMARY KEY (id)
 public.comms_outbound.comms_outbound_purpose_is_users CHECK (((sender_kind = 'user'::text) = (consent_purpose IS NOT NULL)))
 public.comms_outbound.comms_outbound_recipients_array CHECK ((jsonb_typeof(recipients) = 'array'::text))
 public.comms_outbound.comms_outbound_references_array CHECK ((jsonb_typeof(references_chain) = 'array'::text))
+public.comms_outbound.comms_outbound_resent_from_fkey FOREIGN KEY (resent_from) REFERENCES comms_outbound(id) ON DELETE SET NULL
 public.comms_outbound.comms_outbound_sender_kind CHECK ((sender_kind = ANY (ARRAY['user'::text, 'controller'::text])))
 public.comms_outbound.comms_outbound_sender_stated CHECK (((sender_kind = 'user'::text) = (user_id IS NOT NULL)))
 public.comms_outbound.comms_outbound_shape CHECK ((((channel_user_id IS NULL) AND (message_id IS NOT NULL) AND (recipients IS NOT NULL) AND (cc IS NOT NULL) AND (subject IS NOT NULL) AND (references_chain IS NOT NULL)) OR ((channel_user_id IS NOT NULL) AND (message_id IS NULL) AND (recipients IS NULL) AND (cc IS NULL) AND (subject IS NULL) AND (references_chain IS NULL) AND (thread_key IS NULL) AND (list_unsubscribe IS NULL) AND ((channel_user_id <> ''::text) OR (status <> 'pending'::text)))))
@@ -3010,6 +3013,7 @@ public.comms_outbound.reason text gen=- def=-
 public.comms_outbound.recipients jsonb gen=- def=-
 public.comms_outbound.redacted_fields text[] NOT NULL gen=- def='{}'::text[]
 public.comms_outbound.references_chain jsonb gen=- def='[]'::jsonb
+public.comms_outbound.resent_from uuid gen=- def=-
 public.comms_outbound.sender_kind text NOT NULL gen=- def='user'::text
 public.comms_outbound.sent_at timestamp with time zone gen=- def=-
 public.comms_outbound.status text NOT NULL gen=- def='pending'::text
@@ -3044,6 +3048,7 @@ public.comms_outbound_one_delivery_per_instruction CREATE UNIQUE INDEX comms_out
 public.comms_outbound_party_admission CREATE INDEX comms_outbound_party_admission ON public.comms_outbound USING btree (activity_id, user_id) WHERE (party_admission_pending AND (status = 'sent'::text) AND (sender_kind = 'user'::text) AND (channel_user_id IS NULL))
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)
 public.comms_outbound_provider_message CREATE INDEX comms_outbound_provider_message ON public.comms_outbound USING btree (user_id, provider, provider_message_id) WHERE (provider_message_id IS NOT NULL)
+public.comms_outbound_resent_from_uq CREATE UNIQUE INDEX comms_outbound_resent_from_uq ON public.comms_outbound USING btree (resent_from) WHERE (resent_from IS NOT NULL)
 public.comms_outbound_workspace_activity_ix CREATE INDEX comms_outbound_workspace_activity_ix ON public.comms_outbound USING btree (activity_id, id)
 public.communication_basis acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_basis.captured_at timestamp with time zone NOT NULL gen=- def=now()

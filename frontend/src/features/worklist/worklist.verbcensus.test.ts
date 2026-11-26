@@ -82,6 +82,10 @@ const ANSWERED_BY = {
   take: { how: "inline", file: "worklist.take.tsx" },
   // Cancelling a meeting owed an outcome writes its status where the reader is.
   cancel: { how: "inline", file: "worklist.row.answer.tsx" },
+  // A bounced message goes out again to the address the reader types, which
+  // the row's dialog posts. Routing it would send the reader to the contact to
+  // retype a message the rep already wrote and approved.
+  send_again: { how: "inline", file: "worklist.row.answer.tsx" },
   // Putting an overnight correction back acts in place, on the receipt that
   // reported it. It is the one verb this queue draws OUTSIDE the row: the
   // handled panel is where a change nobody was asked about is told, so it is

@@ -192,12 +192,13 @@ func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limi
 	out := make([]attention.BouncedSend, 0, len(bounced))
 	for _, send := range bounced {
 		out = append(out, attention.BouncedSend{
-			ID:        send.ID,
-			Subject:   send.Subject,
-			Reason:    send.Reason,
-			BouncedAt: send.BouncedAt,
-			ContactID: send.ContactID,
-			Recipient: send.Recipient,
+			ID:           send.ID,
+			Subject:      send.Subject,
+			Reason:       send.Reason,
+			BouncedAt:    send.BouncedAt,
+			ContactID:    send.ContactID,
+			Recipient:    send.Recipient,
+			CanSendAgain: send.CanSendAgain,
 		})
 	}
 	return out, nil

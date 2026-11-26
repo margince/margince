@@ -44,6 +44,15 @@ var ErrTerminal = errors.New("comms: delivery is already terminal")
 var ErrDuplicateMessage = fmt.Errorf(
 	"this message identity is already staged for delivery: %w", apperrors.ErrConflict)
 
+// resentFromIndex is the unique index that lets one bounced delivery have at
+// most one send repeating it.
+const resentFromIndex = "comms_outbound_resent_from_uq"
+
+// ErrAlreadyResent marks a second send of a bounce that another request had
+// already sent again, which is the race the read-side check cannot close.
+var ErrAlreadyResent = fmt.Errorf(
+	"this bounced message was already sent again: %w", apperrors.ErrConflict)
+
 // ErrNoAddressee marks a delivery staged with nobody to reach. A message with
 // neither a To nor a Cc address can only be refused later — the consent gate
 // asks about an empty list and answers no — so it is refused here, where the
@@ -167,6 +176,13 @@ type StageInput struct {
 	// ThreadKey then names a new conversation; zero on every other delivery.
 	AnswersActivity ids.UUID
 	ListUnsubscribe string // the Post header is derived from this, never stored
+	// AuthoredBodyLen and AuthoredHTMLLen are how many characters at the front of
+	// Body and HTMLBody the author wrote, so a send that repeats this one can
+	// start from them. See activities.DeliveryRequest.
+	AuthoredBodyLen int
+	AuthoredHTMLLen int
+	// ResentFrom is the bounced delivery this one repeats, zero on any other.
+	ResentFrom ids.UUID
 }
 
 // StageTx records one delivery inside the caller's transaction. user_id —
@@ -222,18 +238,22 @@ func (s *Store) StageTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.UUID
 		  (id, activity_id, user_id, provider, message_id,
 		   recipients, cc, bcc, subject, body, html_body, from_name, consent_purpose, in_reply_to,
 		   references_chain, thread_key, list_unsubscribe, status, created_at, attachments, inline_logo_key, connection_id,
-		   answers_activity_id)
+		   answers_activity_id, authored_body_len, authored_html_len, resent_from)
 		VALUES ($1, $2, $3, $4, $5,
 		        $6, $7, $8, $9, $10, NULLIF($11,''), NULLIF($12,''), $13, NULLIF($14,''), $15,
 		        NULLIF($16,''), NULLIF($17,''), 'pending', $18, $19, NULLIF($20,''), NULLIF($21::uuid, '00000000-0000-0000-0000-000000000000'),
-		        NULLIF($22::uuid, '00000000-0000-0000-0000-000000000000'))`,
+		        NULLIF($22::uuid, '00000000-0000-0000-0000-000000000000'),
+		        $23, $24, NULLIF($25::uuid, '00000000-0000-0000-0000-000000000000'))`,
 		id, in.ActivityID, userID, in.Provider, in.MessageID,
 		recipients, cc, bcc, in.Subject, in.Body, in.HTMLBody, in.FromName, in.ConsentPurpose,
 		in.InReplyTo, refs, in.ThreadKey, in.ListUnsubscribe, s.now().UTC(), files, in.InlineLogoKey, in.ConnectionID,
-		in.AnswersActivity); err != nil {
+		in.AnswersActivity, in.AuthoredBodyLen, in.AuthoredHTMLLen, in.ResentFrom); err != nil {
 		// The idempotency key is an ANSWER, and it is mapped rather than
 		// wrapped: a raw violation carries the constraint and table names, and
 		// no caller is owed the schema behind a refusal it can act on.
+		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == resentFromIndex {
+			return ids.UUID{}, ErrAlreadyResent
+		}
 		if storekit.IsUniqueViolation(err) {
 			return ids.UUID{}, ErrDuplicateMessage
 		}
