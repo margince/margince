@@ -74,6 +74,8 @@ type RecordHistoryEntry struct {
 	Before            map[string]any
 	After             map[string]any
 	Summary           string
+	// Reason is why a project's phase was moved, set only on such a move.
+	Reason *string
 	// AgentClient is the tool's registered name when the write came through an
 	// OAuth grant. Nil for a hand-minted passport and for anything undelegated;
 	// the Summary line already reads correctly either way, and this is here so
@@ -286,7 +288,7 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 		for _, row := range rows {
 			page.Entries = append(page.Entries, recordHistoryEntry(row, mask, edgeMask))
 		}
-		return nil
+		return attachPhaseReasons(ctx, tx, f.EntityType, mask, page.Entries)
 	})
 	if err != nil {
 		return RecordHistoryPage{}, err
