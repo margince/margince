@@ -662,6 +662,14 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Asserts that same card shows the configured zone verbatim — the one screen where the zone name is the content.",
   },
   {
+    file: "features/sign-in/installation-settings.testkit.tsx",
+    why: "The stubbed installation settings those card suites read; the configured company zone is the record's own value, not a clock.",
+  },
+  {
+    file: "features/sign-in/installation-settings.refusal.test.tsx",
+    why: "The dialog EDITS the company time zone; its refusal cases type zone names an admin would, and assert the patch that sends them.",
+  },
+  {
     file: "features/onboarding/onboarding-conversation/basis-act.stories.tsx",
     why: "The basis act prefills the installation's reporting zone from the same settings record; the story needs a configured value.",
   },

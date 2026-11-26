@@ -23589,7 +23589,10 @@ paths:
         conversion rate against it, because changing it would re-mean every roll-up built on
         those rates (ADR-0085 §7). Before that point it is freely changeable, which is the
         case this serves: an installation that chose wrong in its configuration and noticed
-        in week one. Audit-only write (no event stream, EVT-NOEVT-3).
+        in week one. The refusal's field error keeps its English `message` and carries
+        `params` that mirror `BaseCurrencyLock`: `reason`, `count` as a decimal string, and
+        `base_currency` only when the lock names one, so a client words it as it words the
+        read's `base_currency_lock`. Audit-only write (no event stream, EVT-NOEVT-3).
       requestBody:
         required: true
         content:
@@ -42278,7 +42281,8 @@ components:
           type: string
           description: |
             ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
-            rate against the current base.
+            rate against the current base. The refusal's `params` mirror `BaseCurrencyLock`:
+            `reason`, `count` as a decimal string, and `base_currency` when the lock names one.
         base_language:
           type: string
           enum: [en, de, vi]

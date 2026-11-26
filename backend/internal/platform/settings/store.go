@@ -220,7 +220,7 @@ func (s *Store) SetRawTxReceipt(ctx context.Context, tx pgx.Tx, key string, next
 				return WriteReceipt{}, fmt.Errorf("settings: probing %s: %w", key, err)
 			}
 			if frozen {
-				return WriteReceipt{}, FrozenValue{Setting: key, Reason: why}
+				return WriteReceipt{}, FrozenValue{Setting: key, Freeze: why}
 			}
 		}
 		if _, err := tx.Exec(ctx, `
