@@ -339,6 +339,7 @@ func withheldAnswer(
 			}
 			shaped[name] = row[source]
 		}
+		withholdBeyondExactRange(shaped, columns)
 		shaped[withheldColumn] = judged[i].Withheld
 		if plan.CoverageColumn > 0 && !judged[i].Withheld {
 			at := plan.CoverageColumn

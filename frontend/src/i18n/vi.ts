@@ -3077,6 +3077,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.notShown": "Không hiển thị",
   "reading.restricted": "Bị hạn chế",
   "format.notForecast": "Chưa dự báo",
+  "format.tooLargeExact": "Quá lớn để hiển thị chính xác",
+  "format.someTooLargeExact":
+    "Một số tổng quá lớn để hiển thị chính xác nên được bỏ qua.",
   "record.chronologyLoading": "Đang tải lịch sử thay đổi…",
   "record.timeline": "Lịch sử",
   "record.edit": "Sửa",
@@ -15337,7 +15340,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "knowledge.archive": "Chuyển vào kho lưu trữ",
   "knowledge.archiveConfirm.title": "Chuyển {name} vào kho lưu trữ?",
   "knowledge.archiveConfirm.body":
-    "Bộ tài liệu và các tài liệu trong đó sẽ không còn tìm kiếm được. Không có gì bị xóa.",
+    "Bộ tài liệu và các tài liệu trong đó sẽ không còn tìm kiếm được. Không có gì bị xóa, và mục Hiện bộ đã lưu trữ sẽ đưa bộ này trở lại.",
   "knowledge.archiveShipped":
     "Bộ tài liệu này đi kèm Margince nên không thể chuyển vào kho lưu trữ.",
   "knowledge.uploadShipped":
@@ -15368,6 +15371,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một câu. Câu này hiển thị cho bất kỳ ai có câu hỏi nằm ngoài phạm vi của bộ này.",
   "knowledge.searchable": "Tìm kiếm được",
   "knowledge.reindexingBadge": "Đang lập lại chỉ mục",
+  "knowledge.edit": "Sửa bộ tài liệu",
+  "knowledge.edit.title": "Sửa {name}",
+  "knowledge.edit.save": "Lưu",
+  "knowledge.edit.description": "Mô tả",
+  "knowledge.showArchived": "Hiện bộ đã lưu trữ",
+  "knowledge.archivedBadge": "Đã lưu trữ",
+  "knowledge.restore": "Khôi phục bộ tài liệu",
   "settings.tab.privacy": "Quyền riêng tư và lưu trữ",
   "verdictPass.subject.senders": "Người gửi",
   "verdictPass.subject.threads": "Chuỗi thư",

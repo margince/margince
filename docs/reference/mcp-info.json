@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 250587,
+    "tool_catalog_bytes": 250688,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 64052,
+    "approx_wire_tokens_total": 64077,
     "largest_tool_bytes": 16198,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 52266,
-      "input_schema_bytes": 152002,
+      "input_schema_bytes": 152103,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 204268
+      "description_plus_input_schema_bytes": 204369
     }
   },
   "tools": {
@@ -808,7 +808,7 @@
         "inputSchema": {
           "properties": {
             "action": {
-              "description": "read_workspace topic actions lists each action's body\nadd_consumer_mail_domain: Add a consumer-mail domain, or carve one out\nadd_counterparty_hold: Keep one party's mail to the contacts on it\nadd_exclusion: Keep an address or a domain out of capture\nadd_owner_identity: Declare another address as your own\nadd_workspace_email_domain: Register one of the workspace's own email domains\narchive_corpus: Archive a corpus and everything filed in it\ncancel_backfill: Cancel a running backfill — captured rows are retained\ncancel_import_run: Cancel a draft, a test run, or a report nobody will approve\ncreate_corpus: Define a document corpus\ndiscard_domain: Answer an open domain question by excluding the domain from your own capture\ndisconnect_channel: Disconnect a messaging channel (archives the binding and destroys the credential)\ndisconnect_mailbox: Disconnect the calling user's mail/calendar capture\ndismiss_mailbox_silence: Dismiss the owner's current mailbox silence warning\nimport_linkedin_connections: Import your own LinkedIn connections export\nimport_vcards: Import a .vcf address-card file\nkeep_domain_as_company: Answer an open domain question by keeping the company\nkeep_domain_as_vendor: Answer an open vendor question by keeping the vendor verdict\nlift_counterparty_hold: Lift a counterparty hold\nlift_exclusion: Lift an exclusion\nremove_consumer_mail_domain: Withdraw a consumer-mail list entry (admin/ops)\nremove_workspace_email_domain: Stop treating a domain as the workspace's own\nreopen_domain: Ask about an undecided domain again (admin/ops)\nrestore_owner_identity: Put back one of your own addresses you just withdrew\nset_blocked_domain: Block a domain, or unblock one\nset_channel_verbosity: Choose how much Margince posts into a record's channel\nset_context_tag: Set the word this connector files what it captures under\nset_history_baseline: Set the date this mailbox's automatic commitment suggestions start from\nset_mail_posture: Set what this mailbox asks of the mail it brings in\nset_sender_decision: Overrule what the classifier decided about a sender\nset_signature_enrichment: Set this mailbox's own answer to the nightly signature pass\nshare_counterparty_hold_history: Re-open the mail the caller's counterparty holds already caught\nundo_import_run: Reverse a completed CSV import run\nunlink_channel: Stop syncing a record with its chat channel\nupdate_corpus: Edit a corpus — its words, its floor, or which one the palette asks\nupdate_import_run: Save choices on a draft import run\nupload_corpus_document: Add a document to this corpus\nvalidate_import_run: Test a draft import run against the estate\nwithdraw_owner_identity: Withdraw one of your own addresses\nwithdraw_sender_decision: Withdraw your decision and hand the sender back to the classifier",
+              "description": "read_workspace topic actions lists each action's body\nadd_consumer_mail_domain: Add a consumer-mail domain, or carve one out\nadd_counterparty_hold: Keep one party's mail to the contacts on it\nadd_exclusion: Keep an address or a domain out of capture\nadd_owner_identity: Declare another address as your own\nadd_workspace_email_domain: Register one of the workspace's own email domains\narchive_corpus: Archive a corpus and everything filed in it\ncancel_backfill: Cancel a running backfill — captured rows are retained\ncancel_import_run: Cancel a draft, a test run, or a report nobody will approve\ncreate_corpus: Define a document corpus\ndiscard_domain: Answer an open domain question by excluding the domain from your own capture\ndisconnect_channel: Disconnect a messaging channel (archives the binding and destroys the credential)\ndisconnect_mailbox: Disconnect the calling user's mail/calendar capture\ndismiss_mailbox_silence: Dismiss the owner's current mailbox silence warning\nimport_linkedin_connections: Import your own LinkedIn connections export\nimport_vcards: Import a .vcf address-card file\nkeep_domain_as_company: Answer an open domain question by keeping the company\nkeep_domain_as_vendor: Answer an open vendor question by keeping the vendor verdict\nlift_counterparty_hold: Lift a counterparty hold\nlift_exclusion: Lift an exclusion\nremove_consumer_mail_domain: Withdraw a consumer-mail list entry (admin/ops)\nremove_workspace_email_domain: Stop treating a domain as the workspace's own\nreopen_domain: Ask about an undecided domain again (admin/ops)\nrestore_corpus: Bring an archived corpus back with everything filed in it\nrestore_owner_identity: Put back one of your own addresses you just withdrew\nset_blocked_domain: Block a domain, or unblock one\nset_channel_verbosity: Choose how much Margince posts into a record's channel\nset_context_tag: Set the word this connector files what it captures under\nset_history_baseline: Set the date this mailbox's automatic commitment suggestions start from\nset_mail_posture: Set what this mailbox asks of the mail it brings in\nset_sender_decision: Overrule what the classifier decided about a sender\nset_signature_enrichment: Set this mailbox's own answer to the nightly signature pass\nshare_counterparty_hold_history: Re-open the mail the caller's counterparty holds already caught\nundo_import_run: Reverse a completed CSV import run\nunlink_channel: Stop syncing a record with its chat channel\nupdate_corpus: Edit a corpus — its words, its floor, or which one the palette asks\nupdate_import_run: Save choices on a draft import run\nupload_corpus_document: Add a document to this corpus\nvalidate_import_run: Test a draft import run against the estate\nwithdraw_owner_identity: Withdraw one of your own addresses\nwithdraw_sender_decision: Withdraw your decision and hand the sender back to the classifier",
               "enum": [
                 "add_consumer_mail_domain",
                 "add_counterparty_hold",
@@ -832,6 +832,7 @@
                 "remove_consumer_mail_domain",
                 "remove_workspace_email_domain",
                 "reopen_domain",
+                "restore_corpus",
                 "restore_owner_identity",
                 "set_blocked_domain",
                 "set_channel_verbosity",
@@ -8774,7 +8775,7 @@
               "type": "string"
             },
             "include_archived": {
-              "description": "legal_entities, pipelines, roles, saved_views, web_forms only",
+              "description": "corpora, legal_entities, pipelines, roles, saved_views, web_forms only",
               "type": "boolean"
             },
             "include_inactive": {
@@ -13864,6 +13865,14 @@
             "domain"
           ],
           "route": "POST /v1/capture/blocked-domains/{domain}/reopen"
+        },
+        {
+          "action": "restore_corpus",
+          "does": "Bring an archived corpus back with everything filed in it.",
+          "ids": [
+            "id"
+          ],
+          "route": "POST /v1/knowledge/corpora/{id}/restore"
         },
         {
           "action": "restore_owner_identity",
@@ -27398,6 +27407,12 @@
         {
           "action": "corpora",
           "does": "The document corpora this workspace has defined.",
+          "query": [
+            {
+              "name": "include_archived",
+              "type": "boolean"
+            }
+          ],
           "route": "GET /v1/knowledge/corpora"
         },
         {
