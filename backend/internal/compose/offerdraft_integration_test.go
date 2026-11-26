@@ -64,10 +64,10 @@ func newOfferDrafterFixture(t *testing.T, e *integration.Env, brain *ai.FakeClie
 		rateCard: e.Deals,
 		context:  search.NewRetriever(search.NewStore(e.DB()), nil),
 		// The real pool, because the drafter reads the installation's base
-		// language through it. A fixture that left this nil panicked inside the
-		// call rather than failing an assertion, which read as a nil RESULT and
-		// sent the report looking at the wrong line entirely.
-		pool: e.Pool,
+		// language through it. A nil one panicked inside the call instead of
+		// failing an assertion, which pointed the report at the wrong line.
+		pool:  e.Pool,
+		rules: ai.NewVoiceStore(InstallationDB(e.Pool)),
 	}
 }
 

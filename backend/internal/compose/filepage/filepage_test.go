@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func loadContract(t *testing.T) *openapi3.T {
@@ -39,6 +40,12 @@ func servesAFile(contentTypes map[string]bool) bool {
 	return true
 }
 
+// notOpenedInATab are the GET routes that answer neither JSON nor a page. Only
+// a machine calls them, so a refusal page would serve no reader.
+var notOpenedInATab = gatekit.Waive(map[string]string{
+	httpserver.BaseURL + "/channel-events/whatsapp": "Meta's subscription check, answered with the challenge as plain text; a refusal page there would reach no reader",
+})
+
 func TestEveryFileRouteIsOneTheContractServesAsAFile(t *testing.T) {
 	doc := loadContract(t)
 	served := map[string]bool{}
@@ -61,8 +68,9 @@ func TestEveryFileRouteIsOneTheContractServesAsAFile(t *testing.T) {
 	if len(served) == 0 {
 		t.Fatal("the contract declares no GET that answers a file, so this reads nothing")
 	}
+	defer notOpenedInATab.AssertAllMatched(t)
 	for route := range served {
-		if !fileRoutes[route] {
+		if !fileRoutes[route] && !notOpenedInATab.Waived(t, route) {
 			t.Errorf("GET %s answers a file but is not in fileRoutes, so its link opened in a tab reads JSON", route)
 		}
 	}

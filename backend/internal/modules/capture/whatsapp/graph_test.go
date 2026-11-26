@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -46,10 +47,14 @@ func mediaServer(t *testing.T, size int64, sum string, binStatus int, bin []byte
 		}
 		switch r.URL.Path {
 		case "/v23.0/MEDIA":
-			fmt.Fprintf(w, `{"url":%q,"mime_type":"application/pdf","sha256":%q,"file_size":%d}`, srv.URL+"/bin", sum, size)
+			if _, err := fmt.Fprintf(w, `{"url":%q,"mime_type":"application/pdf","sha256":%q,"file_size":%d}`, srv.URL+"/bin", sum, size); err != nil {
+				t.Errorf("writing the media answer: %v", err)
+			}
 		case "/bin":
 			w.WriteHeader(binStatus)
-			w.Write(bin)
+			if _, err := w.Write(bin); err != nil {
+				t.Errorf("writing the media bytes: %v", err)
+			}
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -102,7 +107,9 @@ func TestDownloadMediaMetadataAuthFailure(t *testing.T) {
 func TestDownloadMediaRefusesANonHTTPURL(t *testing.T) {
 	for _, bad := range []string{"file:///etc/passwd", "http://lookaside.fbsbx.com/x", "https://evil.example.com/x", "https://fbsbx.com.evil.example/x", "https://fbsbx.com/x"} {
 		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			fmt.Fprintf(w, `{"url":%q,"file_size":1}`, bad)
+			if _, err := fmt.Fprintf(w, `{"url":%q,"file_size":1}`, bad); err != nil {
+				t.Errorf("writing the media answer: %v", err)
+			}
 		}))
 		c := NewClient(srv.Client(), srv.URL, "v23.0")
 		if _, err := c.DownloadMedia(context.Background(), testToken, "M", 100, ""); !errors.Is(err, ErrRejected) {
@@ -133,7 +140,9 @@ func TestDownloadURLDirectFromEcho(t *testing.T) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		w.Write(payload)
+		if _, err := w.Write(payload); err != nil {
+			t.Errorf("writing the media bytes: %v", err)
+		}
 	}))
 	t.Cleanup(srv.Close)
 	c := NewClient(srv.Client(), srv.URL, "", WithMediaHosts("127.0.0.1"))
@@ -156,16 +165,19 @@ func sendServer(t *testing.T, status int, answer string, header http.Header) (*C
 	t.Helper()
 	got := &sentRequest{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		raw, _ := io.ReadAll(r.Body)
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("reading the request body: %v", err)
+		}
 		got.path, got.auth = r.URL.Path, r.Header.Get("Authorization")
 		if err := json.Unmarshal(raw, &got.body); err != nil {
 			t.Errorf("request body: %v", err)
 		}
-		for k, v := range header {
-			w.Header()[k] = v
-		}
+		maps.Copy(w.Header(), header)
 		w.WriteHeader(status)
-		fmt.Fprint(w, answer)
+		if _, err := fmt.Fprint(w, answer); err != nil {
+			t.Errorf("writing the answer: %v", err)
+		}
 	}))
 	t.Cleanup(srv.Close)
 	return NewClient(srv.Client(), srv.URL, "v23.0"), got

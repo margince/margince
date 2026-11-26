@@ -33,6 +33,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/chatsync"
 	"github.com/margince/margince/backend/internal/compose/evidencereread"
+	"github.com/margince/margince/backend/internal/compose/whatsappedge"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -146,6 +147,10 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		ChatPullArgs{}.Kind(): func(ctx context.Context) error {
 			worker := &chatsync.PullWorker[ChatPullArgs]{Bind: workspaceJobCtx}
 			return worker.Work(ctx, &river.Job[ChatPullArgs]{})
+		},
+		WhatsAppIngestArgs{}.Kind(): func(ctx context.Context) error {
+			worker := &whatsappedge.Worker[WhatsAppIngestArgs]{Bind: workspaceJobCtx}
+			return worker.Work(ctx, &river.Job[WhatsAppIngestArgs]{})
 		},
 		GeocodeCompanyArgs{}.Kind(): func(ctx context.Context) error {
 			return (&geocodeWorker{}).Work(ctx, &river.Job[GeocodeCompanyArgs]{})
