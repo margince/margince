@@ -139,6 +139,27 @@ func TestATreeFileIsReadOnceAndShared(t *testing.T) {
 	}
 }
 
+func TestEverySpellingOfOneFileSharesOneCopyOfItsBytes(t *testing.T) {
+	t.Parallel()
+	absolute, err := filepath.Abs("tree.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := ReadFile("tree.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, spelling := range []string{"../gatekit/tree.go", absolute} {
+		again, err := ReadFile(spelling)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if &again[0] != &first[0] {
+			t.Errorf("%s read tree.go from the disk again instead of sharing the copy held for tree.go", spelling)
+		}
+	}
+}
+
 func TestAFixtureRewrittenWithinOneClockTickIsReadFresh(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "fixture.txt")
