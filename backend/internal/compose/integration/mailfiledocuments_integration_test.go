@@ -164,9 +164,6 @@ func TestAMailFileReachesEveryRecordTheMailIsLinkedTo(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'attachment' AND entity_id = $1`, file); n != 1 {
 		t.Errorf("recording the same part twice wrote %d audit rows, want 1", n)
 	}
-	if v := e.WsScalar(t, `SELECT coalesce(company_id::text, '') FROM attachment WHERE id = $1`, file); v != "" {
-		t.Errorf("a captured mail file was stamped with company %s", v)
-	}
 }
 
 func TestAMailFileLeavesEveryListWhenItIsNotLive(t *testing.T) {

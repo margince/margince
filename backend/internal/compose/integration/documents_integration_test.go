@@ -28,7 +28,7 @@ import (
 )
 
 // seedDocument files one attachment against a parent. The row is written
-// directly because the subject is the READ.
+// directly because the subject is the read.
 func seedDocument(
 	t *testing.T, e *Env, parentType string, parent ids.UUID, name, category string, pinned bool,
 ) ids.UUID {
@@ -191,7 +191,7 @@ var docWritePerms = principal.Permissions{
 }
 
 // The library is fed by the UPLOAD path, not by a hand-written column. A test
-// that seeds company_id itself proves only that the read filters on it;
+// that seeds the row itself proves only that the read finds it;
 // it passes just as happily when nothing in the product ever writes it, which
 // is exactly how a file uploaded through the UI can be invisible to the account
 // view while every gate stays green.
@@ -400,8 +400,8 @@ func seedActivityWithDeal(t *testing.T, e *Env, deal ids.UUID) ids.UUID {
 }
 
 // When two companies turn out to be one, the survivor's library has to hold
-// both sides' files. company_id is a denormalized read path, so nothing
-// moves it on its own — a file left pointing at the dissolved company is filed
+// both sides' files. A file names its company by entity_id, so the merge
+// has to repoint it — a file left pointing at the dissolved company is filed
 // under a record that no longer exists, and to a user the contract has simply
 // vanished.
 func TestACompanyMergeCarriesTheDocumentsAcross(t *testing.T) {

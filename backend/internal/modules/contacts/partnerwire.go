@@ -75,13 +75,3 @@ func wirePartnerActivation(out *crmcontracts.Partner, a partnerActivation) {
 		out.ActivationDealId = &deal
 	}
 }
-
-// intPtr widens the DB's smallint to the contract's int without sharing
-// the row's storage.
-func intPtr(v *int16) *int {
-	if v == nil {
-		return nil
-	}
-	w := int(*v)
-	return &w
-}
