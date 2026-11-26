@@ -226,9 +226,9 @@ var ungradedSetupWaivers = gatekit.Waive(map[string]string{
 })
 
 // Every task the binding onboarding writes answers on a model that was measured,
-// read by the same lookup Settings shows. A stale record still counts: any prompt
-// input can stale one, and only a paid run refreshes it, so Settings marks it
-// "recheck pending" and ai-records-stale.yml names it on the pull request instead.
+// read by the same lookup Settings shows. A stale record still counts. Any prompt
+// input can stale one, and only a paid run refreshes it. Settings marks it
+// "recheck pending", and ai-records-stale.yml names it on the pull request.
 func TestOnboardingBindsOnlyMeasuredModels(t *testing.T) {
 	t.Parallel()
 	for id, cfg := range readSetupPresets(t) {
