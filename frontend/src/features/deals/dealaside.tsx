@@ -160,7 +160,7 @@ function DealAsideBody({
   return (
     <>
       <DealOwnerLeft
-        ownerId={deal.owner_id}
+        ownerId={deal.archived_at ? null : deal.owner_id}
         onChoose={change.ownership?.onEdit}
       />
       <RecordDetails
