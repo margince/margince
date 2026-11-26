@@ -107,12 +107,10 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// credential (no deployment-wide OAuth app to gate on), so there is nothing
 	// to check for before wiring it up.
 	addDeclaredWorker[TelegramIngestArgs](reg, newTelegramIngestWorker(pool, cfg.CaptureConfig, log))
-	addDeclaredWorker[ZaloOAIngestArgs](reg, &zaloedge.Worker[ZaloOAIngestArgs]{
-		Bind: workspaceJobCtx, Pool: pool, Sink: newCaptureSink(pool, cfg.CaptureConfig), Actor: chatChannelPrincipal(zalo.CapturedBy), Log: log,
-	})
-	addDeclaredWorker[WhatsAppIngestArgs](reg, &whatsappedge.Worker[WhatsAppIngestArgs]{
-		Bind: workspaceJobCtx, Pool: pool, Sink: newCaptureSink(pool, cfg.CaptureConfig), Actor: chatChannelPrincipal(whatsapp.CapturedBy), Log: log,
-	})
+	addDeclaredWorker[ZaloOAIngestArgs](reg, zaloedge.NewWorker[ZaloOAIngestArgs](
+		workspaceJobCtx, pool, newCaptureSink(pool, cfg.CaptureConfig), chatChannelPrincipal(zalo.CapturedBy), log))
+	addDeclaredWorker[WhatsAppIngestArgs](reg, whatsappedge.NewWorker[WhatsAppIngestArgs](
+		workspaceJobCtx, pool, newCaptureSink(pool, cfg.CaptureConfig), chatChannelPrincipal(whatsapp.CapturedBy), log))
 	// The captured-company auto-enrich sweep (ADR-0072): always
 	// registered, it enqueues system deep reads the site worker applies.
 	autoEnrich := newCaptureAutoEnrichSweepWorker(pool, log)

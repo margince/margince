@@ -44,12 +44,6 @@ func macInput(appID string, body []byte, timestamp, secret string) []byte {
 	return in
 }
 
-// macHex is the signature Zalo would send for these inputs.
-func macHex(appID string, body []byte, timestamp, secret string) string {
-	sum := sha256.Sum256(macInput(appID, body, timestamp, secret))
-	return hex.EncodeToString(sum[:])
-}
-
 // VerifySignature checks the X-ZEvent-Signature header value against body
 // under the OA secret key. Only app_id and timestamp are read from the body
 // before the check passes; they are the MAC's own inputs.
@@ -78,18 +72,4 @@ func VerifySignature(secret, header string, body []byte) error {
 		return ErrSignatureInvalid
 	}
 	return nil
-}
-
-// Receive reads a webhook request, verifies its signature and decodes it.
-// Nothing in the body is used before the signature passes, except the MAC's own
-// inputs.
-func Receive(r *http.Request, secret string) (Event, error) {
-	body, err := ReadBody(r)
-	if err != nil {
-		return Event{}, err
-	}
-	if err := VerifySignature(secret, r.Header.Get(SignatureHeader), body); err != nil {
-		return Event{}, err
-	}
-	return Decode(body)
 }

@@ -5,6 +5,8 @@ package zalo
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +18,13 @@ import (
 
 const testSecret = "oa-secret"
 
+// macHex is the signature Zalo would send for these inputs, spelled from the
+// production byte string.
+func macHex(appID string, body []byte, timestamp, secret string) string {
+	sum := sha256.Sum256(macInput(appID, body, timestamp, secret))
+	return hex.EncodeToString(sum[:])
+}
+
 func fixture(t *testing.T, name string) []byte {
 	t.Helper()
 	b, err := os.ReadFile("testdata/" + name)
@@ -23,19 +32,6 @@ func fixture(t *testing.T, name string) []byte {
 		t.Fatal(err)
 	}
 	return b
-}
-
-func signed(t *testing.T, name string) *http.Request {
-	t.Helper()
-	body := fixture(t, name)
-	var env struct {
-		AppID     idString `json:"app_id"`
-		Timestamp idString `json:"timestamp"`
-	}
-	mustUnmarshal(t, body, &env)
-	r := httptest.NewRequest(http.MethodPost, "/zalo", bytes.NewReader(body))
-	r.Header.Set(SignatureHeader, "mac="+macHex(string(env.AppID), body, string(env.Timestamp), testSecret))
-	return r
 }
 
 func TestVerifySignatureAgainstIndependentlyComputedFixture(t *testing.T) {
@@ -75,30 +71,16 @@ func TestVerifySignatureRefusals(t *testing.T) {
 	}
 }
 
-func TestReceiveRejectsOversizedBodyBeforeVerifying(t *testing.T) {
+func TestReadBodyStopsAtTheLimit(t *testing.T) {
 	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/zalo", strings.NewReader(strings.Repeat("a", MaxBodyBytes+1)))
-	if _, err := Receive(r, testSecret); !errors.Is(err, ErrBodyTooLarge) {
+	if _, err := ReadBody(r); !errors.Is(err, ErrBodyTooLarge) {
 		t.Fatalf("got %v, want ErrBodyTooLarge", err)
 	}
-}
-
-func TestReceiveDecodesASignedEvent(t *testing.T) {
-	t.Parallel()
-	ev, err := Receive(signed(t, "user_send_text.json"), testSecret)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if ev.Kind != KindMessage || ev.Message.Text != "Xin chào, tôi muốn hỏi giá" {
-		t.Fatalf("unexpected event %+v", ev)
-	}
-}
-
-func TestReceiveRefusesAnUnsignedEvent(t *testing.T) {
-	t.Parallel()
-	r := httptest.NewRequest(http.MethodPost, "/zalo", bytes.NewReader(fixture(t, "user_send_text.json")))
-	if _, err := Receive(r, testSecret); !errors.Is(err, ErrSignatureMissing) {
-		t.Fatalf("got %v, want ErrSignatureMissing", err)
+	body := fixture(t, "user_send_text.json")
+	got, err := ReadBody(httptest.NewRequest(http.MethodPost, "/zalo", bytes.NewReader(body)))
+	if err != nil || !bytes.Equal(got, body) {
+		t.Fatalf("a body under the limit came back as %d bytes, %v", len(got), err)
 	}
 }
 

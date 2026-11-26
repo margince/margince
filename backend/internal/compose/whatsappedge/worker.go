@@ -10,7 +10,6 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/chatedge"
 	"github.com/margince/margince/backend/internal/modules/capture/whatsapp"
@@ -22,22 +21,13 @@ import (
 // IngestJob is the args of the ingest job, which compose declares.
 type IngestJob = chatedge.IngestJob
 
-// Worker files one stored item through the shared chat worker. Actor is the
-// connector principal the filing runs as.
-type Worker[T IngestJob] struct {
-	Bind  func(context.Context, jobs.WorkspaceScoped) (context.Context, error)
-	Pool  *pgxpool.Pool
-	Sink  connector.Sink
-	Actor principal.Principal
-	Log   *slog.Logger
-}
-
-// Work implements River's worker for the ingest job.
-func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
-	shared := chatedge.Worker[T]{
-		Name: "whatsapp_ingest", Bind: w.Bind, Pool: w.Pool, Sink: w.Sink, Actor: w.Actor, Log: w.Log, Decode: decode,
-	}
-	return jobs.FaultContext(ctx, shared.Work(ctx, job))
+// NewWorker is the shared chat worker for this network's ingest job. It files
+// through the live connection as the connector principal actor, and decodes a
+// stored item with decode.
+func NewWorker[T IngestJob](bind func(context.Context, jobs.WorkspaceScoped) (context.Context, error),
+	pool *pgxpool.Pool, sink connector.Sink, actor principal.Principal, log *slog.Logger,
+) *chatedge.Worker[T] {
+	return &chatedge.Worker[T]{Name: "whatsapp_ingest", Bind: bind, Pool: pool, Sink: sink, Actor: actor, Log: log, Decode: decode}
 }
 
 // decode reads one stored item. A delivery status is no message, and a reaction

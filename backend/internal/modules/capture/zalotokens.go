@@ -41,6 +41,17 @@ type ZaloRenewer struct {
 	Log    *slog.Logger
 	// Now is the clock the expiry is judged by.
 	Now func() time.Time
+	// Tx runs one renewal's locked work in a workspace transaction. Nil is
+	// database.WithWorkspaceTx. It is the boundary a test breaks to make a
+	// commit's outcome unclear.
+	Tx func(ctx context.Context, fn func(pgx.Tx) error) error
+}
+
+func (r *ZaloRenewer) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
+	if r.Tx != nil {
+		return r.Tx(ctx, fn)
+	}
+	return database.WithWorkspaceTx(ctx, r.Pool, fn)
 }
 
 // RenewWorkspace renews every connection of one workspace whose access token
@@ -76,29 +87,62 @@ func (r *ZaloRenewer) RenewWorkspace(ctx context.Context, workspace ids.UUID) er
 // transaction ends.
 type zaloRenewal struct {
 	oldRef, newRef keyvault.Ref
-	reauth         bool
+	// refused says Zalo refused the refresh token.
+	refused bool
+	// spent says Zalo accepted the refresh token and issued a new pair, so the
+	// old pair no longer works whatever else happened.
+	spent bool
 }
 
 func (r *ZaloRenewer) renewOne(ctx context.Context, workspace, id ids.UUID) error {
 	var done zaloRenewal
-	err := database.WithWorkspaceTx(ctx, r.Pool, func(tx pgx.Tx) error {
+	err := r.inTx(ctx, func(tx pgx.Tx) error {
 		var err error
 		done, err = r.renewLocked(ctx, tx, workspace, id)
 		return err
 	})
-	if err != nil {
-		// The new pair was sealed but the row never named it, so nothing can
-		// read it. The old refresh token is spent, and the next run asks Zalo
-		// to refuse it, which parks the connection for a new authorization.
-		keyvault.DeleteDetached(ctx, r.Vault, r.Log, workspace, done.newRef, "zalo-renew-uncommitted")
-		return err
-	}
-	keyvault.DeleteDetached(ctx, r.Vault, r.Log, workspace, done.oldRef, "zalo-token-renewed")
-	if done.reauth {
+	if done.refused {
 		r.Log.WarnContext(ctx, "zalo: the refresh token was refused, so the connection needs a new authorization", "connection", id.String())
 		return StopPollingChannelConnection(ctx, r.Pool, id, channelStatusReauthRequired, "zalo refused the refresh token")
 	}
-	return nil
+	if !done.spent {
+		return err
+	}
+	return r.settle(ctx, workspace, id, done, err)
+}
+
+// settle decides what a spent refresh token left behind. The transaction's own
+// answer cannot be trusted, because Postgres may have committed before the
+// connection failed. So the row is read again, and a sealed credential is
+// destroyed only when that read shows the row does not name it. When the read
+// fails nothing is destroyed: an orphaned blob is inert, a destroyed live one is
+// not.
+func (r *ZaloRenewer) settle(ctx context.Context, workspace, id ids.UUID, done zaloRenewal, txErr error) error {
+	current, err := r.credentialRef(ctx, id)
+	if err != nil {
+		r.Log.ErrorContext(ctx, "zalo: a renewal's outcome could not be read, so no credential was destroyed; the superseded or unnamed blob needs cleanup",
+			"connection", id.String(), "old_credential_ref", string(done.oldRef), "new_credential_ref", string(done.newRef), "err", err)
+		return errors.Join(txErr, err)
+	}
+	if done.newRef != "" && current == done.newRef {
+		if txErr != nil {
+			r.Log.WarnContext(ctx, "zalo: a renewal's commit reported an error but the connection names the new tokens", "connection", id.String(), "err", txErr)
+		}
+		keyvault.DeleteDetached(ctx, r.Vault, r.Log, workspace, done.oldRef, "zalo-token-renewed")
+		return nil
+	}
+	keyvault.DeleteDetached(ctx, r.Vault, r.Log, workspace, done.newRef, "zalo-renew-unnamed")
+	r.Log.ErrorContext(ctx, "zalo: Zalo issued new tokens that could not be stored, so the connection needs a new authorization", "connection", id.String(), "err", txErr)
+	return errors.Join(txErr, StopPollingChannelConnection(ctx, r.Pool, id, channelStatusReauthRequired, "the renewed tokens could not be stored"))
+}
+
+// credentialRef reads which sealed credential the connection names now.
+func (r *ZaloRenewer) credentialRef(ctx context.Context, id ids.UUID) (keyvault.Ref, error) {
+	var ref string
+	err := database.WithWorkspaceTx(ctx, r.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT credential_ref FROM channel_connection WHERE id = $1`, id).Scan(&ref)
+	})
+	return keyvault.Ref(ref), err
 }
 
 // renewLocked runs inside the transaction that holds the connection's row lock.
@@ -129,24 +173,25 @@ func (r *ZaloRenewer) renewLocked(ctx context.Context, tx pgx.Tx, workspace, id 
 	}
 	pair, err := r.Client.Refresh(ctx, zalo.App{ID: appID, Secret: secrets.AppSecret}, tokens.RefreshToken)
 	if errors.Is(err, zalo.ErrReauthRequired) {
-		return zaloRenewal{reauth: true}, nil
+		return zaloRenewal{refused: true}, nil
 	}
 	if err != nil {
 		return zaloRenewal{}, err
 	}
+	// From here Zalo has spent the old refresh token.
 	//nolint:gosec // G117: the pair is sealed in the vault, never logged or returned
 	sealed, err := json.Marshal(zaloTokens{AccessToken: pair.AccessToken, RefreshToken: pair.RefreshToken, ExpiresAt: r.Now().Add(pair.ExpiresIn).UTC()})
 	if err != nil {
-		return zaloRenewal{}, fmt.Errorf("encoding the renewed tokens: %w", err)
+		return zaloRenewal{spent: true}, fmt.Errorf("encoding the renewed tokens: %w", err)
 	}
 	newRef, err := r.Vault.Put(ctx, ws, sealed)
 	if err != nil {
-		return zaloRenewal{}, fmt.Errorf("sealing the renewed tokens: %w", err)
+		return zaloRenewal{spent: true}, fmt.Errorf("sealing the renewed tokens: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `UPDATE channel_connection SET credential_ref = $2 WHERE id = $1`, id, string(newRef)); err != nil {
-		return zaloRenewal{newRef: newRef}, err
+		return zaloRenewal{newRef: newRef, spent: true}, err
 	}
-	return zaloRenewal{oldRef: keyvault.Ref(tokenRef), newRef: newRef}, nil
+	return zaloRenewal{oldRef: keyvault.Ref(tokenRef), newRef: newRef, spent: true}, nil
 }
 
 // unsealZalo reads one sealed JSON value through the open transaction, so the
