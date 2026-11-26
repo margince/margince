@@ -82424,6 +82424,19 @@ components:
           allOf:
             - $ref: '#/components/schemas/BuyerRoomContent'
           description: Omitted while access is `paused` or `expired`, and when nothing has been published yet.
+        engagement_notice:
+          allOf:
+            - $ref: '#/components/schemas/BuyerEngagementNotice'
+          description: Present on a seat's first sign-in, and on a seller preview so the seller sees what the buyer will see. Tells the buyer that the seller's company can see the sign-in and the downloads. It has no action.
+      additionalProperties: false
+
+    BuyerEngagementNotice:
+      type: object
+      required: [company]
+      properties:
+        company:
+          type: string
+          description: The seller's company, as the invitation mail names it.
       additionalProperties: false
 
     OfferTemplate:

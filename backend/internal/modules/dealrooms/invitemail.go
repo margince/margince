@@ -83,10 +83,14 @@ func (h Handlers) sendInvite(ctx context.Context, issued IssuedInvitation) error
 	}
 	words := mailcopy.For(language)
 	inviter, company := "", ""
+	var err error
 	if h.inviteContext != nil {
-		var err error
-		inviter, company, err = h.inviteContext(ctx)
-		if err != nil {
+		if inviter, err = h.inviteContext(ctx); err != nil {
+			slog.WarnContext(ctx, "invitation attribution unavailable; sending the access link", "cause", err)
+		}
+	}
+	if h.companyName != nil {
+		if company, err = h.companyName(ctx); err != nil {
 			slog.WarnContext(ctx, "invitation attribution unavailable; sending the access link", "cause", err)
 		}
 	}
@@ -217,8 +221,14 @@ func (h Handlers) WithMailLanguage(reader func(context.Context) string) Handlers
 	return h
 }
 
-// WithInviteContext identifies the contact and company sharing the documents.
-func (h Handlers) WithInviteContext(reader func(context.Context) (string, string, error)) Handlers {
+// WithCompanyName supplies the company the buyer's engagement notice names.
+func (h Handlers) WithCompanyName(reader func(context.Context) (string, error)) Handlers {
+	h.companyName = reader
+	return h
+}
+
+// WithInviteContext names the colleague sharing the documents.
+func (h Handlers) WithInviteContext(reader func(context.Context) (string, error)) Handlers {
 	h.inviteContext = reader
 	return h
 }

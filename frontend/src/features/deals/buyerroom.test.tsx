@@ -289,6 +289,33 @@ describe("BuyerRoomScreen", () => {
     expect(posted?.credentials).toBe("include");
   });
 
+  // A notice, not a dialog: the buyer reads what the room records and nothing
+  // asks them to answer.
+  it("shows the engagement notice with the company and no button, once the server sends it", async () => {
+    stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({ ...LIVE, engagement_notice: { company: "Northwind" } }),
+    });
+    render(<BuyerRoomScreen />);
+
+    await screen.findByRole("heading", { name: "Acme rollout" });
+    const notice = screen.getByText(
+      "Northwind can see when you sign in and which documents you download.",
+    );
+    expect(notice.closest("header")).not.toBeNull();
+    expect(
+      within(notice.closest("header") as HTMLElement).queryByRole("button"),
+    ).toBeNull();
+  });
+
+  it("shows no engagement notice when the server sends none", async () => {
+    stubRoom();
+    render(<BuyerRoomScreen />);
+
+    await screen.findByRole("heading", { name: "Acme rollout" });
+    expect(screen.queryByText(/can see when you sign in/)).toBeNull();
+  });
+
   it("a paused room shows the paused notice and no content", async () => {
     stubRoom({
       "GET /public/rooms/me": () =>

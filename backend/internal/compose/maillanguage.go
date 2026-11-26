@@ -34,18 +34,15 @@ func recipientLanguage(ctx context.Context, pool *pgxpool.Pool) string {
 	return profile.Locale
 }
 
-func roomInviteIdentity(ctx context.Context, pool *pgxpool.Pool) (string, string, error) {
-	name, _, err := identity.NewService(pool).ActorIdentity(ctx)
-	if err != nil {
-		return "", "", err
+// installationCompanyName is the company the invitation mail and the room notice name.
+func installationCompanyName(pool *pgxpool.Pool) func(context.Context) (string, error) {
+	return func(ctx context.Context) (company string, err error) {
+		err = InstallationDB(pool).Tx(ctx, func(tx pgx.Tx) (err error) {
+			company, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
+			return err
+		})
+		return company, err
 	}
-	var company string
-	err = InstallationDB(pool).Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		company, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
-		return err
-	})
-	return name, company, err
 }
 
 func recipientDeadline(ctx context.Context, pool *pgxpool.Pool, at time.Time) time.Time {

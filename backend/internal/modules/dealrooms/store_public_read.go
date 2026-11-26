@@ -97,7 +97,10 @@ func servesContent(access string) bool {
 }
 
 // BuyerView assembles the room bootstrap for one session.
-func (s *Store) BuyerView(ctx context.Context, sess Session) (crmcontracts.BuyerRoomView, error) {
+//
+// companyName is read only when the engagement notice is due, so an ordinary
+// bootstrap pays nothing for it.
+func (s *Store) BuyerView(ctx context.Context, sess Session, companyName func(context.Context) (string, error)) (crmcontracts.BuyerRoomView, error) {
 	if sess.ID == ids.Nil {
 		return crmcontracts.BuyerRoomView{}, apperrors.ErrPermissionDenied
 	}
@@ -127,9 +130,34 @@ func (s *Store) BuyerView(ctx context.Context, sess Session) (crmcontracts.Buyer
 			StewardName:    st.stewardName,
 			ClosedAt:       st.closedAt,
 		}
-		return nil
+		out.EngagementNotice, err = engagementNotice(ctx, tx, sess, companyName)
+		return err
 	})
 	return out, err
+}
+
+// engagementNotice is the one line telling a buyer what the room records. A
+// seat sees it on its first sign-in, which has already written its own
+// `signed_in` row by the time the room is read, so one row means first. A
+// seller preview always sees it and writes no row.
+func engagementNotice(ctx context.Context, tx pgx.Tx, sess Session, companyName func(context.Context) (string, error)) (*crmcontracts.BuyerEngagementNotice, error) {
+	if !sess.Preview {
+		var signIns int
+		if err := tx.QueryRow(ctx,
+			`SELECT count(*) FROM deal_room_engagement
+			  WHERE room_id = $1 AND participant_id = $2 AND kind = $3`,
+			sess.RoomID, sess.ParticipantID, engagementSignedIn).Scan(&signIns); err != nil {
+			return nil, fmt.Errorf("count deal room sign-ins: %w", err)
+		}
+		if signIns > 1 {
+			return nil, nil //nolint:nilnil // no notice is the answer for a returning seat
+		}
+	}
+	company, err := companyName(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read the company named in the room notice: %w", err)
+	}
+	return &crmcontracts.BuyerEngagementNotice{Company: company}, nil
 }
 
 // readBuyerParticipant returns the caller's own row — and only theirs. The

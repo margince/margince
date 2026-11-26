@@ -61,7 +61,10 @@ func WithOperatorMail(m mailer.Mailer) Option {
 // The configured public origin keeps personal links independent of request headers.
 func WithDealRoomInviteMail(m mailer.Mailer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.dealroomsHandlers = s.WithInviteMailer(m).WithMailLanguage(func(ctx context.Context) string { return string(identity.BaseLanguageForPrompt(ctx, pool)) }).WithInviteContext(func(ctx context.Context) (string, string, error) { return roomInviteIdentity(ctx, pool) })
+		s.dealroomsHandlers = s.WithInviteMailer(m).WithMailLanguage(func(ctx context.Context) string { return string(identity.BaseLanguageForPrompt(ctx, pool)) }).WithInviteContext(func(ctx context.Context) (string, error) {
+			name, _, err := identity.NewService(pool).ActorIdentity(ctx)
+			return name, err
+		})
 	}
 }
 

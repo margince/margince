@@ -168,11 +168,13 @@ const ACCESS_PILL: Record<
 export function BuyerHero({
   title,
   welcome,
+  notice,
   access,
   closedAt,
 }: Readonly<{
   title: string;
   welcome: string;
+  notice?: { company: string } | null;
   access: string;
   closedAt: string | null | undefined;
 }>) {
@@ -205,6 +207,11 @@ export function BuyerHero({
         {title}
       </Heading>
       {welcome ? <p className="buyer-welcome">{welcome}</p> : null}
+      {notice ? (
+        <p className="t-caption buyer-notice">
+          {t("buyer.engagementNotice", { company: notice.company })}
+        </p>
+      ) : null}
     </header>
   );
 }
