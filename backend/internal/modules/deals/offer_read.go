@@ -261,7 +261,7 @@ func (e *BuyerNotReadableError) MessageFault() (code, message string) {
 // company read with include_archived.
 func readReadableBuyer(ctx context.Context, tx pgx.Tx, offer crmcontracts.Offer) (map[string]any, error) {
 	if offer.BuyerCompanyId == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // a nil block is an offer that names no buyer, which renders and sends without one
 	}
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
