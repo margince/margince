@@ -4,9 +4,13 @@
 package gatekit
 
 import (
+	"fmt"
+	"go/ast"
 	"go/parser"
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"testing"
 	"time"
 )
@@ -111,4 +115,62 @@ func TestAMissingFileIsAnErrorNotAnEmptyTree(t *testing.T) {
 	if file, err := ParseFile(filepath.Join(t.TempDir(), "absent.go"), 0); err == nil {
 		t.Errorf("parsing a file that does not exist returned %v and no error", file)
 	}
+}
+
+func TestACollectedTreeIsParsedAgainOnTheSamePositions(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "collected.go")
+	writeSource(t, path, "package collected\n\nfunc First() {}\n\nfunc Second() {}\n", time.Unix(1_700_000_000, 0))
+
+	before := declarationPositions(t, path)
+	waitUntilCollected(t, path, 0)
+	grown := sourceFiles.Base()
+	after := declarationPositions(t, path)
+
+	if !slices.Equal(before, after) {
+		t.Errorf("a re-parse moved the declarations: %v, then %v", before, after)
+	}
+	if sourceFiles.Base() != grown {
+		t.Errorf("a re-parse grew the shared FileSet from base %d to %d", grown, sourceFiles.Base())
+	}
+}
+
+// declarationPositions answers each declaration's position as a number and as
+// the file:line it resolves to, and keeps no reference to the tree.
+func declarationPositions(t *testing.T, path string) []string {
+	t.Helper()
+	tree, err := ParseFile(path, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var positions []string
+	for _, decl := range tree.Decls {
+		if fn, isFunc := decl.(*ast.FuncDecl); isFunc {
+			positions = append(positions, fmt.Sprintf("%d=%s", fn.Pos(), sourceFiles.Position(fn.Pos())))
+		}
+	}
+	if len(positions) != 2 {
+		t.Fatalf("the fixture declares two functions, the tree holds %d", len(positions))
+	}
+	return positions
+}
+
+// waitUntilCollected runs the collector until the held tree of path is gone.
+func waitUntilCollected(t *testing.T, path string, mode parser.Mode) {
+	t.Helper()
+	parses.mu.Lock()
+	entry := parses.entries[parseKey{spelled: path, mode: mode}]
+	parses.mu.Unlock()
+	if entry == nil || !entry.filled.Load() {
+		t.Fatalf("%s was never held", path)
+	}
+	for range 10 {
+		runtime.GC()
+		entry.value.mu.Lock()
+		collected := entry.value.tree.Value() == nil
+		entry.value.mu.Unlock()
+		if collected {
+			return
+		}
+	}
+	t.Fatalf("the tree of %s outlived every reference to it", path)
 }
