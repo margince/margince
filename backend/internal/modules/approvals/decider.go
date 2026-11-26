@@ -71,7 +71,7 @@ func passportlessAgentsColleague(ctx context.Context, tx pgx.Tx, p principal.Pri
 		return deciderCandidate{}, err
 	}
 	if !askable {
-		return deciderCandidate{}, fmt.Errorf("approvals: the colleague this job acts for is no longer a member: %w",
+		return deciderCandidate{}, fmt.Errorf("the colleague this job acts for is no longer a member: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	return deciderCandidate{p.OnBehalfOf, deciderOnBehalfOf}, nil
