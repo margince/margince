@@ -220,7 +220,7 @@ export function luminance(hex: string): number {
 // A token's channels, whether it is written as a hex or as an rgba(). The
 // alpha comes back too, because a tint's alpha is the whole reason the
 // composite tests below exist.
-function channels(value: string): [number, number, number, number] {
+export function channels(value: string): [number, number, number, number] {
   const v = value.trim();
   // An authored lch() is converted rather than skipped: a colour a sweep
   // cannot read is a colour no sweep has measured, and a neutral the whole

@@ -216,8 +216,10 @@ deps:
   knowledge:
     # knowledge itself: the module reads its own handbook subpackage, the same
     # self-reference agents carries for its own.
+    # xtext: an audience is compared without case or accents, which needs the
+    # Unicode normal forms golang.org/x/text owns.
     mayDependOn: [knowledge, contracts, platform]
-    canUse: [pgx, oapi]
+    canUse: [pgx, oapi, xtext]
   projects:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
