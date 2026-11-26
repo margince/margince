@@ -17638,6 +17638,9 @@ export const en = {
   "connectors.svc.queued": "Starting soon",
   "connectors.svc.imported": "Imported",
   "connectors.svc.stopped": "Stopped",
+  "connectors.svc.mailMissing": "Mail missing",
+  "connectors.svc.unreadPeriod":
+    "Some mail from {from} to {to} may be missing. Import older email with a window that reaches back to {from}.",
   "connectors.svc.calendar": "Calendar",
   "connectors.svc.calendarDesc":
     "Meetings show on contacts and deals, and your booking link offers only your free times.",
