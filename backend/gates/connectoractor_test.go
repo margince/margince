@@ -347,7 +347,6 @@ var actorKinds = map[string]string{
 // keeps its entry fails AssertAllMatched.
 var agentJobsStillSystemTyped = gatekit.Waive(map[string]string{
 	"internal/compose/commitmentparties.go":         forAColleague,
-	"internal/compose/deepreadprincipal.go":         forAColleague,
 	"internal/compose/jobs_transcript.go":           forAColleague,
 	"internal/compose/transcriptcommitment.go":      forAColleague,
 	"internal/compose/approvalpreviewcommitment.go": forNoOne,

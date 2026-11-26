@@ -275,6 +275,7 @@ var actorKeys = map[string]string{
 	"cohort-promote":             byMailFiling,
 	"system:technical-lookup":    "magic.by.company_lookup",
 	"agent:deepread":             byWebsiteReader,
+	"system:deep_read":           byWebsiteReader,
 	"system:contact_auto_enrich": byWebsiteReader,
 	"system:capture_auto_enrich": byWebsiteReader,
 	"agent:enrich":               "magic.by.signature_reader",

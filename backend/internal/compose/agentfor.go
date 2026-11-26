@@ -150,6 +150,29 @@ func redeemForApprover(ctx context.Context, svc *approvals.Service, id ids.Appro
 		})
 }
 
+// runBooksKey carries a run's bookkeeping principal beside its work.
+type runBooksKey struct{}
+
+// withRunBooks is work carrying the bookkeeping principal of books, for a run
+// whose row writes sit deep inside the work's call path.
+func withRunBooks(work, books context.Context) context.Context {
+	actor, ok := principal.Actor(books)
+	if !ok {
+		return work
+	}
+	return context.WithValue(work, runBooksKey{}, actor)
+}
+
+// runBooks is ctx acting as the run's bookkeeping principal, when one was
+// carried; otherwise ctx itself, whose principal keeps the row already.
+func runBooks(ctx context.Context) context.Context {
+	actor, ok := ctx.Value(runBooksKey{}).(principal.Principal)
+	if !ok {
+		return ctx
+	}
+	return principal.WithActor(ctx, actor)
+}
+
 // colleagueJob names the two principals of a job the product runs for a named
 // colleague. work is the agent that does the job's real work under the
 // colleague's grants. books is the system that keeps the run's own row: claim,

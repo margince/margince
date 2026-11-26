@@ -2230,6 +2230,7 @@ export const en = {
   "systemJob.agent_scheduler": "Scheduled agent runs",
   "systemJob.voice_build": "Writing style build",
   "systemJob.document_read": "Document reading",
+  "systemJob.deep_read": "Website read",
   "systemJob.company_name_promotion": "Company name update",
   "systemJob.contact_share": "Contact share request",
   "systemJob.task_due_date": "Due date question",

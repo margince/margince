@@ -109,6 +109,12 @@ func newDeepReadTestWorker(e *integration.Env, site *fakeSite, brain completer) 
 // args exactly as the start handler enqueues them.
 func startDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (contacts.SiteRead, SiteDeepReadArgs) {
 	t.Helper()
+	// The read writes its findings as Rep1's agent under Rep1's live grants,
+	// and the harness seeds seats with no role. A test that gave Rep1 a role
+	// of its own keeps it.
+	if e.WsCount(t, `SELECT count(*) FROM role_assignment WHERE user_id = $1`, e.Rep1) == 0 {
+		e.GrantRole(t, e.Rep1, "admin")
+	}
 	read, joined, err := e.Contacts.StartSiteRead(
 		e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), seedURL, "human:"+e.Rep1.String())
 	if err != nil {
@@ -711,6 +717,7 @@ func TestDeepReadAttributesItsWritesToTheRequesterTheRowNames(t *testing.T) {
 	// The row says Rep2 asked; the payload still says Rep1. If the worker
 	// believes the payload, the rows it writes carry the wrong human.
 	e.WsExec(t, `UPDATE site_read SET requested_by = $1 WHERE id = $2`, "human:"+e.Rep2.String(), read.ID)
+	e.GrantRole(t, e.Rep2, "admin")
 
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("run: %v", err)
