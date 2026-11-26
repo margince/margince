@@ -13,24 +13,24 @@
   "self_judged": false,
   "stamp": {
     "scenario": "0a48db8ab956be35",
-    "tools": "bfe0abbfeb2d7a70",
-    "instructions": "4eab26d5fff0793f",
+    "tools": "6ee3e724ba4a6c6f",
+    "instructions": "d707a123fe53827f",
     "judge": "",
-    "harness": "ae24b6799c8461d2",
+    "harness": "0fe690d35efcc703",
     "parsers": {
       "gemini:cli": "fa1db64bc14e971b",
       "gpt:cli": "d48ca27c983f8b3f"
     },
-    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
-    "ran_at": "2026-11-25T07:44:25Z",
-    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
-    "graded_at": "2026-11-25T07:44:25Z"
+    "commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "ran_at": "2026-11-26T04:11:24Z",
+    "graded_commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "graded_at": "2026-11-26T04:11:24Z"
   },
   "usage": {
-    "input_tokens": 67042,
-    "output_tokens": 19746,
+    "input_tokens": 69103,
+    "output_tokens": 19196,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 179819,
+    "cache_read_input_tokens": 206178,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -39,19 +39,21 @@
     {
       "passed": true,
       "tools": [
-        "at_risk_relationships",
         "catch_me_up_on",
         "find_records",
-        "get_record_history",
-        "get_worklist",
-        "list_pipelines",
-        "read_attention",
+        "get_company_brief",
+        "get_company_dossier",
+        "get_field_history",
+        "list_records",
         "read_context",
+        "read_details",
         "read_record",
-        "read_workspace",
+        "read_relationships",
         "search_records",
-        "whats_slipping_this_week",
         "whoami"
+      ],
+      "refused": [
+        "read_context"
       ]
     },
     {
@@ -60,45 +62,56 @@
         "at_risk_relationships",
         "catch_me_up_on",
         "find_records",
-        "get_company_brief",
-        "get_field_history",
-        "list_deal_margince_changes",
         "read_attention",
         "read_context",
-        "read_details",
         "read_record",
+        "read_relationships",
+        "review_commitments",
         "search_records",
         "whats_slipping_this_week",
         "whoami"
+      ],
+      "refused": [
+        "read_context"
       ]
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 16.5,
-      "min": 16,
-      "max": 17
+      "median": 18,
+      "min": 17,
+      "max": 19
     },
     "turns": {
-      "median": 6.5,
-      "min": 6,
+      "median": 7,
+      "min": 7,
       "max": 7
     },
     "refused": {
-      "median": 0.5,
-      "min": 0,
+      "median": 1,
+      "min": 1,
       "max": 1
     },
+    "retries": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
     "prompt_tokens": {
-      "median": 123430.5,
-      "min": 117771,
-      "max": 129090
+      "median": 137640.5,
+      "min": 123586,
+      "max": 151695
     },
     "output_tokens": {
-      "median": 9873,
-      "min": 9667,
-      "max": 10079
+      "median": 9598,
+      "min": 8838,
+      "max": 10358
     }
   }
 }

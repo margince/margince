@@ -129,8 +129,6 @@ func WithPasswordLogin(enabled bool) Option {
 	}
 }
 
-// Every send option below records onto s.send and NOTHING else. The HTTP
-// handlers' own store is reconciled from that one value once every option has
-// run (New's applySendPath), and the tool surface is rebuilt over it here, so
-// no option can configure one transport and leave the others silently
-// without.
+// Every send option below records onto s.send and nothing else. After the last
+// option, New's applySendPath gives that one value to the HTTP handlers, and
+// New builds the tool surface over it. So no transport is left without it.

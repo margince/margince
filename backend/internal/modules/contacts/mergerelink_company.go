@@ -110,38 +110,28 @@ func repointCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID
 // rather than taking its default — a re-dated fact would outrank the
 // company's own later evidence.
 //
-// Each conflict target NAMES the uniqueness it relies on, so a future
-// constraint cannot silently start swallowing a different collision here.
+// The survivor's answer is the evidence key it already holds.
 func carryCompanyEnrichment(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
+	if err := moveLegacyEvidence(ctx, tx, entityCompany, sourceID.UUID, targetID.UUID); err != nil {
+		return err
+	}
 	// Moved by UPDATE rather than copied, so each row keeps the id its audit
 	// trail is filed under and the survivor's History carries it on.
 	if _, err := tx.Exec(ctx, `
-		UPDATE company_fact a SET company_id = $2
-		 WHERE a.company_id = $1
-		   AND NOT EXISTS (SELECT 1 FROM company_fact b
-		                    WHERE b.company_id = $2 AND b.category = a.category
-		                      AND b.field = a.field AND b.value_key = a.value_key)`,
+		UPDATE field_provenance a SET object_id = $2
+		 WHERE a.object_type = 'company' AND a.object_id = $1 AND a.value IS NOT NULL
+		   AND NOT EXISTS (SELECT 1 FROM field_provenance b
+		                    WHERE b.object_type = 'company' AND b.object_id = $2 AND b.value IS NOT NULL
+		                      AND b.field_name = a.field_name AND b.value_key = a.value_key)`,
 		sourceID, targetID); err != nil {
-		return fmt.Errorf("carry company facts: %w", err)
+		return fmt.Errorf("carry company facts and profile fields: %w", err)
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM company_fact WHERE company_id = $1`, sourceID); err != nil {
-		return fmt.Errorf("retire the merged-away company facts: %w", err)
+	if _, err := tx.Exec(ctx, `DELETE FROM field_provenance
+		 WHERE object_type = 'company' AND object_id = $1 AND value IS NOT NULL`, sourceID); err != nil {
+		return fmt.Errorf("retire the merged-away company facts and profile fields: %w", err)
 	}
 	if err := settleFactRevisions(ctx, tx, sourceID, targetID); err != nil {
 		return err
-	}
-	if _, err := tx.Exec(ctx, `
-		UPDATE company_profile_field a SET company_id = $2
-		 WHERE a.company_id = $1
-		   AND NOT EXISTS (SELECT 1 FROM company_profile_field b
-		                    WHERE b.company_id = $2 AND b.field = a.field)`,
-		sourceID, targetID); err != nil {
-		return fmt.Errorf("carry company profile fields: %w", err)
-	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM company_profile_field WHERE company_id = $1`, sourceID); err != nil {
-		return fmt.Errorf("retire the merged-away company profile fields: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO company_technical_state

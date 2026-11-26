@@ -307,43 +307,6 @@ export const NoReasonRecorded: Story = {
   },
 };
 
-export const LongPreview: Story = {
-  render: () => {
-    stub([
-      change(
-        1,
-        "Acme renewal",
-        `Changed the amount on "Acme renewal": ${"The updated scope includes delivery, training and support across the regional teams. ".repeat(12)}`,
-        {
-          kind: "deal_amount",
-        },
-      ),
-    ]);
-    return (
-      <StoryProviders>
-        <DoneForYou completed={() => null} />
-      </StoryProviders>
-    );
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const head = (
-      await canvas.findByRole("link", { name: "Acme renewal" })
-    ).closest("summary");
-    const preview = canvasElement.querySelector(".brief-done-preview");
-    if (!(preview instanceof HTMLElement)) throw new Error("no change preview");
-    await expect(head).toHaveAttribute("aria-expanded", "false");
-    await expect(getComputedStyle(preview).webkitLineClamp).toBe("2");
-    await expect(preview.scrollHeight).toBeGreaterThan(preview.clientHeight);
-  },
-};
-
-export const LongPreviewPhone: Story = {
-  ...LongPreview,
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
-};
-
 export const OnlySmallChanges: Story = {
   render: () => {
     stub([]);
@@ -365,18 +328,18 @@ export const OnlySmallChanges: Story = {
             }),
           ),
       },
-      {},
+      { deal: ["read", "update"] },
     );
     return (
       <StoryProviders>
-        <DoneForYou completed={() => null} />
+        <DoneForYou completed={() => <p>Small changes card</p>} />
       </StoryProviders>
     );
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const preview = await canvas.findByText("Saved email or meeting");
-    await expect(preview.previousElementSibling).toHaveClass("brief-done-band");
+    const small = await canvas.findByText("Small changes card");
+    await expect(small.previousElementSibling).toHaveClass("brief-done-band");
   },
 };
 

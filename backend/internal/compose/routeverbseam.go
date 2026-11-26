@@ -6,7 +6,6 @@ package compose
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"mime"
@@ -227,12 +226,7 @@ func fileAnswer(res *http.Response, content []byte) (json.RawMessage, error) {
 	if _, params, err := mime.ParseMediaType(res.Header.Get("Content-Disposition")); err == nil {
 		filename = params["filename"]
 	}
-	return json.Marshal(struct {
-		Filename      string `json:"filename,omitempty"`
-		ContentType   string `json:"content_type"`
-		SizeBytes     int    `json:"size_bytes"`
-		ContentBase64 string `json:"content_base64"`
-	}{filename, res.Header.Get("Content-Type"), len(content), base64.StdEncoding.EncodeToString(content)})
+	return agents.FileAnswer(filename, res.Header.Get("Content-Type"), content)
 }
 
 // RouteVerbs lists the route-backed verbs this build serves, for the tests

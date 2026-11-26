@@ -256,8 +256,29 @@ func Formatting(body string, lang textlang.Lang, on Grounds) []Finding {
 				"own line and separate the paragraphs with a blank line",
 		})
 	}
+	if greetingOnly(body) {
+		findings = append(findings, Finding{
+			Rule:   RuleGreetingOnly,
+			Phrase: "a body that is only a greeting",
+			Why: "the body stops after the greeting and says nothing — write the " +
+				"message itself after the greeting, in its own paragraph",
+		})
+	}
 	return findings
 }
+
+// greetingOnly reports a body that is one short line ending in a comma: the
+// greeting a model wrote before it wrote nothing else. A one-line note that
+// asks or states something ends in a question mark or a full stop, so it is
+// not this.
+func greetingOnly(body string) bool {
+	trimmed := strings.TrimSpace(body)
+	return trimmed != "" && !strings.Contains(trimmed, "\n") &&
+		strings.HasSuffix(trimmed, ",") && len([]rune(trimmed)) <= greetingOnlyRunes
+}
+
+// greetingOnlyRunes bounds a greeting line: "Guten Tag Marek Janetzke," is 24.
+const greetingOnlyRunes = 80
 
 // unbrokenBlock reports a body written as one run of text.
 //

@@ -43,12 +43,13 @@ must_mention:
   - "Sofia"
   - "Heike"
   - "(?i)introduc"
-  # The message is to Sofia: a greeting, a To line, or a salutation line of her
-  # name alone names her. A note that greets Heike is the forwardable note.
-  - "(?im)\b(?:hi|hello|hey|dear|hallo|liebe|morning|afternoon|evening)\W+Sofia\b|\b(?-i:To)\b\W{0,3}Sofia\b|^\W*Sofia\s*[,—–-]|^[>\s]*Sofia[ \t]*$"
 
 must_not_mention:
   - "(?i)\b(?:i|we)(?:\s+have|['’]ve)?\s+(?:sent|emailed|messaged|forwarded)\b"
+
+# Who the message is for is judged, not the shape of its greeting.
+judge:
+  - "Criterion 1. The answer gives a message addressed to Sofia that asks her to introduce the user to her contact at Nordwind Armaturen. Answer no if the message is addressed to the contact at Nordwind instead, or is only a note for Sofia to forward."
 
 runs: 3
 pass_at: 2

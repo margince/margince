@@ -1,28 +1,43 @@
+/* The head says what the task is and holds its verbs; a hairline parts it from
+   the reading below, which scrolls on its own. */
 .task-detail-head {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
   gap: var(--space-3);
+  padding-block-end: var(--space-4);
+  border-block-end: 1px solid var(--borderSubtle);
 }
 .task-detail-head h2 {
-  flex: 1;
-  min-width: 0;
+  margin: 0;
   overflow-wrap: anywhere;
 }
+/* The task's facts as one line of chips, as on Home's cards. */
 .task-detail-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
-}
-/* The records take the meta line's first row, chip by chip, as on a Home card. */
-.task-detail-records {
-  display: flex;
-  flex-wrap: wrap;
-  flex-basis: 100%;
   gap: var(--space-2);
 }
-/* A drawer reads from its start edge, so its verbs start there too. */
-.task-detail-actions,
+/* The step and Done from the start edge; More stands at the end. */
+.task-detail-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+.task-detail-verbs > .overflow-menu:last-child {
+  margin-inline-start: auto;
+}
+/* Why a refused step is refused reads under the whole row, not inside it. */
+.task-detail-verbs > .task-next-reason {
+  flex-basis: 100%;
+  order: 1;
+  margin: 0;
+}
+/* Snooze over the day and time to move to, inside the due chip's panel. */
+.task-detail-move {
+  display: grid;
+  gap: var(--space-3);
+}
 .task-detail-buttons,
 .task-detail-due {
   display: flex;
@@ -30,13 +45,33 @@
   align-items: flex-end;
   gap: var(--gapActions);
 }
-/* The day and time fields take a row of their own under the buttons. */
-.task-detail-verbs {
-  display: grid;
-  gap: var(--gapActions);
-}
 .task-detail-due > .field {
   flex: 1 1 10rem;
+}
+
+/* Why, then Context, then the footnote, each under a hairline. */
+.task-detail-sections {
+  gap: var(--space-5);
+}
+.task-detail-context {
+  display: grid;
+  gap: var(--space-3);
+}
+/* The source's own hairline parts it from the task's note; right under the
+   heading there is no note to part it from. */
+.task-detail-context > h3 + .sourceemail {
+  padding-block-start: 0;
+  border-block-start: 0;
+}
+.task-detail-sections > * + * {
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+.task-detail-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
 }
 
 /* A single newline in the body is a line the writer broke, as in the timeline. */
@@ -45,4 +80,9 @@
 }
 .task-detail-body .md {
   font: inherit;
+}
+
+/* Done's own wrapper, there to find it for first focus; it lays out nothing. */
+.task-detail-own {
+  display: contents;
 }

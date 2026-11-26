@@ -17,7 +17,8 @@ func TestAVerdictReadsHowDirectlyItsRunsFinished(t *testing.T) {
 	files := map[string]string{
 		"measured.json": `{"scenario": "case1_log", "passed": 2, "runs": 2, "pass_at": 2, "slow": true,
 			"efficiency": {"runs": 2, "calls": {"median": 3.5, "min": 3, "max": 4},
-			"turns": {"median": 5, "min": 5, "max": 5}, "refused": {"median": 0, "min": 0, "max": 0}}}`,
+			"turns": {"median": 5, "min": 5, "max": 5}, "refused": {"median": 1, "min": 0, "max": 2},
+			"retries": {"median": 0.5, "min": 0, "max": 1}}}`,
 		"older.json": `{"scenario": "case2_read", "passed": 1, "runs": 1, "pass_at": 1}`,
 	}
 	for name, body := range files {
@@ -29,13 +30,14 @@ func TestAVerdictReadsHowDirectlyItsRunsFinished(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cells := map[string][3]any{}
+	cells := map[string][5]any{}
 	for _, v := range verdicts {
-		cells[v.Scenario] = [3]any{v.Efficiency.CallsCell(), v.Efficiency.TurnsCell(), v.Slow}
+		e := v.Efficiency
+		cells[v.Scenario] = [5]any{e.CallsCell(), e.TurnsCell(), e.RefusedCell(), e.RetriesCell(), v.Slow}
 	}
-	want := map[string][3]any{
-		"case1_log":  {"3.5 (3–4)", "5", true},
-		"case2_read": {Dash, Dash, false},
+	want := map[string][5]any{
+		"case1_log":  {"3.5 (3–4)", "5", "1 (0–2)", "0.5 (0–1)", true},
+		"case2_read": {Dash, Dash, Dash, Dash, false},
 	}
 	for scenario, cell := range want {
 		if cells[scenario] != cell {

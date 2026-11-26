@@ -74,13 +74,6 @@ class AskSofiaForAnIntroTest(ToolGuardCase):
         read = ("read_relationships", {"company_id": "c1"})
         self.assertEqual(self.problems([read], self.answer), [])
 
-    def test_the_note_for_the_contact_instead_fails(self):
-        note = ("run_research", {"action": "draft_intro_note", "id": "n1", "request_body": {"via_user_id": "u1"}})
-        to_heike = ("Here is a note you can forward: Hi Heike, Sofia suggested I introduce myself; "
-                    "nothing has gone out yet.")
-        problems = self.problems([note], to_heike)
-        self.assertTrue(any("Sofia" in p for p in problems), problems)
-
     def test_claiming_it_was_sent_fails(self):
         ask = ("run_research", {"action": "draft_intro_request", "id": "c1", "request_body": {"via_user_id": "u1"}})
         self.assertTrue(self.problems([ask], "I've sent Sofia the ask about Heike."))

@@ -14,9 +14,11 @@ package gates
 // `withClock` keeps the same promise.
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/scanner"
 	"go/token"
 	"os"
 	"slices"
@@ -46,11 +48,15 @@ func TestWithClockReturnsACopyWhoseResultIsUsed(t *testing.T) {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
-			src, err := gatekit.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
+			file, err := gatekit.ParseFile(path, 0)
+			if errors.As(err, new(scanner.ErrorList)) {
+				// A file that does not parse is left to the compiler.
+				return nil
+			}
 			if err != nil {
 				return err
 			}
-			found, seen := withClockFindings(path, src)
+			found, seen := withClockFindingsIn(gatekit.SourceFileSet(), file)
 			calls += seen
 			for _, f := range found {
 				t.Error(f)
@@ -126,6 +132,10 @@ func withClockFindings(path string, src []byte) (found []withClockFinding, calls
 	if err != nil {
 		return nil, 0
 	}
+	return withClockFindingsIn(fset, file)
+}
+
+func withClockFindingsIn(fset *token.FileSet, file *ast.File) (found []withClockFinding, calls int) {
 	discarded := func(n ast.Node, how string) {
 		found = append(found, withClockFinding{fset.Position(n.Pos()), "the result of WithClock is " + how +
 			". WithClock returns a copy, so this call changes nothing; keep the result, or call SetClock"})

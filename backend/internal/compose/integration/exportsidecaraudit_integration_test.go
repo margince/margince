@@ -24,10 +24,10 @@ func TestABoundedExportCarriesTheSidecarAuditRowsOfVisibleCompanies(t *testing.T
 		t.Fatalf("making the other rep's company capture-private: %v", err)
 	}
 	seedSidecarAudit := func(company ids.UUID) (profile, fact, removedFact ids.UUID) {
-		profile = e.SeedID(t, `INSERT INTO company_profile_field (id, company_id, field, value, source, captured_by)
-			VALUES ($1, $2, 'register_vat', 'DE111', 'human', 'human:x')`, company)
-		fact = e.SeedID(t, `INSERT INTO company_fact (id, company_id, category, field, value_key, value, source, captured_by)
-			VALUES ($1, $2, 'company', 'employee_range', '', '11-50', 'human', 'human:x')`, company)
+		profile = e.SeedID(t, `INSERT INTO field_provenance (object_type, id, object_id, field_name, value, source, captured_by)
+			VALUES ('company', $1, $2, 'register_vat', 'DE111', 'human', 'human:x')`, company)
+		fact = e.SeedID(t, `INSERT INTO field_provenance (object_type, id, object_id, field_name, value_key, value, source, captured_by)
+			VALUES ('company', $1, $2, 'employee_range', '', '11-50', 'human', 'human:x')`, company)
 		removedFact = ids.NewV7()
 		for _, row := range []struct {
 			entity string
