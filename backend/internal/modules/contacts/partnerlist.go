@@ -60,7 +60,6 @@ var partnerSortFields = map[string]storekit.SortField{
 	"relationship_stage": storekit.Column(fieldcatalog.TypeText),
 	columnCertifiedStaff: storekit.Column(fieldcatalog.TypeNumber),
 	"retention_rate":     storekit.Column(fieldcatalog.TypeNumber),
-	"partner_fit_score":  storekit.Column(fieldcatalog.TypeNumber),
 	"next_step_due_at":   storekit.Column(fieldcatalog.TypeDate),
 	"created_at":         storekit.Column(storekit.KindTimestamp),
 	"updated_at":         storekit.Column(storekit.KindTimestamp),

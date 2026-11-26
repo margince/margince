@@ -105,6 +105,19 @@ func TestAttachDocumentHandsTheStoreTheDecodedFileAndItsRecord(t *testing.T) {
 	}
 }
 
+func TestAttachDocumentStoresATextFileAsItIs(t *testing.T) {
+	docs := &fakeDocuments{}
+	if _, err := documentsRegistry(docs).Invoke(docsCtx(), "attach_document", attachCall(t, map[string]any{
+		"filename": "handover.txt", "content_type": "text/plain", "content_base64": "",
+		"content_text": "Schlüssel liegt beim Pförtner",
+	})); err != nil {
+		t.Fatalf("attach_document: %v", err)
+	}
+	if len(docs.attached) != 1 || string(docs.attached[0].Content) != "Schlüssel liegt beim Pförtner" {
+		t.Errorf("the store was handed %+v, want the text as its UTF-8 bytes", docs.attached)
+	}
+}
+
 // contract_id reaches the store as the agreement to file against, and its
 // absence files against none.
 func TestAttachDocumentFilesAgainstTheContractItNames(t *testing.T) {
@@ -139,6 +152,7 @@ func TestAttachDocumentRefusesWhatItCannotStore(t *testing.T) {
 		"URL-safe base64":       {map[string]any{"content_base64": "-_-_"}, "content_base64"},
 		"no padding":            {map[string]any{"content_base64": "YWI"}, "content_base64"},
 		"an empty file":         {map[string]any{"content_base64": ""}, "content_base64"},
+		"the file sent twice":   {map[string]any{"content_text": "%PDF-1.7"}, "content_text"},
 		"a word, not a type":    {map[string]any{"content_type": "pdf"}, "content_type"},
 		"an unparsable type":    {map[string]any{"content_type": "application/pdf; ="}, "content_type"},
 		"a blank filename":      {map[string]any{"filename": "  "}, "filename"},

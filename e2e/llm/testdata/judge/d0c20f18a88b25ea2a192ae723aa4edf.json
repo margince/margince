@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer says a morning brief is available and describes its contents (three calls), so it never states that no brief exists for today yet.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says the user has no morning brief for today yet. Answer no if it reports what a brief for today contains, or never says whether there is one.",
+  "answer": "Vietnam Partner: Mai Nguyen still owes the appendix. Your morning brief is available and lists three calls."
+}

@@ -1,0 +1,4 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__read_workspace"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_workspace", "input": {"topic": "overview"}, "id": "fixture1"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture1", "content": "{}", "is_error": false}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "No background job is failing: the last runs of every job finished.\n\nRecent changes:\n- Anna Weber moved Nordwind Logistik to Negotiation.\n- Jonas Keller added the contact Heike Brandt.\n- Lea Braun changed the deal amount on the Elbmarsch offer."}

@@ -150,7 +150,11 @@ func TestNoSQLStatementFoldsADomainWithLower(t *testing.T) {
 			}
 			judged++
 			rel := filepath.ToSlash(path)
-			for _, statement := range gatekit.SQLStatementsIn(t, path, readSource(t, path)) {
+			file, err := gatekit.ParseFile(path, 0)
+			if err != nil {
+				return err
+			}
+			for _, statement := range gatekit.SQLStatementsOf(file) {
 				if !foldsADomainInSQL.MatchString(statement) {
 					continue
 				}

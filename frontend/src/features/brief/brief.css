@@ -53,9 +53,6 @@
   content: "\00a0·\00a0";
   color: var(--textSecondary);
 }
-.greeting-name {
-  color: var(--accentText);
-}
 .glance-title > .brief-report-stepper {
   font: var(--fontBody);
 }
@@ -74,6 +71,17 @@
 }
 .glance-facts > :is(.glance-date, .glance-frozen):not(:last-child)::after {
   content: "\00a0·";
+}
+/* When Margince wrote the brief, as plain caption text. Only the glyph carries
+   the agent's indigo. */
+.glance-briefed {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.glance-briefed > svg {
+  flex: none;
+  color: var(--aiText);
 }
 /* The sentence embeds user data of unbounded length, so it is clamped rather
    than pushing the cards down. */
@@ -626,6 +634,10 @@
   .glance-sentence {
     font: var(--fontBody);
   }
+  /* The facts wrap here, and a dot would end the date's line on nothing. */
+  .glance-facts > :is(.glance-date, .glance-frozen):not(:last-child)::after {
+    content: none;
+  }
 }
 
 /* The coarse-pointer floor (WCAG 2.2 AA), the way `.stat-card-open` takes it in
@@ -734,15 +746,6 @@
 }
 .brief-done-chips:empty {
   display: none;
-}
-.brief-done-preview {
-  margin: 0;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
-  color: var(--textSecondary);
 }
 /* The steps: a dot per change on a hairline spine. The dot is indigo while
    the change waits, since Margince made it, and grey once it is settled. */
