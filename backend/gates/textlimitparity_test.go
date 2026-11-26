@@ -83,6 +83,18 @@ var textLimits = []textLimit{
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusName", corpusBody("patch", "/knowledge/corpora/{id}", "name")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusTopic", corpusBody("patch", "/knowledge/corpora/{id}", "topic_statement")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusDescription", corpusBody("patch", "/knowledge/corpora/{id}", "description")},
+	{
+		"internal/modules/deals/win_evidence.go", "maxWonReasonDetail",
+		schemaPath("components", "schemas", "AdvanceDealRequest", "properties", "won_without_contract_detail"),
+	},
+	{
+		"internal/shared/kernel/statedreason/statedreason.go", "Max",
+		schemaPath("components", "schemas", "RetentionOverrideRequest", "properties", "reason"),
+	},
+	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "CreateCompanyRequest", "properties", "description")},
+	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "UpdateCompanyRequest", "properties", "description")},
+	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "CreateDealRequest", "properties", "description")},
+	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "UpdateDealRequest", "properties", "description")},
 }
 
 func corpusBody(method, route, property string) []string {
@@ -103,8 +115,8 @@ func TestEachMirroredTextCapIsTheContractsMaxLength(t *testing.T) {
 	for _, limit := range textLimits {
 		published := publishedMaxLength(t, doc, limit.path)
 		if applied := appliedIntConst(t, limit.file, limit.constant); applied != published {
-			t.Errorf("%s applies %d and api/crm.yaml publishes maxLength %d at %v — one refuses what the other calls valid",
-				limit.constant, applied, published, limit.path)
+			t.Errorf("%s in %s applies %d and api/crm.yaml publishes maxLength %d at %v — one refuses what the other calls valid",
+				limit.constant, limit.file, applied, published, limit.path)
 		}
 	}
 }
