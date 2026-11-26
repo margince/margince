@@ -170,13 +170,17 @@ func create(t testing.TB, inPlace bool) Database {
 	if inPlace {
 		return laneDatabase(t)
 	}
+	began := time.Now()
 	db, err := nextCopy(t.Context(), processTemplate())
 	if err != nil {
 		t.Fatalf("testdb: %v", err)
 	}
+	logSlow(t, "copying the template", began)
 	t.Cleanup(func() {
 		forget(t.Name(), db)
+		queued := time.Now()
 		dropBehind(db)
+		logSlow(t, "queueing the drop", queued)
 	})
 	databasesMu.Lock()
 	current[t.Name()] = db

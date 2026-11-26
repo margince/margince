@@ -169,20 +169,20 @@ db_admin() {
 #                           connections a fixture dials itself.
 #   LANE_ADMIN_CONNS      the admin connections one package holds for CREATE
 #                         and DROP DATABASE: one copies the next test's database
-#                         while one drops the last one's. Handed to testdb as
+#                         while the rest drop finished ones. Handed to testdb as
 #                         MARGINCE_TEST_ADMIN_CONNS.
 #   LANE_FIXED_CONNS      what the lane costs beyond the packages: the template
 #                         migrate (2), superuser_reserved_connections (3), and an
 #                         operator's own psql or a metrics scrape while the lane
 #                         runs (3).
 #
-# At 8 jobs: 8 x (72 + 2) + 8 = 600, which the 600 postgres-test allows.
+# At 8 jobs: 8 x (72 + 4) + 8 = 616, under the 640 postgres-test allows.
 # Raise the concurrency and every term moves with it. That is the point: the
 # guard reads these, not a number somebody wrote down once.
 LANE_POOL_MAX_CONNS=8
 LANE_TEST_PARALLEL_MAX=3
 LANE_CONNS_PER_PACKAGE=72
-LANE_ADMIN_CONNS=2
+LANE_ADMIN_CONNS=4
 LANE_FIXED_CONNS=8
 
 # declare_lane_budget <jobs> — export the ceiling the harness applies and the

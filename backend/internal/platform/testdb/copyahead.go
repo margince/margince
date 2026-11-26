@@ -12,6 +12,8 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"testing"
+	"time"
 )
 
 // CREATE DATABASE waits for two checkpoints and DROP DATABASE for one. A
@@ -21,13 +23,15 @@ import (
 // drop-db removes any copy it left, along with the package's clone.
 
 // AdminConnsEnv is how many admin connections the lane budgeted for each
-// package process: one for the drops behind the tests and one for the copies.
+// package process. One makes the copies, and the rest drop finished tests'
+// databases. Drops waiting on one checkpoint finish together, so more of them at
+// once keep pace with a package of short tests.
 const AdminConnsEnv = "MARGINCE_TEST_ADMIN_CONNS"
 
 // pendingDrops bounds how far drops may fall behind the tests. A test that
 // finds the queue full waits, so the cluster's RAM holds a bounded number of
 // databases no test uses.
-const pendingDrops = 4
+const pendingDrops = 8
 
 // spare is the copy made for the next test that asks for one.
 var spare struct {
@@ -109,7 +113,9 @@ func dropBehind(db Database) {
 	behind.once.Do(func() {
 		behind.queue = make(chan Database, pendingDrops)
 		behind.done = map[string]chan struct{}{}
-		go dropQueued()
+		for range dropWorkers() {
+			go dropQueued()
+		}
 	})
 	behind.mu.Lock()
 	behind.done[db.Name] = make(chan struct{})
@@ -125,7 +131,17 @@ func droppedEnd(name string) <-chan struct{} {
 	return behind.done[name]
 }
 
-// dropQueued drops the queued databases one at a time, on one admin connection.
+// dropWorkers is how many drops run at once: every admin connection but the
+// one the copies take, and at least one.
+func dropWorkers() int {
+	conns, err := adminConns()
+	if err != nil || conns < 2 {
+		return 1
+	}
+	return int(conns) - 1
+}
+
+// dropQueued drops queued databases one at a time, on one admin connection.
 func dropQueued() {
 	for db := range behind.queue {
 		err := drop(context.Background(), db.Name)
@@ -164,4 +180,15 @@ func adminConns() (int32, error) {
 		return 0, fmt.Errorf("%s=%q is not a positive connection count; the lane sets it to the admin connections its budget holds", AdminConnsEnv, raw)
 	}
 	return int32(n), nil
+}
+
+// slowAdmin is how long a copy or a queued drop may hold a test up before the
+// test's log says so. A lane that waits on the cluster then shows where.
+const slowAdmin = time.Second
+
+func logSlow(t testing.TB, step string, began time.Time) {
+	t.Helper()
+	if waited := time.Since(began); waited > slowAdmin {
+		t.Logf("testdb: %s held the test up for %s", step, waited.Round(time.Millisecond))
+	}
 }

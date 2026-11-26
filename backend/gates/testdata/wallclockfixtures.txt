@@ -450,6 +450,7 @@ internal/platform/jobs/stats_integration_test.go 17
 internal/platform/jobs/sweepinflight_integration_test.go 2
 internal/platform/storedobjects/storedobjects_integration_test.go 2
 internal/platform/testdb/roundtrips.go 1
+internal/platform/testdb/testdatabase.go 2
 internal/shared/kernel/events/events_test.go 1
 internal/shared/kernel/relstrength/relstrength_test.go 4
 migrations/capturedmailanswersnotice_integration_test.go 2
