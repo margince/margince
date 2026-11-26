@@ -42278,6 +42278,9 @@ type Company struct {
 	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool   `json:"legal_hold,omitempty"`
 	LegalName *string `json:"legal_name,omitempty"`
@@ -42824,10 +42827,13 @@ type Company360Project struct {
 	Attention *Company360WorkAttention `json:"attention,omitempty"`
 
 	// Key The subject-line handle, when the project has one.
-	Key            *string             `json:"key,omitempty"`
-	LastActivityAt *time.Time          `json:"last_activity_at,omitempty"`
-	Name           string              `json:"name"`
-	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
+	Key            *string    `json:"key,omitempty"`
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision  `json:"last_activity_precision,omitempty"`
+	Name                  string              `json:"name"`
+	OwnerId               *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// OwnerName The owner's display name; null when the project has no owner or the owner is no longer an active member.
 	OwnerName *string `json:"owner_name,omitempty"`
@@ -51704,6 +51710,9 @@ type DormancyReading struct {
 
 	// LastActivityAt The account's stored last activity the rung is counted from. Null when it has none.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
 	// NoActivity True when the account has no activity recorded at all, which is why it reads as `stale`.
 	NoActivity bool `json:"no_activity"`
@@ -89897,6 +89906,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
+	}
+
 	if raw, found := object["legal_hold"]; found {
 		err = json.Unmarshal(raw, &a.LegalHold)
 		if err != nil {
@@ -90236,6 +90253,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 

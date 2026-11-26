@@ -40,12 +40,7 @@ var notAnActivityTime = gatekit.Waive(map[string]string{
 
 // storedClockStillCounted: callers that count from a stored activity clock
 // without its precision yet, each with the reader it serves.
-var storedClockStillCounted = gatekit.Waive(map[string]string{
-	"internal/shared/kernel/convstate/convstate.go:Classify": storedClock,
-	"internal/shared/kernel/dormancy/dormancy.go:Read":       storedClock,
-	"internal/modules/deals/viability.go:AssessViability":    storedClock,
-	"internal/compose/dealcloselost.go:daysSince":            "the newest customer progress, read without the precision of the activity it names",
-})
+var storedClockStillCounted = gatekit.Waive(map[string]string{})
 
 func TestEveryDayCountFromATimeSaysWhetherItIsAnActivitysTime(t *testing.T) {
 	t.Parallel()
@@ -72,8 +67,8 @@ func TestEveryDayCountFromATimeSaysWhetherItIsAnActivitysTime(t *testing.T) {
 	}
 	// A floor below the real number, so a walk that stopped finding the call
 	// fails instead of reading green over an empty census.
-	if found < 15 {
-		t.Errorf("found %d function(s) calling elapsed.Days, want at least 15: the walk has stopped finding them", found)
+	if found < 12 {
+		t.Errorf("found %d function(s) calling elapsed.Days, want at least 12: the walk has stopped finding them", found)
 	}
 }
 

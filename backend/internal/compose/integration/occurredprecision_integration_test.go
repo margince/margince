@@ -326,3 +326,42 @@ func TestAProjectSaysWhetherItsLastActivityIsADay(t *testing.T) {
 		}
 	}
 }
+
+// A company, its dormancy reading and its project cards say how to read their
+// last activity, from the activity each stored clock names.
+func TestACompanySaysWhetherItsLastActivityIsADay(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	for _, want := range []string{"day", "instant"} {
+		company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Clock " + want + " GmbH", "source": "manual"})
+		project := createdID(t, e, "/v1/projects", AnyMap{"name": "Rollout " + want, "company_id": company, "source": "manual"})
+		note := AnyMap{"kind": "note", "subject": "Met at the fair", "source": "manual", "occurred_at": "2025-03-09T12:00:00Z",
+			"links": []AnyMap{{"entity_type": "company", "entity_id": company}, {"entity_type": "project", "entity_id": project}}}
+		if want == "day" {
+			note["occurred_precision"] = "day"
+		}
+		mustCall(t, e, "POST", "/v1/activities", note, http.StatusCreated, nil)
+		var record struct {
+			Precision string `json:"last_activity_precision"`
+		}
+		mustCall(t, e, "GET", "/v1/companies/"+company, nil, http.StatusOK, &record)
+		var page struct {
+			StateStrip struct {
+				Dormancy struct {
+					Precision string `json:"last_activity_precision"`
+				} `json:"dormancy"`
+			} `json:"state_strip"`
+			Projects []struct {
+				Precision string `json:"last_activity_precision"`
+			} `json:"projects"`
+		}
+		mustCall(t, e, "GET", "/v1/companies/"+company+"/360", nil, http.StatusOK, &page)
+		if record.Precision != want || page.StateStrip.Dormancy.Precision != want {
+			t.Errorf("a company whose last activity is a %s reads %q on the record and %q in its dormancy",
+				want, record.Precision, page.StateStrip.Dormancy.Precision)
+		}
+		if len(page.Projects) != 1 || page.Projects[0].Precision != want {
+			t.Errorf("its project card reads %+v, want one card read as %s", page.Projects, want)
+		}
+	}
+}

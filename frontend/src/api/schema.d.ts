@@ -36633,6 +36633,8 @@ export interface components {
              *     A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -37706,6 +37708,8 @@ export interface components {
              * @description The account's stored last activity the rung is counted from. Null when it has none.
              */
             last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Calendar days from `last_activity_at` to today in the installation zone. 0 when there is no activity. */
             silent_days: number;
             /** @description True when the account has no activity recorded at all, which is why it reads as `stale`. */
@@ -37954,6 +37958,8 @@ export interface components {
             phase: components["schemas"]["Company360ProjectPhase"];
             /** Format: date-time */
             last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date */
             target_end_date?: string | null;
             /** Format: uuid */

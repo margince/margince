@@ -33,6 +33,14 @@ func CompanyFiledActivityReach(operand string) string {
 		WHERE r.company_id = %[1]s`, operand, dealLinkJoin, contactLinkCondition)
 }
 
+// CompanyClockRowsSQL is the rows a company's stored activity clock is folded
+// from, aliased clock_row, in the `FROM ... WHERE` shape occurredday's clock
+// helpers take. A held row sets no precision anyone reads.
+func CompanyClockRowsSQL(company string) string {
+	return "FROM (" + CompanyFiledActivityReach(company+".id") + ") clock_link " +
+		"JOIN activity clock_row ON clock_row.id = clock_link.activity_id WHERE clock_row.restricted_at IS NULL"
+}
+
 // CompanyActivityReach also follows participants whose employment was in
 // place when the activity occurred. Several paths can reach the same pair.
 func CompanyActivityReach(operand string) string {

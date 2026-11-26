@@ -60,3 +60,17 @@ func TestADateOnlyNewestActivityCountsQuietDaysFromItsOwnDate(t *testing.T) {
 		}
 	}
 }
+
+// Customer progress that names only a date counts from that date. Its noon-UTC
+// anchor is already the next day at UTC+14.
+func TestADateOnlyProgressCountsTheCloseSilenceFromItsOwnDate(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	met := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	now := time.Date(2026, 11, 25, 10, 30, 0, 0, time.UTC)
+	if day, instant := daysSince(&met, true, now, kiritimati), daysSince(&met, false, now, kiritimati); day != 6 || instant != 5 {
+		t.Errorf("days since = %d for date-only progress and %d for the instant, want 6 and 5", day, instant)
+	}
+}

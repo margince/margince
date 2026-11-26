@@ -45,6 +45,12 @@ var assuranceSubjectsSQL = `
 		         WHERE al.deal_id = d.id
 		           AND a.archived_at IS NULL
 		           AND %[2]s) AS last_customer_progress_at,
+		       (SELECT ` + occurredday.LatestPrecisionSQL("a", "") + `
+		          FROM activity a
+		          JOIN activity_link al ON al.activity_id = a.id
+		         WHERE al.deal_id = d.id
+		           AND a.archived_at IS NULL
+		           AND %[2]s) AS last_customer_progress_precision,
 		       (SELECT max(a.occurred_at)
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id
@@ -263,9 +269,10 @@ func scanAssuranceSubject(
 	var evidence deals.ViabilityInput
 	var fingerprint string
 	var mailboxes []string
+	var progressPrecision *string
 	err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
 		&out.ExpectedClose, &out.CloseProvisional, &out.WinProbability, &stage, &stageID, &out.StageEnteredAt,
-		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
+		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt, &progressPrecision,
 		&evidence.LastCustomerRefusalAt,
 		&evidence.ConfirmedMeetingAt, &evidence.EarlierAnswerUntil, &evidence.OpenReview, &fingerprint,
 		&out.OfferNetMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
@@ -273,6 +280,7 @@ func scanAssuranceSubject(
 	if err != nil {
 		return out, err
 	}
+	evidence.LastCustomerProgressDateOnly = occurredday.IsStatedDay(progressPrecision)
 	out.DealID = dealID.String()
 	out.Zone = zone
 	if owner != nil {

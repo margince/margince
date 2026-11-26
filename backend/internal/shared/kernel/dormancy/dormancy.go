@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
@@ -76,12 +75,13 @@ type Reading struct {
 }
 
 // Read places an account whose last activity was last. A nil last is an
-// account with no activity at all.
-func (l Ladder) Read(last *time.Time, now time.Time, zone *time.Location) Reading {
+// account with no activity at all. A date-only last activity counts its silence
+// from its own date.
+func (l Ladder) Read(last *occurredday.Moment, now time.Time, zone *time.Location) Reading {
 	if last == nil {
 		return Reading{Rung: Stale, NoActivity: true}
 	}
-	days := max(elapsed.Days(*last, now, zone), 0)
+	days := max(occurredday.DaysSince(*last, now, zone), 0)
 	return Reading{Rung: l.rungAt(days), SilentDays: days}
 }
 

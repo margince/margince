@@ -38,8 +38,7 @@ var standingReads = []standingColumns{
 	{hitType: entityContact, jobTitle: "t.title", lastActivity: lastActivityColumn,
 		clockRows: occurredday.LinkedClockRowsSQL("contact_id", "t.id")},
 	{hitType: entityCompany, lastActivity: lastActivityColumn,
-		clockRows: "FROM (" + storekit.CompanyFiledActivityReach("t.id") + ") clock_link " +
-			"JOIN activity clock_row ON clock_row.id = clock_link.activity_id WHERE clock_row.restricted_at IS NULL"},
+		clockRows: storekit.CompanyClockRowsSQL("t")},
 	{hitType: entityDeal, state: "t.status", dueOn: "t.expected_close_date", lastActivity: lastActivityColumn,
 		clockRows: occurredday.LinkedClockRowsSQL("deal_id", "t.id")},
 	{hitType: entityLead, state: "t.status"},

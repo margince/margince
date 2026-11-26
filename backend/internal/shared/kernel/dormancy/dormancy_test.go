@@ -6,6 +6,8 @@ package dormancy
 import (
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 var berlin = mustZone("Europe/Berlin")
@@ -22,9 +24,8 @@ func mustZone(name string) *time.Location {
 // morning of a day that many calendar days earlier.
 var now = time.Date(2026, 11, 20, 15, 0, 0, 0, berlin)
 
-func daysAgo(days int) *time.Time {
-	at := time.Date(2026, 11, 20, 9, 0, 0, 0, berlin).AddDate(0, 0, -days)
-	return &at
+func daysAgo(days int) *occurredday.Moment {
+	return &occurredday.Moment{At: time.Date(2026, 11, 20, 9, 0, 0, 0, berlin).AddDate(0, 0, -days)}
 }
 
 func TestEachRungBeginsOnItsDay(t *testing.T) {
@@ -54,7 +55,7 @@ func TestEachRungBeginsOnItsDay(t *testing.T) {
 // Berlin on the 30th day back is still that day, though UTC calls it the next.
 func TestTheDayCountFollowsTheInstallationZone(t *testing.T) {
 	t.Parallel()
-	late := time.Date(2026, 10, 21, 23, 30, 0, 0, berlin)
+	late := occurredday.Moment{At: time.Date(2026, 10, 21, 23, 30, 0, 0, berlin)}
 	if got := Default.Read(&late, now, berlin); got.Rung != Cooling || got.SilentDays != 30 {
 		t.Errorf("a late evening 30 days back read as %+v, want cooling on day 30", got)
 	}
@@ -72,7 +73,7 @@ func TestAnAccountWithNoActivityReadsAsStaleAndSaysWhy(t *testing.T) {
 // silence.
 func TestALaterActivityReadsAsActive(t *testing.T) {
 	t.Parallel()
-	later := now.Add(48 * time.Hour)
+	later := occurredday.Moment{At: now.Add(48 * time.Hour)}
 	if got := Default.Read(&later, now, berlin); got.Rung != Active || got.SilentDays != 0 {
 		t.Errorf("a later activity read as %+v, want active with no silent days", got)
 	}
@@ -126,5 +127,23 @@ func TestOnlyDormantAndStaleAreCold(t *testing.T) {
 		if got, want := rung.Cold(), rung == Dormant || rung == Stale; got != want {
 			t.Errorf("%s.Cold() = %v, want %v", rung, got, want)
 		}
+	}
+}
+
+// A date-only last activity counts its silence from its own date. Its noon-UTC
+// anchor is already the next day at UTC+14, which read the account a day warmer.
+func TestADateOnlyLastActivityCountsFromItsOwnDate(t *testing.T) {
+	t.Parallel()
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	asOf := time.Date(2026, 11, 25, 10, 30, 0, 0, time.UTC)
+	day := Default.Read(&occurredday.Moment{At: stored, DateOnly: true}, asOf, kiritimati)
+	instant := Default.Read(&occurredday.Moment{At: stored}, asOf, kiritimati)
+	if day.SilentDays != 6 || instant.SilentDays != 5 {
+		t.Errorf("silent days = %d for the date-only activity and %d for the instant, want 6 and 5",
+			day.SilentDays, instant.SilentDays)
 	}
 }
