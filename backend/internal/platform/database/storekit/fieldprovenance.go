@@ -131,7 +131,7 @@ func MoveFieldProvenance(ctx context.Context, tx pgx.Tx, objectType string, from
 		return nil, nil
 	}
 	rows, err := tx.Query(ctx, `UPDATE field_provenance SET object_id = $3
-		 WHERE object_type = $1 AND object_id = $2 AND field_name = ANY($4) RETURNING id`,
+		 WHERE object_type = $1 AND object_id = $2 AND field_name = ANY($4) AND value IS NULL RETURNING id`,
 		objectType, from, to, fields)
 	if err != nil {
 		return nil, fmt.Errorf("storekit: move field provenance: %w", err)

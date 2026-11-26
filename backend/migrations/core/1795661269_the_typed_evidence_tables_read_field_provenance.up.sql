@@ -1,6 +1,6 @@
 -- company_fact, company_profile_field and contact_profile_field become read
 -- views over field_provenance. Their rows move there through the data task
--- core/1795661270_evidence_rows_move_to_field_provenance; until a row has moved,
+-- evidence_rows_move_to_field_provenance; until a row has moved,
 -- the view reads it from the table's _legacy copy, so no fact disappears from a
 -- read in between. A writer moves its subject's legacy rows before it writes.
 SET LOCAL lock_timeout = '3s';
