@@ -90,8 +90,8 @@ export const Live: Story = {
   },
 };
 
-// A seat that may not log: each verb's tooltip or title names the one
-// sentence its description points at.
+// A role that may change the lead but not log: each verb's tooltip or title
+// names the one sentence its description points at.
 export const LogRefused: Story = {
   render: () => {
     installFetchStub({
@@ -105,7 +105,7 @@ export const LogRefused: Story = {
     );
   },
   play: async ({ canvasElement }) => {
-    const why = en["record.logActivityRefused"];
+    const why = en["record.actionRefused"];
     const log = await within(canvasElement).findByRole("button", {
       name: en["log.title"],
     });

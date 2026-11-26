@@ -162,7 +162,7 @@ fi
 
 echo "== seed-analytics: team and seats =="
 expect "200" "GET /teams" "$(api GET "/teams?q=$(url_encode "$TEAM_NAME")")"
-TEAM_ID="$(jq -r --arg n "$TEAM_NAME" '.data[] | select(.name == $n) | .id' "$workdir/body" | head -n1)"
+TEAM_ID="$(jq -r --arg n "$TEAM_NAME" '.data[] | select(.name == $n) | .id' "$workdir/body" | sed -n 1p)"
 if [[ -z "$TEAM_ID" ]]; then
   expect "201" "POST /teams" "$(api POST /teams "$(jq -n --arg n "$TEAM_NAME" '{name:$n}')")"
   TEAM_ID="$(jq -r '.id' "$workdir/body")"
@@ -175,7 +175,7 @@ fi
 seat() {
   local email="$1" name="$2" role="$3" id
   expect "200" "GET /users" "$(api GET "/users?include_invited=true&q=$(url_encode "$email")")"
-  id="$(jq -r --arg e "$email" '.data[] | select(.email == $e) | .id' "$workdir/body" | head -n1)"
+  id="$(jq -r --arg e "$email" '.data[] | select(.email == $e) | .id' "$workdir/body" | sed -n 1p)"
   if [[ -z "$id" ]]; then
     expect "201" "POST /users ($email)" "$(api POST /users "$(jq -n --arg e "$email" --arg n "$name" \
       --arg r "$role" --arg t "$TEAM_ID" '{email:$e,display_name:$n,role:$r,team_ids:[$t]}')")"
@@ -215,8 +215,8 @@ stage_named() { jq -r --arg p "$PIPELINE_ID" --arg n "$1" \
 cp "$workdir/body" "$workdir/pipelines.json"
 OPEN_STAGE="$(stage_named Qualified)"
 LATE_STAGE="$(stage_named Proposal)"
-WON_STAGE="$(jq -r --arg p "$PIPELINE_ID" '.data[] | select(.id == $p) | .stages[] | select(.semantic == "won") | .id' "$workdir/pipelines.json" | head -n1)"
-WON_NAME="$(jq -r --arg p "$PIPELINE_ID" '.data[] | select(.id == $p) | .stages[] | select(.semantic == "won") | .name' "$workdir/pipelines.json" | head -n1)"
+WON_STAGE="$(jq -r --arg p "$PIPELINE_ID" '.data[] | select(.id == $p) | .stages[] | select(.semantic == "won") | .id' "$workdir/pipelines.json" | sed -n 1p)"
+WON_NAME="$(jq -r --arg p "$PIPELINE_ID" '.data[] | select(.id == $p) | .stages[] | select(.semantic == "won") | .name' "$workdir/pipelines.json" | sed -n 1p)"
 [[ -n "$OPEN_STAGE" && -n "$LATE_STAGE" && -n "$WON_STAGE" ]] \
   || fail "the default pipeline lacks its Qualified, Proposal or won stage"
 
@@ -308,7 +308,7 @@ done
 echo "  OK: $backlog committed deals with no amount, next step or economic buyer"
 
 echo "== seed-analytics: target =="
-expect "200" "GET /analytics/targets" "$(api GET "/analytics/targets?include_retired=true")"
+expect "200" "GET /analytics/targets" "$(api GET "/analytics/targets")"
 seeded="$(jq -c --arg t "$TEAM_ID" --arg q "$QUARTER_START" '[.data[]? | select(.definition.scope.id == $t
   and .definition.period_start == $q and .definition.metric == "bookings_won")][0] // empty' "$workdir/body")"
 # retire_target <true|false> <reason> — retires or restores the seeded target.
@@ -387,7 +387,7 @@ i=0
 for name in "${HISTORY[@]}"; do
   i=$(( i + 1 ))
   expect "200" "GET /deals" "$(api GET "/deals?q=$(url_encode "$name")")"
-  id="$(jq -r --arg n "$name" '.data[] | select(.name == $n) | .id' "$workdir/body" | head -n1)"
+  id="$(jq -r --arg n "$name" '.data[] | select(.name == $n) | .id' "$workdir/body" | sed -n 1p)"
   [[ -n "$id" ]] || fail "the imported deal $name is not readable"
   expect "200" "GET /deals/$id" "$(api GET "/deals/$id")"
   expect "200" "POST /deals/$id/close-day" "$(api POST "/deals/$id/close-day" \
@@ -402,7 +402,7 @@ login "$SDR_EMAIL" "$SEAT_PASSWORD" || fail "cannot sign in as $SDR_EMAIL"
 lead() {
   local email="$1@prospects.example" id
   expect "200" "GET /leads" "$(api GET "/leads?q=$(url_encode "$2")")"
-  id="$(jq -r --arg e "$email" '.data[] | select(.email == $e) | .id' "$workdir/body" | head -n1)"
+  id="$(jq -r --arg e "$email" '.data[] | select(.email == $e) | .id' "$workdir/body" | sed -n 1p)"
   if [[ -z "$id" ]]; then
     expect "201 200" "POST /leads ($2)" "$(api POST /leads "$(jq -n --arg n "$2" --arg e "$email" --arg c "$3" \
       --arg k "$KEY" --arg r "lead-$1" --arg o "$SDR_ID" '{full_name:$n, email:$e, company_name:$c, source:"seed",

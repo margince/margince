@@ -424,6 +424,8 @@
      "Impersonation warning kept from merged contact",
     "impersonation_warning_cleared":
      "Impersonation warning cleared",
+    "impersonation_warning_raised":
+     "Impersonation warning raised by a later email",
     "import_apply_tag":
      "Add tag",
     "import_close_deal":
@@ -1201,7 +1203,7 @@
     "site":
      "site",
     "size_band":
-     "Employees",
+     "Company size",
     "skip":
      "skip",
     "skip_reason":
@@ -1946,20 +1948,24 @@
      "Portfolio company",
     "archive_company_type/text/supplier":
      "Supplier",
-    "archive_company_type/lifecycle/competitor":
-     "Competitor",
     "archive_company_type/lifecycle/customer":
      "Customer",
-    "archive_company_type/lifecycle/investor":
-     "Investor",
-    "archive_company_type/lifecycle/other":
-     "Other",
-    "archive_company_type/lifecycle/partner":
-     "Partner",
-    "archive_company_type/lifecycle/portfolio_company":
-     "Portfolio company",
-    "archive_company_type/lifecycle/supplier":
-     "Supplier",
+    "archive_company_type/lifecycle/disqualified":
+     "Disqualified",
+    "archive_company_type/lifecycle/former_customer":
+     "Former customer",
+    "archive_company_type/lifecycle/live":
+     "Live",
+    "archive_company_type/lifecycle/onboarding":
+     "Onboarding",
+    "archive_company_type/lifecycle/opportunity":
+     "Opportunity",
+    "archive_company_type/lifecycle/prospect":
+     "Prospect",
+    "archive_company_type/lifecycle/target":
+     "Target",
+    "archive_company_type/lifecycle/unknown":
+     "Unknown",
     "archive_company_type/boolean/true":
      "Yes",
     "archive_contact_detach_scope/lifecycle/customer":
@@ -3596,10 +3602,24 @@
      "Granted",
     "consent_result/text/withdrawn":
      "Withdrawn",
-    "consent_result/lifecycle/granted":
-     "Granted",
-    "consent_result/lifecycle/withdrawn":
-     "Withdrawn",
+    "consent_result/lifecycle/customer":
+     "Customer",
+    "consent_result/lifecycle/disqualified":
+     "Disqualified",
+    "consent_result/lifecycle/former_customer":
+     "Former customer",
+    "consent_result/lifecycle/live":
+     "Live",
+    "consent_result/lifecycle/onboarding":
+     "Onboarding",
+    "consent_result/lifecycle/opportunity":
+     "Opportunity",
+    "consent_result/lifecycle/prospect":
+     "Prospect",
+    "consent_result/lifecycle/target":
+     "Target",
+    "consent_result/lifecycle/unknown":
+     "Unknown",
     "consent_result/boolean/true":
      "Yes",
     "consent_wording/lifecycle/customer":
@@ -4134,12 +4154,24 @@
      "Personal",
     "creation_email_type/text/work":
      "Work",
-    "creation_email_type/lifecycle/other":
-     "Other",
-    "creation_email_type/lifecycle/personal":
-     "Personal",
-    "creation_email_type/lifecycle/work":
-     "Work",
+    "creation_email_type/lifecycle/customer":
+     "Customer",
+    "creation_email_type/lifecycle/disqualified":
+     "Disqualified",
+    "creation_email_type/lifecycle/former_customer":
+     "Former customer",
+    "creation_email_type/lifecycle/live":
+     "Live",
+    "creation_email_type/lifecycle/onboarding":
+     "Onboarding",
+    "creation_email_type/lifecycle/opportunity":
+     "Opportunity",
+    "creation_email_type/lifecycle/prospect":
+     "Prospect",
+    "creation_email_type/lifecycle/target":
+     "Target",
+    "creation_email_type/lifecycle/unknown":
+     "Unknown",
     "creation_email_type/boolean/true":
      "Yes",
     "creation_existing/lifecycle/customer":
@@ -4170,14 +4202,24 @@
      "Other",
     "creation_phone_type/text/work":
      "Work",
-    "creation_phone_type/lifecycle/home":
-     "Home",
-    "creation_phone_type/lifecycle/mobile":
-     "Mobile",
-    "creation_phone_type/lifecycle/other":
-     "Other",
-    "creation_phone_type/lifecycle/work":
-     "Work",
+    "creation_phone_type/lifecycle/customer":
+     "Customer",
+    "creation_phone_type/lifecycle/disqualified":
+     "Disqualified",
+    "creation_phone_type/lifecycle/former_customer":
+     "Former customer",
+    "creation_phone_type/lifecycle/live":
+     "Live",
+    "creation_phone_type/lifecycle/onboarding":
+     "Onboarding",
+    "creation_phone_type/lifecycle/opportunity":
+     "Opportunity",
+    "creation_phone_type/lifecycle/prospect":
+     "Prospect",
+    "creation_phone_type/lifecycle/target":
+     "Target",
+    "creation_phone_type/lifecycle/unknown":
+     "Unknown",
     "creation_phone_type/boolean/true":
      "Yes",
     "creation_position/lifecycle/customer":
@@ -4304,10 +4346,24 @@
      "Granted",
     "creation_source_consent/text/withdrawn":
      "Withdrawn",
-    "creation_source_consent/lifecycle/granted":
-     "Granted",
-    "creation_source_consent/lifecycle/withdrawn":
-     "Withdrawn",
+    "creation_source_consent/lifecycle/customer":
+     "Customer",
+    "creation_source_consent/lifecycle/disqualified":
+     "Disqualified",
+    "creation_source_consent/lifecycle/former_customer":
+     "Former customer",
+    "creation_source_consent/lifecycle/live":
+     "Live",
+    "creation_source_consent/lifecycle/onboarding":
+     "Onboarding",
+    "creation_source_consent/lifecycle/opportunity":
+     "Opportunity",
+    "creation_source_consent/lifecycle/prospect":
+     "Prospect",
+    "creation_source_consent/lifecycle/target":
+     "Target",
+    "creation_source_consent/lifecycle/unknown":
+     "Unknown",
     "creation_source_consent/boolean/true":
      "Yes",
     "creation_source_withheld_activities/lifecycle/customer":
@@ -4996,12 +5052,24 @@
      "Queue a crawl of the website",
     "enrichment_depth/text/technical":
      "Queue a public technical lookup of the company domain",
-    "enrichment_depth/lifecycle/page":
-     "Read one page and prepare an enrichment proposal",
-    "enrichment_depth/lifecycle/site":
-     "Queue a crawl of the website",
-    "enrichment_depth/lifecycle/technical":
-     "Queue a public technical lookup of the company domain",
+    "enrichment_depth/lifecycle/customer":
+     "Customer",
+    "enrichment_depth/lifecycle/disqualified":
+     "Disqualified",
+    "enrichment_depth/lifecycle/former_customer":
+     "Former customer",
+    "enrichment_depth/lifecycle/live":
+     "Live",
+    "enrichment_depth/lifecycle/onboarding":
+     "Onboarding",
+    "enrichment_depth/lifecycle/opportunity":
+     "Opportunity",
+    "enrichment_depth/lifecycle/prospect":
+     "Prospect",
+    "enrichment_depth/lifecycle/target":
+     "Target",
+    "enrichment_depth/lifecycle/unknown":
+     "Unknown",
     "enrichment_depth/boolean/true":
      "Yes",
     "execution/lifecycle/customer":
@@ -5623,6 +5691,26 @@
     "impersonation_warning_cleared/lifecycle/unknown":
      "Unknown",
     "impersonation_warning_cleared/boolean/true":
+     "Yes",
+    "impersonation_warning_raised/lifecycle/customer":
+     "Customer",
+    "impersonation_warning_raised/lifecycle/disqualified":
+     "Disqualified",
+    "impersonation_warning_raised/lifecycle/former_customer":
+     "Former customer",
+    "impersonation_warning_raised/lifecycle/live":
+     "Live",
+    "impersonation_warning_raised/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_raised/lifecycle/opportunity":
+     "Opportunity",
+    "impersonation_warning_raised/lifecycle/prospect":
+     "Prospect",
+    "impersonation_warning_raised/lifecycle/target":
+     "Target",
+    "impersonation_warning_raised/lifecycle/unknown":
+     "Unknown",
+    "impersonation_warning_raised/boolean/true":
      "Yes",
     "import_apply_tag/lifecycle/customer":
      "Customer",
@@ -6294,16 +6382,24 @@
      "New",
     "lead_status/text/promoted":
      "Qualified",
-    "lead_status/lifecycle/contacted":
-     "Contacted",
+    "lead_status/lifecycle/customer":
+     "Customer",
     "lead_status/lifecycle/disqualified":
      "Disqualified",
-    "lead_status/lifecycle/engaged":
-     "Engaged",
-    "lead_status/lifecycle/new":
-     "New",
-    "lead_status/lifecycle/promoted":
-     "Qualified",
+    "lead_status/lifecycle/former_customer":
+     "Former customer",
+    "lead_status/lifecycle/live":
+     "Live",
+    "lead_status/lifecycle/onboarding":
+     "Onboarding",
+    "lead_status/lifecycle/opportunity":
+     "Opportunity",
+    "lead_status/lifecycle/prospect":
+     "Prospect",
+    "lead_status/lifecycle/target":
+     "Target",
+    "lead_status/lifecycle/unknown":
+     "Unknown",
     "lead_status/boolean/true":
      "Yes",
     "legal_entity_id/lifecycle/customer":
@@ -7978,20 +8074,24 @@
      "Portfolio company",
     "merge_company_relationship_type/text/supplier":
      "Supplier",
-    "merge_company_relationship_type/lifecycle/competitor":
-     "Competitor",
     "merge_company_relationship_type/lifecycle/customer":
      "Customer",
-    "merge_company_relationship_type/lifecycle/investor":
-     "Investor",
-    "merge_company_relationship_type/lifecycle/other":
-     "Other",
-    "merge_company_relationship_type/lifecycle/partner":
-     "Partner",
-    "merge_company_relationship_type/lifecycle/portfolio_company":
-     "Portfolio company",
-    "merge_company_relationship_type/lifecycle/supplier":
-     "Supplier",
+    "merge_company_relationship_type/lifecycle/disqualified":
+     "Disqualified",
+    "merge_company_relationship_type/lifecycle/former_customer":
+     "Former customer",
+    "merge_company_relationship_type/lifecycle/live":
+     "Live",
+    "merge_company_relationship_type/lifecycle/onboarding":
+     "Onboarding",
+    "merge_company_relationship_type/lifecycle/opportunity":
+     "Opportunity",
+    "merge_company_relationship_type/lifecycle/prospect":
+     "Prospect",
+    "merge_company_relationship_type/lifecycle/target":
+     "Target",
+    "merge_company_relationship_type/lifecycle/unknown":
+     "Unknown",
     "merge_company_relationship_type/boolean/true":
      "Yes",
     "merge_company_triaged_domain/lifecycle/customer":
@@ -9050,14 +9150,24 @@
      "Recipient",
     "merge_override_authority/text/user":
      "Team member",
-    "merge_override_authority/lifecycle/admin":
-     "Administrator",
-    "merge_override_authority/lifecycle/machine":
-     "Automated system",
-    "merge_override_authority/lifecycle/subject":
-     "Recipient",
-    "merge_override_authority/lifecycle/user":
-     "Team member",
+    "merge_override_authority/lifecycle/customer":
+     "Customer",
+    "merge_override_authority/lifecycle/disqualified":
+     "Disqualified",
+    "merge_override_authority/lifecycle/former_customer":
+     "Former customer",
+    "merge_override_authority/lifecycle/live":
+     "Live",
+    "merge_override_authority/lifecycle/onboarding":
+     "Onboarding",
+    "merge_override_authority/lifecycle/opportunity":
+     "Opportunity",
+    "merge_override_authority/lifecycle/prospect":
+     "Prospect",
+    "merge_override_authority/lifecycle/target":
+     "Target",
+    "merge_override_authority/lifecycle/unknown":
+     "Unknown",
     "merge_override_authority/boolean/true":
      "Yes",
     "merge_override_reason/lifecycle/customer":
@@ -9152,18 +9262,24 @@
      "Meeting host",
     "merge_participant_role/text/to":
      "To",
-    "merge_participant_role/lifecycle/attendee":
-     "Attendees",
-    "merge_participant_role/lifecycle/bcc":
-     "Bcc",
-    "merge_participant_role/lifecycle/cc":
-     "Cc",
-    "merge_participant_role/lifecycle/from":
-     "Sender",
-    "merge_participant_role/lifecycle/organizer":
-     "Meeting host",
-    "merge_participant_role/lifecycle/to":
-     "To",
+    "merge_participant_role/lifecycle/customer":
+     "Customer",
+    "merge_participant_role/lifecycle/disqualified":
+     "Disqualified",
+    "merge_participant_role/lifecycle/former_customer":
+     "Former customer",
+    "merge_participant_role/lifecycle/live":
+     "Live",
+    "merge_participant_role/lifecycle/onboarding":
+     "Onboarding",
+    "merge_participant_role/lifecycle/opportunity":
+     "Opportunity",
+    "merge_participant_role/lifecycle/prospect":
+     "Prospect",
+    "merge_participant_role/lifecycle/target":
+     "Target",
+    "merge_participant_role/lifecycle/unknown":
+     "Unknown",
     "merge_participant_role/boolean/true":
      "Yes",
     "merge_payment_at/lifecycle/customer":
@@ -9418,6 +9534,8 @@
      "Impersonation warning kept from merged contact",
     "merge_profile_field/text/impersonation_warning_cleared":
      "Impersonation warning cleared",
+    "merge_profile_field/text/impersonation_warning_raised":
+     "Impersonation warning raised by a later email",
     "merge_profile_field/text/industry":
      "Industry",
     "merge_profile_field/text/invitation_status":
@@ -9569,7 +9687,7 @@
     "merge_profile_field/text/score_override_reason":
      "Score override reason",
     "merge_profile_field/text/size_band":
-     "Employees",
+     "Company size",
     "merge_profile_field/text/social":
      "Social profiles",
     "merge_profile_field/text/source":
@@ -9782,6 +9900,8 @@
      "Impersonation warning kept from merged contact",
     "merge_profile_field/lifecycle/impersonation_warning_cleared":
      "Impersonation warning cleared",
+    "merge_profile_field/lifecycle/impersonation_warning_raised":
+     "Impersonation warning raised by a later email",
     "merge_profile_field/lifecycle/industry":
      "Industry",
     "merge_profile_field/lifecycle/invitation_status":
@@ -9933,7 +10053,7 @@
     "merge_profile_field/lifecycle/score_override_reason":
      "Score override reason",
     "merge_profile_field/lifecycle/size_band":
-     "Employees",
+     "Company size",
     "merge_profile_field/lifecycle/social":
      "Social profiles",
     "merge_profile_field/lifecycle/source":
@@ -10104,24 +10224,24 @@
      "Referred by",
     "merge_relationship_kind/text/works_with":
      "Works with",
-    "merge_relationship_kind/lifecycle/billing_contact":
-     "Billing contact",
-    "merge_relationship_kind/lifecycle/co_sell_with":
-     "Co-sell with",
-    "merge_relationship_kind/lifecycle/deal_stakeholder":
-     "Deal stakeholder",
-    "merge_relationship_kind/lifecycle/employment":
-     "Employment",
-    "merge_relationship_kind/lifecycle/partner_of":
-     "Partner of",
-    "merge_relationship_kind/lifecycle/project_company":
-     "Company on project",
-    "merge_relationship_kind/lifecycle/project_stakeholder":
-     "Project stakeholder",
-    "merge_relationship_kind/lifecycle/referred_by":
-     "Referred by",
-    "merge_relationship_kind/lifecycle/works_with":
-     "Works with",
+    "merge_relationship_kind/lifecycle/customer":
+     "Customer",
+    "merge_relationship_kind/lifecycle/disqualified":
+     "Disqualified",
+    "merge_relationship_kind/lifecycle/former_customer":
+     "Former customer",
+    "merge_relationship_kind/lifecycle/live":
+     "Live",
+    "merge_relationship_kind/lifecycle/onboarding":
+     "Onboarding",
+    "merge_relationship_kind/lifecycle/opportunity":
+     "Opportunity",
+    "merge_relationship_kind/lifecycle/prospect":
+     "Prospect",
+    "merge_relationship_kind/lifecycle/target":
+     "Target",
+    "merge_relationship_kind/lifecycle/unknown":
+     "Unknown",
     "merge_relationship_kind/boolean/true":
      "Yes",
     "merge_relationship_primary/lifecycle/customer":
@@ -11432,14 +11552,24 @@
      "Initiative",
     "phase/text/pursuing":
      "Pursuing",
-    "phase/lifecycle/closed":
-     "Closed",
-    "phase/lifecycle/delivering":
-     "Delivering",
-    "phase/lifecycle/initiative":
-     "Initiative",
-    "phase/lifecycle/pursuing":
-     "Pursuing",
+    "phase/lifecycle/customer":
+     "Customer",
+    "phase/lifecycle/disqualified":
+     "Disqualified",
+    "phase/lifecycle/former_customer":
+     "Former customer",
+    "phase/lifecycle/live":
+     "Live",
+    "phase/lifecycle/onboarding":
+     "Onboarding",
+    "phase/lifecycle/opportunity":
+     "Opportunity",
+    "phase/lifecycle/prospect":
+     "Prospect",
+    "phase/lifecycle/target":
+     "Target",
+    "phase/lifecycle/unknown":
+     "Unknown",
     "phase/boolean/true":
      "Yes",
     "phone/lifecycle/customer":
@@ -11644,8 +11774,24 @@
      "Yes",
     "promise_strength/text/tentative":
      "Tentative: they said they would try",
-    "promise_strength/lifecycle/tentative":
-     "Tentative: they said they would try",
+    "promise_strength/lifecycle/customer":
+     "Customer",
+    "promise_strength/lifecycle/disqualified":
+     "Disqualified",
+    "promise_strength/lifecycle/former_customer":
+     "Former customer",
+    "promise_strength/lifecycle/live":
+     "Live",
+    "promise_strength/lifecycle/onboarding":
+     "Onboarding",
+    "promise_strength/lifecycle/opportunity":
+     "Opportunity",
+    "promise_strength/lifecycle/prospect":
+     "Prospect",
+    "promise_strength/lifecycle/target":
+     "Target",
+    "promise_strength/lifecycle/unknown":
+     "Unknown",
     "promise_strength/boolean/true":
      "Yes",
     "promote_create_contact/lifecycle/customer":
@@ -11884,22 +12030,24 @@
      "Correspondence initiated by the recipient",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Vital or security interest",
-    "promotion_basis_kind/lifecycle/consent":
-     "Recipient agreement",
-    "promotion_basis_kind/lifecycle/contract":
-     "Contract",
-    "promotion_basis_kind/lifecycle/existing_customer_exception":
-     "Existing customer exception",
-    "promotion_basis_kind/lifecycle/legal_obligation":
-     "Legal obligation",
-    "promotion_basis_kind/lifecycle/legitimate_interests":
-     "Legitimate interests",
-    "promotion_basis_kind/lifecycle/precontract_request":
-     "Precontract request",
-    "promotion_basis_kind/lifecycle/subject_initiated_correspondence":
-     "Correspondence initiated by the recipient",
-    "promotion_basis_kind/lifecycle/vital_or_security_interest":
-     "Vital or security interest",
+    "promotion_basis_kind/lifecycle/customer":
+     "Customer",
+    "promotion_basis_kind/lifecycle/disqualified":
+     "Disqualified",
+    "promotion_basis_kind/lifecycle/former_customer":
+     "Former customer",
+    "promotion_basis_kind/lifecycle/live":
+     "Live",
+    "promotion_basis_kind/lifecycle/onboarding":
+     "Onboarding",
+    "promotion_basis_kind/lifecycle/opportunity":
+     "Opportunity",
+    "promotion_basis_kind/lifecycle/prospect":
+     "Prospect",
+    "promotion_basis_kind/lifecycle/target":
+     "Target",
+    "promotion_basis_kind/lifecycle/unknown":
+     "Unknown",
     "promotion_basis_kind/boolean/true":
      "Yes",
     "promotion_basis_until/lifecycle/customer":
@@ -12052,10 +12200,24 @@
      "Granted",
     "promotion_consent_before/text/withdrawn":
      "Withdrawn",
-    "promotion_consent_before/lifecycle/granted":
-     "Granted",
-    "promotion_consent_before/lifecycle/withdrawn":
-     "Withdrawn",
+    "promotion_consent_before/lifecycle/customer":
+     "Customer",
+    "promotion_consent_before/lifecycle/disqualified":
+     "Disqualified",
+    "promotion_consent_before/lifecycle/former_customer":
+     "Former customer",
+    "promotion_consent_before/lifecycle/live":
+     "Live",
+    "promotion_consent_before/lifecycle/onboarding":
+     "Onboarding",
+    "promotion_consent_before/lifecycle/opportunity":
+     "Opportunity",
+    "promotion_consent_before/lifecycle/prospect":
+     "Prospect",
+    "promotion_consent_before/lifecycle/target":
+     "Target",
+    "promotion_consent_before/lifecycle/unknown":
+     "Unknown",
     "promotion_consent_before/boolean/true":
      "Yes",
     "promotion_contact_email/lifecycle/customer":
@@ -12552,14 +12714,24 @@
      "Recipient",
     "promotion_restriction_authority/text/user":
      "Team member",
-    "promotion_restriction_authority/lifecycle/admin":
-     "Administrator",
-    "promotion_restriction_authority/lifecycle/machine":
-     "Automated system",
-    "promotion_restriction_authority/lifecycle/subject":
-     "Recipient",
-    "promotion_restriction_authority/lifecycle/user":
-     "Team member",
+    "promotion_restriction_authority/lifecycle/customer":
+     "Customer",
+    "promotion_restriction_authority/lifecycle/disqualified":
+     "Disqualified",
+    "promotion_restriction_authority/lifecycle/former_customer":
+     "Former customer",
+    "promotion_restriction_authority/lifecycle/live":
+     "Live",
+    "promotion_restriction_authority/lifecycle/onboarding":
+     "Onboarding",
+    "promotion_restriction_authority/lifecycle/opportunity":
+     "Opportunity",
+    "promotion_restriction_authority/lifecycle/prospect":
+     "Prospect",
+    "promotion_restriction_authority/lifecycle/target":
+     "Target",
+    "promotion_restriction_authority/lifecycle/unknown":
+     "Unknown",
     "promotion_restriction_authority/boolean/true":
      "Yes",
     "promotion_restriction_purpose/lifecycle/customer":
@@ -13428,10 +13600,24 @@
      "Exact day",
     "relationship_end_precision/text/month":
      "Month only",
-    "relationship_end_precision/lifecycle/day":
-     "Exact day",
-    "relationship_end_precision/lifecycle/month":
-     "Month only",
+    "relationship_end_precision/lifecycle/customer":
+     "Customer",
+    "relationship_end_precision/lifecycle/disqualified":
+     "Disqualified",
+    "relationship_end_precision/lifecycle/former_customer":
+     "Former customer",
+    "relationship_end_precision/lifecycle/live":
+     "Live",
+    "relationship_end_precision/lifecycle/onboarding":
+     "Onboarding",
+    "relationship_end_precision/lifecycle/opportunity":
+     "Opportunity",
+    "relationship_end_precision/lifecycle/prospect":
+     "Prospect",
+    "relationship_end_precision/lifecycle/target":
+     "Target",
+    "relationship_end_precision/lifecycle/unknown":
+     "Unknown",
     "relationship_end_precision/boolean/true":
      "Yes",
     "relationship_ended/lifecycle/customer":
@@ -13472,24 +13658,24 @@
      "Referred by",
     "relationship_kind/text/works_with":
      "Works with",
-    "relationship_kind/lifecycle/billing_contact":
-     "Billing contact",
-    "relationship_kind/lifecycle/co_sell_with":
-     "Co-sell with",
-    "relationship_kind/lifecycle/deal_stakeholder":
-     "Deal stakeholder",
-    "relationship_kind/lifecycle/employment":
-     "Employment",
-    "relationship_kind/lifecycle/partner_of":
-     "Partner of",
-    "relationship_kind/lifecycle/project_company":
-     "Company on project",
-    "relationship_kind/lifecycle/project_stakeholder":
-     "Project stakeholder",
-    "relationship_kind/lifecycle/referred_by":
-     "Referred by",
-    "relationship_kind/lifecycle/works_with":
-     "Works with",
+    "relationship_kind/lifecycle/customer":
+     "Customer",
+    "relationship_kind/lifecycle/disqualified":
+     "Disqualified",
+    "relationship_kind/lifecycle/former_customer":
+     "Former customer",
+    "relationship_kind/lifecycle/live":
+     "Live",
+    "relationship_kind/lifecycle/onboarding":
+     "Onboarding",
+    "relationship_kind/lifecycle/opportunity":
+     "Opportunity",
+    "relationship_kind/lifecycle/prospect":
+     "Prospect",
+    "relationship_kind/lifecycle/target":
+     "Target",
+    "relationship_kind/lifecycle/unknown":
+     "Unknown",
     "relationship_kind/boolean/true":
      "Yes",
     "relationship_mark/lifecycle/customer":
@@ -13516,10 +13702,24 @@
      "Exact day",
     "relationship_start_precision/text/month":
      "Month only",
-    "relationship_start_precision/lifecycle/day":
-     "Exact day",
-    "relationship_start_precision/lifecycle/month":
-     "Month only",
+    "relationship_start_precision/lifecycle/customer":
+     "Customer",
+    "relationship_start_precision/lifecycle/disqualified":
+     "Disqualified",
+    "relationship_start_precision/lifecycle/former_customer":
+     "Former customer",
+    "relationship_start_precision/lifecycle/live":
+     "Live",
+    "relationship_start_precision/lifecycle/onboarding":
+     "Onboarding",
+    "relationship_start_precision/lifecycle/opportunity":
+     "Opportunity",
+    "relationship_start_precision/lifecycle/prospect":
+     "Prospect",
+    "relationship_start_precision/lifecycle/target":
+     "Target",
+    "relationship_start_precision/lifecycle/unknown":
+     "Unknown",
     "relationship_start_precision/boolean/true":
      "Yes",
     "relationship_started/lifecycle/customer":
@@ -13674,18 +13874,24 @@
      "Meeting host",
     "relink_participant_role/text/to":
      "To",
-    "relink_participant_role/lifecycle/attendee":
-     "Attendees",
-    "relink_participant_role/lifecycle/bcc":
-     "Bcc",
-    "relink_participant_role/lifecycle/cc":
-     "Cc",
-    "relink_participant_role/lifecycle/from":
-     "Sender",
-    "relink_participant_role/lifecycle/organizer":
-     "Meeting host",
-    "relink_participant_role/lifecycle/to":
-     "To",
+    "relink_participant_role/lifecycle/customer":
+     "Customer",
+    "relink_participant_role/lifecycle/disqualified":
+     "Disqualified",
+    "relink_participant_role/lifecycle/former_customer":
+     "Former customer",
+    "relink_participant_role/lifecycle/live":
+     "Live",
+    "relink_participant_role/lifecycle/onboarding":
+     "Onboarding",
+    "relink_participant_role/lifecycle/opportunity":
+     "Opportunity",
+    "relink_participant_role/lifecycle/prospect":
+     "Prospect",
+    "relink_participant_role/lifecycle/target":
+     "Target",
+    "relink_participant_role/lifecycle/unknown":
+     "Unknown",
     "relink_participant_role/boolean/true":
      "Yes",
     "relink_participant_user/lifecycle/customer":
@@ -14934,12 +15140,24 @@
      "Open",
     "status/text/won":
      "Won",
-    "status/lifecycle/lost":
-     "Lost",
-    "status/lifecycle/open":
-     "Open",
-    "status/lifecycle/won":
-     "Won",
+    "status/lifecycle/customer":
+     "Customer",
+    "status/lifecycle/disqualified":
+     "Disqualified",
+    "status/lifecycle/former_customer":
+     "Former customer",
+    "status/lifecycle/live":
+     "Live",
+    "status/lifecycle/onboarding":
+     "Onboarding",
+    "status/lifecycle/opportunity":
+     "Opportunity",
+    "status/lifecycle/prospect":
+     "Prospect",
+    "status/lifecycle/target":
+     "Target",
+    "status/lifecycle/unknown":
+     "Unknown",
     "status/boolean/true":
      "Yes",
     "stopped/lifecycle/customer":
@@ -16206,16 +16424,24 @@
      "Renewed by email",
     "won_without_contract_reason/text/verbal":
      "Verbally, in person or by phone",
-    "won_without_contract_reason/lifecycle/imported":
-     "Not recorded (imported)",
-    "won_without_contract_reason/lifecycle/other":
-     "Other",
-    "won_without_contract_reason/lifecycle/purchase_order":
-     "On a purchase order",
-    "won_without_contract_reason/lifecycle/renewal_by_email":
-     "Renewed by email",
-    "won_without_contract_reason/lifecycle/verbal":
-     "Verbally, in person or by phone",
+    "won_without_contract_reason/lifecycle/customer":
+     "Customer",
+    "won_without_contract_reason/lifecycle/disqualified":
+     "Disqualified",
+    "won_without_contract_reason/lifecycle/former_customer":
+     "Former customer",
+    "won_without_contract_reason/lifecycle/live":
+     "Live",
+    "won_without_contract_reason/lifecycle/onboarding":
+     "Onboarding",
+    "won_without_contract_reason/lifecycle/opportunity":
+     "Opportunity",
+    "won_without_contract_reason/lifecycle/prospect":
+     "Prospect",
+    "won_without_contract_reason/lifecycle/target":
+     "Target",
+    "won_without_contract_reason/lifecycle/unknown":
+     "Unknown",
     "won_without_contract_reason/boolean/true":
      "Yes",
     "write/lifecycle/customer":
@@ -17509,6 +17735,12 @@
     "impersonation_warning_cleared/empty":
      "Not set",
     "impersonation_warning_cleared/execution":
+     "Set when applied",
+    "impersonation_warning_raised/boolean":
+     "No",
+    "impersonation_warning_raised/empty":
+     "Not set",
+    "impersonation_warning_raised/execution":
      "Set when applied",
     "import_apply_tag/boolean":
      "No",
@@ -20798,6 +21030,8 @@
      "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
     "impersonation_warning_cleared":
      "Warnung vor möglicher Täuschung aufgehoben",
+    "impersonation_warning_raised":
+     "Warnung vor möglicher Täuschung durch spätere E-Mail ausgelöst",
     "import_apply_tag":
      "Tag hinzufügen",
     "import_close_deal":
@@ -21575,7 +21809,7 @@
     "site":
      "site",
     "size_band":
-     "Mitarbeitende",
+     "Unternehmensgröße",
     "skip":
      "skip",
     "skip_reason":
@@ -22320,20 +22554,24 @@
      "Portfoliounternehmen",
     "archive_company_type/text/supplier":
      "Lieferant",
-    "archive_company_type/lifecycle/competitor":
-     "Wettbewerber",
     "archive_company_type/lifecycle/customer":
      "Kunde",
-    "archive_company_type/lifecycle/investor":
-     "Investor",
-    "archive_company_type/lifecycle/other":
-     "Sonstiges",
-    "archive_company_type/lifecycle/partner":
-     "Partner",
-    "archive_company_type/lifecycle/portfolio_company":
-     "Portfoliounternehmen",
-    "archive_company_type/lifecycle/supplier":
-     "Lieferant",
+    "archive_company_type/lifecycle/disqualified":
+     "Disqualifiziert",
+    "archive_company_type/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "archive_company_type/lifecycle/live":
+     "Live",
+    "archive_company_type/lifecycle/onboarding":
+     "Onboarding",
+    "archive_company_type/lifecycle/opportunity":
+     "Chance",
+    "archive_company_type/lifecycle/prospect":
+     "Interessent",
+    "archive_company_type/lifecycle/target":
+     "Zielunternehmen",
+    "archive_company_type/lifecycle/unknown":
+     "Unbekannt",
     "archive_company_type/boolean/true":
      "Ja",
     "archive_contact_detach_scope/lifecycle/customer":
@@ -23970,10 +24208,24 @@
      "Erteilt",
     "consent_result/text/withdrawn":
      "Widerrufen",
-    "consent_result/lifecycle/granted":
-     "Erteilt",
-    "consent_result/lifecycle/withdrawn":
-     "Widerrufen",
+    "consent_result/lifecycle/customer":
+     "Kunde",
+    "consent_result/lifecycle/disqualified":
+     "Disqualifiziert",
+    "consent_result/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "consent_result/lifecycle/live":
+     "Live",
+    "consent_result/lifecycle/onboarding":
+     "Onboarding",
+    "consent_result/lifecycle/opportunity":
+     "Chance",
+    "consent_result/lifecycle/prospect":
+     "Interessent",
+    "consent_result/lifecycle/target":
+     "Zielunternehmen",
+    "consent_result/lifecycle/unknown":
+     "Unbekannt",
     "consent_result/boolean/true":
      "Ja",
     "consent_wording/lifecycle/customer":
@@ -24508,12 +24760,24 @@
      "Privat",
     "creation_email_type/text/work":
      "Geschäftlich",
-    "creation_email_type/lifecycle/other":
-     "Sonstige",
-    "creation_email_type/lifecycle/personal":
-     "Privat",
-    "creation_email_type/lifecycle/work":
-     "Geschäftlich",
+    "creation_email_type/lifecycle/customer":
+     "Kunde",
+    "creation_email_type/lifecycle/disqualified":
+     "Disqualifiziert",
+    "creation_email_type/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "creation_email_type/lifecycle/live":
+     "Live",
+    "creation_email_type/lifecycle/onboarding":
+     "Onboarding",
+    "creation_email_type/lifecycle/opportunity":
+     "Chance",
+    "creation_email_type/lifecycle/prospect":
+     "Interessent",
+    "creation_email_type/lifecycle/target":
+     "Zielunternehmen",
+    "creation_email_type/lifecycle/unknown":
+     "Unbekannt",
     "creation_email_type/boolean/true":
      "Ja",
     "creation_existing/lifecycle/customer":
@@ -24544,14 +24808,24 @@
      "Sonstige",
     "creation_phone_type/text/work":
      "Geschäftlich",
-    "creation_phone_type/lifecycle/home":
-     "Privat",
-    "creation_phone_type/lifecycle/mobile":
-     "Mobil",
-    "creation_phone_type/lifecycle/other":
-     "Sonstige",
-    "creation_phone_type/lifecycle/work":
-     "Geschäftlich",
+    "creation_phone_type/lifecycle/customer":
+     "Kunde",
+    "creation_phone_type/lifecycle/disqualified":
+     "Disqualifiziert",
+    "creation_phone_type/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "creation_phone_type/lifecycle/live":
+     "Live",
+    "creation_phone_type/lifecycle/onboarding":
+     "Onboarding",
+    "creation_phone_type/lifecycle/opportunity":
+     "Chance",
+    "creation_phone_type/lifecycle/prospect":
+     "Interessent",
+    "creation_phone_type/lifecycle/target":
+     "Zielunternehmen",
+    "creation_phone_type/lifecycle/unknown":
+     "Unbekannt",
     "creation_phone_type/boolean/true":
      "Ja",
     "creation_position/lifecycle/customer":
@@ -24678,10 +24952,24 @@
      "Erteilt",
     "creation_source_consent/text/withdrawn":
      "Widerrufen",
-    "creation_source_consent/lifecycle/granted":
-     "Erteilt",
-    "creation_source_consent/lifecycle/withdrawn":
-     "Widerrufen",
+    "creation_source_consent/lifecycle/customer":
+     "Kunde",
+    "creation_source_consent/lifecycle/disqualified":
+     "Disqualifiziert",
+    "creation_source_consent/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "creation_source_consent/lifecycle/live":
+     "Live",
+    "creation_source_consent/lifecycle/onboarding":
+     "Onboarding",
+    "creation_source_consent/lifecycle/opportunity":
+     "Chance",
+    "creation_source_consent/lifecycle/prospect":
+     "Interessent",
+    "creation_source_consent/lifecycle/target":
+     "Zielunternehmen",
+    "creation_source_consent/lifecycle/unknown":
+     "Unbekannt",
     "creation_source_consent/boolean/true":
      "Ja",
     "creation_source_withheld_activities/lifecycle/customer":
@@ -25370,12 +25658,24 @@
      "Einen Crawl der Website einreihen",
     "enrichment_depth/text/technical":
      "Eine öffentliche technische Abfrage der Firmendomäne einreihen",
-    "enrichment_depth/lifecycle/page":
-     "Eine Seite lesen und einen Anreicherungsvorschlag vorbereiten",
-    "enrichment_depth/lifecycle/site":
-     "Einen Crawl der Website einreihen",
-    "enrichment_depth/lifecycle/technical":
-     "Eine öffentliche technische Abfrage der Firmendomäne einreihen",
+    "enrichment_depth/lifecycle/customer":
+     "Kunde",
+    "enrichment_depth/lifecycle/disqualified":
+     "Disqualifiziert",
+    "enrichment_depth/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "enrichment_depth/lifecycle/live":
+     "Live",
+    "enrichment_depth/lifecycle/onboarding":
+     "Onboarding",
+    "enrichment_depth/lifecycle/opportunity":
+     "Chance",
+    "enrichment_depth/lifecycle/prospect":
+     "Interessent",
+    "enrichment_depth/lifecycle/target":
+     "Zielunternehmen",
+    "enrichment_depth/lifecycle/unknown":
+     "Unbekannt",
     "enrichment_depth/boolean/true":
      "Ja",
     "execution/lifecycle/customer":
@@ -25997,6 +26297,26 @@
     "impersonation_warning_cleared/lifecycle/unknown":
      "Unbekannt",
     "impersonation_warning_cleared/boolean/true":
+     "Ja",
+    "impersonation_warning_raised/lifecycle/customer":
+     "Kunde",
+    "impersonation_warning_raised/lifecycle/disqualified":
+     "Disqualifiziert",
+    "impersonation_warning_raised/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "impersonation_warning_raised/lifecycle/live":
+     "Live",
+    "impersonation_warning_raised/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_raised/lifecycle/opportunity":
+     "Chance",
+    "impersonation_warning_raised/lifecycle/prospect":
+     "Interessent",
+    "impersonation_warning_raised/lifecycle/target":
+     "Zielunternehmen",
+    "impersonation_warning_raised/lifecycle/unknown":
+     "Unbekannt",
+    "impersonation_warning_raised/boolean/true":
      "Ja",
     "import_apply_tag/lifecycle/customer":
      "Kunde",
@@ -26668,16 +26988,24 @@
      "Neu",
     "lead_status/text/promoted":
      "Qualifiziert",
-    "lead_status/lifecycle/contacted":
-     "Kontaktiert",
+    "lead_status/lifecycle/customer":
+     "Kunde",
     "lead_status/lifecycle/disqualified":
      "Disqualifiziert",
-    "lead_status/lifecycle/engaged":
-     "Im Gespräch",
-    "lead_status/lifecycle/new":
-     "Neu",
-    "lead_status/lifecycle/promoted":
-     "Qualifiziert",
+    "lead_status/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "lead_status/lifecycle/live":
+     "Live",
+    "lead_status/lifecycle/onboarding":
+     "Onboarding",
+    "lead_status/lifecycle/opportunity":
+     "Chance",
+    "lead_status/lifecycle/prospect":
+     "Interessent",
+    "lead_status/lifecycle/target":
+     "Zielunternehmen",
+    "lead_status/lifecycle/unknown":
+     "Unbekannt",
     "lead_status/boolean/true":
      "Ja",
     "legal_entity_id/lifecycle/customer":
@@ -28352,20 +28680,24 @@
      "Portfoliounternehmen",
     "merge_company_relationship_type/text/supplier":
      "Lieferant",
-    "merge_company_relationship_type/lifecycle/competitor":
-     "Wettbewerber",
     "merge_company_relationship_type/lifecycle/customer":
      "Kunde",
-    "merge_company_relationship_type/lifecycle/investor":
-     "Investor",
-    "merge_company_relationship_type/lifecycle/other":
-     "Sonstiges",
-    "merge_company_relationship_type/lifecycle/partner":
-     "Partner",
-    "merge_company_relationship_type/lifecycle/portfolio_company":
-     "Portfoliounternehmen",
-    "merge_company_relationship_type/lifecycle/supplier":
-     "Lieferant",
+    "merge_company_relationship_type/lifecycle/disqualified":
+     "Disqualifiziert",
+    "merge_company_relationship_type/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "merge_company_relationship_type/lifecycle/live":
+     "Live",
+    "merge_company_relationship_type/lifecycle/onboarding":
+     "Onboarding",
+    "merge_company_relationship_type/lifecycle/opportunity":
+     "Chance",
+    "merge_company_relationship_type/lifecycle/prospect":
+     "Interessent",
+    "merge_company_relationship_type/lifecycle/target":
+     "Zielunternehmen",
+    "merge_company_relationship_type/lifecycle/unknown":
+     "Unbekannt",
     "merge_company_relationship_type/boolean/true":
      "Ja",
     "merge_company_triaged_domain/lifecycle/customer":
@@ -29424,14 +29756,24 @@
      "Empfangende Person",
     "merge_override_authority/text/user":
      "Teammitglied",
-    "merge_override_authority/lifecycle/admin":
-     "Admin",
-    "merge_override_authority/lifecycle/machine":
-     "Automatisches System",
-    "merge_override_authority/lifecycle/subject":
-     "Empfangende Person",
-    "merge_override_authority/lifecycle/user":
-     "Teammitglied",
+    "merge_override_authority/lifecycle/customer":
+     "Kunde",
+    "merge_override_authority/lifecycle/disqualified":
+     "Disqualifiziert",
+    "merge_override_authority/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "merge_override_authority/lifecycle/live":
+     "Live",
+    "merge_override_authority/lifecycle/onboarding":
+     "Onboarding",
+    "merge_override_authority/lifecycle/opportunity":
+     "Chance",
+    "merge_override_authority/lifecycle/prospect":
+     "Interessent",
+    "merge_override_authority/lifecycle/target":
+     "Zielunternehmen",
+    "merge_override_authority/lifecycle/unknown":
+     "Unbekannt",
     "merge_override_authority/boolean/true":
      "Ja",
     "merge_override_reason/lifecycle/customer":
@@ -29526,18 +29868,24 @@
      "Organisiert von",
     "merge_participant_role/text/to":
      "An",
-    "merge_participant_role/lifecycle/attendee":
-     "Teilnehmende",
-    "merge_participant_role/lifecycle/bcc":
-     "Bcc",
-    "merge_participant_role/lifecycle/cc":
-     "Cc",
-    "merge_participant_role/lifecycle/from":
-     "Absendeadresse",
-    "merge_participant_role/lifecycle/organizer":
-     "Organisiert von",
-    "merge_participant_role/lifecycle/to":
-     "An",
+    "merge_participant_role/lifecycle/customer":
+     "Kunde",
+    "merge_participant_role/lifecycle/disqualified":
+     "Disqualifiziert",
+    "merge_participant_role/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "merge_participant_role/lifecycle/live":
+     "Live",
+    "merge_participant_role/lifecycle/onboarding":
+     "Onboarding",
+    "merge_participant_role/lifecycle/opportunity":
+     "Chance",
+    "merge_participant_role/lifecycle/prospect":
+     "Interessent",
+    "merge_participant_role/lifecycle/target":
+     "Zielunternehmen",
+    "merge_participant_role/lifecycle/unknown":
+     "Unbekannt",
     "merge_participant_role/boolean/true":
      "Ja",
     "merge_payment_at/lifecycle/customer":
@@ -29792,6 +30140,8 @@
      "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
     "merge_profile_field/text/impersonation_warning_cleared":
      "Warnung vor möglicher Täuschung aufgehoben",
+    "merge_profile_field/text/impersonation_warning_raised":
+     "Warnung vor möglicher Täuschung durch spätere E-Mail ausgelöst",
     "merge_profile_field/text/industry":
      "Branche",
     "merge_profile_field/text/invitation_status":
@@ -29943,7 +30293,7 @@
     "merge_profile_field/text/score_override_reason":
      "Grund für die Score-Anpassung",
     "merge_profile_field/text/size_band":
-     "Mitarbeitende",
+     "Unternehmensgröße",
     "merge_profile_field/text/social":
      "Social-Profile",
     "merge_profile_field/text/source":
@@ -30156,6 +30506,8 @@
      "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
     "merge_profile_field/lifecycle/impersonation_warning_cleared":
      "Warnung vor möglicher Täuschung aufgehoben",
+    "merge_profile_field/lifecycle/impersonation_warning_raised":
+     "Warnung vor möglicher Täuschung durch spätere E-Mail ausgelöst",
     "merge_profile_field/lifecycle/industry":
      "Branche",
     "merge_profile_field/lifecycle/invitation_status":
@@ -30307,7 +30659,7 @@
     "merge_profile_field/lifecycle/score_override_reason":
      "Grund für die Score-Anpassung",
     "merge_profile_field/lifecycle/size_band":
-     "Mitarbeitende",
+     "Unternehmensgröße",
     "merge_profile_field/lifecycle/social":
      "Social-Profile",
     "merge_profile_field/lifecycle/source":
@@ -30478,24 +30830,24 @@
      "Empfohlen von",
     "merge_relationship_kind/text/works_with":
      "Arbeitet mit",
-    "merge_relationship_kind/lifecycle/billing_contact":
-     "Rechnungskontakt",
-    "merge_relationship_kind/lifecycle/co_sell_with":
-     "Co-Selling mit",
-    "merge_relationship_kind/lifecycle/deal_stakeholder":
-     "Deal-Stakeholder",
-    "merge_relationship_kind/lifecycle/employment":
-     "Anstellung",
-    "merge_relationship_kind/lifecycle/partner_of":
-     "Partner von",
-    "merge_relationship_kind/lifecycle/project_company":
-     "Unternehmen im Projekt",
-    "merge_relationship_kind/lifecycle/project_stakeholder":
-     "Projekt-Stakeholder",
-    "merge_relationship_kind/lifecycle/referred_by":
-     "Empfohlen von",
-    "merge_relationship_kind/lifecycle/works_with":
-     "Arbeitet mit",
+    "merge_relationship_kind/lifecycle/customer":
+     "Kunde",
+    "merge_relationship_kind/lifecycle/disqualified":
+     "Disqualifiziert",
+    "merge_relationship_kind/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "merge_relationship_kind/lifecycle/live":
+     "Live",
+    "merge_relationship_kind/lifecycle/onboarding":
+     "Onboarding",
+    "merge_relationship_kind/lifecycle/opportunity":
+     "Chance",
+    "merge_relationship_kind/lifecycle/prospect":
+     "Interessent",
+    "merge_relationship_kind/lifecycle/target":
+     "Zielunternehmen",
+    "merge_relationship_kind/lifecycle/unknown":
+     "Unbekannt",
     "merge_relationship_kind/boolean/true":
      "Ja",
     "merge_relationship_primary/lifecycle/customer":
@@ -31806,14 +32158,24 @@
      "Initiative",
     "phase/text/pursuing":
      "Im Vertrieb",
-    "phase/lifecycle/closed":
-     "Abgeschlossen",
-    "phase/lifecycle/delivering":
-     "In Umsetzung",
-    "phase/lifecycle/initiative":
-     "Initiative",
-    "phase/lifecycle/pursuing":
-     "Im Vertrieb",
+    "phase/lifecycle/customer":
+     "Kunde",
+    "phase/lifecycle/disqualified":
+     "Disqualifiziert",
+    "phase/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "phase/lifecycle/live":
+     "Live",
+    "phase/lifecycle/onboarding":
+     "Onboarding",
+    "phase/lifecycle/opportunity":
+     "Chance",
+    "phase/lifecycle/prospect":
+     "Interessent",
+    "phase/lifecycle/target":
+     "Zielunternehmen",
+    "phase/lifecycle/unknown":
+     "Unbekannt",
     "phase/boolean/true":
      "Ja",
     "phone/lifecycle/customer":
@@ -32018,8 +32380,24 @@
      "Ja",
     "promise_strength/text/tentative":
      "Mit Vorbehalt: Es hieß, man versuche es",
-    "promise_strength/lifecycle/tentative":
-     "Mit Vorbehalt: Es hieß, man versuche es",
+    "promise_strength/lifecycle/customer":
+     "Kunde",
+    "promise_strength/lifecycle/disqualified":
+     "Disqualifiziert",
+    "promise_strength/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "promise_strength/lifecycle/live":
+     "Live",
+    "promise_strength/lifecycle/onboarding":
+     "Onboarding",
+    "promise_strength/lifecycle/opportunity":
+     "Chance",
+    "promise_strength/lifecycle/prospect":
+     "Interessent",
+    "promise_strength/lifecycle/target":
+     "Zielunternehmen",
+    "promise_strength/lifecycle/unknown":
+     "Unbekannt",
     "promise_strength/boolean/true":
      "Ja",
     "promote_create_contact/lifecycle/customer":
@@ -32258,22 +32636,24 @@
      "Von der empfangenden Person begonnene Korrespondenz",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Lebenswichtiges Interesse oder Sicherheitsinteresse",
-    "promotion_basis_kind/lifecycle/consent":
-     "Zustimmung der empfangenden Person",
-    "promotion_basis_kind/lifecycle/contract":
-     "Vertrag",
-    "promotion_basis_kind/lifecycle/existing_customer_exception":
-     "Bestandskundenausnahme",
-    "promotion_basis_kind/lifecycle/legal_obligation":
-     "Rechtliche Verpflichtung",
-    "promotion_basis_kind/lifecycle/legitimate_interests":
-     "Berechtigte Interessen",
-    "promotion_basis_kind/lifecycle/precontract_request":
-     "Vorvertragliche Anfrage",
-    "promotion_basis_kind/lifecycle/subject_initiated_correspondence":
-     "Von der empfangenden Person begonnene Korrespondenz",
-    "promotion_basis_kind/lifecycle/vital_or_security_interest":
-     "Lebenswichtiges Interesse oder Sicherheitsinteresse",
+    "promotion_basis_kind/lifecycle/customer":
+     "Kunde",
+    "promotion_basis_kind/lifecycle/disqualified":
+     "Disqualifiziert",
+    "promotion_basis_kind/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "promotion_basis_kind/lifecycle/live":
+     "Live",
+    "promotion_basis_kind/lifecycle/onboarding":
+     "Onboarding",
+    "promotion_basis_kind/lifecycle/opportunity":
+     "Chance",
+    "promotion_basis_kind/lifecycle/prospect":
+     "Interessent",
+    "promotion_basis_kind/lifecycle/target":
+     "Zielunternehmen",
+    "promotion_basis_kind/lifecycle/unknown":
+     "Unbekannt",
     "promotion_basis_kind/boolean/true":
      "Ja",
     "promotion_basis_until/lifecycle/customer":
@@ -32426,10 +32806,24 @@
      "Erteilt",
     "promotion_consent_before/text/withdrawn":
      "Widerrufen",
-    "promotion_consent_before/lifecycle/granted":
-     "Erteilt",
-    "promotion_consent_before/lifecycle/withdrawn":
-     "Widerrufen",
+    "promotion_consent_before/lifecycle/customer":
+     "Kunde",
+    "promotion_consent_before/lifecycle/disqualified":
+     "Disqualifiziert",
+    "promotion_consent_before/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "promotion_consent_before/lifecycle/live":
+     "Live",
+    "promotion_consent_before/lifecycle/onboarding":
+     "Onboarding",
+    "promotion_consent_before/lifecycle/opportunity":
+     "Chance",
+    "promotion_consent_before/lifecycle/prospect":
+     "Interessent",
+    "promotion_consent_before/lifecycle/target":
+     "Zielunternehmen",
+    "promotion_consent_before/lifecycle/unknown":
+     "Unbekannt",
     "promotion_consent_before/boolean/true":
      "Ja",
     "promotion_contact_email/lifecycle/customer":
@@ -32926,14 +33320,24 @@
      "Empfangende Person",
     "promotion_restriction_authority/text/user":
      "Teammitglied",
-    "promotion_restriction_authority/lifecycle/admin":
-     "Admin",
-    "promotion_restriction_authority/lifecycle/machine":
-     "Automatisches System",
-    "promotion_restriction_authority/lifecycle/subject":
-     "Empfangende Person",
-    "promotion_restriction_authority/lifecycle/user":
-     "Teammitglied",
+    "promotion_restriction_authority/lifecycle/customer":
+     "Kunde",
+    "promotion_restriction_authority/lifecycle/disqualified":
+     "Disqualifiziert",
+    "promotion_restriction_authority/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "promotion_restriction_authority/lifecycle/live":
+     "Live",
+    "promotion_restriction_authority/lifecycle/onboarding":
+     "Onboarding",
+    "promotion_restriction_authority/lifecycle/opportunity":
+     "Chance",
+    "promotion_restriction_authority/lifecycle/prospect":
+     "Interessent",
+    "promotion_restriction_authority/lifecycle/target":
+     "Zielunternehmen",
+    "promotion_restriction_authority/lifecycle/unknown":
+     "Unbekannt",
     "promotion_restriction_authority/boolean/true":
      "Ja",
     "promotion_restriction_purpose/lifecycle/customer":
@@ -33802,10 +34206,24 @@
      "Genauer Tag",
     "relationship_end_precision/text/month":
      "Nur Monat",
-    "relationship_end_precision/lifecycle/day":
-     "Genauer Tag",
-    "relationship_end_precision/lifecycle/month":
-     "Nur Monat",
+    "relationship_end_precision/lifecycle/customer":
+     "Kunde",
+    "relationship_end_precision/lifecycle/disqualified":
+     "Disqualifiziert",
+    "relationship_end_precision/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "relationship_end_precision/lifecycle/live":
+     "Live",
+    "relationship_end_precision/lifecycle/onboarding":
+     "Onboarding",
+    "relationship_end_precision/lifecycle/opportunity":
+     "Chance",
+    "relationship_end_precision/lifecycle/prospect":
+     "Interessent",
+    "relationship_end_precision/lifecycle/target":
+     "Zielunternehmen",
+    "relationship_end_precision/lifecycle/unknown":
+     "Unbekannt",
     "relationship_end_precision/boolean/true":
      "Ja",
     "relationship_ended/lifecycle/customer":
@@ -33846,24 +34264,24 @@
      "Empfohlen von",
     "relationship_kind/text/works_with":
      "Arbeitet mit",
-    "relationship_kind/lifecycle/billing_contact":
-     "Rechnungskontakt",
-    "relationship_kind/lifecycle/co_sell_with":
-     "Co-Selling mit",
-    "relationship_kind/lifecycle/deal_stakeholder":
-     "Deal-Stakeholder",
-    "relationship_kind/lifecycle/employment":
-     "Anstellung",
-    "relationship_kind/lifecycle/partner_of":
-     "Partner von",
-    "relationship_kind/lifecycle/project_company":
-     "Unternehmen im Projekt",
-    "relationship_kind/lifecycle/project_stakeholder":
-     "Projekt-Stakeholder",
-    "relationship_kind/lifecycle/referred_by":
-     "Empfohlen von",
-    "relationship_kind/lifecycle/works_with":
-     "Arbeitet mit",
+    "relationship_kind/lifecycle/customer":
+     "Kunde",
+    "relationship_kind/lifecycle/disqualified":
+     "Disqualifiziert",
+    "relationship_kind/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "relationship_kind/lifecycle/live":
+     "Live",
+    "relationship_kind/lifecycle/onboarding":
+     "Onboarding",
+    "relationship_kind/lifecycle/opportunity":
+     "Chance",
+    "relationship_kind/lifecycle/prospect":
+     "Interessent",
+    "relationship_kind/lifecycle/target":
+     "Zielunternehmen",
+    "relationship_kind/lifecycle/unknown":
+     "Unbekannt",
     "relationship_kind/boolean/true":
      "Ja",
     "relationship_mark/lifecycle/customer":
@@ -33890,10 +34308,24 @@
      "Genauer Tag",
     "relationship_start_precision/text/month":
      "Nur Monat",
-    "relationship_start_precision/lifecycle/day":
-     "Genauer Tag",
-    "relationship_start_precision/lifecycle/month":
-     "Nur Monat",
+    "relationship_start_precision/lifecycle/customer":
+     "Kunde",
+    "relationship_start_precision/lifecycle/disqualified":
+     "Disqualifiziert",
+    "relationship_start_precision/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "relationship_start_precision/lifecycle/live":
+     "Live",
+    "relationship_start_precision/lifecycle/onboarding":
+     "Onboarding",
+    "relationship_start_precision/lifecycle/opportunity":
+     "Chance",
+    "relationship_start_precision/lifecycle/prospect":
+     "Interessent",
+    "relationship_start_precision/lifecycle/target":
+     "Zielunternehmen",
+    "relationship_start_precision/lifecycle/unknown":
+     "Unbekannt",
     "relationship_start_precision/boolean/true":
      "Ja",
     "relationship_started/lifecycle/customer":
@@ -34048,18 +34480,24 @@
      "Organisiert von",
     "relink_participant_role/text/to":
      "An",
-    "relink_participant_role/lifecycle/attendee":
-     "Teilnehmende",
-    "relink_participant_role/lifecycle/bcc":
-     "Bcc",
-    "relink_participant_role/lifecycle/cc":
-     "Cc",
-    "relink_participant_role/lifecycle/from":
-     "Absendeadresse",
-    "relink_participant_role/lifecycle/organizer":
-     "Organisiert von",
-    "relink_participant_role/lifecycle/to":
-     "An",
+    "relink_participant_role/lifecycle/customer":
+     "Kunde",
+    "relink_participant_role/lifecycle/disqualified":
+     "Disqualifiziert",
+    "relink_participant_role/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "relink_participant_role/lifecycle/live":
+     "Live",
+    "relink_participant_role/lifecycle/onboarding":
+     "Onboarding",
+    "relink_participant_role/lifecycle/opportunity":
+     "Chance",
+    "relink_participant_role/lifecycle/prospect":
+     "Interessent",
+    "relink_participant_role/lifecycle/target":
+     "Zielunternehmen",
+    "relink_participant_role/lifecycle/unknown":
+     "Unbekannt",
     "relink_participant_role/boolean/true":
      "Ja",
     "relink_participant_user/lifecycle/customer":
@@ -35308,12 +35746,24 @@
      "Offen",
     "status/text/won":
      "Gewonnen",
-    "status/lifecycle/lost":
-     "Verloren",
-    "status/lifecycle/open":
-     "Offen",
-    "status/lifecycle/won":
-     "Gewonnen",
+    "status/lifecycle/customer":
+     "Kunde",
+    "status/lifecycle/disqualified":
+     "Disqualifiziert",
+    "status/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "status/lifecycle/live":
+     "Live",
+    "status/lifecycle/onboarding":
+     "Onboarding",
+    "status/lifecycle/opportunity":
+     "Chance",
+    "status/lifecycle/prospect":
+     "Interessent",
+    "status/lifecycle/target":
+     "Zielunternehmen",
+    "status/lifecycle/unknown":
+     "Unbekannt",
     "status/boolean/true":
      "Ja",
     "stopped/lifecycle/customer":
@@ -36580,16 +37030,24 @@
      "Per E-Mail verlängert",
     "won_without_contract_reason/text/verbal":
      "Mündlich, persönlich oder telefonisch",
-    "won_without_contract_reason/lifecycle/imported":
-     "Nicht erfasst (importiert)",
-    "won_without_contract_reason/lifecycle/other":
-     "Sonstiges",
-    "won_without_contract_reason/lifecycle/purchase_order":
-     "Per Bestellung",
-    "won_without_contract_reason/lifecycle/renewal_by_email":
-     "Per E-Mail verlängert",
-    "won_without_contract_reason/lifecycle/verbal":
-     "Mündlich, persönlich oder telefonisch",
+    "won_without_contract_reason/lifecycle/customer":
+     "Kunde",
+    "won_without_contract_reason/lifecycle/disqualified":
+     "Disqualifiziert",
+    "won_without_contract_reason/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "won_without_contract_reason/lifecycle/live":
+     "Live",
+    "won_without_contract_reason/lifecycle/onboarding":
+     "Onboarding",
+    "won_without_contract_reason/lifecycle/opportunity":
+     "Chance",
+    "won_without_contract_reason/lifecycle/prospect":
+     "Interessent",
+    "won_without_contract_reason/lifecycle/target":
+     "Zielunternehmen",
+    "won_without_contract_reason/lifecycle/unknown":
+     "Unbekannt",
     "won_without_contract_reason/boolean/true":
      "Ja",
     "write/lifecycle/customer":
@@ -37883,6 +38341,12 @@
     "impersonation_warning_cleared/empty":
      "Nicht gesetzt",
     "impersonation_warning_cleared/execution":
+     "Wird beim Anwenden festgelegt",
+    "impersonation_warning_raised/boolean":
+     "Nein",
+    "impersonation_warning_raised/empty":
+     "Nicht gesetzt",
+    "impersonation_warning_raised/execution":
      "Wird beim Anwenden festgelegt",
     "import_apply_tag/boolean":
      "Nein",
@@ -41172,6 +41636,8 @@
      "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
     "impersonation_warning_cleared":
      "Đã gỡ cảnh báo mạo danh",
+    "impersonation_warning_raised":
+     "Cảnh báo mạo danh do một email sau đó",
     "import_apply_tag":
      "Thêm thẻ",
     "import_close_deal":
@@ -41949,7 +42415,7 @@
     "site":
      "site",
     "size_band":
-     "Số nhân viên",
+     "Quy mô công ty",
     "skip":
      "skip",
     "skip_reason":
@@ -42694,20 +43160,24 @@
      "Công ty trong danh mục",
     "archive_company_type/text/supplier":
      "Nhà cung cấp",
-    "archive_company_type/lifecycle/competitor":
-     "Đối thủ",
     "archive_company_type/lifecycle/customer":
      "Khách hàng",
-    "archive_company_type/lifecycle/investor":
-     "Nhà đầu tư",
-    "archive_company_type/lifecycle/other":
-     "Khác",
-    "archive_company_type/lifecycle/partner":
-     "Đối tác",
-    "archive_company_type/lifecycle/portfolio_company":
-     "Công ty trong danh mục",
-    "archive_company_type/lifecycle/supplier":
-     "Nhà cung cấp",
+    "archive_company_type/lifecycle/disqualified":
+     "Đã loại",
+    "archive_company_type/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "archive_company_type/lifecycle/live":
+     "Đang vận hành",
+    "archive_company_type/lifecycle/onboarding":
+     "Đang triển khai",
+    "archive_company_type/lifecycle/opportunity":
+     "Cơ hội",
+    "archive_company_type/lifecycle/prospect":
+     "Tiềm năng",
+    "archive_company_type/lifecycle/target":
+     "Mục tiêu",
+    "archive_company_type/lifecycle/unknown":
+     "Chưa rõ",
     "archive_company_type/boolean/true":
      "Có",
     "archive_contact_detach_scope/lifecycle/customer":
@@ -44344,10 +44814,24 @@
      "Đã đồng ý",
     "consent_result/text/withdrawn":
      "Đã rút lại",
-    "consent_result/lifecycle/granted":
-     "Đã đồng ý",
-    "consent_result/lifecycle/withdrawn":
-     "Đã rút lại",
+    "consent_result/lifecycle/customer":
+     "Khách hàng",
+    "consent_result/lifecycle/disqualified":
+     "Đã loại",
+    "consent_result/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "consent_result/lifecycle/live":
+     "Đang vận hành",
+    "consent_result/lifecycle/onboarding":
+     "Đang triển khai",
+    "consent_result/lifecycle/opportunity":
+     "Cơ hội",
+    "consent_result/lifecycle/prospect":
+     "Tiềm năng",
+    "consent_result/lifecycle/target":
+     "Mục tiêu",
+    "consent_result/lifecycle/unknown":
+     "Chưa rõ",
     "consent_result/boolean/true":
      "Có",
     "consent_wording/lifecycle/customer":
@@ -44882,12 +45366,24 @@
      "Cá nhân",
     "creation_email_type/text/work":
      "Công việc",
-    "creation_email_type/lifecycle/other":
-     "Khác",
-    "creation_email_type/lifecycle/personal":
-     "Cá nhân",
-    "creation_email_type/lifecycle/work":
-     "Công việc",
+    "creation_email_type/lifecycle/customer":
+     "Khách hàng",
+    "creation_email_type/lifecycle/disqualified":
+     "Đã loại",
+    "creation_email_type/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "creation_email_type/lifecycle/live":
+     "Đang vận hành",
+    "creation_email_type/lifecycle/onboarding":
+     "Đang triển khai",
+    "creation_email_type/lifecycle/opportunity":
+     "Cơ hội",
+    "creation_email_type/lifecycle/prospect":
+     "Tiềm năng",
+    "creation_email_type/lifecycle/target":
+     "Mục tiêu",
+    "creation_email_type/lifecycle/unknown":
+     "Chưa rõ",
     "creation_email_type/boolean/true":
      "Có",
     "creation_existing/lifecycle/customer":
@@ -44918,14 +45414,24 @@
      "Khác",
     "creation_phone_type/text/work":
      "Công việc",
-    "creation_phone_type/lifecycle/home":
-     "Nhà riêng",
-    "creation_phone_type/lifecycle/mobile":
-     "Di động",
-    "creation_phone_type/lifecycle/other":
-     "Khác",
-    "creation_phone_type/lifecycle/work":
-     "Công việc",
+    "creation_phone_type/lifecycle/customer":
+     "Khách hàng",
+    "creation_phone_type/lifecycle/disqualified":
+     "Đã loại",
+    "creation_phone_type/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "creation_phone_type/lifecycle/live":
+     "Đang vận hành",
+    "creation_phone_type/lifecycle/onboarding":
+     "Đang triển khai",
+    "creation_phone_type/lifecycle/opportunity":
+     "Cơ hội",
+    "creation_phone_type/lifecycle/prospect":
+     "Tiềm năng",
+    "creation_phone_type/lifecycle/target":
+     "Mục tiêu",
+    "creation_phone_type/lifecycle/unknown":
+     "Chưa rõ",
     "creation_phone_type/boolean/true":
      "Có",
     "creation_position/lifecycle/customer":
@@ -45052,10 +45558,24 @@
      "Đã đồng ý",
     "creation_source_consent/text/withdrawn":
      "Đã rút lại",
-    "creation_source_consent/lifecycle/granted":
-     "Đã đồng ý",
-    "creation_source_consent/lifecycle/withdrawn":
-     "Đã rút lại",
+    "creation_source_consent/lifecycle/customer":
+     "Khách hàng",
+    "creation_source_consent/lifecycle/disqualified":
+     "Đã loại",
+    "creation_source_consent/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "creation_source_consent/lifecycle/live":
+     "Đang vận hành",
+    "creation_source_consent/lifecycle/onboarding":
+     "Đang triển khai",
+    "creation_source_consent/lifecycle/opportunity":
+     "Cơ hội",
+    "creation_source_consent/lifecycle/prospect":
+     "Tiềm năng",
+    "creation_source_consent/lifecycle/target":
+     "Mục tiêu",
+    "creation_source_consent/lifecycle/unknown":
+     "Chưa rõ",
     "creation_source_consent/boolean/true":
      "Có",
     "creation_source_withheld_activities/lifecycle/customer":
@@ -45744,12 +46264,24 @@
      "Đưa việc thu thập các trang của trang web vào hàng đợi",
     "enrichment_depth/text/technical":
      "Đưa việc tra cứu kỹ thuật công khai của tên miền công ty vào hàng đợi",
-    "enrichment_depth/lifecycle/page":
-     "Đọc một trang và chuẩn bị đề xuất bổ sung thông tin",
-    "enrichment_depth/lifecycle/site":
-     "Đưa việc thu thập các trang của trang web vào hàng đợi",
-    "enrichment_depth/lifecycle/technical":
-     "Đưa việc tra cứu kỹ thuật công khai của tên miền công ty vào hàng đợi",
+    "enrichment_depth/lifecycle/customer":
+     "Khách hàng",
+    "enrichment_depth/lifecycle/disqualified":
+     "Đã loại",
+    "enrichment_depth/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "enrichment_depth/lifecycle/live":
+     "Đang vận hành",
+    "enrichment_depth/lifecycle/onboarding":
+     "Đang triển khai",
+    "enrichment_depth/lifecycle/opportunity":
+     "Cơ hội",
+    "enrichment_depth/lifecycle/prospect":
+     "Tiềm năng",
+    "enrichment_depth/lifecycle/target":
+     "Mục tiêu",
+    "enrichment_depth/lifecycle/unknown":
+     "Chưa rõ",
     "enrichment_depth/boolean/true":
      "Có",
     "execution/lifecycle/customer":
@@ -46371,6 +46903,26 @@
     "impersonation_warning_cleared/lifecycle/unknown":
      "Chưa rõ",
     "impersonation_warning_cleared/boolean/true":
+     "Có",
+    "impersonation_warning_raised/lifecycle/customer":
+     "Khách hàng",
+    "impersonation_warning_raised/lifecycle/disqualified":
+     "Đã loại",
+    "impersonation_warning_raised/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "impersonation_warning_raised/lifecycle/live":
+     "Đang vận hành",
+    "impersonation_warning_raised/lifecycle/onboarding":
+     "Đang triển khai",
+    "impersonation_warning_raised/lifecycle/opportunity":
+     "Cơ hội",
+    "impersonation_warning_raised/lifecycle/prospect":
+     "Tiềm năng",
+    "impersonation_warning_raised/lifecycle/target":
+     "Mục tiêu",
+    "impersonation_warning_raised/lifecycle/unknown":
+     "Chưa rõ",
+    "impersonation_warning_raised/boolean/true":
      "Có",
     "import_apply_tag/lifecycle/customer":
      "Khách hàng",
@@ -47042,16 +47594,24 @@
      "Mới",
     "lead_status/text/promoted":
      "Đủ điều kiện",
-    "lead_status/lifecycle/contacted":
-     "Đã liên hệ",
+    "lead_status/lifecycle/customer":
+     "Khách hàng",
     "lead_status/lifecycle/disqualified":
      "Đã loại",
-    "lead_status/lifecycle/engaged":
-     "Đang trao đổi",
-    "lead_status/lifecycle/new":
-     "Mới",
-    "lead_status/lifecycle/promoted":
-     "Đủ điều kiện",
+    "lead_status/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "lead_status/lifecycle/live":
+     "Đang vận hành",
+    "lead_status/lifecycle/onboarding":
+     "Đang triển khai",
+    "lead_status/lifecycle/opportunity":
+     "Cơ hội",
+    "lead_status/lifecycle/prospect":
+     "Tiềm năng",
+    "lead_status/lifecycle/target":
+     "Mục tiêu",
+    "lead_status/lifecycle/unknown":
+     "Chưa rõ",
     "lead_status/boolean/true":
      "Có",
     "legal_entity_id/lifecycle/customer":
@@ -48726,20 +49286,24 @@
      "Công ty trong danh mục",
     "merge_company_relationship_type/text/supplier":
      "Nhà cung cấp",
-    "merge_company_relationship_type/lifecycle/competitor":
-     "Đối thủ",
     "merge_company_relationship_type/lifecycle/customer":
      "Khách hàng",
-    "merge_company_relationship_type/lifecycle/investor":
-     "Nhà đầu tư",
-    "merge_company_relationship_type/lifecycle/other":
-     "Khác",
-    "merge_company_relationship_type/lifecycle/partner":
-     "Đối tác",
-    "merge_company_relationship_type/lifecycle/portfolio_company":
-     "Công ty trong danh mục",
-    "merge_company_relationship_type/lifecycle/supplier":
-     "Nhà cung cấp",
+    "merge_company_relationship_type/lifecycle/disqualified":
+     "Đã loại",
+    "merge_company_relationship_type/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "merge_company_relationship_type/lifecycle/live":
+     "Đang vận hành",
+    "merge_company_relationship_type/lifecycle/onboarding":
+     "Đang triển khai",
+    "merge_company_relationship_type/lifecycle/opportunity":
+     "Cơ hội",
+    "merge_company_relationship_type/lifecycle/prospect":
+     "Tiềm năng",
+    "merge_company_relationship_type/lifecycle/target":
+     "Mục tiêu",
+    "merge_company_relationship_type/lifecycle/unknown":
+     "Chưa rõ",
     "merge_company_relationship_type/boolean/true":
      "Có",
     "merge_company_triaged_domain/lifecycle/customer":
@@ -49798,14 +50362,24 @@
      "Người nhận",
     "merge_override_authority/text/user":
      "Thành viên nhóm",
-    "merge_override_authority/lifecycle/admin":
-     "Quản trị viên",
-    "merge_override_authority/lifecycle/machine":
-     "Hệ thống tự động",
-    "merge_override_authority/lifecycle/subject":
-     "Người nhận",
-    "merge_override_authority/lifecycle/user":
-     "Thành viên nhóm",
+    "merge_override_authority/lifecycle/customer":
+     "Khách hàng",
+    "merge_override_authority/lifecycle/disqualified":
+     "Đã loại",
+    "merge_override_authority/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "merge_override_authority/lifecycle/live":
+     "Đang vận hành",
+    "merge_override_authority/lifecycle/onboarding":
+     "Đang triển khai",
+    "merge_override_authority/lifecycle/opportunity":
+     "Cơ hội",
+    "merge_override_authority/lifecycle/prospect":
+     "Tiềm năng",
+    "merge_override_authority/lifecycle/target":
+     "Mục tiêu",
+    "merge_override_authority/lifecycle/unknown":
+     "Chưa rõ",
     "merge_override_authority/boolean/true":
      "Có",
     "merge_override_reason/lifecycle/customer":
@@ -49900,18 +50474,24 @@
      "Người chủ trì",
     "merge_participant_role/text/to":
      "Đến",
-    "merge_participant_role/lifecycle/attendee":
-     "Người tham dự",
-    "merge_participant_role/lifecycle/bcc":
-     "Bcc",
-    "merge_participant_role/lifecycle/cc":
-     "Cc",
-    "merge_participant_role/lifecycle/from":
-     "Người gửi",
-    "merge_participant_role/lifecycle/organizer":
-     "Người chủ trì",
-    "merge_participant_role/lifecycle/to":
-     "Đến",
+    "merge_participant_role/lifecycle/customer":
+     "Khách hàng",
+    "merge_participant_role/lifecycle/disqualified":
+     "Đã loại",
+    "merge_participant_role/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "merge_participant_role/lifecycle/live":
+     "Đang vận hành",
+    "merge_participant_role/lifecycle/onboarding":
+     "Đang triển khai",
+    "merge_participant_role/lifecycle/opportunity":
+     "Cơ hội",
+    "merge_participant_role/lifecycle/prospect":
+     "Tiềm năng",
+    "merge_participant_role/lifecycle/target":
+     "Mục tiêu",
+    "merge_participant_role/lifecycle/unknown":
+     "Chưa rõ",
     "merge_participant_role/boolean/true":
      "Có",
     "merge_payment_at/lifecycle/customer":
@@ -50166,6 +50746,8 @@
      "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
     "merge_profile_field/text/impersonation_warning_cleared":
      "Đã gỡ cảnh báo mạo danh",
+    "merge_profile_field/text/impersonation_warning_raised":
+     "Cảnh báo mạo danh do một email sau đó",
     "merge_profile_field/text/industry":
      "Ngành",
     "merge_profile_field/text/invitation_status":
@@ -50317,7 +50899,7 @@
     "merge_profile_field/text/score_override_reason":
      "Lý do chỉnh điểm",
     "merge_profile_field/text/size_band":
-     "Số nhân viên",
+     "Quy mô công ty",
     "merge_profile_field/text/social":
      "Hồ sơ mạng xã hội",
     "merge_profile_field/text/source":
@@ -50530,6 +51112,8 @@
      "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
     "merge_profile_field/lifecycle/impersonation_warning_cleared":
      "Đã gỡ cảnh báo mạo danh",
+    "merge_profile_field/lifecycle/impersonation_warning_raised":
+     "Cảnh báo mạo danh do một email sau đó",
     "merge_profile_field/lifecycle/industry":
      "Ngành",
     "merge_profile_field/lifecycle/invitation_status":
@@ -50681,7 +51265,7 @@
     "merge_profile_field/lifecycle/score_override_reason":
      "Lý do chỉnh điểm",
     "merge_profile_field/lifecycle/size_band":
-     "Số nhân viên",
+     "Quy mô công ty",
     "merge_profile_field/lifecycle/social":
      "Hồ sơ mạng xã hội",
     "merge_profile_field/lifecycle/source":
@@ -50852,24 +51436,24 @@
      "Được giới thiệu từ",
     "merge_relationship_kind/text/works_with":
      "Làm việc cùng",
-    "merge_relationship_kind/lifecycle/billing_contact":
-     "Liên hệ thanh toán",
-    "merge_relationship_kind/lifecycle/co_sell_with":
-     "Bán chung với",
-    "merge_relationship_kind/lifecycle/deal_stakeholder":
-     "Bên liên quan deal",
-    "merge_relationship_kind/lifecycle/employment":
-     "Quan hệ công tác",
-    "merge_relationship_kind/lifecycle/partner_of":
-     "Đối tác của",
-    "merge_relationship_kind/lifecycle/project_company":
-     "Công ty trong dự án",
-    "merge_relationship_kind/lifecycle/project_stakeholder":
-     "Bên liên quan dự án",
-    "merge_relationship_kind/lifecycle/referred_by":
-     "Được giới thiệu từ",
-    "merge_relationship_kind/lifecycle/works_with":
-     "Làm việc cùng",
+    "merge_relationship_kind/lifecycle/customer":
+     "Khách hàng",
+    "merge_relationship_kind/lifecycle/disqualified":
+     "Đã loại",
+    "merge_relationship_kind/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "merge_relationship_kind/lifecycle/live":
+     "Đang vận hành",
+    "merge_relationship_kind/lifecycle/onboarding":
+     "Đang triển khai",
+    "merge_relationship_kind/lifecycle/opportunity":
+     "Cơ hội",
+    "merge_relationship_kind/lifecycle/prospect":
+     "Tiềm năng",
+    "merge_relationship_kind/lifecycle/target":
+     "Mục tiêu",
+    "merge_relationship_kind/lifecycle/unknown":
+     "Chưa rõ",
     "merge_relationship_kind/boolean/true":
      "Có",
     "merge_relationship_primary/lifecycle/customer":
@@ -52180,14 +52764,24 @@
      "Khởi xướng",
     "phase/text/pursuing":
      "Đang theo đuổi",
-    "phase/lifecycle/closed":
-     "Đã đóng",
-    "phase/lifecycle/delivering":
+    "phase/lifecycle/customer":
+     "Khách hàng",
+    "phase/lifecycle/disqualified":
+     "Đã loại",
+    "phase/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "phase/lifecycle/live":
+     "Đang vận hành",
+    "phase/lifecycle/onboarding":
      "Đang triển khai",
-    "phase/lifecycle/initiative":
-     "Khởi xướng",
-    "phase/lifecycle/pursuing":
-     "Đang theo đuổi",
+    "phase/lifecycle/opportunity":
+     "Cơ hội",
+    "phase/lifecycle/prospect":
+     "Tiềm năng",
+    "phase/lifecycle/target":
+     "Mục tiêu",
+    "phase/lifecycle/unknown":
+     "Chưa rõ",
     "phase/boolean/true":
      "Có",
     "phone/lifecycle/customer":
@@ -52392,8 +52986,24 @@
      "Có",
     "promise_strength/text/tentative":
      "Chưa chắc chắn: họ nói sẽ cố gắng",
-    "promise_strength/lifecycle/tentative":
-     "Chưa chắc chắn: họ nói sẽ cố gắng",
+    "promise_strength/lifecycle/customer":
+     "Khách hàng",
+    "promise_strength/lifecycle/disqualified":
+     "Đã loại",
+    "promise_strength/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "promise_strength/lifecycle/live":
+     "Đang vận hành",
+    "promise_strength/lifecycle/onboarding":
+     "Đang triển khai",
+    "promise_strength/lifecycle/opportunity":
+     "Cơ hội",
+    "promise_strength/lifecycle/prospect":
+     "Tiềm năng",
+    "promise_strength/lifecycle/target":
+     "Mục tiêu",
+    "promise_strength/lifecycle/unknown":
+     "Chưa rõ",
     "promise_strength/boolean/true":
      "Có",
     "promote_create_contact/lifecycle/customer":
@@ -52632,22 +53242,24 @@
      "Trao đổi do người nhận bắt đầu",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Lợi ích thiết yếu hoặc an ninh",
-    "promotion_basis_kind/lifecycle/consent":
-     "Sự đồng ý của người nhận",
-    "promotion_basis_kind/lifecycle/contract":
-     "Hợp đồng",
-    "promotion_basis_kind/lifecycle/existing_customer_exception":
-     "Ngoại lệ dành cho khách hàng hiện có",
-    "promotion_basis_kind/lifecycle/legal_obligation":
-     "Nghĩa vụ pháp lý",
-    "promotion_basis_kind/lifecycle/legitimate_interests":
-     "Lợi ích hợp pháp",
-    "promotion_basis_kind/lifecycle/precontract_request":
-     "Yêu cầu trước hợp đồng",
-    "promotion_basis_kind/lifecycle/subject_initiated_correspondence":
-     "Trao đổi do người nhận bắt đầu",
-    "promotion_basis_kind/lifecycle/vital_or_security_interest":
-     "Lợi ích thiết yếu hoặc an ninh",
+    "promotion_basis_kind/lifecycle/customer":
+     "Khách hàng",
+    "promotion_basis_kind/lifecycle/disqualified":
+     "Đã loại",
+    "promotion_basis_kind/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "promotion_basis_kind/lifecycle/live":
+     "Đang vận hành",
+    "promotion_basis_kind/lifecycle/onboarding":
+     "Đang triển khai",
+    "promotion_basis_kind/lifecycle/opportunity":
+     "Cơ hội",
+    "promotion_basis_kind/lifecycle/prospect":
+     "Tiềm năng",
+    "promotion_basis_kind/lifecycle/target":
+     "Mục tiêu",
+    "promotion_basis_kind/lifecycle/unknown":
+     "Chưa rõ",
     "promotion_basis_kind/boolean/true":
      "Có",
     "promotion_basis_until/lifecycle/customer":
@@ -52800,10 +53412,24 @@
      "Đã đồng ý",
     "promotion_consent_before/text/withdrawn":
      "Đã rút lại",
-    "promotion_consent_before/lifecycle/granted":
-     "Đã đồng ý",
-    "promotion_consent_before/lifecycle/withdrawn":
-     "Đã rút lại",
+    "promotion_consent_before/lifecycle/customer":
+     "Khách hàng",
+    "promotion_consent_before/lifecycle/disqualified":
+     "Đã loại",
+    "promotion_consent_before/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "promotion_consent_before/lifecycle/live":
+     "Đang vận hành",
+    "promotion_consent_before/lifecycle/onboarding":
+     "Đang triển khai",
+    "promotion_consent_before/lifecycle/opportunity":
+     "Cơ hội",
+    "promotion_consent_before/lifecycle/prospect":
+     "Tiềm năng",
+    "promotion_consent_before/lifecycle/target":
+     "Mục tiêu",
+    "promotion_consent_before/lifecycle/unknown":
+     "Chưa rõ",
     "promotion_consent_before/boolean/true":
      "Có",
     "promotion_contact_email/lifecycle/customer":
@@ -53300,14 +53926,24 @@
      "Người nhận",
     "promotion_restriction_authority/text/user":
      "Thành viên nhóm",
-    "promotion_restriction_authority/lifecycle/admin":
-     "Quản trị viên",
-    "promotion_restriction_authority/lifecycle/machine":
-     "Hệ thống tự động",
-    "promotion_restriction_authority/lifecycle/subject":
-     "Người nhận",
-    "promotion_restriction_authority/lifecycle/user":
-     "Thành viên nhóm",
+    "promotion_restriction_authority/lifecycle/customer":
+     "Khách hàng",
+    "promotion_restriction_authority/lifecycle/disqualified":
+     "Đã loại",
+    "promotion_restriction_authority/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "promotion_restriction_authority/lifecycle/live":
+     "Đang vận hành",
+    "promotion_restriction_authority/lifecycle/onboarding":
+     "Đang triển khai",
+    "promotion_restriction_authority/lifecycle/opportunity":
+     "Cơ hội",
+    "promotion_restriction_authority/lifecycle/prospect":
+     "Tiềm năng",
+    "promotion_restriction_authority/lifecycle/target":
+     "Mục tiêu",
+    "promotion_restriction_authority/lifecycle/unknown":
+     "Chưa rõ",
     "promotion_restriction_authority/boolean/true":
      "Có",
     "promotion_restriction_purpose/lifecycle/customer":
@@ -54176,10 +54812,24 @@
      "Ngày chính xác",
     "relationship_end_precision/text/month":
      "Chỉ tháng",
-    "relationship_end_precision/lifecycle/day":
-     "Ngày chính xác",
-    "relationship_end_precision/lifecycle/month":
-     "Chỉ tháng",
+    "relationship_end_precision/lifecycle/customer":
+     "Khách hàng",
+    "relationship_end_precision/lifecycle/disqualified":
+     "Đã loại",
+    "relationship_end_precision/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "relationship_end_precision/lifecycle/live":
+     "Đang vận hành",
+    "relationship_end_precision/lifecycle/onboarding":
+     "Đang triển khai",
+    "relationship_end_precision/lifecycle/opportunity":
+     "Cơ hội",
+    "relationship_end_precision/lifecycle/prospect":
+     "Tiềm năng",
+    "relationship_end_precision/lifecycle/target":
+     "Mục tiêu",
+    "relationship_end_precision/lifecycle/unknown":
+     "Chưa rõ",
     "relationship_end_precision/boolean/true":
      "Có",
     "relationship_ended/lifecycle/customer":
@@ -54220,24 +54870,24 @@
      "Được giới thiệu từ",
     "relationship_kind/text/works_with":
      "Làm việc cùng",
-    "relationship_kind/lifecycle/billing_contact":
-     "Liên hệ thanh toán",
-    "relationship_kind/lifecycle/co_sell_with":
-     "Bán chung với",
-    "relationship_kind/lifecycle/deal_stakeholder":
-     "Bên liên quan deal",
-    "relationship_kind/lifecycle/employment":
-     "Quan hệ công tác",
-    "relationship_kind/lifecycle/partner_of":
-     "Đối tác của",
-    "relationship_kind/lifecycle/project_company":
-     "Công ty trong dự án",
-    "relationship_kind/lifecycle/project_stakeholder":
-     "Bên liên quan dự án",
-    "relationship_kind/lifecycle/referred_by":
-     "Được giới thiệu từ",
-    "relationship_kind/lifecycle/works_with":
-     "Làm việc cùng",
+    "relationship_kind/lifecycle/customer":
+     "Khách hàng",
+    "relationship_kind/lifecycle/disqualified":
+     "Đã loại",
+    "relationship_kind/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "relationship_kind/lifecycle/live":
+     "Đang vận hành",
+    "relationship_kind/lifecycle/onboarding":
+     "Đang triển khai",
+    "relationship_kind/lifecycle/opportunity":
+     "Cơ hội",
+    "relationship_kind/lifecycle/prospect":
+     "Tiềm năng",
+    "relationship_kind/lifecycle/target":
+     "Mục tiêu",
+    "relationship_kind/lifecycle/unknown":
+     "Chưa rõ",
     "relationship_kind/boolean/true":
      "Có",
     "relationship_mark/lifecycle/customer":
@@ -54264,10 +54914,24 @@
      "Ngày chính xác",
     "relationship_start_precision/text/month":
      "Chỉ tháng",
-    "relationship_start_precision/lifecycle/day":
-     "Ngày chính xác",
-    "relationship_start_precision/lifecycle/month":
-     "Chỉ tháng",
+    "relationship_start_precision/lifecycle/customer":
+     "Khách hàng",
+    "relationship_start_precision/lifecycle/disqualified":
+     "Đã loại",
+    "relationship_start_precision/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "relationship_start_precision/lifecycle/live":
+     "Đang vận hành",
+    "relationship_start_precision/lifecycle/onboarding":
+     "Đang triển khai",
+    "relationship_start_precision/lifecycle/opportunity":
+     "Cơ hội",
+    "relationship_start_precision/lifecycle/prospect":
+     "Tiềm năng",
+    "relationship_start_precision/lifecycle/target":
+     "Mục tiêu",
+    "relationship_start_precision/lifecycle/unknown":
+     "Chưa rõ",
     "relationship_start_precision/boolean/true":
      "Có",
     "relationship_started/lifecycle/customer":
@@ -54422,18 +55086,24 @@
      "Người chủ trì",
     "relink_participant_role/text/to":
      "Đến",
-    "relink_participant_role/lifecycle/attendee":
-     "Người tham dự",
-    "relink_participant_role/lifecycle/bcc":
-     "Bcc",
-    "relink_participant_role/lifecycle/cc":
-     "Cc",
-    "relink_participant_role/lifecycle/from":
-     "Người gửi",
-    "relink_participant_role/lifecycle/organizer":
-     "Người chủ trì",
-    "relink_participant_role/lifecycle/to":
-     "Đến",
+    "relink_participant_role/lifecycle/customer":
+     "Khách hàng",
+    "relink_participant_role/lifecycle/disqualified":
+     "Đã loại",
+    "relink_participant_role/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "relink_participant_role/lifecycle/live":
+     "Đang vận hành",
+    "relink_participant_role/lifecycle/onboarding":
+     "Đang triển khai",
+    "relink_participant_role/lifecycle/opportunity":
+     "Cơ hội",
+    "relink_participant_role/lifecycle/prospect":
+     "Tiềm năng",
+    "relink_participant_role/lifecycle/target":
+     "Mục tiêu",
+    "relink_participant_role/lifecycle/unknown":
+     "Chưa rõ",
     "relink_participant_role/boolean/true":
      "Có",
     "relink_participant_user/lifecycle/customer":
@@ -55682,12 +56352,24 @@
      "Đang mở",
     "status/text/won":
      "Thắng",
-    "status/lifecycle/lost":
-     "Thua",
-    "status/lifecycle/open":
-     "Đang mở",
-    "status/lifecycle/won":
-     "Thắng",
+    "status/lifecycle/customer":
+     "Khách hàng",
+    "status/lifecycle/disqualified":
+     "Đã loại",
+    "status/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "status/lifecycle/live":
+     "Đang vận hành",
+    "status/lifecycle/onboarding":
+     "Đang triển khai",
+    "status/lifecycle/opportunity":
+     "Cơ hội",
+    "status/lifecycle/prospect":
+     "Tiềm năng",
+    "status/lifecycle/target":
+     "Mục tiêu",
+    "status/lifecycle/unknown":
+     "Chưa rõ",
     "status/boolean/true":
      "Có",
     "stopped/lifecycle/customer":
@@ -56954,16 +57636,24 @@
      "Gia hạn qua email",
     "won_without_contract_reason/text/verbal":
      "Bằng lời, trực tiếp hoặc qua điện thoại",
-    "won_without_contract_reason/lifecycle/imported":
-     "Chưa ghi nhận (dữ liệu nhập)",
-    "won_without_contract_reason/lifecycle/other":
-     "Khác",
-    "won_without_contract_reason/lifecycle/purchase_order":
-     "Theo đơn đặt hàng",
-    "won_without_contract_reason/lifecycle/renewal_by_email":
-     "Gia hạn qua email",
-    "won_without_contract_reason/lifecycle/verbal":
-     "Bằng lời, trực tiếp hoặc qua điện thoại",
+    "won_without_contract_reason/lifecycle/customer":
+     "Khách hàng",
+    "won_without_contract_reason/lifecycle/disqualified":
+     "Đã loại",
+    "won_without_contract_reason/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "won_without_contract_reason/lifecycle/live":
+     "Đang vận hành",
+    "won_without_contract_reason/lifecycle/onboarding":
+     "Đang triển khai",
+    "won_without_contract_reason/lifecycle/opportunity":
+     "Cơ hội",
+    "won_without_contract_reason/lifecycle/prospect":
+     "Tiềm năng",
+    "won_without_contract_reason/lifecycle/target":
+     "Mục tiêu",
+    "won_without_contract_reason/lifecycle/unknown":
+     "Chưa rõ",
     "won_without_contract_reason/boolean/true":
      "Có",
     "write/lifecycle/customer":
@@ -58257,6 +58947,12 @@
     "impersonation_warning_cleared/empty":
      "Chưa đặt",
     "impersonation_warning_cleared/execution":
+     "Được xác định khi áp dụng",
+    "impersonation_warning_raised/boolean":
+     "Không",
+    "impersonation_warning_raised/empty":
+     "Chưa đặt",
+    "impersonation_warning_raised/execution":
      "Được xác định khi áp dụng",
     "import_apply_tag/boolean":
      "Không",

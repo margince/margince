@@ -165,6 +165,22 @@ type Runtime interface {
 	// ended at, or empty when the unit has saved none.
 	IngestPosition(ctx context.Context, system SourceName) (BatchPosition, error)
 
+	// IngestMemberBatch is IngestBatch for a member-owned source, where each
+	// member has a place of their own. It lands the records on the member's
+	// authority, then saves the member's position if the saved version is still
+	// the expected one. A writer that read an older version gets
+	// ErrPositionConflict and must read MemberIngestPosition again.
+	//
+	// expected is the Version MemberIngestPosition answered, 0 when the member
+	// has saved nothing. As in IngestBatch, a failed record ends the batch, the
+	// results so far come back with the error and the position does not move.
+	IngestMemberBatch(ctx context.Context, on UserID, system SourceName, recs []Record, position BatchPosition, expected PositionVersion) (MemberBatchResult, error)
+
+	// MemberIngestPosition answers the member's saved position for a source,
+	// the zero MemberPosition when none is saved. Two members of one source never
+	// see each other's.
+	MemberIngestPosition(ctx context.Context, on UserID, system SourceName) (MemberPosition, error)
+
 	// SyncNow asks this unit's own declared job to run soon for the calling
 	// workspace, and answers when it is QUEUED rather than when it has run.
 	// See syncnow.go for what it promises and what it cannot do.
@@ -180,8 +196,9 @@ type Runtime interface {
 	// OAuthApps. It does not revoke the grant at the vendor.
 	OAuthDisconnect(ctx context.Context, provider OAuthProvider) error
 
-	// AI runs this unit's declared AI tasks through the core's AI path. See AI.
-	AI() AI
+	// Knowledge files documents in the unit's own corpus; see knowledge.go. It
+	// answers ErrNoKnowledge for a unit the core keeps no corpus for.
+	Knowledge() Knowledge
 
 	// Deals, Authority, Directory, Activities, SetAside, Companies and MailContent are system reads for a job tick
 	// or a bus delivery, and answer ErrAttendedRead anywhere else. See

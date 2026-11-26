@@ -158,6 +158,12 @@ Set up on your own computer; no admin and no passport are needed.
   `~/.gemini/config/mcp_config.json`. Then open its agent settings, "Customizations", and
   choose "Authenticate" next to margince. Guide:
   https://antigravity.google/docs/mcp
+<!-- connect: lumo -->
+- **Lumo (Proton).** Use the Lumo desktop app, not the website, which cannot add a custom MCP
+  server yet. Open "Settings", "Desktop app", "Connectors" and "Add MCP server…", set "Transport"
+  to "Remote (HTTP)", enter `margince` as the ID and `Margince` as the Display name, paste
+  `{{.MCPURL}}` and choose "Add server". Sign in to Margince when Lumo asks. Download:
+  https://proton.me/lumo/download
 {{else}}
 This Margince does not accept AI tool connections yet. Ask an administrator or operations user
 to turn them on. Until then, use a passport as the next section says.

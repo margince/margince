@@ -50,7 +50,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -126,7 +125,9 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		// The origin the Origin guard admits is the one the app is served from.
 		// Record links and the connector's icon point at it.
 		agents.WithPublicOrigin(s.mcpAllowedOrigin),
-		agents.WithInputStateKey(s.mcpInputStateKey),
+		agents.WithInputStateKey(s.mcpDoor.inputStateKey),
+		agents.WithReplayGuard(s.mcpDoor.replayGuard),
+		agents.WithCallLog(s.mcpDoor.callLog),
 		// The Tasks extension, which is why a confirm-first call no longer dead-ends
 		// for a client that can hold a handle. The store is composed here for the
 		// same reason the claim store is: agent_task rows are this transport's own
@@ -172,7 +173,9 @@ func mcpAuthenticate(auth *identity.Service) func(*http.Request) (context.Contex
 			}
 			return nil, err
 		}
-		return principal.WithCorrelationID(principal.WithActor(ctx, agent.Principal()), ids.NewV7()), nil
+		// The request keeps the chassis's correlation id, the one its answer's
+		// X-Correlation-ID header names, so its audit rows can be found from it.
+		return principal.WithActor(ctx, agent.Principal()), nil
 	}
 }
 
@@ -192,7 +195,8 @@ func mcpPaceAfterAuth(
 			return ctx, err
 		}
 		if !calls.Allow(dispactapp.PaceKey(ctx, passportBucket(r))) {
-			return nil, mcpPacingRefusal{bucket: calls}
+			// The caller is known; the door names it in the refusal it records.
+			return ctx, mcpPacingRefusal{bucket: calls}
 		}
 		return ctx, nil
 	}

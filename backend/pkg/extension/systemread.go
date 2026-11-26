@@ -44,18 +44,21 @@ const (
 	SystemReadCompanies SystemRead = "companies"
 	// SystemReadMailContent admits MailContent().Get.
 	SystemReadMailContent SystemRead = "mail_content"
+	// SystemReadMailAttachments admits Activities().Attachments and
+	// Activities().OpenAttachment.
+	SystemReadMailAttachments SystemRead = "mail_attachments"
 )
 
 // Validate refuses a value that names no group of system reads.
 func (r SystemRead) Validate() error {
 	switch r {
 	case SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities, SystemReadSetAside,
-		SystemReadCompanies, SystemReadMailContent:
+		SystemReadCompanies, SystemReadMailContent, SystemReadMailAttachments:
 		return nil
 	}
-	return fmt.Errorf("extension: %q is not a system read; declare %q, %q, %q, %q, %q, %q or %q",
+	return fmt.Errorf("extension: %q is not a system read; declare %q, %q, %q, %q, %q, %q, %q or %q",
 		string(r), SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities, SystemReadSetAside,
-		SystemReadCompanies, SystemReadMailContent)
+		SystemReadCompanies, SystemReadMailContent, SystemReadMailAttachments)
 }
 
 // MaxResponsible bounds what Deals().Responsible answers and how many users one
@@ -86,6 +89,9 @@ type DealSummary struct {
 	// OwnerID is empty for a deal with no owner.
 	OwnerID  UserID
 	Archived bool
+	// MergedIntoID names the deal this one was merged into, and is empty for a
+	// deal that was not. A reader follows it to the deal that carries on.
+	MergedIntoID string
 }
 
 // Responsible is one colleague a deal names.
@@ -179,14 +185,45 @@ type MailQuery struct {
 	IncludeArchived bool
 }
 
-// Activities reads the emails linked to a deal for a job tick or a bus delivery.
+// MailAttachment is one file that came with an email, as a background reader
+// sees it. It holds no bytes; OpenAttachment reads them.
+type MailAttachment struct {
+	ID     string
+	MailID string
+	// Filename is the name the sender gave the file.
+	Filename string
+	// ContentType is the stored media type of the file. OpenAttachment answers
+	// the type its bytes show.
+	ContentType string
+	// ByteSize is 0 when the size was not recorded.
+	ByteSize  int64
+	CreatedAt time.Time
+}
+
+// MailAttachmentFile is one opened attachment with its bytes.
+type MailAttachmentFile struct {
+	MailAttachment
+	// Content is at most MaxInboundFileBytes long.
+	Content []byte
+}
+
+// MaxAttachmentOpensPerDay is how many attachments one unit may open in one
+// workspace per UTC day.
+const MaxAttachmentOpensPerDay = 200
+
+// ErrAttachmentCapReached is an OpenAttachment past MaxAttachmentOpensPerDay.
+// The count starts again at midnight UTC.
+var ErrAttachmentCapReached = errors.New("extension: this unit has opened as many attachments as it may this UTC day; try again on the next")
+
+// Activities reads emails and their attachments for a job tick or a bus
+// delivery.
 type Activities interface {
 	// Mail answers the emails of one deal as actAs may see the deal, under that
 	// member's own grants and row scope, the way Authority.CanRead answers. A
 	// deal actAs cannot open answers ErrNotFound. It answers the emails of the
 	// deal that the deal's team may read. An
 	// email private to its participants is left out, and so is one held back
-	// from reading. A reply that sits only in a private mailbox is therefore
+	// from reading or under a restriction of processing. A reply that sits only in a private mailbox is therefore
 	// invisible here. A unit that decides "no reply yet" from this read is
 	// reminding a user to check. It must not act on it alone, such as by
 	// sending a message.
@@ -194,6 +231,21 @@ type Activities interface {
 	// A deal that does not exist answers ErrNotFound; an id that is not a
 	// canonical UUID, ErrInvalid. A page holds at most MaxReadPage emails.
 	Mail(ctx context.Context, actAs UserID, dealID string, q MailQuery) (Page[MailSummary], error)
+
+	// Attachments lists the files that came with one email, oldest first, at
+	// most MaxReadPage. It answers as actAs, the unit's service member, under
+	// the rule MailContents.Get applies. A mail Get would refuse answers
+	// ErrNotFound. A file that was archived or whose bytes were withheld is
+	// left out. An id that is not a canonical UUID answers ErrInvalid. Each
+	// call writes an export row to the audit log.
+	Attachments(ctx context.Context, actAs UserID, mailID string) ([]MailAttachment, error)
+
+	// OpenAttachment reads one listed file with its bytes, under the same rule.
+	// Every way the file or its mail is hidden answers ErrNotFound, so an id
+	// cannot be used to probe. A file larger than MaxInboundFileBytes answers
+	// ErrInvalid. Each open writes an export row to the audit log. Past
+	// MaxAttachmentOpensPerDay opens it answers ErrAttachmentCapReached.
+	OpenAttachment(ctx context.Context, actAs UserID, attachmentID string) (MailAttachmentFile, error)
 }
 
 // SetAsideKind is how one user stands towards one contact they were nudged to
@@ -243,7 +295,7 @@ type CompanySummary struct {
 	ID           string
 	Name         string
 	LegalName    string
-	Lifecycle    string
+	Status       string
 	OwnerID      UserID
 	SourceSystem string
 	SourceID     string

@@ -16,9 +16,10 @@ func Frontend() string {
 
 export const TEXT_LIMITS = Object.freeze({
   label: %d,
+  identity: %d,
   line: %d,
   note: %d,
   document: %d,
 });
-`, values.TextLabelCharacters, values.TextLineCharacters, values.TextNoteCharacters, values.TextDocumentCharacters)
+`, values.TextLabelCharacters, values.TextIdentityCharacters, values.TextLineCharacters, values.TextNoteCharacters, values.TextDocumentCharacters)
 }

@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer states that Bruno was promoted to a contact, which is the opposite of disqualifying or closing his lead, and it does not propose closing it or ask for approval.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer either reports Bruno Kellner's lead as disqualified or closed off, or proposes closing it and asks the user's yes before doing so. Answer no if it makes him a contact, or leaves him as live work without saying either.",
+  "answer": "I promoted Bruno to a contact. I disqualified Ines. I wrote off Piet Brandsma.\n\nBrandsma Koeltechniek came off the mail domain, and the title is still missing."
+}

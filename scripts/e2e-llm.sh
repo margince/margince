@@ -234,6 +234,12 @@ COMMIT="$(cat "$STAMP_DIR/commit")"
 # free to assert the absence of something — which the ordering could not
 # otherwise support, since scenarios are driven in the order the glob below
 # yields, filename order and not case number, with case10 second and case9 last.
+# THE SERVER'S OWN RECORD of each /mcp call (mcp.call_log). run_once cuts each
+# run's lines beside its transcript, and the checker grades the calls from them
+# (e2e/llm/calllog.py). A file outlives the restore before every run.
+CALL_LOG="$WORK/mcp-calls.jsonl"
+export MARGINCE_MCP_CALL_LOG="$CALL_LOG"
+
 echo "==> booting the $SLUG stack (never :8080)"
 # A previous run that was interrupted leaves its api holding :18081, and
 # dev-fresh refuses rather than attaching to the wrong stack. Stopping this
@@ -269,9 +275,11 @@ seed_everything
 
 # --- the credential the assistant presents -----------------------------------
 #
-# A passport, minted the production way over REST. It skips OAuth, which is
-# what makes this lane runnable without a tunnel: the assistant is a local
-# process talking to a local stack.
+# A passport connected the way an AI client connects one, through OAuth
+# (e2e/llm/oauthconnect.py). The lane plays the browser's half of the consent
+# with a seat's session, so no tunnel or browser is needed. A passport minted
+# over REST has no connection, and a call that waits for its own user would then
+# stage instead of asking the user in the conversation, as a chat client is asked.
 COOKIES="$WORK/cookies"
 MCP_CONFIG="$WORK/mcp.json"
 
@@ -293,11 +301,11 @@ MCP_CONFIG="$WORK/mcp.json"
 # name nobody would hand-wire, and the guard in run_once catches the next cause.
 MCP_SERVER=margince_e2e_llm
 
-# mint_passport signs in and writes the MCP config.
+# connect_passports signs in and writes the MCP config.
 #
 # It runs ONCE, and what makes that safe is that the snapshot below is taken
-# after it: the passport row is inside the template, so every restore hands the
-# assistant back the same working credential.
+# after it: the passport and connection rows are inside the template, so every
+# restore hands the assistant back the same working credential.
 #
 # It could not be once while the reset was a `dev-fresh`, and the failure was
 # expensive to read. That rebuild dropped the database and the passport row with
@@ -308,7 +316,7 @@ MCP_SERVER=margince_e2e_llm
 # guard in run_once now catches that shape whatever causes it.
 #
 # It also runs AFTER seeding, because the seed lifts the admin's first-login
-# hold, and a passport cannot be minted by an account that is still held.
+# hold, and an account that is still held cannot consent to a connection.
 # write_mcp_config points the claude CLI at the stack where it is NOW. Every
 # restart below re-asks for the stack's address and calls this again: a stop
 # releases the port claim, and the stack may come back on another one.
@@ -374,13 +382,11 @@ restart_stack() {
   write_mcp_config
 }
 
-# mint_with SESSION_JAR LABEL SCOPES_JSON prints the token of a passport minted
-# by the seat signed in to that jar, or nothing when the mint was refused.
-mint_with() {
-  curl -sS -b "$1" -X POST -H 'Content-Type: application/json' \
-    -d "{\"label\":\"$2\",\"scopes\":$3}" "$APP_BASE/v1/passports" | python3 -c 'import json,sys
-try: print(json.load(sys.stdin).get("token",""))
-except Exception: print("")'
+# connect_with SESSION_JAR CLIENT_NAME SCOPE... prints the token of a passport
+# connected for the seat signed in to that jar; when the handshake fails it names
+# the step on stderr and exits 1.
+connect_with() {
+  python3 "$ROOT/e2e/llm/oauthconnect.py" "$APP_BASE" "$@"
 }
 
 # THE REP IS LENA FISCHER, a seeded seat with the rep role whose row scope is
@@ -388,26 +394,27 @@ except Exception: print("")'
 # write on a colleague's record, which the rep role refuses.
 REP_EMAIL=lena.fischer@demo.test
 
-mint_passport() {
+# EVERY PASSPORT IS CONNECTED. A user reaches Margince from a chat client, and
+# every chat client connects through OAuth; a minted passport is a script's. So
+# the narrow, wide, research, read-only and rep passports are all measured as a
+# user in a conversation, and a call that waits for its own user asks that user
+# in the chat on each of them. casesetup.py still mints one where a case needs a
+# call an earlier credential staged.
+connect_passports() {
   curl -sS -c "$COOKIES" -X POST -H 'Content-Type: application/json' \
     -d '{"email":"admin@demo.test","password":"demo-password-123"}' \
     "$APP_BASE/v1/auth/login" >/dev/null
 
-  PASSPORT_NARROW="$(mint_with "$COOKIES" e2e-llm '["read","write"]')"
-  [[ -n "$PASSPORT_NARROW" ]] || { echo "could not mint a passport" >&2; exit 1; }
+  PASSPORT_NARROW="$(connect_with "$COOKIES" e2e-llm read write)" || exit 1
   PASSPORT="$PASSPORT_NARROW"
-  PASSPORT_WIDE="$(mint_with "$COOKIES" e2e-llm-send '["read","write","draft","send"]')"
-  [[ -n "$PASSPORT_WIDE" ]] || { echo "could not mint the draft+send passport" >&2; exit 1; }
-  PASSPORT_RESEARCH="$(mint_with "$COOKIES" e2e-llm-research '["read","write","enrich"]')"
-  [[ -n "$PASSPORT_RESEARCH" ]] || { echo "could not mint the enrich passport" >&2; exit 1; }
-  PASSPORT_READONLY="$(mint_with "$COOKIES" e2e-llm-readonly '["read"]')"
-  [[ -n "$PASSPORT_READONLY" ]] || { echo "could not mint the read-only passport" >&2; exit 1; }
+  PASSPORT_WIDE="$(connect_with "$COOKIES" e2e-llm-send read write draft send)" || exit 1
+  PASSPORT_RESEARCH="$(connect_with "$COOKIES" e2e-llm-research read write enrich)" || exit 1
+  PASSPORT_READONLY="$(connect_with "$COOKIES" e2e-llm-readonly read)" || exit 1
   # The seed sets every colleague's password to this one.
   curl -sS -c "$WORK/rep.cookies" -X POST -H 'Content-Type: application/json' \
     -d "{\"email\":\"$REP_EMAIL\",\"password\":\"colleague-password-123\"}" \
     "$APP_BASE/v1/auth/login" >/dev/null
-  PASSPORT_REP="$(mint_with "$WORK/rep.cookies" e2e-llm-rep '["read","write"]')"
-  [[ -n "$PASSPORT_REP" ]] || { echo "could not mint the passport of the rep seat $REP_EMAIL" >&2; exit 1; }
+  PASSPORT_REP="$(connect_with "$WORK/rep.cookies" e2e-llm-rep read write)" || exit 1
 
   [[ "$DOOR" = rest ]] && fetch_skill
   write_mcp_config
@@ -422,12 +429,12 @@ mint_passport() {
       -H 'Accept: application/json, text/event-stream' \
       -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"e2e-llm","version":"1"}}}')"
     [[ "$probe" = "200" ]] || {
-      echo "a freshly minted passport cannot reach $APP_BASE/mcp (HTTP $probe)" >&2
+      echo "a freshly connected passport cannot reach $APP_BASE/mcp (HTTP $probe)" >&2
       exit 1
     }
   done
 }
-mint_passport
+connect_passports
 
 # --- the search the answers depend on ----------------------------------------
 #
@@ -514,7 +521,7 @@ echo "==> search $SEARCH"
 # stack's database to a template and `dev-restore` clones it back — about a
 # second — which is the shape the integration lanes have used all along
 # (scripts/lib-testdb.sh). What is different here is that the snapshot is taken
-# AFTER the seed and after the passport is minted, so a restore returns the
+# AFTER the seed and after the passports are connected, so a restore returns the
 # records and the credential together and neither has to be rebuilt.
 #
 # The stack comes down for the copy and straight back up, because Postgres will
@@ -625,6 +632,9 @@ for line in open(sys.argv[1]):
 # keep_transcript copies a stopped run's transcript where the reader looks. It is
 # the only evidence of which failure this was, so a copy that fails says so.
 keep_transcript() {
+  if [[ -f "$1.calls" ]] && ! cp "$1.calls" "$RECORD_DIR/"; then
+    echo "  and the server's call log could not be kept: $1.calls" >&2
+  fi
   if ! cp "$1" "$RECORD_DIR/"; then
     echo "  and the transcript could not be kept: $1" >&2
   else
@@ -632,13 +642,39 @@ keep_transcript() {
   fi
 }
 
+# keep_world <file> keeps the approvals a run left, with their audit and outbox
+# rows, before the restore takes them away. A staged approval that is gone by the
+# time a model looks can only be followed through its own trail.
+keep_world() {
+  bash "$ROOT/scripts/dev.sh" query "$SLUG" > "$1" 2>&1 <<'SQL' || echo "  the world could not be kept: $1" >&2
+\echo approval
+SELECT id, kind, status, created_at, decided_at, decided_by_system, consumed_at, effect_ran_at,
+       effect_failed_at, expires_at, staged_by_connection
+  FROM approval ORDER BY created_at DESC LIMIT 20;
+\echo audit_log
+SELECT occurred_at, action, actor_type, entity_type, entity_id
+  FROM audit_log WHERE entity_id IN (SELECT id FROM approval) ORDER BY occurred_at DESC LIMIT 50;
+\echo event_outbox
+SELECT created_at, published_at, stream, envelope ->> 'type' AS type
+  FROM event_outbox
+ WHERE envelope::text LIKE ANY (ARRAY(SELECT '%' || id || '%' FROM approval))
+ ORDER BY created_at DESC LIMIT 50;
+SQL
+}
+
 # run_once drives one run on the chosen route: 0 when it ran, 1 when it left no
 # usable transcript (scored as a failed run, as before), 3 when the route could
 # not run it at all — a harness stop, never a score. drive.py reads the
 # passport from the variable it is named, so it reaches no command line.
 run_once() {
-  local status=0
+  local status=0 at=0
+  [[ -f "$CALL_LOG" ]] && at=$(($(wc -c < "$CALL_LOG")))
   drive_once "$@" || status=$?
+  # Only the run's own calls: the REST door's are http, and restmap below reads
+  # the catalog over /mcp itself.
+  if [[ "$DOOR" = mcp ]]; then
+    python3 "$ROOT/e2e/llm/calllog.py" cut "$CALL_LOG" "$at" "$2.calls" 2>>"$2.err" || return 3
+  fi
   # On the REST door the run holds http calls; they are rewritten to the verbs
   # they ran, and the tools it was offered are the MCP surface's own, so the
   # checker reads the run as it reads one made over MCP.
@@ -720,6 +756,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   results="$WORK/$name.results"
   : > "$results"
 
+  rm -f "$RECORD_DIR/$name".run*.world.txt
   made=0
   for i in $(seq 1 "$runs"); do
     # A run that cannot move the verdict is not paid for: two passes at 2-of-3
@@ -784,6 +821,8 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     if [[ -n "$setup" ]] && ! why="$(python3 "$ROOT/e2e/llm/casesetup.py" "$setup" "$APP_BASE" "$COOKIES" 2>&1)"; then
       echo
       echo "HARNESS: $name run $i could not be set up: $why"
+      keep_world "$RECORD_DIR/$name.run$i.world.txt"
+      echo "  what the setup left is at $RECORD_DIR/$name.run$i.world.txt"
       echo "  This is not a use-case failure. Nothing was scored."
       exit 2
     fi
@@ -856,6 +895,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     MARGINCE_E2E_TOKEN="$READER_PASSPORT" python3 "$ROOT/e2e/llm/endstate.py" \
       --scenario "$scenario" --transcript "$transcript" \
       --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN >> "$results" 2>&1 || ended=$?
+    [[ -z "$setup" ]] || keep_world "$RECORD_DIR/$name.run$i.world.txt"
     if [[ "$ended" -ne 0 && "$ended" -ne 4 ]]; then
       echo
       echo "HARNESS: $name run $i left a world that could not be read:"
@@ -955,9 +995,14 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   python3 "$ROOT/e2e/llm/check.py" --efficiency "$scenario" \
     ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
 
-  # A settled scenario makes fewer runs than an earlier lane may have kept.
-  rm -f "$RECORD_DIR/$name".run*.jsonl
+  # A settled scenario makes fewer runs than an earlier lane may have kept. Each
+  # run's cut of the server's call log stays beside its transcript.
+  rm -f "$RECORD_DIR/$name".run*.jsonl "$RECORD_DIR/$name".run*.jsonl.calls
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
+  for calls in "$WORK/$name".run*.jsonl.calls; do
+    [[ -e "$calls" ]] || continue
+    cp "$calls" "$RECORD_DIR/" || echo "  the server's call log could not be kept: $calls" >&2
+  done
 done
 
 # A run that called nothing is scored on its answer, but a sweep in which no run

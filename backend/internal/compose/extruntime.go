@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/extai"
 	"github.com/margince/margince/backend/internal/compose/extcapability"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -77,6 +77,8 @@ type extensionRuntimeBinding struct {
 	// BindExtensionModels and BindExtensionObjects; nil, the capability refuses by name.
 	models func(ai.Task) completer
 	blob   blobstore.Store
+	// now is the clock a time-bound read asks; nil means the wall clock.
+	now func() time.Time
 }
 
 // BindExtensionCapture records the capture pipeline a unit's ingress lands
@@ -116,11 +118,6 @@ func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 	}
 	// Only its own two fields: the other dependencies are bound by their own calls.
 	extensionRuntimeDeps.pool, extensionRuntimeDeps.vault = pool, vault
-}
-
-// AI is the unit's AI port for this call, guarded by this Runtime's lifetime.
-func (r *callRuntime) AI() extension.AI { //nolint:ireturn // the published port, as Secrets.
-	return extai.Port{Scope: r.scoped, Unit: r.unit, Declared: ComposedExtensions, Pool: r.deps.pool, PDF: processPDFReader, MaxDocumentBytes: maxDocumentBytes, MaxInputChars: maxDocumentTextChars}
 }
 
 // boundExtensionRuntime reads the binding. Read per CALL rather than

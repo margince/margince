@@ -4,8 +4,12 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Rule } from "../../scripts/lib/css-rules";
+import { darkOnlyWash } from "../../scripts/lib/surface-sheets";
+import { themes } from "../../src/design-system/tokens-testing";
 import { type Area, plantedFindings, srcDir } from "../tree";
 import { floatingLayers, rule, seeThrough } from "./floatinglayers.census";
+
+const darkWash = darkOnlyWash(themes.light, themes.dark);
 
 const probe = (selector: string, body: string): Rule => ({
   file: "probe.css",
@@ -31,14 +35,14 @@ describe("a layer that hangs over the page hides it", () => {
     expect(
       seeThrough([
         probe(":where(.bar)", "background-color: var(--bgPage)"),
-        probe(".bar", "background-color: var(--pane)"),
+        probe(".bar", `background-color: var(${darkWash})`),
         probe(".bar.open", "position: fixed; box-shadow: var(--shadow-pop)"),
         probe(".bar.open", "position: static; background: transparent"),
         probe(".orb", "position: absolute; box-shadow: var(--shadow-pop)"),
         probe(".orb", "background: radial-gradient(red, blue), var(--bgPage)"),
         probe(".bare", "position: fixed; box-shadow: var(--shadow-pop)"),
       ]),
-    ).toEqual([".bar.open: var(--pane) in dark", ".bare: no ground"]);
+    ).toEqual([`.bar.open: var(${darkWash}) in dark`, ".bare: no ground"]);
   });
 
   it("reports a planted see-through layer through its own corpus", () => {

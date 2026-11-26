@@ -49,9 +49,13 @@ var mergePathFiles = []string{
 	"internal/modules/contacts/merge_company.go",
 	"internal/modules/contacts/merge.go",
 	"internal/modules/contacts/mergecompanyedges.go",
-	"internal/modules/contacts/mergekindid.go",
+	"internal/platform/recordmerge/kindid.go",
+	"internal/platform/recordmerge/links.go",
+	"internal/platform/recordmerge/pair.go",
 	"internal/modules/contacts/company_relationship_types.go",
 	"internal/modules/identity/grantmerge.go",
+	"internal/platform/generatedsummary/recordends.go",
+	"internal/modules/signals/mergecarry.go",
 }
 
 // companyFKsTheMergeLeaves are the company-pointing columns the merge
@@ -131,7 +135,30 @@ var concatenatedColumn = regexp.MustCompile(`SET\s+` + "`" + `\s*\+\s*[a-z]`)
 func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
 	defer companyFKsTheMergeLeaves.AssertAllMatched(t)
 
-	written := tablesTheMergeWrites(t)
+	assertEveryForeignKeyJoinsTheMerge(t, mergeCensus{
+		table: "company", floor: theCompanyFKFloor, leaves: companyFKsTheMergeLeaves,
+		written: tablesTheMergeWrites(t, mergePathFiles, reach.Company),
+		moveIn:  "internal/modules/contacts/mergerelink_company.go", leavesName: "companyFKsTheMergeLeaves",
+	})
+}
+
+// mergeCensus is what the foreign-key census needs to know about one merge. It
+// names the table the keys point at, the statements that move them, and where
+// a missing move would be added.
+type mergeCensus struct {
+	table      string
+	floor      int
+	leaves     *gatekit.Waivers[string]
+	written    map[string]bool
+	moveIn     string
+	leavesName string
+}
+
+// assertEveryForeignKeyJoinsTheMerge fails for each foreign key on c.table that
+// the merge neither moves nor declares, and when it reads fewer keys than c.floor.
+func assertEveryForeignKeyJoinsTheMerge(t *testing.T, c mergeCensus) {
+	t.Helper()
+	written := c.written
 	// A source scan that found nothing would waive the whole census by
 	// accident: every column would read as unmoved, the waiver map would not
 	// cover them, and the failures would look like a merge defect rather than
@@ -159,9 +186,9 @@ func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
 		JOIN unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord) ON true
 		JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
 		WHERE c.contype = 'f'
-		  AND c.confrelid::regclass::text = 'company'
+		  AND c.confrelid::regclass::text = $1
 		  AND a.attname <> 'workspace_id'
-		ORDER BY 1, 2`)
+		ORDER BY 1, 2`, c.table)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,24 +208,23 @@ func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
 		// Asked only once the column is already an offender: a waiver checked
 		// before that would decay into a standing permission over every future
 		// column in the same table.
-		if companyFKsTheMergeLeaves.Waived(t, table+"."+column) {
+		if c.leaves.Waived(t, table+"."+column) {
 			continue
 		}
-		t.Errorf("%s.%s points at company and the merge never writes %s.\n"+
-			"A company merge retires one record into another, so every row naming the retired "+
+		t.Errorf("%s.%s points at %s and the merge never writes %s.\n"+
+			"A merge retires one record into another, so every row naming the retired "+
 			"one has to move, be dropped, or be declared. Left alone it points at a record no "+
 			"read returns — nothing errors and the data is simply gone from the survivor's view, "+
-			"until a hard delete of the archived company takes it for real. Move it in "+
-			"internal/modules/contacts/mergerelink_company.go, or declare it in "+
-			"companyFKsTheMergeLeaves with what moving it would cost.", table, column, table)
+			"until a hard delete of the archived record takes it for real. Move it in "+
+			"%s, or declare it in %s with what moving it would cost.", table, column, c.table, table, c.moveIn, c.leavesName)
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	if seen < theCompanyFKFloor {
-		t.Errorf("the census found %d company foreign keys, fewer than the %d floor: it is reading "+
+	if seen < c.floor {
+		t.Errorf("the census found %d %s foreign keys, fewer than the %d floor: it is reading "+
 			"a smaller schema than it thinks, and an under-counting census reports PASS over the "+
-			"very columns it failed to look at", seen, theCompanyFKFloor)
+			"very columns it failed to look at", seen, c.table, c.floor)
 	}
 }
 
@@ -221,10 +247,10 @@ func movesAGenerator(written map[string]bool, table string, generatedFrom []stri
 // census and it was too weak in the direction that matters: a relink reduced to
 // its DELETE still mentioned the table, so the census certified a merge that
 // destroyed the rows instead of moving them.
-func tablesTheMergeWrites(t *testing.T) map[string]bool {
+func tablesTheMergeWrites(t *testing.T, files []string, kind reach.Record) map[string]bool {
 	t.Helper()
 	written := map[string]bool{}
-	for _, rel := range mergePathFiles {
+	for _, rel := range files {
 		path := filepath.Join("../../..", rel)
 		body, err := os.ReadFile(path)
 		if err != nil {
@@ -247,12 +273,12 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 			// table it names — that being the only company column such a
 			// statement is ever given.
 			if concatenatedColumn.MatchString(stmt) {
-				written[table+".company_id"] = true
+				written[table+"."+string(kind)+"_id"] = true
 			}
 		}
 		// moveDedupeCandidates renders its columns from dedupePairSides, so its
 		// call on the company side is what moves the pair's two company ends.
-		if movesCompanyPairs.MatchString(string(body)) {
+		if kind == reach.Company && movesCompanyPairs.MatchString(string(body)) {
 			written["dedupe_candidate.left_company_id"] = true
 			written["dedupe_candidate.right_company_id"] = true
 		}
@@ -262,18 +288,18 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 			}
 		}
 	}
-	for column := range declaredCompanyLinks(t) {
+	for column := range declaredLinks(t, kind) {
 		written[column] = true
 	}
 	return written
 }
 
-// declaredCompanyLinks returns the "table.column" pairs core modules declare
+// declaredLinks returns the "table.column" pairs core modules declare
 // for the merge to move (sweepreach). They count only while the merge path
 // still calls the registry, so dropping that call fails here too.
-func declaredCompanyLinks(t *testing.T) map[string]bool {
+func declaredLinks(t *testing.T, kind reach.Record) map[string]bool {
 	t.Helper()
-	body, err := os.ReadFile(filepath.Join("../../..", "internal/modules/contacts/mergekindid.go"))
+	body, err := os.ReadFile(filepath.Join("../../..", "internal/platform/recordmerge/kindid.go"))
 	if err != nil {
 		t.Fatalf("reading the merge's call into the declared tables: %v", err)
 	}
@@ -283,7 +309,7 @@ func declaredCompanyLinks(t *testing.T) map[string]bool {
 	declared := map[string]bool{}
 	for _, o := range corereach.Tables() {
 		for _, l := range o.Table.Links {
-			if l.Record == reach.Company || l.KindColumn != "" {
+			if l.Record == kind || l.KindColumn != "" {
 				declared[o.Table.Name+"."+l.Column] = true
 			}
 		}

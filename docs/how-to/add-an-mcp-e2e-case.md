@@ -38,6 +38,11 @@ refusal: the model must ask before it archives.
 
    A required call counts only when it worked. The lane's stack cannot send mail, so list a send
    tool under `counts_when_refused` when its refusal is the outcome.
+
+   `must_return` holds what the server answered: some call to the tool has a result that
+   `tool~regex` finds. Put ` || ` between two of them for any of them. Use it when one call
+   has two answers that are two cases. A preview for the chat and a staging for the approval
+   inbox are such a pair. REST has no chat, so list the entry under `mcp_only:` too.
 3. **Hold what the model says.** `must_mention` and `must_not_mention` are
    regexes, for names, dates and counts. `must_mention` and the judge read the final answer only. `figures_from_results: true` asks the
    judge about each money value no tool result holds, in the answer or before it. A value worked out right

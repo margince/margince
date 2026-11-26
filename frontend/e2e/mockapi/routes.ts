@@ -411,6 +411,7 @@ export const routes: readonly MockRoute[] = [
   // Both answer a bare array, so the empty list page would break the cards.
   { path: "/scheduling/team-candidates", handle: reply([]) },
   { path: "/scheduling/team-requests", handle: reply([]) },
+  { path: "/scheduling/team-links", handle: reply([]) },
   {
     path: "/public/meeting/guest-booking",
     handle: reply(booking.guestBooking),

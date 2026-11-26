@@ -417,6 +417,7 @@
     "GET /v1/scheduling/profile": "read_view",
     "GET /v1/scheduling/proposals": "list_meeting_proposals",
     "GET /v1/scheduling/team-candidates": "read_view",
+    "GET /v1/scheduling/team-links": "read_view",
     "GET /v1/scheduling/team-requests": "read_view",
     "GET /v1/sdr-handoffs/{id}/assignee": "get_handoff_assignee",
     "GET /v1/search": "search_records",
@@ -1749,6 +1750,7 @@
     "enrich": [
       "approval_id",
       "company_id",
+      "confirm_code",
       "depth",
       "idempotency_key",
       "url"
@@ -2594,6 +2596,7 @@
     ],
     "merge_members": [
       "approval_id",
+      "confirm_code",
       "idempotency_key",
       "preview_token",
       "source_id",
@@ -3065,6 +3068,7 @@
     "relink_activities": [
       "activity_ids",
       "approval_id",
+      "confirm_code",
       "entity_id",
       "entity_type",
       "idempotency_key",
@@ -3073,6 +3077,7 @@
     "relink_activity": [
       "activity_id",
       "approval_id",
+      "confirm_code",
       "entity_id",
       "entity_type",
       "idempotency_key",
@@ -3080,6 +3085,7 @@
     ],
     "relink_thread": [
       "approval_id",
+      "confirm_code",
       "entity_id",
       "entity_type",
       "idempotency_key",
@@ -3516,6 +3522,7 @@
     "set_up_partner": [
       "approval_id",
       "company_id",
+      "confirm_code",
       "idempotency_key",
       "next_step",
       "next_step_due_at",
@@ -3722,7 +3729,8 @@
       "id",
       "idempotency_key",
       "if_version",
-      "record_type"
+      "record_type",
+      "why"
     ],
     "update_record_assignment": [
       "id",

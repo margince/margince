@@ -200,7 +200,7 @@ func hasSQLSequence(statement string, words ...string) bool {
 }
 
 func lineSeamProblems(flow *lineLockFlow, constants map[string]string) []string {
-	allowed := map[string]bool{"Store.settleDealLines": true, "Store.leaveLinesMode": true}
+	allowed := map[string]bool{"Store.settleDealLines": true, "Store.leaveLinesMode": true, "Store.releaseMergedDealPin": true}
 	seen := map[string]bool{}
 	var problems []string
 	if flow.external[lineValueSeam] {

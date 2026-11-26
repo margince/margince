@@ -19,7 +19,7 @@ import {
 } from "../../lib/segmentpredicate";
 import { StoryProviders } from "../../testing/story-utils";
 import { FilterBuilder } from "./filterbuilder";
-import { moneyText } from "./filtersentence";
+import { moneyText } from "./filtersentence.values";
 import { ValueControl } from "./filtervalue";
 
 afterEach(cleanup);

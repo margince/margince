@@ -160,7 +160,7 @@ describe("companyTimeline", () => {
       ...BASE,
       last_outbound_at: "2026-08-01T08:00:00Z",
       state_strip: {
-        account: { lifecycle: "customer", relationship_types: [] },
+        account: { status: "customer", relationship_types: [] },
         engagement: { state: "waiting_on_them" },
       },
     } satisfies Company360;

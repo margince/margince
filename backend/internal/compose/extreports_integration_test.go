@@ -12,13 +12,18 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -33,8 +38,9 @@ const (
 )
 
 // registerVisitReports declares a visit kind with its table and the reports
-// over it, and puts both registries back when the test ends.
-func registerVisitReports(t *testing.T) {
+// over it, and any extra units beside it. Both registries are put back when
+// the test ends.
+func registerVisitReports(t *testing.T, extra ...extension.Extension) {
 	t.Helper()
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -64,7 +70,10 @@ func registerVisitReports(t *testing.T) {
 		},
 	}}
 	recordkinds.Register(unit, kinds)
-	registerReports(exts)
+	for _, other := range extra {
+		recordkinds.Register(other.Name, other.RecordKinds)
+	}
+	registerReports(append(exts, extra...))
 	t.Cleanup(func() {
 		recordkinds.Reset()
 		registerReports(nil)
@@ -255,5 +264,53 @@ func TestAMultiselectCustomFieldSplitsDealsByCombinationWithoutDoubleCounting(t 
 	}
 	if counts["apac,emea"] != 5 || counts["amer"] != 5 || answer.Total == nil || *answer.Total != 10 {
 		t.Errorf("groups = %v total = %v, want {emea,apac} in one group of 5, amer 5, total 10", counts, answer.Total)
+	}
+}
+
+func TestOneReportThatCannotRunLeavesTheOthersOnTheDirectory(t *testing.T) {
+	e := integration.Setup(t)
+	// A kind whose table is missing: its report fails when it runs.
+	broken := extension.Extension{
+		Name: "brokendemo",
+		RecordKinds: []extension.RecordKindDeclaration{{
+			Kind: "gone", DisplayName: "Gone", Table: "ext_brokendemo_gone",
+			Fields: []extension.RecordKindField{{Name: "code", Label: "Code"}}, NaturalKey: []string{"code"},
+		}},
+		ReportCounts: []extension.ReportCount{{Name: "gone", Label: "Gone", Population: "gone"}},
+	}
+	registerVisitReports(t, broken)
+	seedVisits(t, "north", 6, 0)
+	ctx := e.As(e.Rep1, nil, principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{
+			reportDemoObject: {Read: true}, "ext_brokendemo_gone": {Read: true}, "installation_settings": {Read: true},
+		},
+		RowScope: principal.RowScopeAll,
+	})
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/extension-reports", nil).WithContext(ctx)
+	analyticsQueryHandlers{db: e.DB(), floor: analyticsquery.DefaultFloor}.ListExtensionReports(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s; want 200", rec.Code, rec.Body.String())
+	}
+	var directory crmcontracts.ExtensionReportDirectory
+	if err := json.Unmarshal(rec.Body.Bytes(), &directory); err != nil {
+		t.Fatal(err)
+	}
+	byName := map[string]crmcontracts.ExtensionReport{}
+	for _, report := range directory.Data {
+		byName[report.Name] = report
+	}
+	gone := byName["ext:brokendemo:gone"]
+	if gone.Status != crmcontracts.ExtensionReportStatusUnavailable || len(gone.Groups) != 0 || gone.Total != nil {
+		t.Errorf("the broken report = %+v, want it listed unavailable with no figures", gone)
+	}
+	visits := byName["ext:reportdemo:visits"]
+	if visits.Status != crmcontracts.ExtensionReportStatusOk || visits.Total == nil || *visits.Total != 6 {
+		t.Errorf("the healthy report = %+v, want ok with 6 visits", visits)
+	}
+	if strings.Contains(rec.Body.String(), "ext_brokendemo_gone") {
+		t.Errorf("the answer names the failing table: %s", rec.Body.String())
 	}
 }

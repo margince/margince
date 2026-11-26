@@ -37,14 +37,14 @@ func (r *unitReader) readDeclaredField(name string, kv *ast.KeyValueExpr, file *
 		m.Instrumentation, err = r.readInstrumentation(kv.Value, file)
 	case "Inbound":
 		m.Inbound, err = r.readInbound(kv.Value, file)
-	case "AITasks":
-		m.AITasks, err = r.readAITasks(kv.Value, file)
 	case "SystemReads":
 		m.SystemReads, err = r.readSystemReads(kv.Value, file)
 	case "Needs":
 		m.Needs, err = r.readNeeds(kv.Value, file)
 	case "OAuthApps":
 		m.OAuthApps, err = r.readOAuthApps(kv.Value, file)
+	case "MailHooks":
+		m.MailHooks, err = r.readMailHooks(kv.Value, file)
 	default:
 		// Fail closed. An unknown field could be a future governed capability.
 		// A manifest that silently omitted it would hide a request from the

@@ -48,6 +48,9 @@ func TestHooksRunInUnitNameOrderAndEachSeesThePreviousResult(t *testing.T) {
 	if len(out.Companies) != 2 || out.Companies[0] != first || out.Companies[1] != second || len(changes) != 2 {
 		t.Fatalf("each hook must see the previous result: %v %v", out, changes)
 	}
+	if !changes[0].Declared || !changes[1].Declared {
+		t.Errorf("a declared reason is not marked declared: %v", changes)
+	}
 }
 
 func TestAChangeThatNamesNoDeclaredReasonIsIgnored(t *testing.T) {
@@ -59,7 +62,7 @@ func TestAChangeThatNamesNoDeclaredReasonIsIgnored(t *testing.T) {
 		if len(out.Companies) != 0 {
 			t.Errorf("reason %q: an undeclared reason must not change the result, got %v", reason, out)
 		}
-		if len(changes) != 1 || changes[0].Result != capture.HookIgnored || changes[0].Reason != reason {
+		if len(changes) != 1 || changes[0].Result != capture.HookIgnored || changes[0].Reason != reason || changes[0].Declared {
 			t.Errorf("reason %q: want one ignored change, got %v", reason, changes)
 		}
 	}

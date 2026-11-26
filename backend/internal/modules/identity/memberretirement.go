@@ -28,7 +28,9 @@ type MemberWorkInspection struct {
 	Transferable crmcontracts.HandoverCounts
 	Signals      int
 	Blockers     []crmcontracts.MemberRetirementBlocker
-	Stamp        string
+	// BlockingRecords names the records behind the blockers that are about records.
+	BlockingRecords []crmcontracts.MemberRetirementBlockingRecords
+	Stamp           string
 }
 
 // MemberWork delegates work movement to the modules that own those records.
@@ -142,6 +144,13 @@ func (s *Service) retirementPreviewTx(ctx context.Context, tx pgx.Tx, actor Iden
 	}
 	digest := sha256.Sum256(encoded)
 	out.Token = hex.EncodeToString(digest[:])
+	// Set after the token: names and links change with the reader, and a
+	// preview over either door must confirm the same removal.
+	records := work.BlockingRecords
+	if records == nil {
+		records = []crmcontracts.MemberRetirementBlockingRecords{}
+	}
+	out.BlockingRecords = &records
 	return out, nil
 }
 

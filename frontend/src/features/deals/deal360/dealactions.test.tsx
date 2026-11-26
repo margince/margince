@@ -81,14 +81,14 @@ describe("the deal header's Email verb", () => {
     expect(
       document.getElementById(email.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe("You do not have permission to log activities on this record.");
+    ).toBe("Your role can only read. Ask an administrator for another role.");
   });
 
   it("names the refusal in its tooltip, described once by the header's sentence", async () => {
     const user = userEvent.setup();
     armHoverIntent();
     mount({ deal: ["read"] });
-    const why = en["record.logActivityRefused"];
+    const why = en["record.roleReadsOnly"];
 
     const email = screen.getByRole("button", { name: "Email" });
     const sentence = await screen.findByText(why);
@@ -212,7 +212,7 @@ describe("the deal's record keys", () => {
     renderHook(() => useShortcutDispatcher());
     mount({ deal: ["read"] });
     await screen.findByText(
-      "You do not have permission to log activities on this record.",
+      "Your role can only read. Ask an administrator for another role.",
     );
 
     await user.keyboard("ntm");
@@ -256,5 +256,37 @@ describe("an archived deal's menu", () => {
     expect(
       screen.queryByRole("button", { name: en["deal.restore"] }),
     ).toBeNull();
+  });
+
+  it("offers Merge deal on a live deal with an account, and not on an archived one", async () => {
+    mount(
+      { deal: ["read", "update", "delete"] },
+      { writable: true, company_id: "c-1" },
+    );
+    await openMore();
+    expect(
+      await screen.findByRole("button", { name: en["merge.deal"] }),
+    ).toBeTruthy();
+    cleanup();
+
+    mount(
+      { deal: ["read", "update", "delete"] },
+      {
+        archived_at: "2026-11-01T09:00:00Z",
+        writable: false,
+        company_id: "c-1",
+      },
+    );
+    await openMore();
+    expect(screen.queryByRole("button", { name: en["merge.deal"] })).toBeNull();
+  });
+
+  it("offers no Merge deal on a deal with no account, which has nobody to merge with", async () => {
+    mount(
+      { deal: ["read", "update", "delete"] },
+      { writable: true, company_id: undefined },
+    );
+    await openMore();
+    expect(screen.queryByRole("button", { name: en["merge.deal"] })).toBeNull();
   });
 });

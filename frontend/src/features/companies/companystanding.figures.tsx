@@ -38,7 +38,7 @@ export function StandingFigures({
   if (!strip && omitted(view, "state_strip")) {
     return <StripWithheld />;
   }
-  const lifecycle = strip?.account.lifecycle ?? "unknown";
+  const lifecycle = strip?.account.status ?? "unknown";
   return (
     <StatStrip
       density="plate"

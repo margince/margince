@@ -105,8 +105,7 @@ func (s *Store) setBookingAliasTx(ctx context.Context, tx pgx.Tx, host ids.UserI
 	args := schedulingArgs{}
 	var page ids.UUID
 	var policy *crmcontracts.SchedulingProfile
-	err := tx.QueryRow(ctx, `SELECT id, scheduling_policy FROM booking_page WHERE host_user_id=`+args.add(host)+
-		` AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, args...).Scan(&page, &policy)
+	err := tx.QueryRow(ctx, `SELECT id, scheduling_policy FROM booking_page WHERE `+livePageSQL(&args, host, ids.Nil)+` FOR UPDATE`, args...).Scan(&page, &policy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return errAliasNoPage
 	}
@@ -131,7 +130,8 @@ func (s *Store) setBookingAliasTx(ctx context.Context, tx pgx.Tx, host ids.UserI
 	return storekit.EmitEvent(ctx, tx, audit, page, crmcontracts.InternalEventBookingPageUpdated{Enabled: policy != nil && policy.Enabled})
 }
 
-// liveBookingPageAlias is the host's live alias on their current page, or "".
+// liveBookingPageAlias is the host's live alias on their personal page, or "".
+// An alias only ever names a personal page.
 func liveBookingPageAlias(ctx context.Context, tx pgx.Tx, host ids.UserID) (string, error) {
 	args := schedulingArgs{}
 	var alias string
@@ -193,7 +193,7 @@ func (s *Store) claimBookingAlias(ctx context.Context, tx pgx.Tx, host ids.UserI
 	}
 	args = schedulingArgs{}
 	_, err = tx.Exec(ctx, `UPDATE booking_alias SET booking_page_id=`+args.add(page)+
-		`, created_at=`+args.add(s.now())+`, retired_at=NULL WHERE id=`+args.add(id), args...)
+		`, retired_at=NULL WHERE id=`+args.add(id), args...)
 	return err
 }
 
@@ -202,8 +202,8 @@ func (s *Store) insertBookingAlias(ctx context.Context, tx pgx.Tx, host ids.User
 		return err
 	}
 	args := schedulingArgs{}
-	tag, err := tx.Exec(ctx, `INSERT INTO booking_alias (alias, host_user_id, booking_page_id, created_at) VALUES (`+
-		args.add(alias)+`, `+args.add(host)+`, `+args.add(page)+`, `+args.add(s.now())+`) ON CONFLICT (alias) DO NOTHING`, args...)
+	tag, err := tx.Exec(ctx, `INSERT INTO booking_alias (alias, host_user_id, booking_page_id) VALUES (`+
+		args.add(alias)+`, `+args.add(host)+`, `+args.add(page)+`) ON CONFLICT (alias) DO NOTHING`, args...)
 	if err != nil {
 		return err
 	}

@@ -22,6 +22,7 @@ const STOP_REASONS: ReadonlySet<string> = new Set([
 const ALLOWED_FACT: Partial<Record<GuardEntry["reason_code"], MessageKey>> = {
   consent_confirmed: "contact.consent.fact.marketingPermission",
   existing_customer: "contact.consent.fact.existingCustomer",
+  opt_out_allowed: "contact.consent.fact.optOutAllowed",
   qualifying_event: "contact.consent.fact.businessContact",
   said_we_may_write: "contact.consent.fact.saidWeMayWrite",
   contract_notice: "contact.consent.fact.serviceMessages",

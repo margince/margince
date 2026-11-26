@@ -35,6 +35,8 @@ type seatCalendars struct {
 	mu     sync.Mutex
 	owners map[string]string
 	feeds  map[string][]map[string]any
+	// expired names the calendars whose sync token Google no longer honors.
+	expired map[string]bool
 }
 
 func (c *seatCalendars) set(label string, items ...map[string]any) {
@@ -65,6 +67,10 @@ func (c *seatCalendars) serve(t *testing.T) *httptest.Server {
 	mux.HandleFunc("/calendars/primary/events", func(w http.ResponseWriter, r *http.Request) {
 		c.mu.Lock()
 		defer c.mu.Unlock()
+		if r.URL.Query().Get("syncToken") != "" && c.expired[label(r)] {
+			w.WriteHeader(http.StatusGone)
+			return
+		}
 		integration.WriteJSON(w, map[string]any{"items": c.feeds[label(r)], "nextSyncToken": "synctok"})
 	})
 	srv := httptest.NewServer(mux)

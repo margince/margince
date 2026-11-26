@@ -102,11 +102,11 @@ export const VerbsOpen: Story = {
   render: () => <Rows data={view} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const [first] = await canvas.findAllByRole("button", {
-      name: "More actions",
-    });
-    if (!first) throw new Error("no row offers more actions");
-    await userEvent.click(first);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "More actions for Brandt Automotive GmbH",
+      }),
+    );
   },
 };
 
@@ -140,4 +140,38 @@ export const BoughtEmployer: Story = {
       }}
     />
   ),
+};
+
+// An employer with no name: the row's menu takes the generic label.
+export const UnnamedEmployerVerbs: Story = {
+  render: () => (
+    <Rows
+      data={{
+        ...view,
+        employments: {
+          page: { has_more: false },
+          data: [
+            {
+              relationship_id: "held",
+              company_id: "o-1",
+              company_name: null,
+              role: "Head of Procurement",
+              is_current_primary: true,
+              employment_status: "current",
+              started_at: "2021-03-01",
+              started_precision: "month",
+              version: 1,
+            },
+          ],
+        },
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions",
+      }),
+    );
+  },
 };

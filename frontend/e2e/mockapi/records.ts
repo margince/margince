@@ -453,6 +453,7 @@ export const advanceDeal: Handler = (
   if (advance.status === "won" && !wasWon) {
     projectState.startDelivery(
       dealPatches[target.id]?.project_id ?? target.project_id,
+      { id: target.id, name: target.name },
     );
   }
   return json({ ...target, ...dealPatches[target.id] });

@@ -284,7 +284,7 @@ it("names why the row in hand is first, whose it is, and its inbox", () => {
     <BriefFeed day={readingsDay({}, [row])} state="ready" />,
   );
   const head = container.querySelector(".brief-triage-lead-head");
-  expect(head?.querySelector(".brief-task-status")?.textContent).toBe(
+  expect(head?.querySelector(".task-meta-status")?.textContent).toBe(
     "Customer waiting",
   );
   expect(head?.textContent).toContain(en["visibility.team"]);

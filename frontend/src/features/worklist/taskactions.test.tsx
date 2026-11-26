@@ -509,6 +509,32 @@ test("a call task dials the primary number, not the first one listed", async () 
   ).toBeNull();
 });
 
+// With no composer, Call fills once the contact's number is read, so Done
+// waits for that read rather than showing filled and then stepping back.
+test("a reach out draws Done only once its contact is read", async () => {
+  let landContact: ((response: Response) => void) | undefined;
+  stubNextSteps({
+    routes: {
+      "GET /contacts/c-1": () =>
+        new Promise<Response>((land) => {
+          landContact = land;
+        }),
+    },
+  });
+  openTaskWith();
+
+  await vi.waitFor(() => expect(landContact).toBeDefined());
+  expect(
+    screen.queryByRole("button", { name: en["tasks.complete"] }),
+  ).toBeNull();
+
+  landContact?.(jsonResponse(ALICE));
+  const done = await screen.findByRole("button", {
+    name: en["tasks.complete"],
+  });
+  expect(done.classList.contains("btn-primary")).toBe(false);
+});
+
 test("a reply to a call keeps Email beside Call in its details", async () => {
   stubNextSteps({ taskType: "reply_by_call", mailTarget: true });
   openTaskWith();

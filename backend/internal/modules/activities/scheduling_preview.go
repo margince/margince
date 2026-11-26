@@ -30,6 +30,8 @@ type BookingPreview struct {
 	CompanyName     string
 	Title           string
 	DurationMinutes int
+	// Lengths are the meeting lengths the page offers, the default first.
+	Lengths []int
 	// LogoURL and PageURL are absolute on the validated public origin, or
 	// empty when the company has no logo or no usable origin is configured.
 	LogoURL string
@@ -44,16 +46,12 @@ func (h Handlers) PublicBookingPreview(ctx context.Context, slug string) (Bookin
 	if err != nil {
 		return BookingPreview{}, err
 	}
-	profile, err := h.store.hostSchedulingProfile(ctx, page.HostUserID)
-	if err != nil {
-		return BookingPreview{}, err
-	}
-	paused, _, err := h.store.pagePaused(ctx, page.HostUserID, profile)
-	if err != nil || paused {
-		return BookingPreview{}, err
+	profile, open := h.store.openForBooking(ctx, page)
+	if open.err != nil || open.paused {
+		return BookingPreview{}, open.err
 	}
 	profile = h.store.brandSchedulingProfile(ctx, page.HostUserID, profile)
-	out := BookingPreview{Available: true, Title: profile.Title, DurationMinutes: profile.DurationMinutes}
+	out := BookingPreview{Available: true, Title: profile.Title, DurationMinutes: profile.DurationMinutes, Lengths: bookingLengths(profile)}
 	if profile.HostName != nil {
 		out.HostName = *profile.HostName
 	}
@@ -71,4 +69,15 @@ func (h Handlers) PublicBookingPreview(ctx context.Context, slug string) (Bookin
 		out.PageURL = *profile.PublicUrl
 	}
 	return out, nil
+}
+
+// ForLength is the card of a link that asks for requested minutes. It names
+// the length the booking page opens at, by the guest endpoints' rule. The
+// bool says whether that is the length the link asked for.
+func (p BookingPreview) ForLength(requested *int) (BookingPreview, bool) {
+	if len(p.Lengths) == 0 {
+		return p, false
+	}
+	p.DurationMinutes = offeredLength(p.Lengths, requested)
+	return p, requested != nil && *requested == p.DurationMinutes
 }

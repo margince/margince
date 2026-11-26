@@ -14,7 +14,10 @@ package connector
 // Username is display only. A Telegram handle can be released and re-claimed
 // by a different human, so nothing may route, authorize or deduplicate on it.
 type ChannelIdentity struct {
-	Provider      string
+	Provider string
+	// AccountScope names the connected account the identity was seen through.
+	// It is empty for everything the workspace's own bot receives.
+	AccountScope  string
 	ChannelUserID string
 	Username      string
 }

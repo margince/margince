@@ -47,7 +47,7 @@ function mountCompany(
   installFetchStub({
     "GET /me": meRoute(grants),
     "GET /companies/o-1": () =>
-      jsonResponse({ ...company, lifecycle: "customer" }),
+      jsonResponse({ ...company, status: "customer" }),
     "GET /companies/o-1/360": () => jsonResponse(company360),
     "GET /companies/o-1/finance-summary": () => {
       asked.push("finance-summary");

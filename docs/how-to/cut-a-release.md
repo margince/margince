@@ -27,6 +27,13 @@ gh issue list --label "release: blocker"
 off one the release can ship without. Then run all jobs of the run again; the tag can stay. A tag with
 an added part, such as `v1.1.0-rc.1`, passes with blockers still open.
 
+`release-tag.yml` also refuses a plain tag while `config/presets/gemini_cloud.yaml` has a stale or absent
+AI record. That is the setup a new installation is offered, and the check reads each task's first rung and
+its fallback. Run [the sweep](re-certify-the-whole-corpus.md) and merge its records into `main` before you
+tag. A run reads the commit of its tag, so merging records later does not help it, and running all jobs again
+reads the same commit. For a tag that failed this check, delete it and tag the new `main`, as
+[When a run fails](#when-a-run-fails) says. A tag with an added part passes and only prints the list.
+
 ## Write the notes
 
 The notes of a release are its GitHub release page; the repository keeps no changelog file. Before you
@@ -34,7 +41,10 @@ tag, create a draft release for the tag, by hand, with the part no tool can writ
 
 - **Highlights**: what a user gets from this release, in a few lines.
 - **Upgrade notes**: what someone who runs Margince must do or know before the upgrade. That covers a
-  setting that changed, a feature taken out, and an API change that breaks a client.
+  setting that changed, a feature taken out, and an API change that breaks a client. It also covers a new
+  OAuth redirect address, or a Google or Microsoft API, that the provider app must allow. Name the address and
+  the API, because users see a provider error until an operator adds them. The pull request that adds one carries `!`
+  in its title.
 
 ```sh
 gh release create v1.1.0 --draft --title "Margince v1.1.0" --notes-file notes.md

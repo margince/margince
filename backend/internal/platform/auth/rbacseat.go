@@ -12,11 +12,14 @@ import (
 // AllowsWrite is Allows under the seat ceiling, for a control a read offers: a
 // read seat writes nothing, whatever its role grants. It records nothing.
 func AllowsWrite(ctx context.Context, object string, action principal.Action) bool {
+	return SeatAdmitsWrites(ctx) && Allows(ctx, object, action)
+}
+
+// SeatAdmitsWrites is the seat ceiling alone, for a refusal that names the seat
+// apart from the role.
+func SeatAdmitsWrites(ctx context.Context) bool {
 	p, err := rbacActor(ctx)
-	if err != nil {
-		return false
-	}
-	return seatAdmitsWrites(p) && Allows(ctx, object, action)
+	return err == nil && seatAdmitsWrites(p)
 }
 
 // seatAdmitsWrites is the seat ceiling every offered write sits under. The

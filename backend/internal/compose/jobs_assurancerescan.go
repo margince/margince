@@ -142,5 +142,5 @@ func (w *assuranceSweepWorker) rescanDeal(ctx context.Context, args AssuranceDea
 }
 
 func (w *assuranceSweepWorker) scanDeal(ctx context.Context, store *assurance.Store, now time.Time, deal ids.UUID) (assurance.Result, error) {
-	return assuranceScanner(w.pool, store).ScanDeal(ctx, now, deal)
+	return AssuranceScanner(w.pool, store).ScanDeal(ctx, now, deal)
 }

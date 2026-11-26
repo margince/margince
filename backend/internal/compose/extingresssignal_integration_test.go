@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -27,6 +28,7 @@ const signalPolicy = `{"objects":{"signal":{"read":true,"create":true}},"row_sco
 func setupSignalIngress(t *testing.T) *crmEnv {
 	t.Helper()
 	e := setupCRMIngress(t)
+	extregistrytest.Reset(t)
 	signaltypes.Register(ingressUnit, []extension.SignalTypeDeclaration{{
 		Kind: "loss", Label: "Loss reported",
 		Evidence: []extension.SignalEvidenceField{{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true}},

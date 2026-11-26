@@ -26,6 +26,8 @@ type ForwardedTriageBinding struct {
 }
 
 // ForwardedTriageBindings reports candidates for review; it never changes identity ownership.
+// A binding is triage's when its read is a triage read. The company's source
+// cannot say so: an outside id adopted later replaces the writer in source_system.
 // Scope is applied before pagination so a cursor cannot name a private domain.
 func (s *Store) ForwardedTriageBindings(ctx context.Context, afterDomain string, limit int) ([]ForwardedTriageBinding, string, error) {
 	if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
@@ -48,7 +50,7 @@ func (s *Store) ForwardedTriageBindings(ctx context.Context, afterDomain string,
 		query := `SELECT d.domain, d.company_id, r.id, r.pages
    FROM company_domain_disposition d JOIN company c ON c.id = d.company_id
    JOIN site_read r ON r.id = d.site_read_id
-   WHERE d.domain > ` + arg(afterDomain) + ` AND c.source LIKE 'domain_triage:%'
+   WHERE d.domain > ` + arg(afterDomain) + `
     AND r.target_kind = 'domain_triage' AND r.status IN ('done','partial') AND ` + scope + `
    ORDER BY d.domain LIMIT ` + arg(limit)
 		rows, err := tx.Query(ctx, query, args...)

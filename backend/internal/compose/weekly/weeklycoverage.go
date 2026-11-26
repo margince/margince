@@ -185,7 +185,7 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID, asOf ti
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	owned := fmt.Sprintf("ANY($%d)", arg(owners))
-	dealScope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	dealScope, err := standingDealScope(ctx, arg)
 	if err != nil {
 		return figureStarts{}, err
 	}

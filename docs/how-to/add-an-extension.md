@@ -252,8 +252,12 @@ Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss the
 - **Paths start from the `servers` URL**, which already ends in `/v1`. Write `/ext/<name>/inbound`, never
   `/v1/ext/...`. The server puts the base path back when it mounts the route. Written twice, it publishes
   `/v1/v1/ext/...` to every generated client (the `composition` tool refuses it).
-- **Every path must be under `/ext/<your-unit>/`.** Another unit's space, a core path, or a path template
-  (`{id}`) are all refused.
+- Every path must be under `/ext/<your-unit>/`. Another unit's space or a core path is refused.
+- A path may name a record by its id, as in `GET /ext/<unit>/orders/{order_id}`. The part right after the
+  unit is fixed, so `/ext/<unit>/{id}` is refused. Declare each id as a parameter with `in: path`,
+  `required: true` and a plain schema: text, a number or true/false. The tool takes the id as an argument of
+  that name, for any method, so an agent passes it the same way. The same name again in the body or query is
+  refused, by `make gen` and with a 422 on a call.
 - **Arguments live where the method puts them.** A served extension operation *is* a tool call under the
   rules, so the seam reads its arguments from one place. That is the request body for POST, PUT and PATCH, and
   the query for GET. If you declare them on the other side, the generator fails with a named error. The seam
@@ -457,9 +461,8 @@ So the static check below also refuses role changes (`SET ROLE`, `RESET ROLE`, `
 `DO` blocks. It refuses `EXECUTE`, `PREPARE`, `CREATE FUNCTION` and functions that run a query string, such as
 `query_to_xml`.
 
-A separate database login for each unit would make the limit hold against such code. That is
-[issue 628](https://github.com/margince/margince/issues/628), closed until a unit from outside the first-party
-set is planned.
+A separate database login for each unit would make the limit hold against such code. Core has none
+([issue 628](https://github.com/margince/margince/issues/628)).
 
 `ErrCoreTableRefused` also appears when the role holds no rights on one of your own tables. That happens when a
 role other than the migrate role (`margince_owner`) created the table, because only its tables get the rights
@@ -569,9 +572,15 @@ names, and the core keeps them apart from other units. No method takes another u
 
 ## Own a screen: `frontend/`
 
-Ship `extensions/<name>/frontend/package.json` and the module it names. The package may use its own
-packages. They live in the generated workspace under `build/composition-frontend/workspace/`, which
-`make composition` writes. The tracked `pnpm-lock.yaml` names only the core frontend.
+Ship `extensions/<name>/frontend/package.json` and the module it names. The package may use only packages
+the main app already ships. Each runtime or peer package must be a dependency of `frontend/` in the
+tracked `pnpm-lock.yaml`. Declare it at the range the main app declares, or at its locked version.
+
+No
+license check exists yet for an extension's own packages, so the generator refuses any other package. It
+also refuses `optionalDependencies`, and allows `devDependencies`. The unit installs in the generated
+workspace under `build/composition-frontend/workspace/`, which `make composition` writes. Each package is
+pinned there to the main app's locked version.
 
 ```json
 {
@@ -632,6 +641,10 @@ asked for:
 | `Scope: extension.SecretScopeUser` | Settings → Connections | one user's own account in some place; no one else sees it |
 | `Scope: extension.SecretScopeWorkspace` | Settings → Integrations | the installation's shared key, kept by an operator |
 | no `Secrets` at all | no page | nothing to set up, so nothing to list; `#/ext/<name>` still routes |
+
+The unit's card under Settings, Extensions says "Ready" or "Needs setup". It needs setup while a workspace-scoped key
+you declare holds no value, or while an `OAuthApps` entry has no stored client. User-scoped keys never count.
+`GET /v1/extensions` names the missing items in `setup_missing`; nothing about it is stored.
 
 This has two results. **A unit declares one scope**: secrets that cover both are refused at `make gen`. A unit
 that is half one user's own account and half the installation's has no single page.
@@ -821,7 +834,7 @@ A unit that needs a value an admin sets does not build a settings screen. Declar
 ```go
 Settings: []extension.Setting{
 	{Key: "live", Label: "Send for real", Hint: "Off keeps every message a draft.", Kind: extension.SettingSwitch},
-	{Key: "region", Label: "Region", Kind: extension.SettingText},
+	{Key: "region", Label: "Region", Kind: extension.SettingText, Initial: "eu-west"},
 },
 ```
 
@@ -831,12 +844,15 @@ Settings: []extension.Setting{
 | `Label` | The name the admin sees. Required, one line, up to 60 characters. Shown as written, in one language. |
 | `Hint` | What the setting does. Optional, one line, up to 200 characters. |
 | `Kind` | `extension.SettingSwitch` holds `true` or `false` and starts `false`. `extension.SettingText` holds one line of up to 200 characters and starts empty. |
+| `Initial` | The value before an admin changes it. Optional. The `Kind` must hold it; left out, a switch starts `false` and a text starts empty. |
 
 Only an admin sees these settings, and only an admin can change them. Each change is saved with an audit row, like any installation setting. `make gen` and the start both refuse a declaration that breaks the table above, and the generated manifest lists the settings.
 
 An admin changes them with `PUT /v1/extensions/{name}/settings`. Send `overwrites_edited_fields` and a `declared` list of `key` and `value` pairs, for example `{"overwrites_edited_fields": false, "declared": [{"key": "region", "value": "eu-west"}]}`. A setting left out of the list keeps its value. A key the unit did not declare, or a value its kind cannot hold, is a 422 and saves nothing. A switch value is the text `true` or `false`.
 
-The core stores the values and does not yet hand them to the unit's code. Only core code reads them today. A unit that needs to read its own setting has to wait for that.
+A saved value wins over `Initial` from then on, across restarts and new versions of the unit. A new `Initial` reaches only a setting no admin has saved.
+
+The core stores the values and does not hand them to the unit's code. Only core code reads them.
 
 ## Declare a company type
 
@@ -891,8 +907,18 @@ The kind is gated on the RBAC object `ext_<unit>_<kind>`. The unit's hyphens bec
 tags or lists a record, it checks the `read` right and a live row. A caller without the right gets `404`. The start
 refuses a declaration that breaks the table above.
 
-The service reports itself unready while your table, a column or the unique index is missing. It does the same while
-`margince_app` holds fewer than the four rights on the table.
+Ship two more indexes in the unit's migrations, because core's reads over your table use them:
+
+| Read | Index the table must hold |
+|---|---|
+| Search | A text search index over the lower-cased title column: `CREATE INDEX ON ext.<table> USING gin (lower(<title>) public.gin_trgm_ops)`. The title column is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. |
+| History, for each entry of `Timeline.Subjects` | An index whose first column is the subject's `Column` and whose second is the `AtColumn`: `CREATE INDEX ON ext.<table> (<column>, <at column>)`. |
+
+Each index covers every row, so give it no `WHERE`. The service reports itself unready while your table, a column,
+the unique index or one of these indexes is missing. It does the same while such an index is not valid, as after a
+failed `CREATE INDEX CONCURRENTLY`.
+The message names the statement that adds a missing index. It does the same while `margince_app` holds fewer than the
+four rights on the table.
 
 `GET /v1/record-kinds` lists the kinds a seat may read. The reference page
 [extension record kinds, links, signals and reports](../reference/extension-record-kinds-links-signals-and-reports.md#extension-record-kinds-and-link-registry)
@@ -1248,6 +1274,29 @@ Which half declares what is a rule, and the `composition` tool refuses the other
   tick.
 - **Both parts share one queue**, and the child's kind is the dispatcher's name plus `_ws`. No clock ever
   reaches a worker that no dispatcher fans out to.
+- **A dispatcher has one schedule**: a `cadence` such as `6h`, or `at` with a local time as `HH:MM`. Add `days`
+  to run `at` only on some days, written `mon` to `sun`; without `days` it runs every day. Both a `cadence` and an
+  `at`, or `days` with no `at`, are refused.
+
+```yaml
+ext_demo_report:
+  job: report
+  role: dispatcher
+  queue: default
+  timeout: 1m
+  at: "07:30"
+  days: [mon, tue, wed, thu, fri]
+```
+
+An `at` time counts in the company time zone an admin sets in Settings. A change of zone moves the next run within
+a minute.
+
+When the clock skips an hour, a time in that hour runs at the first minute after it. When the clock shows an hour
+twice, a time in it runs once. A start of the worker never runs an `at` job by itself. If the worker was down at a
+slot, the job runs once soon after the restart; otherwise it waits for its next slot.
+
+Job health lets an `at` job wait the longest gap between two of its slots. That is one day for a daily job, and three
+days for one that skips `sat` and `sun`.
 
 ```go
 Jobs: []extension.Job{{Name: "heartbeat", Handle: heartbeat}},
@@ -1323,6 +1372,7 @@ SystemReads: []extension.SystemRead{
 	extension.SystemReadSetAside, // SetAside().Contact and Contacts
 	extension.SystemReadCompanies, // Companies().Get and List (as actAs)
 	extension.SystemReadMailContent, // MailContent().Get (as actAs)
+	extension.SystemReadMailAttachments, // Activities().Attachments and OpenAttachment (as actAs)
 },
 ```
 
@@ -1357,9 +1407,11 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   list was cut. A key that names no role adds nobody and is no error. The core logs which keys you asked for.
 - **`Mail` answers the emails of one deal.** It tells a unit if a mail is sent and if a reply is in. Each
   `MailSummary` holds the id, the direction, the time, what kind of sender wrote it (empty for a human) and the
-  deal id. It holds no subject, body, address or file. It leaves out mail kept private to its senders and
-  receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It gives pages,
-  newest first, of at most `extension.MaxReadPage`.
+  deal id. It holds no subject, body, address or file.
+
+  It leaves out mail kept private to its senders and
+  receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It also leaves out
+  mail under a restriction of processing (Art. 18). It gives pages, newest first, of at most `extension.MaxReadPage`.
 
   You name the member it answers for. A deal that member cannot open answers `ErrNotFound`.
 - **`SetAside` reads who put a contact aside.** A colleague can put a contact aside for up to 90 days, or for
@@ -1393,7 +1445,23 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   or body was taken out answers the content state `withheld` and gives neither. The body stops at
   `extension.MaxMailBody` characters, and `BodyTruncated` says so. Ask `Authority().CanRead` before you show a
   colleague what you kept from it.
-- **Name the seat: `actAs`.** `Companies`, `MailContent().Get` and `ByRole` take `actAs` right after `ctx`.
+- **`Attachments` and `OpenAttachment` read mail files.** `Activities().Attachments(ctx, actAs, mailID)`
+  lists the files sent with one email, oldest first. Each `MailAttachment` holds the id, the mail id, the file
+  name, the stored type, the size and the time. `Activities().OpenAttachment(ctx, actAs, attachmentID)` also gives
+  the bytes, with the type the bytes show.
+
+  Both run as `actAs` under the rule `MailContent().Get` applies to the mail. A mail that read refuses answers
+  `ErrNotFound` here too. So does a file that was archived or whose bytes were withheld. A list leaves such a file
+  out. Only files sent with an email are read, never a file a user uploaded.
+
+  A file of more than `extension.MaxInboundFileBytes` bytes answers `ErrInvalid`. An open checks the file again
+  after it reads the bytes. A file withheld or archived in that time answers `ErrNotFound`.
+
+  Each list and each open writes an `export` row to the system log, which names your unit and `actAs`. An open that
+  fails writes no row and does not count. A unit may open `extension.MaxAttachmentOpensPerDay` (200) files in a workspace per UTC day. The next open answers
+  `extension.ErrAttachmentCapReached` until the next UTC day starts. A list does not count.
+- **Name the seat: `actAs`.** `Companies`, `MailContent().Get`, the reads of mail files and `ByRole` take
+  `actAs` right after `ctx`.
   It must be the unit's own service member, the one the core made for it (see
   [declare-a-service-member.md](declare-a-service-member.md)). That member must have filed one of the unit's
   user secrets.
@@ -1554,6 +1622,50 @@ Give every field your provider gives you, and decide nothing about who a contact
 fields its matching ladder may use, from your declaration. What each field must hold, and what breaks when it
 does not, is the connector contract in
 [explanation/ingress-gate-and-auto-capture.md](../explanation/ingress-gate-and-auto-capture.md).
+
+### A member-owned chat source
+
+A chat account belongs to one member. Pin a posture on the source to say so:
+
+```go
+Ingress: []extension.IngressSource{{
+	System:        "relay",
+	Lands:         []extension.RecordKind{extension.KindActivity},
+	PinnedPosture: extension.PostureClassified, // or PostureHeld; never wider
+}},
+```
+
+The member puts in the connection as a user-scoped secret for their own account. Your unit has no `channel_connection` row.
+A member asks you for something on your own HTTP route. The route stores the request in your own table and calls
+`rt.SyncNow`. Your job ingests it later, because a call with a caller never ingests.
+
+A chat message is kind `message`, with a counterparty named by an account on your own channel. It goes through the
+function every chat network shares. The pin is written as the import's `posture_at_import`. So the audience of the
+message and the check for private threads work as they do for mail in a member's mailbox. The pin replaces the posture
+derived from the member's mailboxes.
+
+A source with a pin lands chat messages only. Any other record answers `DispositionUnrepresentable`.
+
+Four things are new on this path:
+
+- **`Record.ChosenSubject`** names a contact or a lead that the member picked (`extension.ChosenSubject`). The core
+  checks it on the member's live rights. The message is linked to it directly, and nothing matches its counterparty by
+  identity. A subject the member cannot see answers `DispositionSubjectNotFound`, the same as one that does not exist.
+  It stores nothing, and the other records of the batch go on. Your cursor moves past it like past any answer.
+- **`Record.OccurredPrecision`** is `PrecisionInstant` (the default), `PrecisionDay` or `PrecisionUnknown`. The core
+  stores a day as a date with no time of day. With an unknown time you may leave `Activity.OccurredAt` zero.
+  The core then dates the record on the day it takes it in, as a day. The timeline has no separate stored "unknown", so it reads like a
+  day. The time the core takes a record in is never one you state.
+- **`Record.Parts` and `Record.PartDrops`** carry files, within `MaxInboundFiles`, `MaxInboundFileBytes` and
+  `MaxInboundMessageBytes`. The core reads each type again from the bytes. A retry keeps one copy of a file, as for
+  mail, and an erasure removes it.
+- **One saved place per member.** `rt.MemberIngestPosition(ctx, member, source)` answers the member's `MemberPosition`.
+  `rt.IngestMemberBatch(ctx, member, source, recs, position, version)` lands the records, then saves the place only
+  if `version` is still the one you read. A stale writer gets `ErrPositionConflict`, which is also an `ErrConflict`,
+  and reads the place again.
+
+Two members of one source never see each other's place. A source with a pin keeps a place per member, so `IngestBatch`
+and `IngestPosition` refuse it with `ErrInvalid`. They stay as they were for a source with no pin.
 
 ## Carry replies: give a transport
 
@@ -1716,53 +1828,6 @@ The rules:
   `google` or `microsoft`. `AuthURL` and `TokenURL` must use `https`.
 - `rt.OAuthDisconnect(ctx, "books")` drops the tokens. It does not end the grant at the vendor.
 
-## Ask a model: declare an AI task
-
-A unit that wants a model's help declares each task and runs it through the core. It never holds a provider
-client or a key:
-
-```go
-AITasks: []extension.AITask{{
-	Name:      "invoice_total",
-	Prompt:    "Read the invoice and return its total amount and currency.",
-	Schema:    `{"type":"object","required":["total","currency"],"properties":{"total":{"type":"number"},"currency":{"type":"string"}}}`,
-	Documents: true,
-}},
-```
-
-```go
-res, err := rt.AI().Run(ctx, "invoice_total", extension.AIInput{
-	Documents: []extension.AIDocument{{Filename: "inv.pdf", ContentType: "application/pdf", Body: pdf}},
-	NoContact: "a supplier invoice",
-})
-```
-
-Every call is one `extension_task` call on the core's router. The installation's routing setting picks the
-model. The region limit applies as it does to a core task. Secrets are stripped from the input. The input is
-never kept in the call log's payload store. The `ai_call` row names the unit and the task as
-`<unit>/<task>`.
-
-The rules:
-
-- **A task you did not declare is refused** with `ErrAITaskUndeclared`. `Name` is `snake_case`, at most 48
-  characters, and the call log keeps it, so a rename splits one task's history.
-- **Name the contacts the call carries** in `Contacts`, or say in `NoContact` why it carries none. A named contact
-  with a stop on its processing refuses the call. A call that does neither is refused with `ErrInvalid`.
-  The core cannot check the source of your input. So it also refuses every AI call while any contact in the
-  workspace has a stop on its processing. The error is `ErrAIUnavailable`, and the call may be tried
-  again once the stop is removed.
-- A document is read by its bytes, not its label. A PDF is read as text by the reader the core uses for its own documents. A scan with no text layer is refused
-  with `ErrAIScannedDocument`. No document goes to a model as bytes, and an image is refused with
-  `ErrAIDocumentType`.
-- **`Documents: true` is required** to pass documents. Text types go through as text.
-- **With a `Schema`**, the model is held to it, and the answer comes back as `AIResult.JSON`, one JSON object. Without one,
-  it comes back as `AIResult.Text`.
-- **The answer is advice.** `AIResult.MachineMade` is always true. A unit that shows or stores it says a model
-  wrote it.
-- **`ErrAIUnavailable`** means routing, the region limit, a stop on processing or the budget refused the call. It reached
-  no model, so a job may try again later.
-- The core's certification covers the one `extension_task` site. It does not run a unit's own examples yet.
-
 ## Call your provider
 
 Build each request with `extension.NewRequest`. It names the installation to your provider in the
@@ -1792,11 +1857,12 @@ Needs: []extension.Need{
 },
 ```
 
-Ask a model with `rt.Models().Complete`. Name the core records the text was built from in `About`, or say in
-`NoContactData` why it holds none of a contact's data:
+Ask a model with `rt.Models().Complete`, for a task the unit declares in its `api/ai-tasks.yaml` as
+`ext_<unit>_<task>`. Each such task has its own routing, budget and certification case. Name the core
+records the text was built from in `About`, or say in `NoContactData` why it holds none of a contact's data:
 
 ```go
-text, err := rt.Models().Complete(ctx, extension.CompleteRequest{
+text, err := rt.Models().Complete(ctx, "ext_books_summarise", extension.CompleteRequest{
     System:   "Summarise the change in one sentence.",
     Messages: []extension.Message{{Role: "user", Text: change}},
     About:    []extension.EntityRef{{Type: "deal", ID: dealID}},
@@ -1920,3 +1986,16 @@ At the next boot the core deletes the objects the removed unit kept with `rt.Obj
 No other core file or core test needs an edit. Removing it *turns the unit off* (routes answer 404, the list leaves
 the unit out, migrations skip it), but it does **not erase**. The unit's tables and rows, its `extension_secret`
 rows and any grants of its RBAC objects inside `role.permissions` all stay. There is no tool to erase them.
+
+Lists, saved views and reports over the unit's record kinds stay, and nothing else breaks:
+
+- A list over one of its kinds reads as health `unavailable`, with no count, no members and no filter. Its
+  export answers 422. The Live List check stores it as `invalid` and pauses the rules that watch it as
+  `list_unavailable`. It keeps the list's last members, so no one is recorded as having left.
+- A saved view over one of its kinds keeps its row. A change to its filter answers 422.
+- Its reports leave the report directory, because they are no longer registered.
+
+All of these come back when the unit is composed again. The paused rules stay paused until someone
+resumes them. A member who may not read a kind is told nothing about its lists: the library leaves them
+out, and a direct read answers 403. A new list, saved view or search over a kind answers the same 422
+whether the unit was removed or the caller may not read it.

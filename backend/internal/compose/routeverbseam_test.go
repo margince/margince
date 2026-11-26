@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -73,6 +74,12 @@ func TestARouteAnswerSaysWhatTheWriteDid(t *testing.T) {
 	if _, err := answer(http.StatusConflict, `{"code":"taken","detail":"already shared"}`); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("another conflict answered %v, want ErrConflict", err)
 	}
+	_, err := answer(http.StatusUnprocessableEntity, `{"code":"validation_error","detail":"filing refused",`+
+		`"details":{"errors":[{"field":"links","code":"project_filing_needs_approval","message":"filing refused"}]}}`)
+	if fault, ok := errors.AsType[*httperr.DetailedError](err); !ok || len(fault.Fields) != 1 ||
+		fault.Fields[0].Field != "links" || fault.Fields[0].Code != "project_filing_needs_approval" {
+		t.Errorf("a field refusal answered %v, want the route's own field and code", err)
+	}
 }
 
 // The effect has committed before the body overflows, so the overflow is a
@@ -122,5 +129,38 @@ func TestNoTwoActionsOfOneRouterSayTheSameThing(t *testing.T) {
 			continue
 		}
 		seen[key] = v.Action
+	}
+}
+
+// A route-backed verb's links description is written in crm.yaml, which cannot
+// name a Go constant. Each one that names the project refusal says it in the
+// words the registry verbs use, and this test fails when one of them changes.
+func TestARouteVerbStatesTheProjectRefusalInTheRegistrysWords(t *testing.T) {
+	stated := 0
+	for route, shape := range routeVerbShapes {
+		var body struct {
+			Properties struct {
+				Links struct {
+					Description string `json:"description"`
+				} `json:"links"`
+			} `json:"properties"`
+		}
+		if shape.BodySchema == "" {
+			continue
+		}
+		if err := json.Unmarshal([]byte(shape.BodySchema), &body); err != nil {
+			t.Fatalf("%s: the body schema does not decode: %v", route, err)
+		}
+		said := strings.Join(strings.Fields(body.Properties.Links.Description), " ")
+		if !strings.Contains(said, "project_filing_needs_approval") {
+			continue
+		}
+		stated++
+		if !strings.Contains(said, agents.ProjectLinkRefused) {
+			t.Errorf("%s names the project refusal in its own words:\n%s\nwant it to contain:\n%s", route, said, agents.ProjectLinkRefused)
+		}
+	}
+	if stated == 0 {
+		t.Fatal("no route-backed verb names the project refusal, so this test reads nothing")
 	}
 }

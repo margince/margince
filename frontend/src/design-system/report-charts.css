@@ -182,7 +182,6 @@
   min-height: var(--controlHeight);
   color: var(--textPrimary);
   text-decoration: none;
-  text-align: start;
 }
 .report-chart-row-name {
   overflow-wrap: anywhere;

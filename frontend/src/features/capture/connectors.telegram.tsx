@@ -44,7 +44,7 @@ type ChannelConnectionsResult = {
   data: ChannelConnection[];
 };
 
-function useChannelConnections() {
+export function useChannelConnections() {
   return useQuery({
     queryKey: ["channel-connections"],
     queryFn: async (): Promise<ChannelConnectionsResult> => {

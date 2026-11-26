@@ -320,7 +320,8 @@ describe("a waiting message whose prepared move is the reply", () => {
 });
 
 describe("a move the server refused this reader", () => {
-  const SEND = "You do not have permission to send email";
+  const SEND =
+    "Your role can only read. Ask an administrator for another role.";
 
   it("draws the prepared reply refused, with the server's reason", async () => {
     stub(

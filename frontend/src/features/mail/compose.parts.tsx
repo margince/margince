@@ -404,7 +404,7 @@ export function ReplyQuote({
             })}
           </figcaption>
           <blockquote>
-            <EmailText body={message.body} />
+            <EmailText body={message.body} subject={message.subject} />
           </blockquote>
         </figure>
       )}

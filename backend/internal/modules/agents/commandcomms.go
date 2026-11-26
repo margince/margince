@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -219,6 +220,7 @@ func (r *sendMessageResolver) Guards(ctx context.Context, cmd SendMessageCommand
 	var anchor struct {
 		Kind            string `json:"kind"`
 		ChannelProvider string `json:"channel_provider"`
+		ThreadKey       string `json:"thread_key"`
 	}
 	if err := json.Unmarshal(rec.Fields, &anchor); err != nil {
 		return fmt.Errorf("crmagents: activity %s read back with unreadable fields: %w", cmd.ActivityID, err)
@@ -229,6 +231,11 @@ func (r *sendMessageResolver) Guards(ctx context.Context, cmd SendMessageCommand
 				cmd.ActivityID, anchor.Kind),
 			Guidance: "reply on the channel the conversation was held on",
 		}
+	}
+	// A linked business account's chat is read here and answered in the
+	// provider's app. The send refuses it at execution, which costs the approval.
+	if err := connector.RefuseCaptureOnlyThread(anchor.ChannelProvider, anchor.ThreadKey); err != nil {
+		return &BadArgsError{Cause: err, Guidance: "reply in the provider's own app, since this conversation belongs to a linked business account"}
 	}
 	// Refused HERE rather than at execution, and the timing is the point: this
 	// runs before staging, and staging costs the human the one-shot approval

@@ -89,6 +89,7 @@ export function useDealEdit(
       currentCompany,
       masked,
       closed: deal.status === "won" || deal.status === "lost",
+      priced: deal.amount_minor != null,
       me: meId,
       currentOwner: deal.owner_id ?? null,
       currency: deal.currency ?? "",

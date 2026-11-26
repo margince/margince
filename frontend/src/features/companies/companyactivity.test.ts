@@ -42,7 +42,7 @@ type Reading = NonNullable<NonNullable<Company360["state_strip"]>["dormancy"]>;
 function reading(over: Partial<Reading>): Company360 {
   return view({
     state_strip: {
-      account: { lifecycle: "customer", relationship_types: [] },
+      account: { status: "customer", relationship_types: [] },
       dormancy: {
         rung: "active",
         silent_days: 0,

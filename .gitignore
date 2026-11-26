@@ -17,8 +17,8 @@ coverage-extensions.out
 # an unrelated future /build asset is never silently hidden), and
 # extensions/ is the installation-owned enabled set. The vanilla tree
 # ships the placeholder, the approval lock, and the FIRST-PARTY units
-# enabled by default (extensions/eu and extensions/apac, the EU member-state and
-# Asia-Pacific jurisdiction packs; extensions/openchannel, the reference
+# enabled by default (extensions/eu, extensions/apac and extensions/us, the EU member-state,
+# Asia-Pacific and United States jurisdiction packs; extensions/openchannel, the reference
 # connector; extensions/finance-demo, the demonstration accounting source). instance/go.mod
 # turns a unit on, and a unit missing from the un-ignore list below is a unit
 # no clone of this repository has.
@@ -42,7 +42,9 @@ coverage-extensions.out
 !/extensions/apac
 !/extensions/eu
 !/extensions/finance-demo
+!/extensions/gdocs
 !/extensions/openchannel
+!/extensions/us
 # A unit's installed frontend dependencies. Its package.json and the workspace
 # lockfile are what ship; node_modules is what pnpm makes from them, and it is
 # per-member now that a unit's frontend layer is a workspace package.
