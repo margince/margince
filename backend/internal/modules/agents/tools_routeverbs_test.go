@@ -307,8 +307,7 @@ func TestAnUploadVerbRefusesAFileItCannotSend(t *testing.T) {
 		"not base64":   {map[string]string{"filename": "a.png", "content_type": "image/png", "content_base64": "!!"}, "content_base64"},
 		"empty":        {map[string]string{"filename": "a.png", "content_type": "image/png", "content_base64": ""}, "content_base64"},
 		"past a limit": {map[string]string{"filename": "a.png", "content_type": "image/png", "content_base64": huge}, "over the"},
-		"sent twice": {map[string]string{"filename": "a.txt", "content_type": "text/plain", "content_base64": good,
-			"content_text": "x"}, "not both"},
+		"sent twice":   {map[string]string{"filename": "a.txt", "content_type": "text/plain", "content_base64": good, "content_text": "x"}, "not both"},
 	} {
 		tool := routeVerbTool{verb: uploadLogoVerb, run: func(context.Context, RouteCall) (json.RawMessage, error) {
 			t.Errorf("%s reached the route", name)
