@@ -3,17 +3,17 @@
 
 // What an MCP app view shows in English, read for the mcp-view-copy rule.
 
-import { basename } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { type Document, Element, type Node, Window } from "happy-dom";
 import ts from "typescript";
 import { declaredValues, rulesOfText } from "../scripts/lib/css-rules";
-import type { CensusFile } from "./tree";
+import { type CensusFile, srcDir } from "./tree";
 
 export type Copy = Readonly<{ at: string; text: string }>;
 
 // A JSON file a view imports carries copy this reader does not see, unless it
 // is the list of tools a view may call.
-const JSON_WITHOUT_COPY = new Set(["actions.json"]);
+const TOOL_LIST = join(srcDir, "mcp-apps", "actions.json");
 
 const COMPARISONS = new Set([
   ts.SyntaxKind.EqualsEqualsEqualsToken,
@@ -75,7 +75,9 @@ const isPlus = (node: ts.Node): node is ts.BinaryExpression =>
   ts.isBinaryExpression(node) &&
   node.operatorToken.kind === ts.SyntaxKind.PlusToken;
 
-function plusParts(node: ts.Expression): ts.Expression[] {
+function plusParts(grouped: ts.Expression): ts.Expression[] {
+  let node = grouped;
+  while (ts.isParenthesizedExpression(node)) node = node.expression;
   return isPlus(node)
     ? [...plusParts(node.left), ...plusParts(node.right)]
     : [node];
@@ -122,7 +124,7 @@ export function jsonImports(file: CensusFile): string[] {
     ts.isImportDeclaration(statement) &&
     ts.isStringLiteral(statement.moduleSpecifier) &&
     statement.moduleSpecifier.text.endsWith(".json") &&
-    !JSON_WITHOUT_COPY.has(basename(statement.moduleSpecifier.text))
+    resolve(dirname(file.path), statement.moduleSpecifier.text) !== TOOL_LIST
       ? [`${file.rel} imports ${statement.moduleSpecifier.text}`]
       : [],
   );

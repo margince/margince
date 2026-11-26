@@ -73,10 +73,10 @@ describe("the mcp-view-copy rule, over planted views", () => {
     ]);
   });
 
-  it("reads a template placeholder and any part of a + chain as {}", () => {
+  it("reads a template placeholder and any part of a grouped + chain as {}", () => {
     expect(
       module(
-        `const a = \`Catch me up on "\${name}"\`;\nconst b = "It" + "'s due " + day;\n`,
+        `const a = \`Catch me up on "\${name}"\`;\nconst b = "It" + ("'s due " + day);\n`,
       ),
     ).toEqual([
       quoted(CURLY, "src/mcp-apps/card/main.ts:1:11", 'Catch me up on "{}"'),
@@ -182,10 +182,11 @@ describe("the mcp-view-copy rule, over planted views", () => {
   it("names a JSON import whose copy it does not read", () => {
     expect(
       module(
-        'import actions from "../actions.json";\nimport copy from "./copy.json";\n',
+        'import tools from "../actions.json";\nimport copy from "./copy.json";\nimport actions from "./actions.json";\n',
       ),
     ).toEqual([
       "reads JSON this rule cannot: src/mcp-apps/card/main.ts imports ./copy.json",
+      "reads JSON this rule cannot: src/mcp-apps/card/main.ts imports ./actions.json",
     ]);
   });
 
