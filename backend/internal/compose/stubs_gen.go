@@ -2619,6 +2619,18 @@ func (stubs) GetAuthenticationPolicy(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "GetAuthenticationPolicy")
 }
 
+func (stubs) DeleteGoogleDirectory(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DeleteGoogleDirectory")
+}
+
+func (stubs) GetGoogleDirectory(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetGoogleDirectory")
+}
+
+func (stubs) SetGoogleDirectory(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SetGoogleDirectory")
+}
+
 func (stubs) GetInstallationConfiguration(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetInstallationConfiguration")
 }

@@ -183,12 +183,13 @@ func linkFederatedIdentity(ctx context.Context, tx pgx.Tx, userID ids.UserID, pr
 // parallel implementation. Sessions carry no workspace column (ADR-0091 §8),
 // so unlike Login this needs no bound installation context.
 //
-// The token's groups grant mapped roles (grouprolesync.go) in the same
-// transaction as the session, so a member never holds a session that predates
-// the grant their sign-in earned. Its given name fills an empty greeting name
-// on the first link only.
+// Mapped roles (grouprolesync.go) are granted in the session's transaction, from
+// the token's groups or, for Google, from groupsFor. A member never holds a
+// session that predates the grant their sign-in earned. Its given name fills an
+// empty greeting name on the first link only.
 func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string, claims OIDCClaims) (string, error) {
-	subject, email, groups := claims.Subject, claims.Email, claims.Groups
+	subject, email := claims.Subject, claims.Email
+	groups := s.groupsFor(ctx, provider, claims)
 	rawToken, tokenHash, err := mintSessionToken()
 	if err != nil {
 		return "", fmt.Errorf("identity: mint session token: %w", err)
