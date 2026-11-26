@@ -693,5 +693,9 @@ const (
 	// 169: forecasting.addTeamStandings reads a team freeze's deal ids and hands
 	// them to the snapshot lens before any caller sees one. The lens applies the
 	// reader's deal row scope and the team's assertion check, as FocusLists does.
-	modulesTierUnscopedCeiling = 169
+	//
+	// 171: privacy.purgeSummariesWrittenFrom reads the company and deal ids an
+	// erased or anonymized contact spoke on, two references in one statement. They
+	// go to generatedsummary.ForgetRecords, which deletes by them, and to no caller.
+	modulesTierUnscopedCeiling = 171
 )
