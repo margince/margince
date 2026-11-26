@@ -7033,7 +7033,10 @@ export const en = {
   "offer.termsText": "Terms text",
   "offer.lines": "Line items",
   "offer.addLine": "Add line",
-  "offer.positionTaken": "Another line already has this position.",
+  "offer.lineOrderHint":
+    "Drag a line by its handle, or focus the handle and press the up or down arrow.",
+  "offer.lineHandle": "Move {name}, line {position} of {total}",
+  "offer.lineMoved": "{name} is now line {position} of {total}",
   "offer.lapsed":
     "The Valid until date of this offer has passed. Change it under Edit header on a draft, or regenerate a sent offer.",
   "offer.position": "Position",

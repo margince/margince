@@ -56037,7 +56037,7 @@ components:
       type: object
       description: Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422).
       properties:
-        position: {type: integer, minimum: 1}
+        position: {type: integer, minimum: 1, description: 'Moves the line to this place in the offer. The lines between shift to make room, and the offer''s lines are numbered from 1 again. A place past the last line puts it last.'}
         description: {type: string}
         unit: {type: string}
         quantity: {type: number, format: double}

@@ -60208,6 +60208,7 @@ export interface components {
         };
         /** @description Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422). */
         UpdateOfferLineItemRequest: {
+            /** @description Moves the line to this place in the offer. The lines between shift to make room, and the offer's lines are numbered from 1 again. A place past the last line puts it last. */
             position?: number;
             description?: string;
             unit?: string;
