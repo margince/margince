@@ -78,6 +78,16 @@ jobs:
           persist-credentials: false
           # The tag is checked against main, which a shallow checkout lacks.
           fetch-depth: 0
+      # `make check` leaves the release scripts' tests out, so the release
+      # proves the scripts it calls before it uses them. release.yml can serve
+      # a tag cut before the lane existed; that tag's own `make check` ran the
+      # tests, and its Makefile has no check-release target.
+      - name: The release scripts pass their own tests
+        run: |
+          set -euo pipefail
+          if grep -q '^check-release:' Makefile; then
+            make check-release
+          fi
       - name: Read the tag
         id: version
         env:
