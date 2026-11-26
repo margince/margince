@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/livepipeline"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 )
@@ -104,8 +105,8 @@ func reportingStageCohortChart(out *reporting.Evaluation, chart crmcontracts.Rep
 	frame := out.Result.Context
 	chart.ContextId = reportingInterval
 	chart.Interval = &frame.Interval
-	if frame.PipelineId == nil {
-		chart.Coverage.Status = crmcontracts.ReportingStatusNotConfigured
+	if livepipeline.Stages(frame) == nil {
+		chart.Coverage.Status = crmcontracts.ReportingStatusChoosePipeline
 		reason := reporting.ExplanationCopy(frame).Say(reportingCoverageWords.ChoosePipeline)
 		chart.Coverage.Reason = &reason
 		return chart

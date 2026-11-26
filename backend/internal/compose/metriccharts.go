@@ -8,6 +8,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/livepipeline"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 )
@@ -21,8 +22,8 @@ func reportingGroups(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 		chart.Interval = &frame.Interval
 		chart.StateAt = nil
 	}
-	if !owners && frame.PipelineId == nil {
-		chart.Coverage.Status = "not_configured"
+	if !owners && livepipeline.Stages(frame) == nil {
+		chart.Coverage.Status = crmcontracts.ReportingStatusChoosePipeline
 		reason := reporting.ExplanationCopy(frame).Say(reportingCoverageWords.ChoosePipeline)
 		chart.Coverage.Reason = &reason
 		return chart

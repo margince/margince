@@ -22422,6 +22422,7 @@ func (e ReportingSelectionTargetBasis) Valid() bool {
 
 // Defines values for ReportingStatus.
 const (
+	ReportingStatusChoosePipeline     ReportingStatus = "choose_pipeline"
 	ReportingStatusFailed             ReportingStatus = "failed"
 	ReportingStatusInsufficientSample ReportingStatus = "insufficient_sample"
 	ReportingStatusNoData             ReportingStatus = "no_data"
@@ -22435,6 +22436,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingStatus enum.
 func (e ReportingStatus) Valid() bool {
 	switch e {
+	case ReportingStatusChoosePipeline:
+		return true
 	case ReportingStatusFailed:
 		return true
 	case ReportingStatusInsufficientSample:
@@ -65231,18 +65234,21 @@ type ReportingContext struct {
 	FrameworkRevision    int64 `json:"framework_revision"`
 
 	// Horizon The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed.
-	Horizon               *ReportingWindow       `json:"horizon,omitempty"`
-	Industry              *ReportingIndustry     `json:"industry,omitempty"`
-	InitiativeId          *ReportingInitiativeId `json:"initiative_id,omitempty"`
-	InitiativeLabel       *string                `json:"initiative_label,omitempty"`
-	InitiativeLaunchAt    *time.Time             `json:"initiative_launch_at,omitempty"`
-	Interval              ReportingWindow        `json:"interval"`
-	MemberIds             []openapi_types.UUID   `json:"member_ids"`
-	PeriodKind            string                 `json:"period_kind"`
-	PipelineId            *openapi_types.UUID    `json:"pipeline_id,omitempty"`
-	PopulationFingerprint string                 `json:"population_fingerprint"`
-	ProductId             *ReportingProductId    `json:"product_id,omitempty"`
-	ProductLabel          *string                `json:"product_label,omitempty"`
+	Horizon            *ReportingWindow       `json:"horizon,omitempty"`
+	Industry           *ReportingIndustry     `json:"industry,omitempty"`
+	InitiativeId       *ReportingInitiativeId `json:"initiative_id,omitempty"`
+	InitiativeLabel    *string                `json:"initiative_label,omitempty"`
+	InitiativeLaunchAt *time.Time             `json:"initiative_launch_at,omitempty"`
+	Interval           ReportingWindow        `json:"interval"`
+	MemberIds          []openapi_types.UUID   `json:"member_ids"`
+
+	// OnlyLivePipeline The installation's only live pipeline, absent when it has several or the reader may not read pipelines. A stage chart over every pipeline then reads this one, and a target over every pipeline also holds when this one is chosen.
+	OnlyLivePipeline      *openapi_types.UUID `json:"only_live_pipeline,omitempty"`
+	PeriodKind            string              `json:"period_kind"`
+	PipelineId            *openapi_types.UUID `json:"pipeline_id,omitempty"`
+	PopulationFingerprint string              `json:"population_fingerprint"`
+	ProductId             *ReportingProductId `json:"product_id,omitempty"`
+	ProductLabel          *string             `json:"product_label,omitempty"`
 
 	// ProseLanguage Base language used for generated explanations. Absent on legacy readings, which use English.
 	ProseLanguage *string        `json:"prose_language,omitempty"`
@@ -65273,6 +65279,10 @@ type ReportingCoverage struct {
 	// Status `failed` means the database could not calculate this figure on this
 	// read. The other figures in the same evaluation are unaffected, and a
 	// later read may succeed.
+	//
+	// `choose_pipeline` means the figure compares the stages of one pipeline
+	// and the selection names none, while the installation has several.
+	// Nothing needs setting up: choosing a pipeline answers it.
 	Status   ReportingStatus `json:"status"`
 	Withheld bool            `json:"withheld"`
 }
@@ -65607,6 +65617,10 @@ type ReportingPoint struct {
 	// Status `failed` means the database could not calculate this figure on this
 	// read. The other figures in the same evaluation are unaffected, and a
 	// later read may succeed.
+	//
+	// `choose_pipeline` means the figure compares the stages of one pipeline
+	// and the selection names none, while the installation has several.
+	// Nothing needs setting up: choosing a pipeline answers it.
 	Status ReportingStatus `json:"status"`
 	Target *float64        `json:"target,omitempty"`
 	Upper  *float64        `json:"upper,omitempty"`
@@ -65850,6 +65864,10 @@ type ReportingSelectionTargetBasis string
 // ReportingStatus `failed` means the database could not calculate this figure on this
 // read. The other figures in the same evaluation are unaffected, and a
 // later read may succeed.
+//
+// `choose_pipeline` means the figure compares the stages of one pipeline
+// and the selection names none, while the installation has several.
+// Nothing needs setting up: choosing a pipeline answers it.
 type ReportingStatus string
 
 // ReportingTarget defines model for ReportingTarget.

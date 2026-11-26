@@ -16,6 +16,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/livepipeline"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
@@ -76,6 +77,9 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 	}
 	out.ScopeHoldsDeals = holds
 	if err := reportingPipeline(ctx, tx, selection.PipelineId); err != nil {
+		return out, err
+	}
+	if err := livepipeline.Mark(ctx, tx, &out); err != nil {
 		return out, err
 	}
 	if err := reportingDimensionContext(ctx, tx, selection, &out); err != nil {

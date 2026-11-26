@@ -67485,10 +67485,15 @@ components:
         `failed` means the database could not calculate this figure on this
         read. The other figures in the same evaluation are unaffected, and a
         later read may succeed.
+
+        `choose_pipeline` means the figure compares the stages of one pipeline
+        and the selection names none, while the installation has several.
+        Nothing needs setting up: choosing a pipeline answers it.
       enum:
       - ok
       - no_data
       - not_configured
+      - choose_pipeline
       - insufficient_sample
       - partial
       - unsupported
@@ -68062,6 +68067,13 @@ components:
         scope:
           $ref: '#/components/schemas/ReportingScope'
         pipeline_id: *id002
+        only_live_pipeline:
+          type: string
+          format: uuid
+          description: >-
+            The installation's only live pipeline, absent when it has several or the reader may
+            not read pipelines. A stage chart over every pipeline then reads this one, and a
+            target over every pipeline also holds when this one is chosen.
         population_fingerprint:
           type: string
         interval:

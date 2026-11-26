@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/livepipeline"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
@@ -85,8 +86,9 @@ func cohortOutcomeGroup(stage, outcome string) string {
 func readReportingStageConversion(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	// Stages belong to one pipeline. Without one the reading is refused before
 	// any history is read.
-	if frame.PipelineId == nil {
-		return nil, reportingGap(crmcontracts.ReportingStatusNotConfigured, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.ChoosePipeline)), nil
+	pipeline := livepipeline.Stages(frame)
+	if pipeline == nil {
+		return nil, reportingGap(crmcontracts.ReportingStatusChoosePipeline, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.ChoosePipeline)), nil
 	}
 	var b reportingBindings
 	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), "h.owner_id_at_change", b.arg, unownedIsExcluded)
@@ -97,7 +99,7 @@ func readReportingStageConversion(ctx context.Context, tx pgx.Tx, frame crmcontr
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	narrowing := orUnnarrowed(population) + " AND " + orUnnarrowed(rowScope) + " AND d.archived_at IS NULL AND h.pipeline_id_at_change = " + b.add(*frame.PipelineId)
+	narrowing := orUnnarrowed(population) + " AND " + orUnnarrowed(rowScope) + " AND d.archived_at IS NULL AND h.pipeline_id_at_change = " + b.add(*pipeline)
 	fieldScope, withheld, err := reportingFieldScope(ctx, string(recordTypeDeal), "t", reportingDealFields(reportingStageConversion), &b)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err

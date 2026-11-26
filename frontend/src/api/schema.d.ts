@@ -49650,9 +49650,13 @@ export interface components {
          * @description `failed` means the database could not calculate this figure on this
          *     read. The other figures in the same evaluation are unaffected, and a
          *     later read may succeed.
+         *
+         *     `choose_pipeline` means the figure compares the stages of one pipeline
+         *     and the selection names none, while the installation has several.
+         *     Nothing needs setting up: choosing a pipeline answers it.
          * @enum {string}
          */
-        ReportingStatus: "ok" | "no_data" | "not_configured" | "insufficient_sample" | "partial" | "unsupported" | "unavailable" | "failed";
+        ReportingStatus: "ok" | "no_data" | "not_configured" | "choose_pipeline" | "insufficient_sample" | "partial" | "unsupported" | "unavailable" | "failed";
         SdrSummary: {
             /**
              * Format: date-time
@@ -50086,6 +50090,11 @@ export interface components {
             scope: components["schemas"]["ReportingScope"];
             /** Format: uuid */
             pipeline_id?: string;
+            /**
+             * Format: uuid
+             * @description The installation's only live pipeline, absent when it has several or the reader may not read pipelines. A stage chart over every pipeline then reads this one, and a target over every pipeline also holds when this one is chosen.
+             */
+            only_live_pipeline?: string;
             population_fingerprint: string;
             interval: components["schemas"]["ReportingWindow"];
             target_interval?: components["schemas"]["ReportingWindow"];
