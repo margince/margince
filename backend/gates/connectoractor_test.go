@@ -359,7 +359,6 @@ var agentJobsStillSystemTyped = gatekit.Waive(map[string]string{
 	"internal/compose/reconcile.go":                   forAColleague,
 	"internal/compose/scrapeaccept.go":                forAColleague,
 	"internal/compose/signalproposals.go":             forAColleague,
-	"internal/compose/voicebuild.go":                  forAColleague,
 	"internal/compose/commitmenttask.go":              forNoOne,
 	"internal/compose/jobs_knowledgeingest.go":        forNoOne,
 })

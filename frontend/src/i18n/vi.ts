@@ -2246,6 +2246,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.public_record_preview": "Xem trước bản ghi công khai",
   "systemJob.agent_resume": "Tiếp tục lần chạy của trợ lý AI",
   "systemJob.agent_scheduler": "Lượt chạy trợ lý AI theo lịch",
+  "systemJob.voice_build": "Tiến trình phân tích văn phong",
   "systemJob.forecast_chances": "Tỷ lệ giai đoạn dự báo",
   "systemJob.assurance_freshness": "Độ mới của kiểm tra dự báo",
   "systemJob.forecast_call_baseline": "Mốc so sánh của dự báo đã chốt",

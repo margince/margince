@@ -6,10 +6,10 @@ package compose
 // The product acting for one named colleague: an agent principal named for the
 // job, carrying that colleague's grants as they are now.
 //
-// A job bound as the system principal passes auth.Require without reading any
-// grant, so a job someone started could do what that colleague may not. Bound
-// through here, the colleague's live grants decide, and a colleague who left or was
-// demoted cannot act through the job.
+// A system principal passes auth.Require without reading any grant. Bound
+// through here, the colleague's live grants decide what the job may do.
+// A job's own run row is kept by the system (forColleague), so a refused run
+// still ends.
 
 import (
 	"context"
@@ -20,13 +20,18 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
-// agentActorPrefix is the kind every actor id bound through this seam has.
-const agentActorPrefix = "agent:"
+// agentActorPrefix and systemActorPrefix are the kinds of the actor ids this
+// seam binds: the work's and the bookkeeping's.
+const (
+	agentActorPrefix  = "agent:"
+	systemActorPrefix = "system:"
+)
 
 // agentFor binds the product acting FOR colleague: an agent principal named
 // actorID, carrying OnBehalfOf and the colleague's grants as they are now. A
@@ -84,4 +89,52 @@ func agentPrincipalFor(colleague principal.Principal, actorID string) (principal
 		// never puts a message on the wire.
 		Scopes: principal.ScopeSet{principal.ScopeWrite: struct{}{}},
 	}, nil
+}
+
+// colleagueJob names the two principals of a job the product runs for a named
+// colleague. work is the agent that does the job's real work under the
+// colleague's grants. books is the system that keeps the run's own row: claim,
+// stage, finish, fail, defer.
+type colleagueJob struct {
+	work  string
+	books string
+}
+
+// forColleague binds one run of job for colleague. books always binds, so the
+// run can be ended whatever the colleague may still do. work is nil, and err
+// answers workRefused, when the colleague left or lost their seat.
+//
+// Both name the colleague as the one acted for: aiactivity files a run on the
+// colleague's activity rail through on_behalf_of, and owner-only checks read
+// UserID.
+func forColleague(ctx context.Context, users *identity.Service, colleague ids.UUID, job colleagueJob) (books, work context.Context, err error) {
+	if !strings.HasPrefix(job.books, systemActorPrefix) || len(job.books) == len(systemActorPrefix) {
+		return nil, nil, fmt.Errorf("compose: %q is not a system id, so the run's bookkeeping may not act under it", job.books)
+	}
+	books = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: job.books, UserID: colleague, OnBehalfOf: colleague,
+	})
+	work, err = agentFor(ctx, users, colleague, job.work)
+	return books, work, err
+}
+
+// workIn moves the work's agent onto ctx, which derives from the bookkeeping.
+// The work then keeps what was bound there since, such as a work lease. A
+// refused work stays nil.
+func workIn(ctx, work context.Context) context.Context {
+	if work == nil {
+		return nil
+	}
+	agent, ok := principal.Actor(work)
+	if !ok {
+		return nil
+	}
+	return principal.WithActor(ctx, agent)
+}
+
+// workRefused is the colleague's grants not covering the work: they left, lost
+// a grant, or no longer see the record. The run is ended through its
+// bookkeeping as failed. A retry would meet the same answer.
+func workRefused(err error) bool {
+	return errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound)
 }

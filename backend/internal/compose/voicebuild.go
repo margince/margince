@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
@@ -119,48 +120,55 @@ func WithVoiceBuildEnqueue(inserter *jobs.Runner) Option {
 type voiceBuildWorker struct {
 	pool  *pgxpool.Pool
 	store *ai.VoiceStore
+	users *identity.Service
 	brain completer
 	log   *slog.Logger
 	now   func() time.Time
 }
 
 func newVoiceBuildWorker(pool *pgxpool.Pool, brain completer, log *slog.Logger) *voiceBuildWorker {
-	return &voiceBuildWorker{pool: pool, store: ai.NewVoiceStore(InstallationDB(pool)), brain: brain, log: log, now: time.Now}
+	return &voiceBuildWorker{
+		pool: pool, store: ai.NewVoiceStore(InstallationDB(pool)), users: identity.NewService(pool),
+		brain: brain, log: log, now: time.Now,
+	}
 }
+
+// voiceBuilder is the build's two principals: the agent derives and activates
+// the voice under the requester's grants, and the system keeps the build row.
+var voiceBuilder = colleagueJob{work: "agent:voice-builder", books: "system:voice_build"}
 
 // reclaimAfter leaves a grace beyond the work timeout before a replacement
 // worker may steal a running row from a dead one.
 func (w *voiceBuildWorker) reclaimAfter() time.Duration { return voiceBuildTimeout + time.Minute }
 
-// voiceBuildWorkerCtx binds the build's workspace and the owner-scoped
-// system principal: visibleProfile admits only the profile owner, so the
-// runner acts as the requesting human's system delegate.
-func voiceBuildWorkerCtx(ctx context.Context, args VoiceBuildArgs) (context.Context, error) {
+// voiceBuildWorkerCtx binds the build's workspace and its two principals,
+// both for the requester: visibleProfile admits only the profile owner. work
+// is nil when the requester left or lost their seat, and the build is then
+// failed through books.
+func (w *voiceBuildWorker) voiceBuildWorkerCtx(ctx context.Context, args VoiceBuildArgs) (books, work context.Context, err error) {
 	requester, err := ids.Parse(args.RequestedBy)
 	if err != nil {
-		return nil, fmt.Errorf("voice_build: requester id: %w", err)
+		return nil, nil, fmt.Errorf("voice_build: requester id: %w", err)
 	}
 	ctx, err = workspaceJobCtx(ctx, args)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type:       principal.PrincipalSystem,
-		ID:         "agent:voice-builder",
-		UserID:     requester,
-		OnBehalfOf: requester,
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7()), nil
+	books, work, err = forColleague(principal.WithCorrelationID(ctx, ids.NewV7()), w.users, requester, voiceBuilder)
+	if err != nil && !workRefused(err) {
+		return nil, nil, err
+	}
+	return books, work, nil
 }
 
 func (w *voiceBuildWorker) Work(ctx context.Context, job *river.Job[VoiceBuildArgs]) error {
-	// Into its own variable: voiceBuildWorkerCtx returns (nil, err) on a
-	// refusal, and assigning over ctx would hand that nil to the fault below.
-	buildCtx, err := voiceBuildWorkerCtx(ctx, job.Args)
+	// Into their own variables: voiceBuildWorkerCtx returns nils on an error,
+	// and assigning over ctx would hand that nil to the fault below.
+	books, work, err := w.voiceBuildWorkerCtx(ctx, job.Args)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	ctx = buildCtx
+	ctx = books
 	profileID, err := ids.Parse(job.Args.ProfileID)
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("voice_build: profile id: %w", err))
@@ -170,12 +178,14 @@ func (w *voiceBuildWorker) Work(ctx context.Context, job *river.Job[VoiceBuildAr
 		return jobs.FaultContext(ctx, fmt.Errorf("voice_build: build id: %w", err))
 	}
 	_, err = InstallationDB(w.pool).WithWorkLease(ctx, "voice_build", buildID, w.log, func(owned context.Context) error {
-		return w.build(owned, job, profileID, buildID)
+		return w.build(owned, workIn(owned, work), job, profileID, buildID)
 	})
 	return jobs.FaultContext(ctx, err)
 }
 
-func (w *voiceBuildWorker) build(ctx context.Context, job *river.Job[VoiceBuildArgs], profileID, buildID ids.UUID) error {
+// build keeps the row under ctx, the bookkeeping, and does the work under
+// work. work is nil when the requester can no longer act.
+func (w *voiceBuildWorker) build(ctx, work context.Context, job *river.Job[VoiceBuildArgs], profileID, buildID ids.UUID) error {
 	input, claimed, err := w.store.ClaimBuild(ctx, profileID, buildID, w.reclaimAfter())
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("voice_build %s: claim: %w", job.Args.BuildID, err))
@@ -195,11 +205,15 @@ func (w *voiceBuildWorker) build(ctx context.Context, job *river.Job[VoiceBuildA
 	}
 	claimedAt := claimTime(input)
 	said := voiceCopyFor(identity.BaseLanguageForPrompt(ctx, w.pool))
+	if work == nil {
+		return jobs.FaultContext(ctx, w.fail(ctx, buildID, claimedAt, "internal",
+			ai.SafeVoiceBuildFailure(apperrors.ErrNotFound, said.Lang())))
+	}
 	if w.brain == nil {
 		return jobs.FaultContext(ctx, w.fail(ctx, buildID, claimedAt, "model_unavailable",
 			ai.VoiceBuildUnavailable(said.Lang())))
 	}
-	err = w.run(ctx, buildID, input, said)
+	err = w.run(ctx, work, buildID, input, said)
 	if err == nil {
 		return nil
 	}
@@ -295,30 +309,31 @@ func (w *voiceBuildWorker) advance(ctx context.Context, buildID ids.UUID, claime
 	return nil
 }
 
-// run drives extract → evaluate → activate on a claimed build. Every
-// terminal write below mints its detached context AT write time (deep-read
-// precedent): a context minted before the model calls would carry a deadline
-// the run itself already spent, and the outcome could then never be
-// recorded — the build would sit "running" until reclaim, forever retrying.
-func (w *voiceBuildWorker) run(ctx context.Context, buildID ids.UUID, input ai.VoiceBuildInput, said voiceCopy) error {
-	heldOut, buildSamples := splitVoiceHeldOut(input.Samples, input.Build.SourceHash)
-	if err := w.advance(ctx, buildID, claimTime(input), "extract"); err != nil {
-		return err
-	}
-	artifact, err := ai.DeriveVoice(ctx, w.brain, input.Personality, input.Build.SourceHash, buildSamples)
-	if err != nil {
-		return err
-	}
-	if err := w.advance(ctx, buildID, claimTime(input), "evaluate"); err != nil {
-		return err
-	}
+// run drives extract → evaluate → activate on a claimed build: the stages
+// under books, the work under work. The completing write mints its detached
+// context at write time. One minted before the model calls would carry a
+// deadline the run already spent, and the build would sit running.
+func (w *voiceBuildWorker) run(books, work context.Context, buildID ids.UUID, input ai.VoiceBuildInput, said voiceCopy) error {
+	// The work's first act reads under the requester's grants. A requester who
+	// may no longer read the profile never has their corpus sent to a model.
 	var predecessor *ai.VoiceProfileVersion
-	if active, ok, err := w.store.ActiveVersion(ctx, input.Profile.ID); err != nil {
+	if active, ok, err := w.store.ActiveVersion(work, input.Profile.ID); err != nil {
 		return err
 	} else if ok {
 		predecessor = &active
 	}
-	evaluated, err := said.evaluateVoiceCandidate(ctx, w.brain, artifact, input.Personality, heldOut, predecessor)
+	heldOut, buildSamples := splitVoiceHeldOut(input.Samples, input.Build.SourceHash)
+	if err := w.advance(books, buildID, claimTime(input), "extract"); err != nil {
+		return err
+	}
+	artifact, err := ai.DeriveVoice(work, w.brain, input.Personality, input.Build.SourceHash, buildSamples)
+	if err != nil {
+		return err
+	}
+	if err := w.advance(books, buildID, claimTime(input), "evaluate"); err != nil {
+		return err
+	}
+	evaluated, err := said.evaluateVoiceCandidate(work, w.brain, artifact, input.Personality, heldOut, predecessor)
 	if err != nil {
 		return err
 	}
@@ -328,21 +343,21 @@ func (w *voiceBuildWorker) run(ctx context.Context, buildID ids.UUID, input ai.V
 	// complete without it — so it is said out loud and the run carries on
 	// rather than losing a built artifact to a missing illustration.
 	if len(evaluated.SampleDrafts) == 0 {
-		drafts, draftErr := demonstrationDraft(ctx, w.brain, artifact, input.Personality)
+		drafts, draftErr := demonstrationDraft(work, w.brain, artifact, input.Personality)
 		if draftErr != nil {
-			w.log.WarnContext(ctx, "voice demonstration draft failed",
+			w.log.WarnContext(work, "voice demonstration draft failed",
 				"build", buildID.String(), "err", draftErr)
 		} else {
 			evaluated.SampleDrafts = drafts
 		}
 	}
 	corpusStats := ai.AnalyzeVoice(input.Samples)
-	if err := w.advance(ctx, buildID, claimTime(input), "activate"); err != nil {
+	if err := w.advance(books, buildID, claimTime(input), "activate"); err != nil {
 		return err
 	}
 	// The completing write must outlive a job timeout that fires mid-run: a
 	// canceled work context must never strand a finished artifact unrecorded.
-	terminal, cancel := terminalCtx(ctx)
+	terminal, cancel := terminalCtx(work)
 	defer cancel()
 	_, err = w.store.CompleteBuild(terminal, buildID, claimTime(input), ai.VoiceBuildOutcome{
 		Language:     said.Lang(),
