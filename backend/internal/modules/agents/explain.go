@@ -127,7 +127,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return AuthorityRefusal(err)
 	case errors.Is(err, apperrors.ErrNotFound):
-		return "No such record in this workspace (or it is outside the acting user's row scope). (" + refusalDetail(err) + ")"
+		return notFoundExplanation(err)
 	case errors.As(err, &skew):
 		// Its words name the remedy, a re-stage or a reload, which the generic retry below contradicts.
 		return echoSafe(skew.Message, MaxFaultDetail)
