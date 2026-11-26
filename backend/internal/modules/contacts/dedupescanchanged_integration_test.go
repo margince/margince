@@ -46,6 +46,11 @@ func ageRows(t *testing.T, tables ...string) {
 	}()
 	if err := pgx.BeginFunc(ctx, owner, func(tx pgx.Tx) error {
 		for _, table := range tables {
+			// The company_fact stream reads a view; its rows are stored in
+			// field_provenance.
+			if table == tableCompanyFact {
+				table = tableEvidence
+			}
 			trigger := pgx.Identifier{"trg_" + table + "_updated"}.Sanitize()
 			name := pgx.Identifier{table}.Sanitize()
 			for _, statement := range []string{

@@ -154,8 +154,8 @@ func TestCorrectionLedgerSurvivesRederivation(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
-	SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
-		VALUES ($1, '`+mine.String()+`', 'title', 'Business Development Manager',
+	SeedIDRow(t, owner, `INSERT INTO field_provenance (object_type, id, object_id, field_name, value, evidence_snippet, evidence_ref, source, captured_by)
+		VALUES ('contact', $1, '`+mine.String()+`', 'title', 'Business Development Manager',
 		        'Anna Weber, Business Development Manager', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -222,8 +222,8 @@ func TestACorrectionDoesNotOutliveTheValueItCorrected(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
-	SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
-		VALUES ($1, '`+mine.String()+`', 'title', 'Business Development Manager',
+	SeedIDRow(t, owner, `INSERT INTO field_provenance (object_type, id, object_id, field_name, value, evidence_snippet, evidence_ref, source, captured_by)
+		VALUES ('contact', $1, '`+mine.String()+`', 'title', 'Business Development Manager',
 		        'Anna Weber, Business Development Manager', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -264,9 +264,9 @@ func TestACorrectionDoesNotOutliveTheValueItCorrected(t *testing.T) {
 	// Now a newer answer replaces the value the human was looking at. The
 	// touch trigger moves updated_at; the value is what an accepted research
 	// claim would have written.
-	if _, err := owner.Exec(context.Background(), `UPDATE contact_profile_field
+	if _, err := owner.Exec(context.Background(), `UPDATE field_provenance
 		   SET value = 'Geschaeftsfuehrerin', source = 'research_accept', captured_by = 'user:rep1'
-		 WHERE contact_id = $1 AND field = 'title'`, mine); err != nil {
+		 WHERE object_type = 'contact' AND value IS NOT NULL AND object_id = $1 AND field_name = 'title'`, mine); err != nil {
 		t.Fatalf("writing the newer value: %v", err)
 	}
 
@@ -304,8 +304,8 @@ func TestACorrectionIsAboutTheValueTheReaderHadInFrontOfThem(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
-	SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
-		VALUES ($1, '`+mine.String()+`', 'title', 'Business Development Manager',
+	SeedIDRow(t, owner, `INSERT INTO field_provenance (object_type, id, object_id, field_name, value, evidence_snippet, evidence_ref, source, captured_by)
+		VALUES ('contact', $1, '`+mine.String()+`', 'title', 'Business Development Manager',
 		        'Anna Weber, Business Development Manager', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -322,9 +322,9 @@ func TestACorrectionIsAboutTheValueTheReaderHadInFrontOfThem(t *testing.T) {
 
 	// The page is open on that value. Something replaces it — and the reader,
 	// still looking at the old one, corrects it AFTERWARDS.
-	if _, err := owner.Exec(context.Background(), `UPDATE contact_profile_field
+	if _, err := owner.Exec(context.Background(), `UPDATE field_provenance
 		   SET value = 'Geschaeftsfuehrerin', source = 'research_accept', captured_by = 'user:rep1'
-		 WHERE contact_id = $1 AND field = 'title'`, mine); err != nil {
+		 WHERE object_type = 'contact' AND value IS NOT NULL AND object_id = $1 AND field_name = 'title'`, mine); err != nil {
 		t.Fatalf("writing the newer value: %v", err)
 	}
 
@@ -393,8 +393,8 @@ func TestAStaleCorrectionDoesNotOverwriteTheVerdictAboutTheValueThatStands(t *te
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
-	SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
-		VALUES ($1, '`+mine.String()+`', 'title', 'Business Development Manager',
+	SeedIDRow(t, owner, `INSERT INTO field_provenance (object_type, id, object_id, field_name, value, evidence_snippet, evidence_ref, source, captured_by)
+		VALUES ('contact', $1, '`+mine.String()+`', 'title', 'Business Development Manager',
 		        'Anna Weber, Business Development Manager', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -408,9 +408,9 @@ func TestAStaleCorrectionDoesNotOverwriteTheVerdictAboutTheValueThatStands(t *te
 	}
 
 	// The value moves while that page is open.
-	if _, err := owner.Exec(context.Background(), `UPDATE contact_profile_field
+	if _, err := owner.Exec(context.Background(), `UPDATE field_provenance
 		   SET value = 'Geschaeftsfuehrerin', source = 'research_accept', captured_by = 'user:rep1'
-		 WHERE contact_id = $1 AND field = 'title'`, mine); err != nil {
+		 WHERE object_type = 'contact' AND value IS NOT NULL AND object_id = $1 AND field_name = 'title'`, mine); err != nil {
 		t.Fatalf("writing the newer value: %v", err)
 	}
 	current, err := svc.ProfileFields(rep, contactID)
@@ -547,8 +547,8 @@ func TestErasureReachesTheEnrichmentSidecarAndTheLedger(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
-	SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
-		VALUES ($1, '`+mine.String()+`', 'title', 'Head of Procurement',
+	SeedIDRow(t, owner, `INSERT INTO field_provenance (object_type, id, object_id, field_name, value, evidence_snippet, evidence_ref, source, captured_by)
+		VALUES ('contact', $1, '`+mine.String()+`', 'title', 'Head of Procurement',
 		        'Anna Weber — Head of Procurement at ScaleCommerce', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -802,8 +802,8 @@ func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
 	duplicate := e.SeedContact(t, "A. Weber", &e.Rep1)
 
 	// The duplicate carries a field the survivor does not.
-	SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
-		VALUES ($1, '`+duplicate.String()+`', 'title', 'Head of Procurement',
+	SeedIDRow(t, owner, `INSERT INTO field_provenance (object_type, id, object_id, field_name, value, evidence_snippet, evidence_ref, source, captured_by)
+		VALUES ('contact', $1, '`+duplicate.String()+`', 'title', 'Head of Procurement',
 		        'Anna Weber — Head of Procurement', 'site_read:https://example.test/team',
 		        'site_read', 'agent:enrich')`)
 	// One single-answer field they BOTH carry, with different values, and one
@@ -814,10 +814,10 @@ func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
 	}{
 		{survivor, "https://survivor.test", "+4930111111"}, {duplicate, "https://duplicate.test", "+4930222222"},
 	} {
-		SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
-			VALUES ($1, '`+p.id.String()+`', 'website', '`+p.website+`', 'sig', 'activity:x', 'capture_enrich', 'agent:enrich')`)
-		SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value_key, value, evidence_snippet, source_ref, source, captured_by)
-			VALUES ($1, '`+p.id.String()+`', 'phone', '`+p.number+`', '`+p.number+`', 'sig', 'activity:x', 'capture_enrich', 'agent:enrich')`)
+		SeedIDRow(t, owner, `INSERT INTO field_provenance (object_type, id, object_id, field_name, value, evidence_snippet, evidence_ref, source, captured_by)
+			VALUES ('contact', $1, '`+p.id.String()+`', 'website', '`+p.website+`', 'sig', 'activity:x', 'capture_enrich', 'agent:enrich')`)
+		SeedIDRow(t, owner, `INSERT INTO field_provenance (object_type, id, object_id, field_name, value_key, value, evidence_snippet, evidence_ref, source, captured_by)
+			VALUES ('contact', $1, '`+p.id.String()+`', 'phone', '`+p.number+`', '`+p.number+`', 'sig', 'activity:x', 'capture_enrich', 'agent:enrich')`)
 	}
 
 	if _, err := e.Contacts.MergeContact(e.Admin(),
