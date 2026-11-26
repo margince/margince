@@ -19,7 +19,7 @@ dates and the paper.
 To create a contract in Margince, or upload a customer's signed contract document, open the company's **Documents** tab. Click **Add contract** in the **Contracts** panel, and drop the signed file on **Signed document**.
 1. Open the company, choose **Documents**, then **Add contract**.
 2. In **Record contract**, fill **Title** and **This value is** (both required).
-   You may also fill **Value**, **Starts**, **Ends**, **Renews**, **Notice period (days)**, **Payment terms (days)** and **Signed**.
+   You may also fill **Currency**, **Value**, **Starts**, **Ends**, **Renews**, **Notice period (days)**, **Payment terms (days)** and **Signed**. **Currency** starts on your base currency; pick another and the value you typed stays the same.
 3. Click **Record contract**.
 A new contract starts as **Draft**; without the Create permission there is no button.
 Also called: add an agreement, upload a signed contract.
@@ -27,7 +27,7 @@ Also called: add an agreement, upload a signed contract.
 ### How do I make a contract active or change its status?
 To change a contract's status in Margince, open the company's **Documents** tab and use the contract row's actions menu → **Change status**.
 1. Open the actions menu on the contract's row. A screen reader names it **Actions for** and the contract's title, then its number or, without one, its start day. Two menus that would still read the same end in (1) and (2).
-2. Choose **Change status**, pick the **New status** (Draft, Active, Expired or Canceled), and click **Change status**.
+2. Choose **Change status**, pick the **New status** (Draft, Active, Expired or Canceled), and click **Change status**. When you pick Expired or Canceled, the form warns that the status is final.
 A contract that is already Expired, Canceled or Superseded offers no status change, because those are final. Superseded cannot be chosen at all; renewing sets it.
 Also called: activate a contract, mark a contract expired.
 
@@ -107,13 +107,15 @@ replaces.
 ### What renewing changes
 Renewing a contract creates the new contract and supersedes the old one in one
 step. **The old contract keeps its terms.** Only its status changes to
-Superseded, and it shows which contract replaced it. You may not be able to open the
+Superseded, and its row reads "Replaced by" and the new contract's name. You may not be able to open the
 company. Then the renewal still works and says what it did instead: "The renewal
 keeps the same counterparty and records no deal."
 
 ### What a cancellation records
 Recording a cancellation stores the date notice was given and the date it takes
 effect. Nothing else changes; the status changes later, when somebody sets it.
+The contract row shows it at once, as "Canceled, ends" and the date, with the notice
+date, even when the term has not started yet. It no longer shows when the contract renews.
 
 The form refuses three cases: "Enter both dates.";
 "Cancellation cannot take effect before notice was given."; "Cancellation

@@ -315,6 +315,19 @@ export function ContractStatusModal({
             />
           )}
         </Field>
+        {/* No transition leaves a terminal status, so the reader is told before
+            the save rather than finding the menu item gone after it. */}
+        {isTerminalContractStatus(status) && status !== contract.status && (
+          <Callout
+            tone="warning"
+            kind="standing"
+            title={t("contracts.statusChange.finalTitle", {
+              status: t(labelFor(CONTRACT_STATUS_LABEL, status)),
+            })}
+          >
+            {t("contracts.statusChange.finalBody")}
+          </Callout>
+        )}
         <ErrorLine error={assert.error} />
       </div>
       <div className="actions">

@@ -16,7 +16,10 @@ import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { MoneyInput } from "../../design-system/moneyinput";
 import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
+import { currencyOptions } from "../../format/currencychoices";
+import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import {
   type FieldLabels,
   fieldCheckSentence,
@@ -29,6 +32,7 @@ import type { ContractDraft, ValueBasis } from "./contractform";
 type TermsWire =
   | "title"
   | "contract_number"
+  | "currency"
   | "value_minor"
   | "value_basis"
   | "starts_on"
@@ -45,6 +49,7 @@ export const TERMS_WIRE: readonly (readonly [
 ])[] = [
   ["title", "title"],
   ["contractNumber", "contract_number"],
+  ["currency", "currency"],
   ["valueMinor", "value_minor"],
   ["valueBasis", "value_basis"],
   ["startsOn", "starts_on"],
@@ -59,6 +64,7 @@ export function termsLabels(t: Translator): Record<TermsWire, string> {
   return {
     title: t("contracts.form.name"),
     contract_number: t("contracts.form.number"),
+    currency: t("contracts.form.currency"),
     value_minor: t("contracts.form.value"),
     value_basis: t("contracts.form.basis"),
     starts_on: t("contracts.form.startsOn"),
@@ -161,6 +167,26 @@ export function useContractCurrency(draftCurrency: string) {
   return { base, currency, unread };
 }
 
+/**
+ * The draft in another currency, its amounts keeping the figure the reader
+ * typed: the minor units scale with the new currency's digits. With no known
+ * currency yet the amounts were typed at no scale, so they stay as they are.
+ */
+export function inCurrency(
+  draft: ContractDraft,
+  shown: string,
+  currency: string,
+): ContractDraft {
+  const scale = (minor: number) =>
+    shown === "" ? minor : toMinorUnits(toMajorUnits(minor, shown), currency);
+  return {
+    ...draft,
+    currency,
+    valueMinor: scale(draft.valueMinor),
+    arrMinor: scale(draft.arrMinor),
+  };
+}
+
 export function ContractTermsFields({
   draft,
   setDraft,
@@ -176,6 +202,8 @@ export function ContractTermsFields({
   errors?: (field: TermsWire) => string | undefined;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const leading = useLeadingCurrencies();
   return (
     <div className="form-stack">
       <Field
@@ -203,6 +231,17 @@ export function ContractTermsFields({
             onChange={(e) =>
               setDraft({ ...draft, contractNumber: e.target.value })
             }
+          />
+        )}
+      </Field>
+
+      <Field label={t("contracts.form.currency")} error={errors?.("currency")}>
+        {(props) => (
+          <Select
+            {...props}
+            value={currency}
+            onChange={(next) => setDraft(inCurrency(draft, currency, next))}
+            options={currencyOptions(leading, currency, locale)}
           />
         )}
       </Field>
