@@ -119,7 +119,8 @@ const (
 	// History query, boot owner check and filter preview handler.
 	// Raised by 44 production and 99 test lines for the agent-for-a-colleague
 	// seam, the finance card's hidden billing count and their cases.
-	composeRootProductionLines = 231_503
+	// Raised by 94 production lines for the Zalo ingest and token renewal job args.
+	composeRootProductionLines = 231_597
 	composeRootTestLines       = 362_364
 )
 
