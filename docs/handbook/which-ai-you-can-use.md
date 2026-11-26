@@ -20,8 +20,8 @@ Also called: which model should I use, best model, recommended model, which LLM,
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 28 | 10 | 0 | 0 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 28 | 10 | 0 | 0 |
+| Google Gemini | global cloud | 27 | 11 | 0 | 0 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 27 | 11 | 0 | 0 |
 | Anthropic Claude | global cloud | 33 | 5 | 0 | 0 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 8 | 6 |
