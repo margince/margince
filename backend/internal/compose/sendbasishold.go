@@ -136,6 +136,9 @@ func holdBasisFingerprint(ctx context.Context, tx pgx.Tx, row basisRow) error {
 		}
 		return nil
 	}
+	if row.table == teamRequestBasis {
+		return holdTeamRequest(ctx, tx, row)
+	}
 	if row.table != commitmentAdmissionTable {
 		return nil
 	}

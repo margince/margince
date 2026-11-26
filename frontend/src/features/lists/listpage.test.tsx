@@ -268,7 +268,7 @@ describe("an opened list", () => {
     expect(
       within(row).getByText("Signed the quote for the launch deck"),
     ).toBeInTheDocument();
-    expect(within(row).getByText(/2026/)).toBeInTheDocument();
+    expect(within(row).getByText(/^20 Sept? 2026$/)).toBeInTheDocument();
     for (const header of [
       en["lists.members.addedBy"],
       en["lists.members.addedOn"],
@@ -730,6 +730,16 @@ describe("an opened list", () => {
     expect(within(facts()).queryByText(/—/)).toBeNull();
     expect(screen.queryByText(en["lists.health.invalid"])).toBeNull();
     expect(screen.queryByRole("button", { name: /^Select all/ })).toBeNull();
+  });
+
+  it("says the records are unavailable, and does not call the filter broken", async () => {
+    stubLivePage({ ...liveList, health: "unavailable", visible_count: null });
+    page(LIVE_ID);
+    expect(
+      await screen.findByText(en["lists.unavailable.title"]),
+    ).toBeInTheDocument();
+    expect(screen.getByText(en["lists.unavailable.body"])).toBeInTheDocument();
+    expect(screen.queryByText(en["lists.invalid.title"])).toBeNull();
   });
 
   it("dates a list's exports by the latest of them, whatever order they arrive in", async () => {

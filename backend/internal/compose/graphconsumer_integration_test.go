@@ -516,14 +516,14 @@ func TestAnArrivalHiddenFromTheWorkspaceFoldsWhenItOpens(t *testing.T) {
 		t.Fatal(err)
 	}
 	type edge struct {
-		total    int
-		computed time.Time
+		total int
+		xmin  string
 	}
 	edgeOf := func() edge {
 		t.Helper()
 		var out edge
 		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-			return tx.QueryRow(ctx, `SELECT count_total, computed_at FROM graph_interaction_edge WHERE contact_id = $1`, contact).Scan(&out.total, &out.computed)
+			return tx.QueryRow(ctx, `SELECT count_total, xmin::text FROM graph_interaction_edge WHERE contact_id = $1`, contact).Scan(&out.total, &out.xmin)
 		}); err != nil {
 			t.Fatal(err)
 		}

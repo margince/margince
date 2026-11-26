@@ -77,6 +77,7 @@ type layerFile struct {
 	DealFollowUpWindow                *time.Duration     `yaml:"deal-follow-up-window"`
 	MarketingExceptions               *[]exceptionEntry  `yaml:"marketing-exceptions"`
 	ConsentOnly                       *bool              `yaml:"consent-only"`
+	MarketingMode                     *string            `yaml:"marketing-mode"`
 	Disclosures                       *[]disclosureEntry `yaml:"disclosures"`
 	SubjectPrefix                     *string            `yaml:"subject-prefix"`
 	FrequencyCap                      *frequencyCapEntry `yaml:"frequency-cap"`

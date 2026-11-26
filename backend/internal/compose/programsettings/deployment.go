@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // The margince.yaml switches a program reads at boot. They carry no flag: a
@@ -25,6 +26,10 @@ var (
 	CapturePayloads = config.Define(config.Spec[bool]{
 		Key: "ai.capture_payloads", Env: "MARGINCE_AI_CAPTURE_PAYLOADS", Type: config.Bool, Default: config.Some(false), Roles: both,
 		Doc: "Keep each AI call's request and answer in ai_call_payload, aged by its retention policy; set it on the api and the worker together.",
+	})
+	MCPCallLog = config.Define(config.Spec[string]{
+		Key: "mcp.call_log", Env: "MARGINCE_MCP_CALL_LOG", Type: config.String, Roles: apiOnly,
+		Doc: "Dev and debugging only, refused in production: a file the api adds one JSON line to for each /mcp call, with caller, tool, arguments, outcome and answer, secrets stripped. It holds personal data, and nothing caps or ages it; unset writes none.",
 	})
 	MCPConnector = config.Define(config.Spec[bool]{
 		Key: "mcp.connector_enabled", Env: "MARGINCE_MCP_CONNECTOR_ENABLED", Type: config.Bool, Default: config.Some(false), Roles: apiOnly,
@@ -109,9 +114,20 @@ func distinctCurrencies(codes []string) error {
 	return nil
 }
 
+// CallLogFault refuses mcp.call_log in production. Its file holds personal data
+// that no retention policy or erasure reaches, and nothing caps its size.
+func CallLogFault(c *config.Config, posture runtimeenv.Environment) error {
+	path, origin := config.ValWithSource(c, MCPCallLog)
+	if path == "" || posture != runtimeenv.Production {
+		return nil
+	}
+	return fmt.Errorf("mcp.call_log from %s is for dev and debugging only, and %s is production: unset it",
+		origin, runtimeenv.EnvVar)
+}
+
 // FileSettings lists the margince.yaml switches above.
 func FileSettings() []config.Any {
-	return []config.Any{PasswordLogin, CapturePayloads, MCPConnector, MCPDynamicRegistration, MCPMetadataDocument, MCPUnusedClientLimit, MCPUnusedClientRetention, AnalyticsPerformance, CoreFeaturesDisabled, ListsEnabled, AllowDataReset, AllowTestMailbox, RatesFxSource, RatesFxCurrencies}
+	return []config.Any{PasswordLogin, CapturePayloads, MCPCallLog, MCPConnector, MCPDynamicRegistration, MCPMetadataDocument, MCPUnusedClientLimit, MCPUnusedClientRetention, AnalyticsPerformance, CoreFeaturesDisabled, ListsEnabled, AllowDataReset, AllowTestMailbox, RatesFxSource, RatesFxCurrencies}
 }
 
 // atLeastOne refuses a limit that would refuse every registration: an install

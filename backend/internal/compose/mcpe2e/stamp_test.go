@@ -68,6 +68,30 @@ func stampsAt(t *testing.T, root string, door Door) map[string]Stamp {
 	return stamps
 }
 
+// fileVerdicts writes verdict files, by file name, under one model folder of
+// the MCP door's records.
+func fileVerdicts(t *testing.T, root, folder string, verdicts map[string]string) {
+	t.Helper()
+	dir := filepath.Join(root, VerdictTrees[DoorMCP], folder)
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	for name, body := range verdicts {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func currencyOf(t *testing.T, root string) map[string]bool {
+	t.Helper()
+	currency, err := Currency(root)
+	if err != nil {
+		t.Fatalf("judging the base: %v", err)
+	}
+	return currency
+}
+
 func edit(t *testing.T, root, name, from, to string) {
 	t.Helper()
 	path := filepath.Join(root, name)
@@ -158,31 +182,48 @@ func TestAVerdictWithoutAStampIsStale(t *testing.T) {
 
 func TestNewlyStaleListsOnlyWhatTheChangeMoved(t *testing.T) {
 	base := tree(t)
-	head := tree(t)
 	stamps := stampsOf(t, base)
-	dir := filepath.Join(head, VerdictTrees[DoorMCP], "model-a")
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		t.Fatal(err)
-	}
+	verdicts := map[string]string{"case9_old.json": `{"scenario":"case9_old"}`}
 	for name, stamp := range stamps {
 		body, err := json.Marshal(map[string]any{"scenario": name, "stamp": RecordedStamp{Stamp: stamp, Commit: "c"}})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(dir, name+".json"), body, 0o600); err != nil {
-			t.Fatal(err)
-		}
+		verdicts[name+".json"] = string(body)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "case9_old.json"), []byte(`{"scenario":"case9_old"}`), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	head := tree(t)
+	fileVerdicts(t, base, "model-a", verdicts)
+	fileVerdicts(t, head, "model-a", verdicts)
 	edit(t, head, mcpInfoFile, "Log one thing.", "Log one thing, once.")
-	lines, err := NewlyStale(base, head)
+	lines, err := NewlyStale(currencyOf(t, base), head)
 	if err != nil {
 		t.Fatalf("NewlyStale: %v", err)
 	}
 	if len(lines) != 1 || lines[0].Scenario != "case1_log" || lines[0].Folder != "model-a" {
 		t.Fatalf("newly stale = %+v, want only model-a/case1_log", lines)
+	}
+}
+
+// The base's answer stands as the base's code gave it. Head's code may read
+// the base's files another way, which is the change under review.
+func TestTheBasesOwnAnswerDecidesWhatWasCurrent(t *testing.T) {
+	head := tree(t)
+	fileVerdicts(t, head, "model-a", map[string]string{
+		"case1_log.json":  `{"scenario":"case1_log"}`,
+		"case2_read.json": `{"scenario":"case2_read"}`,
+		"case9_new.json":  `{"scenario":"case9_new"}`,
+	})
+	baseCurrent := map[string]bool{"mcp_e2e/model-a/case1_log": true, "mcp_e2e/model-a/case2_read": false}
+	lines, err := NewlyStale(baseCurrent, head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var listed []string
+	for _, line := range lines {
+		listed = append(listed, line.Scenario)
+	}
+	if want := []string{"case1_log", "case9_new"}; !slices.Equal(listed, want) {
+		t.Errorf("newly stale = %v, want %v: current on the base, or filed stale by the change", listed, want)
 	}
 }
 
@@ -200,6 +241,7 @@ func TestTheReaderTakesEveryToolKeyAndItsSpelling(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "s.yaml")
 	body := "name: s\n# a comment\nmust_call:\n  # why\n  - a|b\nmay_call: [c, d]\n" +
 		"must_call_with:\n  - e.x=1\nmust_not_call_with:\n  - 'f~g|h'\nmust_call_matching:\n  - 'i~j || k~l'\n" +
+		"must_return:\n  - 'm~n || o~p'\n" +
 		"prompt: |\n  must_call:\n  - not_a_tool\n"
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
@@ -209,7 +251,7 @@ func TestTheReaderTakesEveryToolKeyAndItsSpelling(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := slices.Sorted(slices.Values(sc.tools))
-	if want := []string{"a", "b", "c", "d", "e", "f", "i", "k"}; !reflect.DeepEqual(got, want) {
+	if want := []string{"a", "b", "c", "d", "e", "f", "i", "k", "m", "o"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("tools = %v, want %v", got, want)
 	}
 }

@@ -159,12 +159,12 @@ Some migrations take a lock on a whole table, and every other user of that table
 migration sets a short `lock_timeout`, so on a busy installation it fails, and does not wait without end.
 Run it when the app is not busy, and run `migrate up` again if it timed out.
 
-- `1790401426_bookings_reserve_their_exact_interval` builds the rule that stops two booking holds sharing
-  time. It locks the whole activity table, and waits at most three seconds for that lock.
+- `1790401426_bookings_reserve_their_exact_interval` builds the rule that stops two booking holds sharing time. It locks the whole activity table, and waits at most three seconds for that lock.
 
 ## Build an index while the app still writes
 
-Put `-- pgmigrate:no-transaction` on a line by itself in the up file of such a migration.
+A plain `CREATE INDEX` blocks writes until it has read every row, so an index on a table an earlier migration made is built `CONCURRENTLY`.
+`TestAnIndexOnAPreExistingTableIsBuiltConcurrently` fails one built plainly. Put `-- pgmigrate:no-transaction` on a line by itself in the up file of such a migration.
 The [runner](../../backend/internal/platform/dbmigrate/notransaction.go) records the version after
 all statements finish, so each statement must be safe to run again.
 
@@ -185,6 +185,25 @@ with `RESET lock_timeout`. The text-limit guards
 (`1794600201_each_table_checks_its_text_limits.up.sql`, written by `backend/tools/gen-textbounds`) are
 the worked example. `TestEveryUnwrappedMigrationOnlySaysRerunnableStatements` refuses any other
 statement in a file with the marker.
+
+## Change a unique index that an `ON CONFLICT` names
+
+An `ON CONFLICT (...)` names its index by columns. With no matching unique index, Postgres refuses
+the statement with `42P10`. During an update the old and the new binary run side by side. A swap in one
+step breaks the writes of the binary that expects the other index. Mail capture is one such writer.
+
+Change such an index in two releases:
+
+1. Release 1 adds the new index and keeps the old one
+   ([build it while the app writes](#build-an-index-while-the-app-still-writes)). The code uses the new
+   form in its `ON CONFLICT`. Old binaries still find the old index.
+2. Release 2 drops the old index in a new migration and updates `migrations/testdata/head_catalog.txt`.
+
+If the old index keys off a `COALESCE(col, 'literal')`, `TestNoUniqueKeyFakesANullWithASentinel`
+reports it in release 1. Declare it as `<schema>.<table>.<index>` in `sentinelIndexesBeingRetired`
+(`backend/gates/nullsentinelindex_test.go`), with a reason that names the release that drops it. The test
+then requires another unique `NULLS NOT DISTINCT` index on the same table, with the same key columns and
+the same `WHERE`. It fails once the declared index no longer exists, so remove the declaration in release 2.
 
 ## Why no one edits a shipped migration
 

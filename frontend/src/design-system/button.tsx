@@ -1,5 +1,11 @@
-import { LoaderCircle, Sparkles } from "lucide-react";
-import { type ComponentPropsWithRef, type ReactNode, useId } from "react";
+import { LoaderCircle, Lock, Sparkles } from "lucide-react";
+import {
+  type ComponentPropsWithRef,
+  createContext,
+  type ReactNode,
+  useContext,
+  useId,
+} from "react";
 import { describedByIds } from "./describedby";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
 import { atRegionVolume, useQuietVerbs } from "./verbvolume";
@@ -203,6 +209,7 @@ export function Button({
   const singlePress = useSinglePress(pending);
   const drawn = atRegionVolume(variant, useQuietVerbs());
   const marked = drawn === "ai" || drawn === "aiQuiet";
+  const refused = reason !== undefined || reasonId !== undefined;
   const classes = [
     "btn",
     faceClass(drawn),
@@ -212,7 +219,6 @@ export function Button({
   ]
     .filter(Boolean)
     .join(" ");
-  const refused = reason !== undefined || reasonId !== undefined;
   // Every way this control can be barred, in one value, because `disabled` and
   // `busy` both have to agree about it. Refusal beats busy in all its
   // spellings, `disabled` included. Otherwise a caller passing both gets a
@@ -260,7 +266,7 @@ export function Button({
       onClick={busy ? swallowWhileBusy : singlePress(onClick)}
     >
       {busy && <BusyMark />}
-      {marked && <Sparkles aria-hidden="true" />}
+      <LeadingMark refused={refused} marked={marked} />
       {/* The children stay, always. An icon-only control has no room for two
           16px marks side by side, so the glyph is hidden, but in CSS, by the
           `.btn-icon` rule for a busy button. Dropping the children here would also
@@ -281,6 +287,29 @@ export function Button({
       {button}
     </ButtonSentences>
   );
+}
+
+// A menu's rows are words only, and the menu prints why its rows are refused.
+const RefusalAsLine = createContext(false);
+
+/** Marks a region whose refused controls keep a plain face and a reason line. */
+export function RefusalLines({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <RefusalAsLine.Provider value={true}>{children}</RefusalAsLine.Provider>
+  );
+}
+
+// The mark before the label. A refused control gets a lock, which base.css
+// keys its locked face on. Otherwise an AI verb gets its ✦.
+function LeadingMark({
+  refused,
+  marked,
+}: Readonly<{ refused: boolean; marked: boolean }>) {
+  const asLine = useContext(RefusalAsLine);
+  if (refused) {
+    return asLine ? null : <Lock aria-hidden="true" className="btn-lock" />;
+  }
+  return marked ? <Sparkles aria-hidden="true" /> : null;
 }
 
 /**
@@ -344,6 +373,7 @@ function ButtonSentences({
   busy: boolean;
   children: ReactNode;
 }>) {
+  const asLine = useContext(RefusalAsLine);
   if (reason === undefined && busyLabel === undefined) {
     return children;
   }
@@ -351,9 +381,13 @@ function ButtonSentences({
     <span className={reason === undefined ? "btn-shell" : "btn-with-reason"}>
       {children}
       {/* `t-caption` is the supporting line's role: one size and one ink for
-          every refusal, and the class atoms.css's dialog rule selects. */}
+          every refusal, and the class atoms.css's dialog rule selects.
+          `btn-reason` makes it a tip outside a dialog or a menu. */}
       {reason !== undefined && (
-        <span id={reasonId} className="t-caption">
+        <span
+          id={reasonId}
+          className={asLine ? "t-caption" : "t-caption btn-reason"}
+        >
           {reason}
         </span>
       )}

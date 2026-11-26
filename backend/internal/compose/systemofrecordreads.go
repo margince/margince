@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/editaccess"
+	"github.com/margince/margince/backend/internal/compose/purgerun"
 	"github.com/margince/margince/backend/internal/compose/recordreferences"
 	"github.com/margince/margince/backend/internal/compose/unroutedmail"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -34,12 +35,12 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// Its nil model lane is bound by WithCompanyBrief; unbound, it serves its floor.
 	s.contactsStore = newContactsStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
 	s.blockedDomainHandlers = blockedDomainHandlers{contacts: s.contactsStore}
-	s.captureExclusionHandlers = captureExclusionHandlers{store: capture.NewExclusionStore(InstallationDB(pool))}
+	s.captureExclusionHandlers = captureExclusionHandlers{store: capture.NewExclusionStore(InstallationDB(pool)).WithRemovalRepair(purgerun.RepairRule)}
 	// Both stores: keeping a domain question settles the triage ledger, and
 	// discarding it writes the caller's own capture exclusion.
 	s.domainQuestionHandlers = domainQuestionHandlers{
 		contacts:   s.contactsStore,
-		exclusions: capture.NewExclusionStore(InstallationDB(pool)),
+		exclusions: capture.NewExclusionStore(InstallationDB(pool)).WithRemovalRepair(purgerun.RepairRule),
 	}
 	s.threadAudience = NewThreadAudienceSetter(pool)
 	s.captureSenderHandlers = captureSenderHandlers{

@@ -16,6 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/redistest"
+	"github.com/margince/margince/backend/internal/platform/replayguard"
 )
 
 const clientCheckTool = "check_client"
@@ -148,6 +150,7 @@ func TestTheClientCheckToolExistsOnlyForAnAdminWhileTheSwitchIsOn(t *testing.T) 
 		return []compose.Option{
 			compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"),
 			compose.WithMCPInputStateKey("client-check-integration-state-key-0123"),
+			compose.WithMCPReplayGuard(replayguard.New(redistest.Client(t))),
 		}
 	})
 	e.BootstrapWorkspace(t)
@@ -172,6 +175,9 @@ func TestTheClientCheckToolExistsOnlyForAnAdminWhileTheSwitchIsOn(t *testing.T) 
 	if data, _ := structured["data"].(map[string]any); data["supported"] != true || data["action"] != "accept" {
 		t.Errorf("an accepted form was not measured as supported: %v", got)
 	}
+	if again := modernCheck(t, e, client.Bearer(), answer); again["resultType"] != "input_required" {
+		t.Errorf("the same answer a second time → %v, want the form asked again", again)
+	}
 
 	demoteToRep(t, e)
 	withheldLike(t, client, "switch on, rep")
@@ -184,6 +190,7 @@ func TestEveryClientCheckAnswerKeepsItsAdvertisedSchema(t *testing.T) {
 		return []compose.Option{
 			compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"),
 			compose.WithMCPInputStateKey("client-check-integration-state-key-0123"),
+			compose.WithMCPReplayGuard(replayguard.New(redistest.Client(t))),
 		}
 	})
 	e.BootstrapWorkspace(t)
@@ -197,8 +204,9 @@ func TestEveryClientCheckAnswerKeepsItsAdvertisedSchema(t *testing.T) {
 		"io.modelcontextprotocol/protocolVersion":    "2026-07-28",
 		"io.modelcontextprotocol/clientCapabilities": AnyMap{},
 	}}
-	state, _ := modernCheck(t, e, bearer, nil)["requestState"].(string)
+	// Each answer spends its state, so each one answers a question of its own.
 	answer := func(content AnyMap) AnyMap {
+		state, _ := modernCheck(t, e, bearer, nil)["requestState"].(string)
 		return AnyMap{"requestState": state, "inputResponses": AnyMap{
 			"margince_client_check": AnyMap{"action": "accept", "content": content},
 		}}

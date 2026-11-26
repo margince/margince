@@ -316,6 +316,10 @@ func (s *Store) GetPartner(ctx context.Context, companyID ids.CompanyID) (crmcon
 // MarginTierOf answers what commercial tier a partner company is on, or
 // nil when it is not a partner or its tier was never set.
 //
+// An archived partner still answers its tier. A partner earns on a deal it
+// sourced, and archiving the company before the win is priced must not cancel
+// that.
+//
 // A narrow accessor rather than a use of GetPartner because the caller needs
 // exactly one field and no company read: the commission accrual prices a
 // win it was handed, it does not open the partner's record. It is still gated
@@ -338,7 +342,7 @@ func (s *Store) MarginTierOf(ctx context.Context, companyID ids.CompanyID) (*str
 	var tier *string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
-			`SELECT margin_tier FROM partner WHERE company_id = $1 AND `+livePartnerSQL(""),
+			`SELECT margin_tier FROM partner WHERE company_id = $1`,
 			companyID).Scan(&tier)
 		if errors.Is(err, pgx.ErrNoRows) {
 			tier = nil

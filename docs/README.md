@@ -85,6 +85,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
 - [prove-a-tool-in-the-role-matrix.md](how-to/prove-a-tool-in-the-role-matrix.md): make a new MCP tool show
   ✓ or ✗ for every role.
+- [choose-how-a-tool-asks-first.md](how-to/choose-how-a-tool-asks-first.md): choose how an agent tool asks first.
 - [add-a-module.md](how-to/add-a-module.md): add a module, or link two modules.
 - [add-a-job.md](how-to/add-a-job.md): add a job.
 - [add-a-setting.md](how-to/add-a-setting.md): add, rename or remove a setting.
@@ -158,8 +159,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [design-a-bench-case.md](how-to/design-a-bench-case.md): add a screen to the daily-use speed test
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
-- [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`. Also [update-a-messaging-policy-pack.md](how-to/update-a-messaging-policy-pack.md): change the mail rules in `extensions/eu` or `extensions/apac`.
-- Extension text: [the work](reference/extensions-can-override-core-s-translati.md). Extension use of core's AI models and files: [the work](reference/extensions-can-use-core-s-ai-models-s3-a.md), [what it can use](reference/extension-capabilities.md), [why](explanation/extension-capability-grants.md). Extension apps: [the work](reference/extensions-can-appear-as-apps-in-the-hom.md), [why](explanation/extension-apps-in-the-drawer.md).
+- [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`. Also [customize-a-deployment.md](how-to/customize-a-deployment.md): choose the extensions to build, change core text, add an app and set settings. And [update-a-messaging-policy-pack.md](how-to/update-a-messaging-policy-pack.md): change the mail rules in `extensions/eu` or `extensions/apac`.
+- Extension text: [change core text](how-to/override-core-wording-from-an-extension.md). Extension use of core's AI models and files: [what it can use](reference/extension-capabilities.md), [why](explanation/extension-capability-grants.md). Extension apps: [why](explanation/extension-apps-in-the-drawer.md).
 - [install-extensions-as-go-modules.md](how-to/install-extensions-as-go-modules.md): turn
   extensions on from `instance/go.mod`, here or in a client's own repository.
 - [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
@@ -197,7 +198,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [record-links.md](reference/record-links.md): typed links for deals, companies and contacts: types,
   rights and routes.
 - [extension-privacy-and-retention.md](reference/extension-privacy-and-retention.md): how an extension's data
-  follows core's privacy and retention rules, feature by feature.
+  follows core's privacy and retention rules.
 - [mcp-protocol.md](reference/mcp-protocol.md): how `/mcp` works: message forms, limits and client sign-in.
 - [mcp-info.md](reference/mcp-info.md): each MCP tool's text as a client sees it. Generated.
 - [ai-prompts.md](reference/ai-prompts.md): every text this build sends to a model. Generated.
@@ -236,7 +237,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   [data-reset.md](reference/data-reset.md) and [model-binding.md](reference/model-binding.md): how each
   feature reads its settings.
 - [extension-doors-for-core-data.md](reference/extension-doors-for-core-data.md): what an extension can read
-  and write in core records, one row for each feature, and which are built.
+  and write in core records, and the page for each feature.
 - [rest-api.md](reference/rest-api.md): the rules every REST call follows, and where its OpenAPI document is.
 - [ai-provider-key-test.md](reference/ai-provider-key-test.md): what the Test button on the Models page
   checks.
@@ -320,7 +321,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 - [scheduling.md](explanation/scheduling.md): how the app finds a meeting time.
 - [privacy-and-consent.md](explanation/privacy-and-consent.md): whether a message may go, and the GDPR
   rules.
-- [messaging-policy-packs.md](explanation/messaging-policy-packs.md): where the mail rules of `extensions/eu` and `extensions/apac` are read.
+- [messaging-policy-packs.md](explanation/messaging-policy-packs.md): where the mail rules of `extensions/eu`, `extensions/apac` and `extensions/us` are read.
 
 #### AI, search and workflows
 

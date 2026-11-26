@@ -266,7 +266,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var resolvedCountries []string
 	var version int64
 	var visibility string
-	var sourceSystem, authorName, authorSeatName *string
+	var authorName, authorSeatName *string
 	var authorID *ids.UUID
 	var mark, greetingRegister *string
 	// Null where the contact was typed, and null where the reader may not open
@@ -281,7 +281,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
 		&resolvedCountries,
 		&mergedInto, &fromLead, &p.Source, &p.CapturedBy,
-		&sourceSystem, &authorID, &authorName, &authorSeatName,
+		&p.SourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LastActivityAt, &p.LegalHold,
 		&mark, &greetingRegister, &warnedAt, &warnedFor, &createdFrom,
 	}
@@ -315,8 +315,8 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		p.GreetingRegister = &g
 	}
 	p.ImpersonationWarning = impersonationWarningOf(warnedAt, warnedFor)
-	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
-	p.ImportedFrom = provenance.ImportedFrom(sourceSystem)
+	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, p.SourceSystem)
+	p.ImportedFrom = provenance.ImportedFrom(p.SourceSystem)
 	return p, nil
 }
 

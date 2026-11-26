@@ -13,6 +13,7 @@ import (
 
 func TestDomainEvidenceHasEveryFieldInEveryShippedLanguage(t *testing.T) {
 	langcopytest.Census(t, domainEvidence)
+	langcopytest.GermanStyle(t, domainEvidence)
 }
 
 func TestDomainEvidencePreservesSourceWordsAndUnknownKinds(t *testing.T) {

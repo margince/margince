@@ -201,7 +201,12 @@ func (w *DealRoomTimeline) write(ctx context.Context, env events.Envelope, note 
 		Source: roomTimelineSource,
 	})
 	if err != nil {
-		return fmt.Errorf("deal room timeline: writing the note for %s: %w", env.Type, err)
+		// ErrNotFound: the deal is gone or archived. An archived deal is frozen
+		// (auth.EnsureWritableLive), so no note may be added to it. A retry
+		// would stay pending for as long as it stays archived. The note is
+		// dropped, and the subscriber's ERROR log names the deal.
+		return fmt.Errorf("deal room timeline: writing the note for %s: %w", env.Type,
+			events.UnactionableIfGone(err, "deal", note.deal))
 	}
 	return nil
 }

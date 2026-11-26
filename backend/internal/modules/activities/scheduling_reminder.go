@@ -72,14 +72,15 @@ func (s *Store) SendMeetingReminder(ctx context.Context, id ids.UUID, gate Conse
 		attendee = ActivityLinkInput{EntityType: linkEntityLead, EntityID: row.Appointment.LeadID}
 	}
 	origin := FromAccount([]ActivityLinkInput{attendee})
-	input, err := s.meetingReminderInput(ctx, row)
+	input, link, err := s.meetingReminderInput(ctx, row)
 	if err != nil {
 		return err
 	}
 	prepared, err := s.PrepareSend(ctx, origin, input, gate, stager)
 	if err != nil {
-		return s.meetingReminderNotSent(ctx, row, err)
+		return s.meetingReminderNotSent(ctx, row, err, stager)
 	}
+	prepared = prepared.withholdingFromRecord(link)
 	err = s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
 		current, err := readInvitation(ctx, tx, id, true)
 		if err != nil {
@@ -94,35 +95,38 @@ func (s *Store) SendMeetingReminder(ctx context.Context, id ids.UUID, gate Conse
 		return writeMeetingReminder(ctx, tx, current, "queued")
 	})
 	if err != nil {
-		return s.meetingReminderNotSent(ctx, row, err)
+		return s.meetingReminderNotSent(ctx, row, err, stager)
 	}
 	return nil
 }
 
 // meetingReminderNotSent marks the reminder unavailable. A refusal by the send
 // rules is handled once the host is told; any other failure is the job's fault.
-func (s *Store) meetingReminderNotSent(ctx context.Context, row invitationRow, err error) error {
+func (s *Store) meetingReminderNotSent(ctx context.Context, row invitationRow, err error, stager DeliveryStager) error {
 	if errors.Is(err, apperrors.ErrConsentNotGranted) {
-		return s.markMeetingReminderRefused(ctx, row)
+		return s.markMeetingReminderRefused(ctx, row, err, stager)
 	}
 	return errors.Join(err, s.markMeetingReminderUnavailable(ctx, row))
 }
 
-func (s *Store) meetingReminderInput(ctx context.Context, row invitationRow) (SendEmailInput, error) {
+// meetingReminderInput is the reminder and the guest's management link it
+// carries. The link is a bearer capability over the host's meeting, so the
+// caller keeps it off the recorded copy.
+func (s *Store) meetingReminderInput(ctx context.Context, row invitationRow) (SendEmailInput, string, error) {
 	link, err := s.openMeetingLink(ctx, row.ManagementRef)
 	if err != nil {
-		return SendEmailInput{}, err
+		return SendEmailInput{}, "", err
 	}
 	hours, err := s.strictHours(ctx, row.Host)
 	if err != nil {
-		return SendEmailInput{}, err
+		return SendEmailInput{}, "", err
 	}
 	zone := hours.Location
 	words := mailcopy.For(string(s.footerLanguage(ctx, row.Appointment.Description, row.Appointment.Subject)))
 	// No letterhead: the reminder leaves through the host's own mailbox, not
 	// the system relay, so it does not speak as the installation.
 	message := words.MeetingMessage(row.Appointment.Subject, row.Appointment.Description, row.Appointment.Location, link, row.Appointment.Start.In(zone), row.Appointment.End.In(zone))
-	return SendEmailInput{Recipients: row.Appointment.Attendees, Subject: message.Title, Body: message.Text, HTMLBody: emailview.Render(message, emailview.Letterhead{}), ConsentPurpose: "transactional", Context: commsauthz.CategoryRequestedFollowup, Evidence: commsauthz.Evidence{ActivityID: row.ID}}, nil
+	return SendEmailInput{Recipients: row.Appointment.Attendees, Subject: message.Title, Body: message.Text, HTMLBody: emailview.Render(message, emailview.Letterhead{}), ConsentPurpose: "transactional", Context: commsauthz.CategoryRequestedFollowup, Evidence: commsauthz.Evidence{ActivityID: row.ID}}, link, nil
 }
 
 func (s *Store) markMeetingReminderUnavailable(ctx context.Context, observed invitationRow) error {
@@ -140,8 +144,9 @@ func (s *Store) markMeetingReminderUnavailable(ctx context.Context, observed inv
 
 // markMeetingReminderRefused tells the host, in the transaction that marks the
 // reminder unavailable, that the send rules stopped it. The reminder is not held
-// for later, because a held copy could go out after the meeting moved.
-func (s *Store) markMeetingReminderRefused(ctx context.Context, observed invitationRow) error {
+// for later, because a held copy could go out after the meeting moved. The
+// stager records why in the same transaction.
+func (s *Store) markMeetingReminderRefused(ctx context.Context, observed invitationRow, refusal error, stager DeliveryStager) error {
 	if s.invitationAttention == nil {
 		return errors.New("meeting reminder: nothing is wired to tell the host of a refused reminder")
 	}
@@ -151,6 +156,9 @@ func (s *Store) markMeetingReminderRefused(ctx context.Context, observed invitat
 			return err
 		}
 		if err := writeMeetingReminder(ctx, tx, row, "unavailable"); err != nil {
+			return err
+		}
+		if err := recordUnheldRefusalTx(ctx, tx, stager, refusal); err != nil {
 			return err
 		}
 		return s.invitationAttention.InvitationAttentionTx(ctx, tx, row.Host, row.ID, ids.NewV7(), AttentionReminderRefused)

@@ -38,8 +38,6 @@ const (
 	TaskDraftReply Task = "draft_reply"
 	// TaskEnrich is Read a contact's own mail signature into contact fields - title, phone, linkedin, company_name, address, website - each quoting the signature line it was read from; a quote not in the signature is dropped in code. Floor 0.6. phone is a list: the reply carries one phone entry per number the signature lists, and each number is its own evidence row. A newer signature replaces only the older number of the same country and type; a number it leaves out is kept, because a trimmed signature is not a retired number.
 	TaskEnrich Task = "enrich"
-	// TaskExtensionTask is the one task every extension AI call rides, so an extension never holds a provider client or key. The extension's declared task (its prompt, answer schema and whether it takes documents) is data on its declaration; the unit and the declared task name are stamped on every ai_call row the call writes. no_payload BY CONTRACT: an extension's input is whatever the unit chooses to send, and none of it may be kept in ai_call_payload. The request must name the contacts it carries, or say it carries none, so a restriction of processing holds for an extension as it does for core.
-	TaskExtensionTask Task = "extension_task"
 	// TaskGrowthFit is How well one company fits what we sell. The only site on the company view that must read OUR offering as well as theirs — a fit is a claim about two companies, and judging one against a guess about the other is what the DOSS-AC-13 band cap exists to stop. Our own context is never citable: evidence is target-side only, so a factor drawn from what we sell is labelled an assessment and still cites their records, or the grounding filter drops it (DOSS-AC-6). The band the model proposes is not the band served — the deterministic completeness gate can lower it to `unknown` or cap it at `moderate`, and never raises it.
 	TaskGrowthFit Task = "growth_fit"
 	// TaskNlSearch is A list described in plain words, read into filter clauses the builder shows for a human to edit and save. The model is handed the record type, the sentence, the caller's own filter vocabulary, today's date and the reader's language, and never a record: it proposes a predicate tree and the deterministic engine decides membership, exactly as for a hand-built filter. Every proposed clause is checked in code before it is answered - a field the caller cannot filter on, an operator its type refuses, a value outside a picklist's options or of the wrong type is dropped and named back as unsupported rather than failing the proposal, and so is a phrase the model could not express. The company context is our own offer and market, so 'companies in our target market' has something to be read against; it is conditional because reading it needs company read, and a caller filtering contacts without that grant still gets a proposal, just without it. search_data_plan translates a search question into one read-only reporting, analytics or record plan from the caller's vocabulary. It sends no record values to the planner, executes through the shared readers and uses the handbook for unsupported questions. Nothing is saved: Save stays a human's press. With no model bound filter_propose answers 409 ai_not_configured; search_data_plan reports unsupported so the search box can ask the handbook.
@@ -110,7 +108,6 @@ var taskDisplayNames = map[Task]string{
 	TaskDocumentExtract:               "Document extraction",
 	TaskDraftReply:                    "Reply drafting",
 	TaskEnrich:                        "Signature enrichment",
-	TaskExtensionTask:                 "Extension AI task",
 	TaskGrowthFit:                     "Company fit assessment",
 	TaskNlSearch:                      "Natural-language search",
 	TaskOfferDraft:                    "Offer drafting",
@@ -160,7 +157,6 @@ var taskSummaries = map[Task]string{
 	TaskDocumentExtract:               "Reads an attached document, such as an invoice or order, for deal facts you can accept.",
 	TaskDraftReply:                    "Drafts emails and replies for you to review before sending.",
 	TaskEnrich:                        "Fills in a contact's title, phone and other details from their own email signature.",
-	TaskExtensionTask:                 "Runs an AI task that an installed extension declared, on the same models, region limit and call log as the product's own tasks.",
 	TaskGrowthFit:                     "Judges how well a company fits what we sell.",
 	TaskNlSearch:                      "Turns a list described in plain words into filters you can check and save.",
 	TaskOfferDraft:                    "Drafts offers and quotes from a deal's details.",
@@ -214,7 +210,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "c76eff0073403541424e47cb3c145fb35a882036cbe6990cb7a1b22b4a1f3e4b"
+const TaskContractHash = "de35de79b13bcff314c0e60bf88afb9c9ec94a4f7902985678f2185332258f72"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -237,7 +233,6 @@ func AllTasks() []Task {
 		TaskDocumentExtract,
 		TaskDraftReply,
 		TaskEnrich,
-		TaskExtensionTask,
 		TaskGrowthFit,
 		TaskNlSearch,
 		TaskOfferDraft,
@@ -283,7 +278,6 @@ var taskLadders = map[Task][]Tier{
 	TaskDocumentExtract:               {TierPremium},
 	TaskDraftReply:                    {TierCheapCloud, TierPremium},
 	TaskEnrich:                        {TierLocalSmall, TierCheapCloud},
-	TaskExtensionTask:                 {TierCheapCloud, TierPremium},
 	TaskGrowthFit:                     {TierCheapCloud, TierPremium},
 	TaskNlSearch:                      {TierCheapCloud, TierPremium},
 	TaskOfferDraft:                    {TierCheapCloud, TierPremium},
@@ -338,7 +332,6 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskDocumentExtract:               ExecutionModeBackground,
 	TaskDraftReply:                    ExecutionModeInteractive,
 	TaskEnrich:                        ExecutionModeBackground,
-	TaskExtensionTask:                 ExecutionModeBackground,
 	TaskGrowthFit:                     ExecutionModeInteractive,
 	TaskNlSearch:                      ExecutionModeInteractive,
 	TaskOfferDraft:                    ExecutionModeInteractive,
@@ -412,7 +405,6 @@ var taskStatus = map[Task]string{
 	TaskDocumentExtract:               "shipped",
 	TaskDraftReply:                    "shipped",
 	TaskEnrich:                        "shipped",
-	TaskExtensionTask:                 "shipped",
 	TaskGrowthFit:                     "shipped",
 	TaskNlSearch:                      "shipped",
 	TaskOfferDraft:                    "shipped",
@@ -519,9 +511,6 @@ var taskSites = map[Task][]Site{
 	},
 	TaskEnrich: {
 		{Name: "signature", Kind: "one_shot"},
-	},
-	TaskExtensionTask: {
-		{Name: "run", Kind: "one_shot"},
 	},
 	TaskGrowthFit: {
 		{Name: "growth_fit", Kind: "one_shot"},
@@ -643,7 +632,6 @@ var noPayloadTasks = map[Task]bool{
 	TaskChatTaskReading:               true,
 	TaskDealVerdict:                   true,
 	TaskDocumentExtract:               true,
-	TaskExtensionTask:                 true,
 	TaskOwedVerdict:                   true,
 	TaskReaderRendering:               true,
 	TaskReportInterpret:               true,
@@ -687,7 +675,6 @@ var taskSubjectRestriction = map[Task]SubjectRestrictionPosture{
 	TaskDocumentExtract:               {Posture: "honour", Reason: ""},
 	TaskDraftReply:                    {Posture: "honour", Reason: ""},
 	TaskEnrich:                        {Posture: "honour", Reason: ""},
-	TaskExtensionTask:                 {Posture: "honour", Reason: ""},
 	TaskGrowthFit:                     {Posture: "none", Reason: "reads the company's own recorded facts and our offering, never a contact's record or mail"},
 	TaskNlSearch:                      {Posture: "none", Reason: "is handed a sentence and the caller's filter vocabulary, never a record"},
 	TaskOfferDraft:                    {Posture: "honour", Reason: ""},
@@ -772,7 +759,6 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskDocumentExtract:               {TokenBudget: 0, Conditional: false},
 	TaskDraftReply:                    {Scopes: []string{"positioning", "sales", "proof", "market"}, TokenBudget: 1400, Conditional: false},
 	TaskEnrich:                        {TokenBudget: 0, Conditional: false},
-	TaskExtensionTask:                 {TokenBudget: 0, Conditional: false},
 	TaskGrowthFit:                     {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false, OfferingSelectable: true},
 	TaskNlSearch:                      {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: true},
 	TaskOfferDraft:                    {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1600, Conditional: false},

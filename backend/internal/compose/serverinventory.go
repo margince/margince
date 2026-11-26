@@ -157,7 +157,7 @@ type Server struct {
 	recoveryHealthHandlers
 	vacuumhealth.Endpoint
 	automaticWorkHandlers
-	// Extension inventory, settings, transports: stateless, embedded as the zero value.
+	// Extension inventory, settings, transports.
 	extensionsHandlers
 	extensionSettingsHandlers
 	channelProvidersHandlers
@@ -249,8 +249,8 @@ type Server struct {
 	// challenge points at. WithMCPResource sets both from --public-base-url,
 	// never from a request header a caller controls.
 	mcpResource, mcpAllowedOrigin string
-	// mcpInputStateKey signs the questions a tool asks in the chat.
-	mcpInputStateKey string
+	// mcpDoor is what the /mcp door carries beside the registry.
+	mcpDoor mcpDoorSettings
 	// dispactCalls checks the Dispact app's call tokens on /mcp; nil serves none.
 	dispactCalls *dispactapp.Edge
 	// chatPulls queues a chat_pull for a Dispact notice; WithChatLinks sets it.

@@ -30,6 +30,9 @@ type documentQuestion struct {
 	request func(documentSource) model.Request
 	// noneGrounded says why a finished reading offered nothing.
 	noneGrounded langcopy.Phrase
+	// refused says why a reading the product would not act on was closed. It
+	// also says what the question's panel lets the reader do next.
+	refused langcopy.Phrase
 }
 
 func (q documentQuestion) modelFields() []string {
@@ -53,6 +56,7 @@ func dealFactsQuestion() documentQuestion {
 		settle:       resolveDocumentAmount,
 		request:      documentExtractRequest,
 		noneGrounded: documentWords.NoFields,
+		refused:      documentWords.Refused,
 	}
 }
 

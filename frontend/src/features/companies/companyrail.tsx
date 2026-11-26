@@ -12,9 +12,9 @@ import {
   LIFECYCLE_OPTIONS,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
-import { EditAccessRequest } from "../../components/editaccessrequest";
 import { type RailEdit, RailField } from "../../components/railfield";
 import { useSectionEdit } from "../../components/sectionedit";
+import { useViewOnlyAccess } from "../../components/viewonly";
 import { Badge } from "../../design-system/atoms";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
@@ -28,7 +28,6 @@ import { postalLines } from "../../format/address";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { ADDRESS_KEYS } from "../../lib/addresscolumns";
-import { useCanWriteRecord } from "../../lib/capability";
 import { useIndustryOptions } from "../../lib/industryoptions";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
@@ -37,7 +36,7 @@ import { CompanyContactCard } from "./companycontactcard";
 import {
   companyWebsite,
   displayHost,
-  useCompanyReadOnlyReason,
+  useCompanyVerbRefusal,
 } from "./companyheader";
 import { useCompanyEdit, useCompanyFieldSave } from "./companyrailedit";
 import {
@@ -59,7 +58,7 @@ type RailProps = Readonly<{
   // The composite read is still in flight, so the Way in row can tell "still
   // loading" from "nobody has a way in".
   loading: boolean;
-  // Why this reader cannot change the account, said once as the footnote. The
+  // Why an archived account takes no change, said once as the footnote. The
   // verbs in the head point at it by `id`.
   refusal?: Readonly<{ id: string; text: string }>;
 }>;
@@ -114,6 +113,7 @@ function RailBody({
   const about = useAboutSection(company, view, loading, edit);
   const address = useAddressSection(company, edit);
   const ownership = useOwnershipSection(company, edit);
+  const access = useViewOnlyAccess("company", company);
   const registration = useRegistrationSection(company, edit, gate);
   const sections: DetailSection[] = [
     about.section,
@@ -133,14 +133,8 @@ function RailBody({
     <>
       <RecordDetails
         sections={sections}
-        footnote={
-          refusal && (
-            <>
-              <span id={refusal.id}>{refusal.text}</span>
-              <EditAccessRequest kind="company" record={company} />
-            </>
-          )
-        }
+        footnote={refusal && <span id={refusal.id}>{refusal.text}</span>}
+        access={access}
       />
       {about.element}
       {address.element}
@@ -158,13 +152,8 @@ export type Edit = Readonly<{ canEdit: boolean; reason?: string }>;
  * checklist) refuses with this one answer.
  */
 export function useCompanyEditGate(company: Company): Edit {
-  const t = useT();
-  const writable = useCanWriteRecord("company", company);
-  const reason = useCompanyReadOnlyReason(company);
-  return {
-    canEdit: writable && !reason,
-    reason: reason ?? (writable ? undefined : t("record.notYoursToChange")),
-  };
+  const reason = useCompanyVerbRefusal(company);
+  return { canEdit: !reason, reason };
 }
 
 /** The account's name as the record's head renames it, with the rail's gate. */
@@ -216,14 +205,14 @@ export function useRowBuilders(company: Company, edit: Edit) {
     ),
   });
   const choice = (
-    key: "size_band" | "lifecycle" | "industry",
+    key: "size_band" | "status" | "industry",
     label: MessageKey,
     listed: readonly { value: string; label: string }[],
   ): DetailRow => {
     // Industry and size band may be cleared, which the mapper sends as null;
-    // lifecycle has its own "unknown" stage instead.
+    // status has its own "unknown" stage instead.
     const options =
-      key === "lifecycle"
+      key === "status"
         ? listed
         : [{ value: "", label: t("field.unset") }, ...listed];
     return {
@@ -271,7 +260,7 @@ export function useRowBuilders(company: Company, edit: Edit) {
   return { text, choice, compound };
 }
 
-const ABOUT_KEYS = ["domains", "industry", "size_band", "lifecycle"];
+const ABOUT_KEYS = ["domains", "industry", "size_band", "status"];
 
 function useAboutSection(
   company: Company,
@@ -338,7 +327,7 @@ function useAboutRows(
   const wayIn = useWayIn(company, view, loading);
   const tagged = useRecordCarriesTags("company", company.id, view?.tags);
   const choice = (
-    key: "size_band" | "lifecycle" | "industry",
+    key: "size_band" | "status" | "industry",
     label: MessageKey,
     options: readonly { value: string; label: string }[],
   ): DetailRow => ({
@@ -367,7 +356,7 @@ function useAboutRows(
       })),
     ),
     choice(
-      "lifecycle",
+      "status",
       "company.lifecycle",
       LIFECYCLE_OPTIONS.map((value) => ({
         value,

@@ -47,7 +47,7 @@ var Revision string
 // and empty by a bare `go build`, both of which Unknown answers for.
 //
 // The value is the release version: the `v*` tag for a tagged release, and
-// `1970.<build>` from the constellation lane. It is compared for equality only,
+// `1970.<build>` from the release lane. It is compared for equality only,
 // never ordered. A set is either one release or it is not.
 var ReleaseVersion string
 

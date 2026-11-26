@@ -174,6 +174,9 @@ func deleteLeadRecordsTx(ctx context.Context, tx pgx.Tx, leadID ids.UUID) error 
 		pgx.NamedArgs{sqlArgLead: leadID}); err != nil {
 		return fmt.Errorf("deleting the untold lead's captured original: %w", err)
 	}
+	if _, err := deleteLinkedOriginalsTx(ctx, tx, "lead_id", leadID); err != nil {
+		return fmt.Errorf("deleting the originals of messages filed on the untold lead: %w", err)
+	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM field_provenance WHERE object_type = 'lead' AND object_id = $1`, leadID); err != nil {
 		return fmt.Errorf("deleting the untold lead's field stamps: %w", err)

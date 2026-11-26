@@ -57,7 +57,7 @@ func TestAMergedAwayCustomerLeavesTheSurvivorACustomer(t *testing.T) {
 	ctx := e.as()
 	kept := e.createNamedCompany(ctx, t, "Kept Unassessed", "kept.test")
 	retired := e.createNamedCompany(ctx, t, "Retired Customer", "retired.test")
-	if _, err := e.store.UpdateCompany(ctx, retired, UpdateCompanyInput{Lifecycle: new("customer"), SizeBand: new("51-200")}); err != nil {
+	if _, err := e.store.UpdateCompany(ctx, retired, UpdateCompanyInput{Status: new("customer"), SizeBand: new("51-200")}); err != nil {
 		t.Fatalf("assess the retiring company: %v", err)
 	}
 
@@ -65,8 +65,8 @@ func TestAMergedAwayCustomerLeavesTheSurvivorACustomer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("merge: %v", err)
 	}
-	if survivor.Lifecycle == nil || *survivor.Lifecycle != "customer" {
-		t.Errorf("survivor lifecycle = %v, want customer", survivor.Lifecycle)
+	if survivor.Status == nil || *survivor.Status != "customer" {
+		t.Errorf("survivor lifecycle = %v, want customer", survivor.Status)
 	}
 	if survivor.SizeBand == nil || *survivor.SizeBand != "51-200" {
 		t.Errorf("survivor size band = %v, want 51-200", survivor.SizeBand)

@@ -99,6 +99,10 @@ func TestANewPipelineIsBornWithAWonAndALostStage(t *testing.T) {
 		"no stages":       {nil, []string{"Won", "Lost"}},
 		"only open":       {[]StageInput{open}, []string{"Intro", "Won", "Lost"}},
 		"won but no lost": {[]StageInput{open, won}, []string{"Intro", "Signed", "Lost"}},
+		"an open stage named Won": {
+			[]StageInput{{Name: "won", Position: 1, Semantic: string(SemanticOpen), WinProbability: 10}},
+			[]string{"won", "Won 2", "Lost"},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := setupConfigEnv(t)
@@ -213,4 +217,36 @@ func TestAPipelineWithoutAClosingPairIsRepairedWhenRestoredOrEdited(t *testing.T
 			t.Errorf("the edited pipeline holds %v, want %v", got, want)
 		}
 	})
+}
+
+// A repair beside an open stage named like the missing closing one numbers the
+// stage it adds. The stage name index then has nothing to refuse.
+func TestARepairBesideAnOpenStageNamedWonNumbersTheAddedStage(t *testing.T) {
+	e := setupConfigEnv(t)
+	_, from, _ := twoStagePipeline(t, e)
+	var pipelineID ids.PipelineID
+	if err := e.owner.QueryRow(e.as(), `SELECT pipeline_id FROM stage WHERE id = $1`, from).Scan(&pipelineID); err != nil {
+		t.Fatal(err)
+	}
+	dropClosingStages(t, e, pipelineID)
+	if _, err := e.owner.Exec(e.as(), `UPDATE stage SET name = 'WON' WHERE id = $1`, from); err != nil {
+		t.Fatalf("naming an open stage like the closing one: %v", err)
+	}
+	semantic := string(SemanticOpen)
+	if _, err := e.store.UpdateStage(e.as(), from, UpdateStageInput{Semantic: &semantic}); err != nil {
+		t.Fatalf("editing: %v", err)
+	}
+	if got := liveSemantics(t, e, pipelineID); !slices.Equal(got, []string{"lost", "open", "open", "won"}) {
+		t.Fatalf("the edited pipeline holds %v, want the closing pair added", got)
+	}
+	won, lost := closingStageIDs(t, e, pipelineID)
+	for stage, want := range map[ids.StageID]string{won: "Won 2", lost: "Lost"} {
+		got, err := e.store.GetStage(e.as(), stage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Name != want {
+			t.Errorf("the added stage is named %q, want %q", got.Name, want)
+		}
+	}
 }

@@ -311,6 +311,15 @@ func TestMergePreviewCarriesAClosedIntroductionWithoutCancellingItAgain(t *testi
 	}
 }
 
+// withoutIntroductions is the admin seat with its introduction grant taken
+// away: every seeded role holds one, so only a custom role lacks it.
+func withoutIntroductions(e *integration.Env) context.Context {
+	perms := integration.AdminPerms
+	perms.Objects = maps.Clone(perms.Objects)
+	delete(perms.Objects, "introduction")
+	return e.As(e.AdminUser, nil, perms)
+}
+
 func TestIntroductionPreviewChecksReadPermissionBeforeLookingForRequests(t *testing.T) {
 	c := setupCarry(t)
 	source := c.contactAt(t, "Read source", "read-source@carry.test")
@@ -319,7 +328,7 @@ func TestIntroductionPreviewChecksReadPermissionBeforeLookingForRequests(t *test
 		if hasAsk {
 			c.ask(t, source, c.e.Rep1, nil)
 		}
-		preview, err := c.contacts.PreviewMergeSurvivorship(c.e.Admin(), "contact", source.UUID, target.UUID, nil, nil)
+		preview, err := c.contacts.PreviewMergeSurvivorship(withoutIntroductions(c.e), "contact", source.UUID, target.UUID, nil, nil)
 		if !errors.Is(err, apperrors.ErrPermissionDenied) || !reflect.DeepEqual(preview, contacts.MergeSurvivorship{}) {
 			t.Fatalf("without introduction read, hasAsk=%v: %+v, %v", hasAsk, preview, err)
 		}

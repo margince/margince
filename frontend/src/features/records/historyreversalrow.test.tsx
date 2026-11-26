@@ -112,16 +112,26 @@ describe("a reversal and the change it reversed, as one row", () => {
     expect(screen.getByText("Head of Ops")).toBeTruthy();
   });
 
-  it("carries no action of its own while collapsed", async () => {
+  it("offers Redo beside the disclosure while collapsed", async () => {
     vi.stubGlobal("fetch", servingOnePage([tinsReversal, samsChange]));
     render(<RecordHistory kind="contact" id="p1" restore={restore} />);
     await screen.findByText("Sam Okafor’s change, undone by Tin Nguyen");
 
-    // One control, and it opens the pair. Two changes with opposite intents
-    // have no honest single label, so the collapsed face offers no verb.
+    // A line that says "undone" has one useful next step, and it sits on the
+    // line itself rather than behind the disclosure.
     const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0].textContent).toContain("Show both changes");
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      "Redo",
+      "Show both changes",
+    ]);
+  });
+
+  it("offers no Redo on a surface that cannot write", async () => {
+    vi.stubGlobal("fetch", servingOnePage([tinsReversal, samsChange]));
+    render(<RecordHistory kind="contact" id="p1" />);
+    await screen.findByText("Sam Okafor’s change, undone by Tin Nguyen");
+
+    expect(screen.queryByRole("button", { name: /Redo/ })).toBeNull();
   });
 
   it("announces the disclosure and toggles it", async () => {
@@ -178,7 +188,7 @@ describe("a reversal and the change it reversed, as one row", () => {
     expect(within(reversed).getByText("Head of Platform")).toBeTruthy();
   });
 
-  it("offers Redo on the reversal and refuses the row it reversed", async () => {
+  it("keeps one Redo when opened, on the line, and refuses the row it reversed", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", servingOnePage([tinsReversal, samsChange]));
     render(<RecordHistory kind="contact" id="p1" restore={restore} />);
@@ -190,10 +200,9 @@ describe("a reversal and the change it reversed, as one row", () => {
       .getByText("Tin Nguyen restored the record")
       .closest("li");
     if (!reversal) throw new Error("expected the reversal's row");
-    // Pressing it re-applies the change: "Put back" would be the same words
-    // for the opposite intent, on the row above the one it undid.
-    expect(within(reversal).getByRole("button", { name: /Redo/ })).toBeTruthy();
-    expect(within(reversal).queryByText("Put back")).toBeNull();
+    expect(screen.getAllByRole("button", { name: /Redo/ })).toHaveLength(1);
+    expect(within(reversal).queryByRole("button", { name: /Redo/ })).toBeNull();
+    expect(screen.queryByText("Put back")).toBeNull();
     expect(screen.getByText("This change was already undone.")).toBeTruthy();
   });
 });
@@ -282,10 +291,7 @@ describe("redoing a change of several fields", () => {
       ]),
     );
     render(<RecordHistory kind="contact" id="p1" restore={restore} />);
-    await user.click(
-      await screen.findByRole("button", { name: /Show both changes/ }),
-    );
-    await user.click(screen.getByRole("button", { name: /Redo/ }));
+    await user.click(await screen.findByRole("button", { name: /Redo/ }));
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Redo this change?")).toBeTruthy();

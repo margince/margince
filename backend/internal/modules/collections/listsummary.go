@@ -45,11 +45,12 @@ func (s *Store) summarize(ctx context.Context, lists []listRow) ([]*listSummary,
 	}
 	// Resolved before the transaction: the catalog reads take a connection of
 	// their own (see liveFilter).
-	vocab, err := s.liveVocabularies(ctx, out)
+	readable := slices.DeleteFunc(slices.Clone(out), func(l *listSummary) bool { return l.Health == healthUnavailable })
+	vocab, err := s.liveVocabularies(ctx, readable)
 	if err != nil {
 		return nil, err
 	}
-	shortlists, live, err := splitByKind(out, vocab)
+	shortlists, live, err := splitByKind(readable, vocab)
 	if err != nil {
 		return nil, err
 	}
@@ -74,18 +75,23 @@ func (s *Store) summarize(ctx context.Context, lists []listRow) ([]*listSummary,
 
 // gatedSummaries checks read access once per record type, before any filter is
 // judged. So a list whose filter no longer compiles is refused to a reader who
-// may not read its records.
+// may not read its records. A list over an extension kind no unit declares any
+// more is marked unavailable and never judged, so it cannot fail the page.
 func gatedSummaries(ctx context.Context, lists []listRow) ([]*listSummary, error) {
 	out := make([]*listSummary, 0, len(lists))
 	gated := map[string]bool{}
 	for _, l := range lists {
-		if !gated[l.EntityType] {
+		summary := &listSummary{listRow: l, Health: healthOK, CanEdit: mayEditList(ctx, l)}
+		switch {
+		case kindRemoved(l.EntityType):
+			summary.Health = healthUnavailable
+		case !gated[l.EntityType]:
 			if err := auth.Require(ctx, l.EntityType, principal.ActionRead); err != nil {
 				return nil, err
 			}
 			gated[l.EntityType] = true
 		}
-		out = append(out, &listSummary{listRow: l, Health: healthOK, CanEdit: mayEditList(ctx, l)})
+		out = append(out, summary)
 	}
 	return out, nil
 }

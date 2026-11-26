@@ -113,6 +113,12 @@ ifeq (,$(findstring -trimpath,$(GOFLAGS)))
 override GOFLAGS += -trimpath
 export GOFLAGS
 endif
+# -trimpath leaves runtime.GOROOT empty in a `go run` tool such as gen-composition,
+# so the root of the same go is passed in the environment, as in ../Makefile.
+ifeq ($(GOROOT),)
+GOROOT := $(shell go env GOROOT)
+export GOROOT
+endif
 endif
 # The root workspace, which is what every backend/tools generator runs under:
 # the tools are a separate module, and their resolution must not depend on
@@ -150,7 +156,7 @@ TEST_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order -shuffle=$(T
 
 .DEFAULT_GOAL := help
 
-.PHONY: preflight-gates mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift policy-refresh help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report e2e-agent-loop e2e-ai-restamp ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: preflight-gates mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift policy-refresh help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report e2e-agent-loop e2e-ai-restamp ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-untagged lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -189,7 +195,7 @@ help: ## List targets with their descriptions (the default goal)
 # CHECK_LEGS="$(TEST_LEGS)", and `backend-lint` runs `check-static`.
 # gates/checklegsplit_test.go fails if the two stop covering every leg.
 TEST_LEGS   := test-uncached test-cached test-solo test-extensions
-STATIC_LEGS := lint-base lint-strict lint-modules vet arch-lint
+STATIC_LEGS := lint-base lint-strict lint-untagged lint-modules vet arch-lint
 CHECK_LEGS  := $(TEST_LEGS) $(STATIC_LEGS)
 
 check: ## The merge gate: everything a PR must pass
@@ -286,7 +292,7 @@ vet: composition ## Run go vet over every package, untagged (composed workspace)
 	# lint pass still runs, still reports, and still passes.
 	#
 	# golangci runs WITH those tags, so a file guarded `//go:build !integration`
-	# is excluded there and read here and nowhere else.
+	# is excluded there. `lint-untagged` lints it; in backend/gates only this reads it.
 	$(GOWORK_COMPOSED) $(GO) vet ./...
 
 # The passes are separate targets so `-j4` runs them side by side: the
@@ -813,7 +819,7 @@ GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BI
 # as the module lane is, so it is guarded in the same place rather than twice.
 CHECK_BASE_REF ?= $(shell ../scripts/check-base-ref.sh)
 
-lint: lint-base lint-strict ## golangci-lint: repo-wide baseline + new-code strict set
+lint: lint-base lint-strict lint-untagged ## golangci-lint: repo-wide baseline, new-code strict set, and the files only the untagged build reads
 
 # Two targets so CI can run the passes on two runners; each loads the whole tree.
 lint-base: composition lint-tool
@@ -839,6 +845,13 @@ lint-strict: composition lint-tool $(if $(filter lint lint-base,$(MAKECMDGOALS))
 	else \
 		echo "lint-strict: CHECK_BASE_REF=$(CHECK_BASE_REF) does not resolve — fetch it" >&2; exit 1; \
 	fi
+
+# The baseline config's tags drop every `//go:build !integration` file, and such
+# a file ships in every binary. This pass reads them with no tags, in only the
+# packages that hold one (scripts/untagged-lint-packages.sh), so the rest of the
+# tree is not linted twice.
+lint-untagged: composition lint-tool
+	$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci-untagged.sh
 
 # The modules `./...` cannot reach, through the same wrapper and config.
 lint-modules: composition lint-tool
@@ -931,7 +944,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 		-out-kinds internal/compose/jobkinds_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-worklist -contract api/worklist-kinds.yaml \
 		-out-go internal/compose/attention/kinds_gen.go -out-frontend ../frontend/src/lib/worklistkinds.gen.ts
-	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go -tier-out internal/modules/ai/tiercert_gen.go
+	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/attemptlimitcmd -out internal/modules/ai/attemptlimits_gen.go
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/taskgradecmd -out internal/modules/ai/taskgrades_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-modelsetups -out ../frontend/src/lib/modelsetups.gen.ts -out-go internal/modules/ai/stockpresets_gen.go

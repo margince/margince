@@ -149,6 +149,12 @@ type CorpusFacts struct {
 	PendingApprovals int `json:"pending_approvals,omitempty"`
 	AppliedApprovals int `json:"applied_approvals,omitempty"`
 	ExpiredApprovals int `json:"expired_approvals,omitempty"`
+	// The longest history of each kind, counted in the database after the
+	// seed: what a read whose cost follows one record's history pays.
+	LargestCompany int `json:"largest_company_activities,omitempty"`
+	LargestDeal    int `json:"largest_deal_activities,omitempty"`
+	LargestContact int `json:"largest_contact_activities,omitempty"`
+	LargestThread  int `json:"largest_thread_messages,omitempty"`
 }
 
 // StrictVerdict is one cohort of the strict Home acceptance lane. Its budget

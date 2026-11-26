@@ -62,8 +62,8 @@ var selectedDirection = regexp.MustCompile(`(?i)\b[a-z_]+\.direction\s*,|coalesc
 
 // The compose statements that select the transport itself, each with why.
 var transportDirectionReaders = gatekit.Waive(map[string]string{
-	"internal/compose/signalscan.go":    "asks whether we sent the newest message; directionowner_test holds it to the direction rule",
-	"internal/compose/extsystemmail.go": "hands an extension the stored transport fact of a sending system's mail",
+	"internal/compose/signalscan.go":          "asks whether we sent the newest message; directionowner_test holds it to the direction rule",
+	"internal/compose/systemmail/dealmail.go": "hands an extension the stored transport fact of a sending system's mail",
 })
 
 // A statement that hands a model who wrote a row selects

@@ -88,6 +88,8 @@ type Sink struct {
 	// foldMeeting retires one of two live rows holding one meeting. Nil keeps
 	// both.
 	foldMeeting MeetingFolder
+	// replacedSeries folds the meetings a split series replaced. Nil keeps them.
+	replacedSeries SeriesSplitFolder
 	// keepMeetingHost hands a replayed meeting to its organizer. Nil leaves the
 	// first calendar that synced it as its host.
 	keepMeetingHost   MeetingHostKeeper
@@ -125,6 +127,7 @@ const (
 	fieldSourceSystem = "source_system"
 	fieldSourceID     = "source_id"
 	fieldReason       = "reason"
+	fieldOutcome      = "outcome"
 	// fieldError carries the cause on a fault breadcrumb. Named once because
 	// two post-commit steps record one, and an operator filtering system_log
 	// must not have to know which of them spelled the key.
@@ -294,6 +297,9 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 
 			switch fields := rec.Fields.(type) {
 			case ActivityFields:
+				if err := memberGuardTx(ctx, tx, actor.UserID); err != nil {
+					return err
+				}
 				if attempt.activityLanding, err = s.landActivityTx(ctx, tx, rec, fields, actor.UserID); err != nil {
 					return err
 				}

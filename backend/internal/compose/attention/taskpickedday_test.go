@@ -79,3 +79,14 @@ func TestATimedTaskIsStillGroupedByItsInstant(t *testing.T) {
 		t.Fatalf("group = %q, want %q", got, dueGroupTomorrow)
 	}
 }
+
+// The task's type reaches the queue row, where a card names the work by it.
+func TestATaskRowCarriesItsType(t *testing.T) {
+	asOf := time.Date(2026, 11, 16, 9, 0, 0, 0, time.UTC)
+	until := storekit.StartOfNextDay(asOf, time.UTC)
+	item := taskItem(Task{ID: ids.NewV7(), TaskType: new(crmcontracts.TaskTypeMeet)}, asOf, until, time.UTC)
+	row := classifyTask(item, asOf).item
+	if row.TaskType == nil || *row.TaskType != crmcontracts.TaskTypeMeet {
+		t.Fatalf("the queue row's type is %v, want meet", row.TaskType)
+	}
+}

@@ -203,6 +203,7 @@ var forecastStageEntriesSQL = `
 		       h.deal_id, h.to_stage_id AS stage_id, h.pipeline_id_at_change AS pipeline_id, h.changed_at
 		  FROM deal_stage_history h
 		 WHERE h.provenance = '` + stagemove.Recorded + `' AND h.semantic_at_change = 'open'
+		   AND EXISTS (SELECT 1 FROM deal m WHERE m.id = h.deal_id AND ` + deals.StandingSQL("m") + `)
 		   AND h.pipeline_id_at_change IS NOT NULL
 		   AND h.changed_at >= $1 AND h.changed_at < $2
 		 ORDER BY h.deal_id, h.to_stage_id, h.changed_at, COALESCE(h.write_seq, 0), h.id
@@ -275,6 +276,7 @@ var forecastSettledSignalsSQL = `
 	 WHERE c.in_open AND c.risk_signals IS NOT NULL AND s.risk_signals_version = $1
 	   AND s.taken_at < $2
 	   AND standing.semantic IN ('won', 'lost') AND standing.at > s.taken_at
+	   AND EXISTS (SELECT 1 FROM deal m WHERE m.id = c.deal_id AND ` + deals.StandingSQL("m") + `)
 	 ORDER BY c.deal_id, s.taken_at DESC, s.id DESC`
 
 // RiskEffects answers each signal's shrunk odds ratio from the frozen

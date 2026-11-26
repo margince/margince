@@ -14,6 +14,7 @@ import (
 
 	"golang.org/x/mod/modfile"
 
+	"github.com/margince/margince/backend/internal/platform/unitset"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -58,29 +59,32 @@ func scanExtensions(root string) ([]extensionUnit, error) {
 	for _, src := range sources {
 		// The ONE unit-name rule, published on the seam: scan-time
 		// acceptance must never drift from boot-time validation.
-		if err := extension.Name(src.name).Validate(); err != nil {
-			return nil, fmt.Errorf("%s: %w", src.modulePath, err)
+		if err := extension.Name(src.Name).Validate(); err != nil {
+			return nil, fmt.Errorf("%s: %w", src.ModulePath, err)
 		}
-		if _, err := os.Stat(src.dir); src.fetched && os.IsNotExist(err) {
-			return nil, fmt.Errorf("%s@%s is not fetched yet; run make composition", src.modulePath, src.version)
+		if _, err := os.Stat(src.Dir); src.Fetched && os.IsNotExist(err) {
+			return nil, fmt.Errorf("%s@%s is not fetched yet; run make composition", src.ModulePath, src.Version)
 		}
-		unit, err := scanUnit(src.name, src.dir)
+		unit, err := scanUnit(src.Name, src.Dir)
 		if err != nil {
+			return nil, err
+		}
+		if err := pinUnitRuntimeDeps(root, &unit); err != nil {
 			return nil, err
 		}
 		// A downloaded go.mod may name any module. Composed under another path,
 		// it would stand in for that module everywhere, core's imports included.
-		if src.fetched && unit.ModulePath != src.modulePath && unit.ModulePath != src.replacementPath() {
-			return nil, fmt.Errorf("%s@%s declares module %q in its go.mod; refused, since it would replace that module in the whole build", src.modulePath, src.version, unit.ModulePath)
+		if src.Fetched && unit.ModulePath != src.ModulePath && unit.ModulePath != replacementPath(src) {
+			return nil, fmt.Errorf("%s@%s declares module %q in its go.mod; refused, since it would replace that module in the whole build", src.ModulePath, src.Version, unit.ModulePath)
 		}
 		// A fork may declare its own path, but not one the workspace already holds.
-		if isCoreModule(unit.ModulePath) {
-			return nil, fmt.Errorf("%s declares module %q, one of core's own; refused", src.modulePath, unit.ModulePath)
+		if unitset.IsCoreModule(unit.ModulePath) {
+			return nil, fmt.Errorf("%s declares module %q, one of core's own; refused", src.ModulePath, unit.ModulePath)
 		}
 		if other, dup := modulePaths[unit.ModulePath]; dup {
-			return nil, fmt.Errorf("%s and %s both declare module %q; one module path, one unit", other, src.modulePath, unit.ModulePath)
+			return nil, fmt.Errorf("%s and %s both declare module %q; one module path, one unit", other, src.ModulePath, unit.ModulePath)
 		}
-		modulePaths[unit.ModulePath] = src.modulePath
+		modulePaths[unit.ModulePath] = src.ModulePath
 		units = append(units, unit)
 	}
 	sort.Slice(units, func(i, j int) bool { return units[i].Name < units[j].Name })

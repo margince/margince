@@ -26,8 +26,19 @@ func TestPublicBookingPendingCancellationAndPausedPage(t *testing.T) {
 	if status := publicCall(t, e, "GET", base+"/availability"+query+"&duration_minutes=60", nil, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("unsupported legacy duration: %d", status)
 	}
-	if status := publicCall(t, e, "GET", base+"/availability"+query+"&l=60", nil, nil, nil); status != http.StatusOK {
-		t.Fatalf("unknown length should use the default: %d", status)
+	// An unknown length opens the page at its default. Free times refuse it, so
+	// a guest is never booked at a length the page did not show.
+	var page, unknownLength struct {
+		DurationMinutes int `json:"duration_minutes"`
+	}
+	if status := publicCall(t, e, "GET", base+"/profile", nil, nil, &page); status != http.StatusOK {
+		t.Fatalf("opening the page: %d", status)
+	}
+	if status := publicCall(t, e, "GET", base+"/profile?l=60", nil, nil, &unknownLength); status != http.StatusOK || unknownLength.DurationMinutes != page.DurationMinutes {
+		t.Fatalf("an unknown length opens the page at %d minutes (%d), want its default %d", unknownLength.DurationMinutes, status, page.DurationMinutes)
+	}
+	if status := publicCall(t, e, "GET", base+"/availability"+query+"&l=60", nil, nil, nil); status != http.StatusUnprocessableEntity {
+		t.Fatalf("free times at a length the page does not offer: %d, want 422", status)
 	}
 	if status := publicCall(t, e, "POST", base, body, map[string]string{"Idempotency-Key": "guessable"}, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("weak recovery capability: %d", status)

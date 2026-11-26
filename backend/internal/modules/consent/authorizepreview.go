@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 // Preview answers what the engine would decide for this message, and records
@@ -123,6 +124,7 @@ func (g *Gate) decidePreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 		if d.ConsentPurpose, err = consentPurposeTx(ctx, tx, d); err != nil {
 			return set, err
 		}
+		d.AsksCountry = countryCouldChangeTheAnswer(d, countries[i], messagingrules.AnyOptOut())
 		set.Decisions = append(set.Decisions, d)
 	}
 	return withSubjectLabels(set, countries, req.Subject), nil

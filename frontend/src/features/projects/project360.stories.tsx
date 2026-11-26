@@ -251,6 +251,83 @@ export const PageClosed: Story = {
   ),
 };
 
+/** A project a won deal moved into delivery: its history names the deal. */
+export const PageMovedByWin: Story = {
+  render: page(
+    project360({
+      project: project({ phase: "delivering" }),
+      phase_history: {
+        data: [
+          {
+            id: "ph-1",
+            from_phase: null,
+            to_phase: "pursuing",
+            reason: null,
+            changed_at: "2026-03-01T09:00:00Z",
+          },
+          {
+            id: "ph-2",
+            from_phase: "pursuing",
+            to_phase: "delivering",
+            reason: null,
+            changed_at: "2026-04-01T09:00:00Z",
+            changed_by: {
+              actor_type: "human",
+              actor_id: "human:u-me",
+              actor_name: "Me",
+            },
+            cause: {
+              kind: "deal_won",
+              deal_id: "d-1",
+              deal_name: "Phase one licence",
+            },
+          },
+        ],
+        phase_durations: [
+          { phase: "pursuing", seconds: 2_678_400, current: false },
+          { phase: "delivering", seconds: 7_862_400, current: true },
+        ],
+      },
+    }),
+  ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("link", {
+      name: "Phase one licence",
+    });
+  },
+};
+
+/** All tasks opens the history narrowed to tasks, under its own title. */
+export const AllTasksDrawer: Story = {
+  render: page(
+    project360({
+      commitments: {
+        data: [
+          {
+            activity_id: "a-1",
+            subject: "Send the kickoff agenda",
+            due_at: null,
+            assignee_id: "u-me",
+            assignee_name: "Me",
+            due_has_time: false,
+            version: 1,
+            overdue: false,
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+      },
+    }),
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: en["project.commitments.all"],
+      }),
+    );
+    await screen.findByRole("dialog", { name: en["project.commitments.all"] });
+  },
+};
+
 // The menu's Edit project opens the project's fields in the same dialog the
 // details sections save through.
 export const EditProject: Story = {

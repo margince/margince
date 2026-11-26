@@ -47,6 +47,31 @@ func TestACountryLayerCompilesToItsRules(t *testing.T) {
 	}
 }
 
+func TestAMarketingModeCompilesAndAPackThatStatesNoneKeepsOptIn(t *testing.T) {
+	policy, err := Compile(policyFS(country + "marketing-mode: opt_out\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !policy.Rules.MarketingMode.OptOut() {
+		t.Errorf("marketing mode %q, want opt_out", policy.Rules.MarketingMode)
+	}
+	silent, err := Compile(policyFS(country))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if silent.Rules.MarketingMode.OptOut() {
+		t.Errorf("a pack that states no mode compiled to %q, want opt-in", silent.Rules.MarketingMode)
+	}
+	for name, front := range map[string]string{
+		"an unknown mode":           country + "marketing-mode: opt_sideways\n",
+		"opt-out with consent-only": country + "marketing-mode: opt_out\nconsent-only: true\n",
+	} {
+		if _, err := Compile(policyFS(front)); err == nil {
+			t.Errorf("%s compiled", name)
+		}
+	}
+}
+
 func TestTheSourceIsRefused(t *testing.T) {
 	for name, front := range map[string]string{
 		"an unknown key":              country + "reply-windw: 720h\n",

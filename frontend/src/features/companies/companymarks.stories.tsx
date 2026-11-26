@@ -27,7 +27,7 @@ type Company = components["schemas"]["Company"];
 const company: Company = {
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   relationship_types: ["customer", "partner"],
   owner_id: "u-1",
   visibility: "workspace",
@@ -83,7 +83,7 @@ export const CustomerAndPartner: Story = {
     <Marks
       record={{
         ...company,
-        lifecycle: "opportunity",
+        status: "opportunity",
         partner: {
           company_id: "o-1",
           cert_status: "certified",

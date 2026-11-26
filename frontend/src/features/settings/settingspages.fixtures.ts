@@ -138,6 +138,12 @@ const UNUSED_AI: RouteMap = {
     jsonResponse({ providers: [] } satisfies Schemas["AiProviderKeyList"]),
   "GET /ai/health": () =>
     jsonResponse({ window_hours: 1, rungs: [] } satisfies Schemas["AiHealth"]),
+  "GET /ai/call-stats": (_body, url) =>
+    jsonResponse({
+      window: url.searchParams.get("window") ?? "7d",
+      group: url.searchParams.get("group") ?? "provider",
+      rows: [],
+    } satisfies Schemas["AiCallStats"]),
   "GET /ai/agent-usage": () =>
     jsonResponse({ resets_at: "2026-10-15T00:00:00Z", data: [] }),
 };
@@ -198,6 +204,7 @@ export const UNUSED_INSTALLATION_ROUTES: RouteMap = {
   "GET /installation/configuration": () => jsonResponse(CONFIGURATION),
   "GET /scheduling/profile": () => jsonResponse(bookingProfile),
   "GET /scheduling/team-candidates": () => jsonResponse([]),
+  "GET /scheduling/team-links": () => jsonResponse([]),
   "GET /scheduling/team-requests": () => jsonResponse([]),
   "GET /company": () => jsonResponse(UNREAD_COMPANY),
   "GET /company/context/capabilities": () => jsonResponse(COMPANY_CONTEXT_ON),

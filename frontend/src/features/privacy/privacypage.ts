@@ -23,3 +23,31 @@ export function privacyPageOf(controller: Controller | undefined): string {
   }
   return "";
 }
+
+// Stands in for an unstated page while the sentence is filled, so the sentence
+// that holds it can be found and dropped. No copy contains it.
+const NO_PAGE = "\u0000";
+
+/**
+ * The question with its rights link filled, or with the sentence that points to
+ * it left out when the controller states no page. The server drops it the same
+ * way (withoutRightsSentence in backend/internal/modules/consent/boundquestion.go).
+ */
+export function withRightsLink(
+  fill: (privacyPage: string) => string,
+  privacyPage: string,
+): string {
+  if (privacyPage) {
+    return fill(privacyPage);
+  }
+  const text = fill(NO_PAGE);
+  const at = text.indexOf(NO_PAGE);
+  if (at < 0) {
+    return text;
+  }
+  const end = text.startsWith(".", at + 1) ? at + 2 : at + 1;
+  const start = text.lastIndexOf(". ", at);
+  return start < 0
+    ? text.slice(end).trim()
+    : text.slice(0, start + 1) + text.slice(end);
+}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -94,7 +95,7 @@ func (g *Gate) checkGrantedRecipients(ctx context.Context, recipients []connecto
 			w := packRulesFor(country)
 			// No sending entity: this gate is asked about a purpose key, not a
 			// staged message, so the existing-customer route never applies here.
-			marketing := MarketingContext{Exception: w.marketingException}
+			marketing := w.marketingContext(ids.UUID{})
 			granted, err := grantedForRecipient(ctx, tx, r, purpose, time.Now(), w.reply, marketing, record)
 			if err != nil {
 				return err
@@ -222,8 +223,8 @@ func resolveContact(ctx context.Context, tx pgx.Tx, r connector.Recipient) (stri
 		rows, err = tx.Query(ctx, `
 			SELECT DISTINCT p.id FROM contact_channel_identity pci
 			JOIN contact p ON p.id = pci.contact_id AND p.archived_at IS NULL
-			WHERE pci.provider = $1 AND pci.channel_user_id = $2 AND pci.archived_at IS NULL
-			LIMIT 2`, r.Channel.Provider, r.Channel.ChannelUserID)
+			WHERE pci.provider = $1 AND pci.channel_user_id = $2 AND pci.account_scope = $3 AND pci.archived_at IS NULL
+			LIMIT 2`, r.Channel.Provider, r.Channel.ChannelUserID, r.Channel.AccountScope)
 	} else {
 		rows, err = tx.Query(ctx, `
 			SELECT DISTINCT p.id FROM contact_email pe

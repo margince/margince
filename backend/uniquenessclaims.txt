@@ -102,7 +102,6 @@ internal/compose/companybrief/ask_test.go#func declaredQuestions
 internal/compose/companybrief/evidencenames.go#func recordNames
 internal/compose/companybrief/write.go#var knownNature
 internal/compose/companydossier/doc.go#package companydossier
-internal/compose/companydossier/input.go#func KnownRecords
 internal/compose/companydossier/service.go#var knownNature
 internal/compose/companynamepromotion_integration_test.go#func seedDossierName
 internal/compose/companyrollupread.go#type fxConverter
@@ -126,7 +125,6 @@ internal/compose/deploymentsecretseal.go#method vaultBinding.open
 internal/compose/dispatch.go#func fanOutChildren
 internal/compose/documentextract.go#func documentFieldOrder
 internal/compose/documentextract.go#func toModelField
-internal/compose/export.go#func exportableColumns
 internal/compose/extensionpolicy.go#func preflightRetentionClasses
 internal/compose/extensions.go#var composedExtensions
 internal/compose/extensions.go#var composedSubscriptions
@@ -213,7 +211,6 @@ internal/compose/sitetriage.go#const block at const triageFieldKind
 internal/compose/tagseam.go#method tagAdapter.TaggableTypes
 internal/compose/telegrampollfixture_integration_test.go#type telegramPollFakeAPI.held
 internal/compose/telegrampollscope.go#func polledBatchAccounts
-internal/compose/telegrampollscope.go#func telegramRawSourceID
 internal/compose/transcriptproposetransport.go#func TranscriptReadOnLanding
 internal/modules/activities/activity.go#const block at const fieldKind
 internal/modules/activities/activitylinks.go#func insertActivityLinks

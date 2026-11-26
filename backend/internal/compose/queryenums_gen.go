@@ -129,11 +129,11 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "captured_by_kind", Values: []string{"human", "agent", "connector", "system"}, Array: false, Explode: true},
 		{Name: "dormancy", Values: []string{"active", "cooling", "dormant", "stale"}, Array: false, Explode: true},
 		{Name: "industry", Values: []string{"agriculture", "automotive", "aerospace_defense", "chemicals_materials", "construction", "consumer_goods_retail", "education", "energy_utilities", "entertainment_media", "financial_services", "food_beverage", "government_public_sector", "healthcare", "hospitality_tourism", "insurance", "it_services", "software", "legal_professional_services", "logistics_transport", "manufacturing", "marketing_advertising", "mining_metals", "nonprofit", "pharma_biotech", "real_estate", "telecommunications"}, Array: false, Explode: true},
-		{Name: "lifecycle", Values: []string{"unknown", "target", "prospect", "opportunity", "onboarding", "live", "customer", "former_customer", "disqualified"}, Array: false, Explode: true},
 		{Name: "partner_kind", Values: []string{"hosting", "consulting", "strategic", "referral"}, Array: false, Explode: true},
 		{Name: "partner_stage_meaning", Values: []string{"candidate", "signed", "ready", "active", "dormant", "ended"}, Array: false, Explode: true},
 		{Name: "relationship_type", Values: []string{"customer", "partner", "supplier", "investor", "portfolio_company", "competitor", "other"}, Array: false, Explode: true},
 		{Name: "size_band", Values: []string{"1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"}, Array: false, Explode: true},
+		{Name: "status", Values: []string{"unknown", "target", "prospect", "opportunity", "onboarding", "live", "customer", "former_customer", "disqualified"}, Array: false, Explode: true},
 		{Name: "tag_mode", Values: []string{"any", "all", "none"}, Array: false, Explode: true},
 	},
 	"GET /v1/companies/{id}/contacts": {
@@ -636,5 +636,6 @@ var deprecationTable = map[string]map[string]string{
 	"POST /v1/lead-sources":                                      {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"POST /v1/stage-automation/policies/{id}/resume":             {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"PUT /v1/forecast/assurance/enforcement":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"PUT /v1/scheduling/team-requests/{host_user_id}":            {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"PUT /v1/stage-automation/policies/{id}":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 }

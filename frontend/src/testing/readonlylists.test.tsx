@@ -109,7 +109,7 @@ describe.each(LISTS)(
           name: new RegExp(verb),
         });
         await waitFor(() => expect(button).toBeDisabled());
-        expect(button).toHaveAccessibleDescription(en["record.actionRefused"]);
+        expect(button).toHaveAccessibleDescription(en["record.roleReadsOnly"]);
       }
       expect(screen.queryByRole("dialog")).toBeNull();
     });

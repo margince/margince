@@ -31,7 +31,7 @@ import (
 
 // PromptVersion changes when the prompt or the reply shape changes, so a
 // cached assessment written under an older prompt is not served as current.
-const PromptVersion = "2026-11-10.2"
+const PromptVersion = "2026-11-25.1"
 
 // Bounds apply before grounding, so malformed replies cannot grow the reading.
 const (
@@ -129,7 +129,7 @@ Coverage "withheld", "failed" or "unsupported" prohibits a conclusion from that 
 // that view, so the other views' request stays as certified.
 const ViewProgress = "progress"
 
-const progressRule = `View "progress" is one seller's or one team's closed revenue against the sales goal for one month or one calendar year. Say where the period stands against the goal, then name what is still open: what is missing to the goal and the open deals expected to close in the period. Write one or two short paragraphs. With no goal cell, no goal is set for the whole period: judge nothing against one. A goal with partial coverage counts only the months that have one. Open deals expected in the period are not closed revenue and do not establish that the goal will be reached.
+const progressRule = `View "progress" is one seller's or one team's closed revenue against the sales goal for one month or one calendar year. Say where the period stands against the goal, then name what is still open: what is missing to the goal and the open deals expected to close in the period. Write one or two short paragraphs. With no goal cell, no goal is set for the whole period: judge nothing against one. A goal with partial coverage counts only the months that have one. Open deals expected in the period are not closed revenue and do not establish that the goal will be reached. Never compare them with the missing amount, and never say that they close the gap or leave one: the summary does not say whether the goal will be reached.
 `
 
 func viewRule(view string) string {

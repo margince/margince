@@ -73,8 +73,9 @@ const DUPLICATE = {
   type: "about:blank",
   title: "Conflict",
   status: 409,
-  code: "conflict",
-  detail: "conflict",
+  code: "name_taken",
+  detail:
+    'a record role called "Technical contact" already exists; choose a different name',
 };
 
 function story(

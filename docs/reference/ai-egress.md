@@ -40,7 +40,6 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `document_extract` | `premium` | no | yes | none | shipped |
 | `draft_reply` | `cheap_cloud` → `premium` | no | no | none | shipped |
 | `enrich` | `local_small` → `cheap_cloud` | no | no | none | shipped |
-| `extension_task` | `cheap_cloud` → `premium` | no | yes | none | shipped |
 | `growth_fit` | `cheap_cloud` → `premium` | no | no | none | shipped |
 | `nl_search` | `cheap_cloud` → `premium` | no | no | none | shipped |
 | `offer_draft` | `cheap_cloud` → `premium` | no | no | none | shipped |
@@ -119,7 +118,7 @@ a processing record can be written from the rows marked yes.
 | the customer's own webhook endpoint | yes | whatever the subscribed event carries, which is the customer's own record data | the subscription itself; deleting it stops the delivery |
 | the identity provider's published key set | no |  | the identity provider binding |
 | the mailbox provider (IMAP) | yes | the mailbox credential and the folders it reads | the mailbox connection; removing it stops the sync |
-| the provider an installed extension unit calls | yes | whatever that unit sends its provider, which can include the deals and colleagues' details its manifest lists under system_reads | removing the unit from the installation |
+| the provider an installed extension unit calls | yes | whatever that unit sends its provider, which can include the deals and colleagues' details its manifest lists under system_reads, and the captured mail its manifest lists under mail_hooks | removing the unit from the installation |
 | the publishers of the law texts the messaging policy packs cite | no |  | no installation makes this call: the policy-refresh tool sends it when a release is prepared |
 | the team's own Dispact install | yes | linked deal and project names, stages, close dates, owner names and emails, the subjects of activities shared with the whole workspace, and the emails of members invited to a new channel | Settings → Integrations: disconnecting the Dispact bot stops every call; unlinking a record stops posts for it |
 | this installation's own public address | no |  | not optional: it is how the installation learns whether it is reachable |
