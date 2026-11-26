@@ -312,8 +312,8 @@ func recordGerman(elements []ast.Expr) []ast.Expr {
 	})
 }
 
-// embeddedGerman reads every line of the files a //go:embed directive takes
-// from a folder named de, or under a name with a de part such as terms.de.md.
+// embeddedGerman reads every line of the German files a //go:embed directive
+// takes. A file is German in a folder named de, or under a name like terms.de.md.
 func embeddedGerman(path string, file *ast.File) ([]germanString, error) {
 	var found []germanString
 	for _, group := range file.Comments {

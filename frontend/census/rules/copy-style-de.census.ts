@@ -137,7 +137,7 @@ function stylePage(): string {
 
 /**
  * Fails a parse of the Never column that reads a different number of words
- * than the page states, so a lost row cannot shorten the list. The backend
+ * than the page states. A lost row then cannot shorten the list. The backend
  * gate germanvocabulary_test.go holds the same count.
  */
 export function neverColumnCountFindings(page: string = stylePage()): string[] {
