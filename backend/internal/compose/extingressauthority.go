@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// composedFor returns what the named unit declared in THIS boot's composition,
+// composedFor returns what the named unit declared in this boot's composition,
 // read through field.
 //
 // It reads the composed declarations rather than a second registry, for the

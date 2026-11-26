@@ -55,7 +55,7 @@ func TestAnOfferTemplateKeepsItsRegionButNotAFreeWord(t *testing.T) {
 }
 
 // An installation that stored a language the table does not hold upgrades
-// without losing the row. The key over such a column stays NOT VALID, and the
+// without losing the row. The key over such a column stays unvalidated, and the
 // two columns an old CHECK already held are validated.
 func TestTheLanguageKeysApplyOverAStoredUnknownCode(t *testing.T) {
 	ownerDSN, _ := dsns(t)

@@ -75,10 +75,9 @@ func Known(code string) bool {
 	return false
 }
 
-// registered holds the codes the stored data may carry beyond Shipped: the
-// languages the composed units declared, which the boot also writes into the
-// language table. It is replaced whole and never edited in place, so a reader
-// never sees a half-built set.
+// registered holds the codes stored data may carry beyond Shipped: the languages
+// the composed units declared. It is replaced whole and never edited in place,
+// so a reader never sees a half-built set.
 var registered atomic.Pointer[[]string]
 
 // SetRegistered replaces the extra languages the stored data may carry. The boot
@@ -89,9 +88,8 @@ func SetRegistered(codes []string) {
 }
 
 // Registered reports whether a code may be stored in a language column: a
-// shipped language, or one a composed unit declared. It answers the question
-// the language table's foreign key asks, so a writer can refuse a bad code with
-// a message that names the field instead of a constraint.
+// shipped language, or one a composed unit declared. It asks what the language
+// table's foreign key asks, so a writer refuses a bad code by field name.
 func Registered(code string) bool {
 	if Known(code) {
 		return true

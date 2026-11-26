@@ -2,10 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package languages owns the language table: the languages stored data may
-// carry. Core seeds the three it ships (textlang.Shipped) in its migration, and
-// the composed units add theirs here at boot, in the same validate-then-apply
-// order as the other declarations. It never deletes: a language whose unit is
-// gone keeps its row, because stored rows still name it.
+// carry. Core seeds the three it ships (textlang.Shipped) in its migration.
+// The composed units add theirs here at boot, validate first and apply after.
+// It never deletes a row, because stored rows still name the language.
 package languages
 
 import (
@@ -23,9 +22,8 @@ import (
 )
 
 // Preflight refuses a set whose language declarations the table could not hold,
-// before anything is registered. It also refuses a code that is already a core
-// language: a unit cannot take one over, and a silent skip would hide a unit
-// that believes it ships one.
+// before anything is registered. It also refuses a code core already ships. A
+// silent skip would hide a unit that believes it ships that language.
 func Preflight(exts []extension.Extension) error {
 	for _, unit := range exts {
 		for _, language := range unit.Languages {
@@ -40,7 +38,7 @@ func Preflight(exts []extension.Extension) error {
 	return nil
 }
 
-// declared is every language the units add, one per code in the order of the
+// declared lists the languages the units add, one per code in the order of the
 // units' names. Two units may declare one code (two jurisdiction packs that both
 // write Arabic); the first unit's label is the one stored.
 func declared(exts []extension.Extension) []extension.Language {
@@ -57,9 +55,8 @@ func declared(exts []extension.Extension) []extension.Language {
 	return out
 }
 
-// Register tells the Go writers which languages the units added, so a bad code
-// is refused with a message naming the field instead of a foreign key. It runs
-// after Preflight.
+// Register tells the Go writers which languages the units added. A bad code is
+// then refused with a message naming the field. It runs after Preflight.
 func Register(exts []extension.Extension) {
 	var codes []string
 	for _, language := range declared(exts) {
@@ -72,9 +69,8 @@ func Register(exts []extension.Extension) {
 // idempotent upsert, and a core row is never touched: a label change reaches a
 // unit row only.
 //
-// It runs over database.WithInfraTx for the reason channel_provider's reconcile
-// does: the table has no workspace_id, and a fresh install has no workspace yet
-// when the first process boots.
+// It runs over database.WithInfraTx like channel_provider's reconcile. The table
+// has no workspace_id, and a fresh install has no workspace at its first boot.
 func Reconcile(ctx context.Context, pool *pgxpool.Pool, exts []extension.Extension) error {
 	if err := Preflight(exts); err != nil {
 		return err

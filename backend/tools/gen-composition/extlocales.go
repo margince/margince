@@ -33,11 +33,9 @@ import (
 const localesLayer = "i18n"
 
 // composedLocales are the locales the core catalogue ships, and the only ones a
-// unit may supply. They are the product's shipped languages, taken from
-// textlang.Shipped rather than written out again; the frontend's LOCALES is held
-// to the same list by TestComposedLocalesMatchTheCatalogue. A unit inventing
-// `fr.json` would silently ship copy no locale switch can ever select, and the
-// honest answer to that is a refusal rather than a file nobody reads.
+// unit may supply. They come from textlang.Shipped, and the frontend's LOCALES is
+// held to the same list by TestComposedLocalesMatchTheCatalogue. A unit shipping
+// `fr.json` would ship copy no locale switch can select, so it is refused.
 var composedLocales = shippedLocales()
 
 func shippedLocales() []string {

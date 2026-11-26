@@ -9,9 +9,8 @@ import (
 	"strings"
 )
 
-// languageGrammar is `language.code`'s own CHECK, restated here so a unit's
-// declaration is refused at boot with a message that names the unit rather than
-// at the first write with a constraint name.
+// languageGrammar is the CHECK on `language.code`. A bad declaration is refused
+// at boot with the unit's name, and not at the first write with a constraint name.
 var languageGrammar = regexp.MustCompile(`^[a-z]{2}$`)
 
 // maxLanguageLabelRunes is the bound the language table puts on a label.

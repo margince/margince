@@ -644,13 +644,8 @@ func TestFK_rowScopedTargetsHaveVisibilityDecision(t *testing.T) {
 	}
 }
 
-// Every language the product ships is a language the table holds, so a captured
-// message may record it.
-//
-// Derived from textlang.Shipped rather than listed: the old CHECK admitted de
-// and en for as long as the product shipped Vietnamese too, so a detected
-// Vietnamese message could not be stored, and nothing said so because nothing
-// wrote the column. A fourth language added to the Go list fails here until the
+// Every shipped language is a row of the language table, so a captured message
+// may record it. A fourth language added to textlang.Shipped fails here until the
 // table is seeded with it.
 func TestSchema_theLanguageTableHoldsEveryShippedLanguage(t *testing.T) {
 	owner, _ := dsns(t)

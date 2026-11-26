@@ -5,20 +5,13 @@
 
 package gates
 
-// Every column that holds a language or a locale is held by the language table
-// or by the locale shape, and by nothing looser.
+// Every language or locale column has a foreign key to the language table or
+// the locale shape check.
 //
-// A language column with no key takes any string, and a consent notice stored
-// under a typo of its language is evidence nobody can match. The language table
-// holds the codes stored data may carry: core seeds the languages it ships and
-// a composed unit adds the rest at boot, so a new language needs no migration.
-//
-// A column of the form de-DE is a locale and not a language, because a template
-// for de-DE and one for de-AT are two templates. Those columns carry a shape
-// check instead, and each is named below with its reason.
-//
-// The corpus is every catalog column whose name holds `language` or `locale`.
-// A column added later fails here until it picks one of the two.
+// A language column with no key takes any string, such as a typo in a consent
+// notice's language. A locale such as de-DE carries a shape check instead, and
+// each is named below. The corpus is every catalog column named like `language`
+// or `locale`.
 
 import (
 	"regexp"
@@ -48,8 +41,8 @@ var (
 	localeCheckLine    = regexp.MustCompile(`^public\.(\w+)\.\w+ CHECK \(.*?\b(\w+) ~ ` + regexp.QuoteMeta(localeShape))
 )
 
-// languageColumnCensus is what the catalog says: every language or locale column,
-// the ones with a key to the language table, and the ones with the locale shape.
+// languageColumnCensus holds every language or locale column of the catalog,
+// those with a key to the language table, and those with the locale shape.
 type languageColumnCensus struct{ columns, keyed, shaped map[string]bool }
 
 func readLanguageColumns(catalog string) languageColumnCensus {
@@ -109,8 +102,8 @@ func TestEveryLanguageColumnIsKeyedToTheLanguageTable(t *testing.T) {
 	}
 }
 
-// The data task that reports stored values the new keys leave unchecked must
-// read exactly the columns the catalog holds, or a column would go unreported.
+// The data task reads the columns the catalog holds. A column it skipped would
+// never be reported.
 func TestTheLanguageReportReadsEveryHeldColumn(t *testing.T) {
 	t.Parallel()
 	census := readLanguageColumns(readCatalog(t))
@@ -129,8 +122,8 @@ func TestTheLanguageReportReadsEveryHeldColumn(t *testing.T) {
 	}
 }
 
-// Core seeds exactly the languages it ships. The seed is SQL and the list is Go,
-// so this is where they are held together.
+// Core seeds the languages it ships. The seed is SQL and the list is Go, so this
+// test holds the two together.
 func TestTheLanguageTableSeedIsTheShippedLanguages(t *testing.T) {
 	t.Parallel()
 	seed := regexp.MustCompile(`\('([a-z]{2})', '[^']*', 'core'\)`)

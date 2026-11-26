@@ -20,7 +20,6 @@ const (
 	// MigrationVersion is the migration that created the language table and put a
 	// foreign key on every language column.
 	MigrationVersion = "core/1795713760"
-	taskID           = MigrationVersion + "_unknown_language_values"
 
 	// ReasonNotRegistered and ReasonBadLocale name the two things a stored value
 	// can be wrong about. Their sentences and remedies are in systemtext.
@@ -31,9 +30,8 @@ const (
 	badLocale     = `t.%[1]s IS NOT NULL AND t.%[1]s !~ '^[a-z]{2}(-[A-Z]{2})?$'`
 )
 
-// column is one stored value the task checks: a language column held by the
-// language table's foreign key, or a locale column held by a shape check.
-// Identifiers are compile-time literals, never request text.
+// column is a language column held by the language table's foreign key, or a
+// locale column held by a shape check. Identifiers are literals, never request text.
 type column struct {
 	table, name, id string
 	locale          bool
@@ -56,22 +54,21 @@ var columns = []column{
 	{table: "lead_privacy_notice", name: "locale", id: "id", locale: true},
 }
 
-// DataTask reports every stored value the language table or a locale shape
-// would refuse, without changing a row and without guessing a mapping: a
-// foreign key added NOT VALID leaves rows written earlier unchecked, and
-// whoever reads the report decides what each one means.
+// DataTask reports each stored value the language table or a locale shape would
+// refuse. It changes no row and guesses no mapping. A key added not valid leaves
+// older rows unchecked, and a person reads the report to decide what each means.
 func DataTask() datatask.Task {
 	steps := make([]datatask.Step, len(columns))
 	for i, c := range columns {
 		steps[i] = c.step()
 	}
 	return datatask.Task{
-		ID: taskID, Version: 1, Requires: []string{MigrationVersion}, Steps: steps,
+		ID: "core/1795713760_unknown_language_values", Version: 1, Requires: []string{MigrationVersion}, Steps: steps,
 		Title: systemtext.Literal("datatask.title.core.1795713760_unknown_language_values"),
 	}
 }
 
-// Checked is every column the task reports on, as table.column.
+// Checked lists the columns the task reports on, as table.column.
 func Checked() []string {
 	out := make([]string, len(columns))
 	for i, c := range columns {

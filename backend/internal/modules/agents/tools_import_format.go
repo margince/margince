@@ -31,8 +31,8 @@ func (t describeImportFormat) Spec() mcp.ToolSpec {
 	}
 }
 
-// shippedLanguagesJSON is the JSON array of codes the product speaks, from the
-// one list the Go validators answer to.
+// shippedLanguagesJSON is the JSON array of codes the product speaks, read from
+// textlang.Shipped.
 func shippedLanguagesJSON() string {
 	codes := make([]string, len(textlang.Shipped))
 	for i, lang := range textlang.Shipped {

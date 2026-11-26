@@ -64,14 +64,22 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 		"how they say so. A VALIDATE would fail on every installation with meeting history. The " +
 		"precision data task fills in only the rows the noon repair's audit proves; the rest stay " +
 		"unknown on purpose, and the rule binds every row written since",
-	"finance_invoice.finance_invoice_names_its_customer_link": unnamedCustomerLink,
-	"company.company_source_check":                            unlistedRecordSource,
-	"contact.contact_source_check":                            unlistedRecordSource,
-	"deal.deal_source_check":                                  unlistedRecordSource,
-	"offer.offer_source_check":                                unlistedRecordSource,
-	"project.project_source_check":                            unlistedRecordSource,
-	"signal.signal_source_check":                              unlistedRecordSource,
-	"finance_payment.finance_payment_names_its_customer_link": unnamedCustomerLink,
+	"confirm_token.confirm_token_question_locale_fkey":            unlistedLanguage,
+	"consent_text_version.consent_text_version_locale_fkey":       unlistedLanguage,
+	"legal_entity.legal_entity_default_language_fkey":             unlistedLanguage,
+	"offer.offer_language_fkey":                                   unlistedLanguage,
+	"product_translation.product_translation_language_fkey":       unlistedLanguage,
+	"team_weekly_review.team_weekly_review_summary_language_fkey": unlistedLanguage,
+	"offer_template.offer_template_locale_shape":                  unlistedLocale,
+	"lead_privacy_notice.lead_privacy_notice_locale_shape":        unlistedLocale,
+	"finance_invoice.finance_invoice_names_its_customer_link":     unnamedCustomerLink,
+	"company.company_source_check":                                unlistedRecordSource,
+	"contact.contact_source_check":                                unlistedRecordSource,
+	"deal.deal_source_check":                                      unlistedRecordSource,
+	"offer.offer_source_check":                                    unlistedRecordSource,
+	"project.project_source_check":                                unlistedRecordSource,
+	"signal.signal_source_check":                                  unlistedRecordSource,
+	"finance_payment.finance_payment_names_its_customer_link":     unnamedCustomerLink,
 	"activity_participant.activity_participant_address_is_canonical": "" +
 		"rows written before the check hold the address as typed, and the participant address data " +
 		"task lowercases them after the migrations ran. A VALIDATE would fail the upgrade of an " +
@@ -79,6 +87,20 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 		"check binds every row written since; validating it needs a minimum upgrade-from release " +
 		"that guarantees the task ran",
 })
+
+// unlistedLanguage is the cost shared by the keys to the language table over
+// columns that took any text before it.
+const unlistedLanguage = "" +
+	"rows written before the key may hold a code no unit declared, such as a typo or a language " +
+	"that was never offered. The unknown_language_values data task lists them and rewrites none, " +
+	"because a mapping would be a guess. A VALIDATE would fail the upgrade of an installation that " +
+	"holds one. The key binds every row written since"
+
+// unlistedLocale is the same cost for the two locale columns and their shape check.
+const unlistedLocale = "" +
+	"rows written before the check may hold a locale that is not a language with an optional " +
+	"region. The unknown_language_values data task lists them and rewrites none, and a VALIDATE " +
+	"would fail the upgrade of an installation that holds one. The check binds every row written since"
 
 // unlistedRecordSource is the cost shared by the source checks whose older rows
 // a data task corrects.
