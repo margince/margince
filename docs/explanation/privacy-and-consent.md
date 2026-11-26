@@ -351,7 +351,7 @@ into consent's handlers.
 - **The suppression list** hashes each erased address and handle. Capture, import and typed creates
   refuse a later match. Public booking can still create one; refusal there would reveal erasures.
 - **Article 15 subject access** (`AssembleSAR`) requires `contact.delete` and full row scope.
-  One audited export (`action=export`) includes the subject's records, mail, consent and kept copies.
+  One audited export (`action=export`) includes the subject's records, consent, kept copies and mail sent or received, not mail filed on their employer alone.
   Held mail can supply the subject's verdict and party facts; its content audience still applies.
   The contact who made the link gets their role and state, with the target's notes and id left out.
   Each weekly-plan audit image must prove its own subject link; a later link proves no earlier label.

@@ -24,16 +24,16 @@ import (
 // query set is compliance-critical — adding or dropping a source changes what
 // the export owes the data subject. It is assembled chapter by chapter, and the
 // order the chapters concatenate in is the order the export runs them in.
-func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities, authored, external []ids.UUID) ([]sarSection, error) {
+func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, emails, ownEmails []string, leads, identities, authored, messages, external []ids.UUID) ([]sarSection, error) {
 	sections := sarIdentitySections(pkg)
 	retained, err := sarRetainedCopySections(ctx, pkg, identities, emails, leads)
 	if err != nil {
 		return nil, err
 	}
 	sections = append(sections, retained...)
-	sections = append(sections, sarReportingSections(pkg), sarQuestionSection(pkg, contactID, emails), sarBindingSection(pkg, contactID, emails))
-	sections = append(sections, sarRecordSections(pkg, contactID, leads)...)
-	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads)...)
+	sections = append(sections, sarReportingSections(pkg, contactID, messages), sarQuestionSection(pkg, contactID, emails), sarBindingSection(pkg, contactID, emails))
+	sections = append(sections, sarRecordSections(pkg, contactID, leads, messages)...)
+	sections = append(sections, sarMessagingSections(pkg, contactID, emails, ownEmails, leads, messages)...)
 	sections = append(sections, sarConsentSections(pkg, contactID, emails, leads)...)
 	sections = append(sections, sarRequestSections(pkg, contactID)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
@@ -138,7 +138,7 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 //
 // The leads are subjectReach's, so the section lists every lead whose history
 // the retained copies export.
-func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUID) []sarSection {
+func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads, messages []ids.UUID) []sarSection {
 	return []sarSection{
 		{&pkg.Relationships, `SELECT kind, company_id, deal_id, role, started_at, ended_at
 		   FROM relationship WHERE contact_id = $1 AND archived_at IS NULL`, nil},
@@ -180,8 +180,7 @@ func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUI
 		       CASE WHEN ` + sarContentDisclosed + ` THEN NULL
 		            ELSE substring(a.captured_by from '([0-9a-f-]{36})$')
 		       END AS withheld_from_mailbox_of
-		   FROM activity a JOIN activity_link l ON l.activity_id = a.id
-		   WHERE l.contact_id = $1`, nil},
+		   FROM activity a WHERE a.id = ANY($1)`, []any{messages}},
 		// A filename is content: `Aufhebungsvertrag_Mueller.pdf` states what the
 		// message is about. An attachment of a limited message is therefore
 		// listed by id and size with its name withheld, under the same rule as
@@ -195,8 +194,7 @@ func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUI
 		      END AS filename
 		   FROM attachment at
 		   WHERE (at.entity_type = 'contact' AND at.entity_id = $1)
-		      OR (at.entity_type = 'activity' AND at.entity_id IN (
-		            SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1))`, nil},
+		      OR (at.entity_type = 'activity' AND at.entity_id = ANY($2))`, []any{contactID.UUID, messages}},
 	}
 }
 
