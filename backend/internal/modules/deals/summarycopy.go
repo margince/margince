@@ -87,7 +87,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		stageUnreliable:       "auf die Belege für diese Phase ist in ihrem jetzigen Stand kein Verlass",
 		stageNoCriteria:       "diese Phase legt nicht fest, was es braucht, um sie zu verlassen, also kann hier nichts sie erfüllen",
 		stageStillAsksForKey:  "die Phase verlangt noch %s, und nichts zeigt, dass es erfüllt ist",
-		stageOurSideOnlyKey:   "%s beschreibt etwas, das der Käufer tut, und nur unsere eigene Seite hat es gesagt",
+		stageOurSideOnlyKey:   "%s beschreibt etwas, das die Käuferseite tut, und nur die eigene Seite hat es gesagt",
 		stageClosing:          "dieser Schritt führt in eine Abschlussphase oder aus ihr heraus, und darüber entscheidet immer ein Mensch",
 		stageCrossPipeline:    "dieser Schritt würde in eine andere Pipeline wechseln",
 		stageSkips:            "dieser Schritt überspringt eine Phase oder geht eine zurück, statt um eine voranzugehen",

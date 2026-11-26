@@ -282,7 +282,7 @@ var reasonCatalog = withRecordIDReasons(withUndoReasons(withActivityReasons(with
 	}},
 	ReasonIDNotVisible: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "No company you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
-		textlang.German:     "Kein Unternehmen, das Sie sehen können, hat die ID {value:q}. Es kann archiviert oder zusammengeführt worden sein oder zu einem Arbeitsbereich gehören, aus dem diese Datei nicht stammt.",
+		textlang.German:     "Kein Unternehmen, das Sie sehen können, hat die ID {value:q}. Es kann archiviert oder zusammengeführt worden sein oder aus einem anderen System stammen.",
 		textlang.Vietnamese: "Không có công ty nào bạn nhìn thấy có mã {value:q}. Có thể nó đã được lưu trữ, gộp, hoặc thuộc về một không gian làm việc mà tệp này không đến từ đó.",
 	}},
 	ReasonRefTakenByAnotherCompany: {params: []string{paramRef}, text: map[textlang.Lang]string{
