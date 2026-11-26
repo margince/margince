@@ -35,8 +35,8 @@ func KindHasDecisionGrants(kind string) bool {
 // Derived from the same two maps KindHasDecisionGrants reads, so a kind added
 // to either is in this list the moment it can be staged.
 //
-// Held by: TestEveryStageableKindHasAFrontendLabel
-// (backend/gates/frontendapprovalkinds_test.go), which fails in both directions
+// Held by: TestEveryFrontendVocabularyMirrorMatchesTheServer
+// (backend/gates/frontendvocabularymirrors_test.go), which fails in both directions
 // against the frontend's label map — a kind this list gains with no label, and
 // a label naming a kind this list does not carry.
 func StageableKinds() []string {

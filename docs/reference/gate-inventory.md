@@ -85,18 +85,12 @@ The eight shapes, what each is for, and how each one silently passes:
 | `forwardmeasureparity_test.go` | H3 | Every forward measure must be spelled the same on all three sides. |
 | `frontendacquisitionkinds_test.go` | H3 | The browser knows every way the server says a contact was obtained, and no other. |
 | `frontendagentlabels_test.go` | H2 | A provenance tag names the agent behind a proposal or a change by its words, never by its principal id. |
-| `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
 | `frontendattentionsources_test.go` | H1 | Every source the Worklist can carry has a row in the frontend's kind table, or the client shows a reader the source's own identifier. |
 | `frontendaudiencereasons_test.go` | H3 | A held message says why it was held, or the reader cannot argue with the verdict. |
 | `frontendauditkinds_test.go` | H2 | Every record type an audit row names has words in the audit log, and the log's own map words no type that nothing writes. |
-| `frontendautonomykinds_test.go` | H1 | Every kind a rep may put on automatic must have words on the settings screen that offers it, and the screen must offer no kind the product cannot automate. |
 | `frontendcatalogwords_test.go` | H2 | The automation library reads in the reader's language. |
 | `frontendcollapsespace_test.go` | H3 | The viewer and the server must fold whitespace by the same set, or a citation opens a document with nothing marked. |
-| `frontendcountries_test.go` | H3 | The country filters offer the codes the server stores, and no other. |
-| `frontendcurrencies_test.go` | H3 | The currency picker must never offer a code the server refuses. |
-| `frontendcustomfieldtypes_test.go` | H3 | The custom-field types are one list on both sides of the wire. |
 | `frontenddatenotation_test.go` | H3 | A server-written brief and the app around it must write one day the same way, or the reader sees 16/11/2026 beside 2026-11-16 on one screen. |
-| `frontenddealroles_test.go` | H3 | A stored deal role is free text, and both sides decide the same question. |
 | `frontendeffectfailures_test.go` | H2 | A failed approval's line reads in the reader's language when the browser has words for its code. |
 | `frontendemailtext_test.go` | H3 | The browser and the server split a mail body by the same rules, or a row's preview and the message it opens disagree about where the sender stopped writing. |
 | `frontendentrymounts_test.go` | H3 | Every slot pkg/extension accepts is mounted on a core screen, read from the screens themselves. |
@@ -115,7 +109,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendlinkedinhosts_test.go` | H3 | Which hosts count as LinkedIn is decided on both sides of the wire, and the two answers are different sizes by design. |
 | `frontendlivemailboxstatus_test.go` | H3 | The composer and the send refusal must call the same connections live. |
 | `frontendmagickeys_test.go` | H2 | Every sentence the receipt emits has a word for it, in the client that draws it and in the catalog that translates it. |
-| `frontendmailproviders_test.go` | H3 | Which capture providers are a mailbox is answered on both sides of the wire, and the two answers must be the same three names. |
 | `frontendmailsubject_test.go` | H3 | The browser and the server both group a thread by its subject without the reply and forward markers. |
 | `frontendmaskedfields_test.go` | H3 | A field the server can withhold is drawn as withheld, or the screen states something false. |
 | `frontendmessagevoice_test.go` | H3 | messageVoiceCases lists the contract's directions and authors for one kind, with the side the activity engine reads. |
@@ -132,14 +125,12 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendrolekeys_test.go` | H2 | The screens ask what a seat may do rather than which role it holds. |
 | `frontendrolereadsonly_test.go` | H3 | A refused write names its cause in one sentence on every surface. |
 | `frontendrunactionwords_test.go` | H2 | A run's history says what it did in the reader's language, by action kind. |
-| `frontendrunreasons_test.go` | H2 | The browser puts a troubled run's reason code into words. |
 | `frontendsendpermissionreasons_test.go` | H3 | The composer has its own sentence for every code the send engine refuses with, and no other. |
 | `frontendsetupproviders_test.go` | H3 | Onboarding offers a first-time admin a provider and a model, and the server has to be able to price and serve whatever it offered. |
 | `frontendsignaturecap_test.go` | H3 | The personal HTML signature cap is one rule with three spellings. |
-| `frontendsocialplatforms_test.go` | H3 | The keys a contact's social map takes are decided on both sides of the wire. |
-| `frontendtaskorigins_test.go` | H3 | Every automatic task source has a sentence in the browser saying what made the task. |
 | `frontendunitspellings_test.go` | H3 | The browser and the server must read a unit's spelling as the same key. |
 | `frontendvendorservices_test.go` | H3 | Which calendar belongs beside which mailbox is answered on both sides of the wire, and the two answers must be the same pairs. |
+| `frontendvocabularymirrors_test.go` | H2 | Each frontend list that mirrors a server vocabulary holds the values the server's list holds, and no other. |
 | `frontendwebformsigning_test.go` | H3 | The setup dialog hands a website's developer the code that signs a server form's posts. |
 | `frontendwinmovesproject_test.go` | H3 | The won dialog tells the reader that winning also moves the deal's project. |
 | `frontendwriteverbs_test.go` | H3 | The browser hides a moment verb a seat may not take by asking whether the verb writes an activity. |
