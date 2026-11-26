@@ -326,7 +326,7 @@ func aiCallBindings(c Call) []boundColumn {
 // ai_call_payload row of whichever attempt carries content.
 func (m *CallMeter) recordAttempts(ctx context.Context, tx pgx.Tx, attempts []Call) error {
 	for _, c := range attempts {
-		bound := aiCallBindings(c)
+		bound := aiCallBindings(withStoredTokenCounts(ctx, m.log, c))
 		args := valuesOf(bound)
 		var callID ids.UUID
 		err := tx.QueryRow(ctx, storekit.SQLf(

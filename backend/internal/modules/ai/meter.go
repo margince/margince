@@ -6,6 +6,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -88,7 +89,9 @@ func (m *Meter) Record(ctx context.Context, u Usage) error {
 			  cached_hits = ai_usage.cached_hits + EXCLUDED.cached_hits,
 			  tokens_in   = ai_usage.tokens_in + EXCLUDED.tokens_in,
 			  tokens_out  = ai_usage.tokens_out + EXCLUDED.tokens_out`,
-			day, string(u.Task), string(u.Tier), cachedHit, u.TokensIn, u.TokensOut)
+			day, string(u.Task), string(u.Tier), cachedHit,
+			storedTokenCount(ctx, slog.Default(), "tokens_in", u.TokensIn),
+			storedTokenCount(ctx, slog.Default(), "tokens_out", u.TokensOut))
 		if err != nil {
 			return fmt.Errorf("ai: metering: %w", err)
 		}
