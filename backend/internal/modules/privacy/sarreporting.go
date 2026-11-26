@@ -9,7 +9,8 @@ import (
 
 func sarReportingSections(pkg *SARPackage, contactID ids.ContactID, messages []ids.UUID) sarSection {
 	return sarSection{&pkg.ReportingContributions, `SELECT c.metric,c.context_id,c.fact->'row'->'occurred_at' AS occurred_at,
- c.fact->'row'->'value' AS value,e.captured_at,e.redacted_at
+ CASE WHEN c.source_type<>'activity' OR ` + sarActivityDisclosed("c.source_id") + ` THEN c.fact->'row'->'value' END AS value,
+ (c.source_type<>'activity' OR ` + sarActivityDisclosed("c.source_id") + `) AS content_disclosed,e.captured_at,e.redacted_at
  FROM report_edition_contribution c JOIN report_edition e ON e.id=c.edition_id WHERE
  (c.source_type='deal' AND c.source_id IN (SELECT deal_id FROM relationship WHERE contact_id=$1 AND kind='deal_stakeholder')) OR
  (c.source_type='activity' AND c.source_id = ANY($2)) OR

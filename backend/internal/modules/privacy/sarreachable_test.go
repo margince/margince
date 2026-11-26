@@ -153,32 +153,38 @@ func TestTheConfirmLinkSectionCarriesNoCredential(t *testing.T) {
 	}
 }
 
-// The sections that list the subject's mails take the one subjectMessages
-// result. A section that reads an activity_link subquery drops a mail the
-// subject was only copied on. The staged-approval row match keeps the
-// erasure-shared evidence clause, because the cascade destroys what it matches.
-func TestTheMailSectionsReadTheSubjectMessagesSetNotTheLinkTable(t *testing.T) {
+// Every section handed the subjectMessages set takes its content gate from the
+// export's audience rule and finds mail through that set alone. Without the
+// gate, a limited mail's content reaches a Cc. A section on the activity_link
+// table drops a mail the subject was only copied on. The staged-approval row
+// match keeps the erasure-shared evidence clause. Sections are found by the set
+// they were handed, so a new one is held to both rules unlisted.
+func TestEverySectionReadingTheMessageSetGatesContentAndSkipsTheLinkTable(t *testing.T) {
 	var pkg SARPackage
-	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)
+	sentinel := ids.NewV7()
+	messages := []ids.UUID{sentinel}
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, messages, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	mailSections := []*[]map[string]any{
-		&pkg.Activities, &pkg.Attachments, &pkg.SentMessages, &pkg.StagedMessages,
-		&pkg.MeetingProposals, &pkg.MeetingInvitations, &pkg.ReportingContributions,
-	}
+	const atLeast = 7
 	seen := 0
 	for _, section := range sections {
-		if !slices.Contains(mailSections, section.dest) {
+		if !slices.ContainsFunc(section.args, func(arg any) bool {
+			set, ok := arg.([]ids.UUID)
+			return ok && slices.Contains(set, sentinel)
+		}) {
 			continue
 		}
 		seen++
-		query := strings.ReplaceAll(section.query, evidenceCitesSubjectActivity, "")
-		if strings.Contains(query, "activity_link") {
-			t.Errorf("a mail section reads activity_link instead of the subjectMessages set:\n%s", strings.TrimSpace(section.query))
+		if !strings.Contains(section.query, sarContentDisclosed) {
+			t.Errorf("a section reads the subject's messages without the content gate:\n%s", strings.TrimSpace(section.query))
+		}
+		if strings.Contains(strings.ReplaceAll(section.query, evidenceCitesSubjectActivity, ""), "activity_link") {
+			t.Errorf("a section reads activity_link instead of the subjectMessages set:\n%s", strings.TrimSpace(section.query))
 		}
 	}
-	if seen != len(mailSections) {
-		t.Fatalf("found %d of the %d mail sections, so the census examined too little", seen, len(mailSections))
+	if seen < atLeast {
+		t.Fatalf("found %d sections reading the message set, fewer than the %d this census assumes", seen, atLeast)
 	}
 }

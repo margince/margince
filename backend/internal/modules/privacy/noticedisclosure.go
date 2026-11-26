@@ -101,9 +101,13 @@ func readContactNotice(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 	}
 	wanted := []*[]map[string]any{
 		&pkg.Emails, &pkg.Phones, &pkg.ChannelIdentities, &pkg.LinkedInConnections, &pkg.Relationships,
-		&pkg.Deals, &pkg.Activities, &pkg.RawCapture, &pkg.Consent, &pkg.CommunicationBases,
+		&pkg.Deals, &pkg.RawCapture, &pkg.Consent, &pkg.CommunicationBases,
 	}
-	messages, err := subjectMessages(ctx, tx, contactID, emails, identities)
+	hasMail, err := subjectHasMessage(ctx, tx, contactID, emails, identities, "")
+	if err != nil {
+		return nil, err
+	}
+	hasTranscript, err := subjectHasMessage(ctx, tx, contactID, emails, identities, meetingoutcome.TranscriptSourceSystem)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +115,7 @@ func readContactNotice(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 	if err != nil {
 		return nil, err
 	}
-	sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, nil, messages, external)
+	sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, nil, nil, external)
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +130,14 @@ func readContactNotice(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 		if *section.dest, err = rowMaps(ctx, tx, section.query, args...); err != nil {
 			return nil, fmt.Errorf("privacy: reading what a notice discloses: %w", err)
 		}
+	}
+	// Only whether mail exists, and whether any is a transcript, leaves the
+	// page. A stand-in row for each answer spares loading every message.
+	if hasMail {
+		pkg.Activities = append(pkg.Activities, map[string]any{})
+	}
+	if hasTranscript {
+		pkg.Activities = append(pkg.Activities, map[string]any{"source_system": meetingoutcome.TranscriptSourceSystem})
 	}
 	held, err := rowMaps(ctx, tx, sarSubjectQuery, contactID)
 	if err != nil || len(held) == 0 {
