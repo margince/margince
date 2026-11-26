@@ -19072,8 +19072,8 @@ paths:
         The undo for a retirement somebody regrets. It refuses when a LIVE tag has taken the
         name in the meantime: two words a reader cannot tell apart is the exact state the
         vocabulary exists to prevent, and the caller has to rename one of them first. It also
-        refuses a tag that carries `merged_into`: the merge moved its records to the survivor
-        and cannot be undone.
+        refuses a tag that carries `merged_into`: the merge moved its records to the survivor,
+        and a restore would not move them back.
       responses:
         '200':
           description: The restored tag.

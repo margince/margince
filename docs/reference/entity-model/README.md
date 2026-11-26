@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 354 |
-| Columns | 4359 |
-| Foreign keys | 619 |
+| Columns | 4360 |
+| Foreign keys | 620 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -447,7 +447,7 @@ erDiagram
 | [`stored_object_intent`](platform.md#stored_object_intent) | platform | 5 | 0 |
 | [`suggestion_dismissal`](compose.md#suggestion_dismissal) | compose | 4 | 0 |
 | [`system_log`](platform.md#system_log) | platform | 8 | 0 |
-| [`tag`](collections.md#tag) | collections | 10 | 3 |
+| [`tag`](collections.md#tag) | collections | 11 | 4 |
 | [`tag_interest_read`](collections.md#tag_interest_read) | collections | 4 | 0 |
 | [`tag_suggestion`](collections.md#tag_suggestion) | collections | 9 | 1 |
 | [`tag_suggestion_evidence`](collections.md#tag_suggestion_evidence) | collections | 4 | 0 |
