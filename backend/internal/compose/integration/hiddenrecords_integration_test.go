@@ -11,12 +11,12 @@ package integration
 // contact here is made capture-private to its owner.
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -33,17 +33,19 @@ var hiddenReaderPerms = principal.Permissions{
 	RowScope: principal.RowScopeTeam,
 }
 
-// seedDepartedSeat is a colleague who left: their records still exist and
-// still count as withheld, and nobody is told to ask them.
-func seedDepartedSeat(t *testing.T) ids.UUID {
+// deactivateThroughTheDirectory makes a colleague leave through the product's
+// own path, with its cascade, after the records they own were written. Their
+// records still count as withheld, and nobody is told to ask them.
+func deactivateThroughTheDirectory(t *testing.T, e *Env, seat ids.UUID) {
 	t.Helper()
-	id := ids.NewV7()
-	if _, err := OwnerConn(t).Exec(context.Background(), `
-		INSERT INTO app_user (id, email, display_name, email_domain_folded, status)
-		VALUES ($1, 'departed@authz.test', 'Departed Colleague', 'authz.test', 'deactivated')`, id); err != nil {
-		t.Fatalf("seeding a departed seat: %v", err)
+	admin := identity.Identity{
+		UserID: ids.From[ids.UserKind](e.AdminUser), WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
+		Roles: []string{"admin"}, SeatType: string(principal.SeatFull), Permissions: AdminPerms,
 	}
-	return id
+	if err := identity.NewService(e.Pool).DeactivateUser(e.Admin(), admin,
+		identity.DeactivateUserInput{UserID: ids.From[ids.UserKind](seat)}); err != nil {
+		t.Fatalf("deactivating a seat: %v", err)
+	}
 }
 
 // seedEmployee makes a contact owned by owner a current employee of company.
@@ -72,10 +74,10 @@ func TestCompanyContactsStateHowManyAreHiddenAndWhoHoldsThem(t *testing.T) {
 	seedEmployee(t, e, company, "Visible Buyer", e.Rep1, false)
 	seedEmployee(t, e, company, "Hidden Sponsor", e.Rep3, true)
 	seedEmployee(t, e, company, "Hidden Engineer", e.Rep3, true)
-	seedEmployee(t, e, company, "Orphaned Champion", seedDepartedSeat(t), true)
-	// Archived, and owned by a colleague nothing else hides: counting it would
-	// show as a fourth entry and a second holder.
-	archived := seedEmployee(t, e, company, "Archived Lead", e.Rep2, true)
+	seedEmployee(t, e, company, "Orphaned Champion", e.Rep2, true)
+	deactivateThroughTheDirectory(t, e, e.Rep2)
+	// Archived: counting it would show as a fourth entry.
+	archived := seedEmployee(t, e, company, "Archived Lead", e.Rep3, true)
 	e.WsExec(t, `UPDATE contact SET archived_at = now() WHERE id = $1`, archived)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, hiddenReaderPerms)
@@ -91,10 +93,10 @@ func TestCompanyContactsStateHowManyAreHiddenAndWhoHoldsThem(t *testing.T) {
 		t.Fatal("contacts_hidden is absent beside a listed contacts section")
 	}
 	if hidden.Count != 3 {
-		t.Errorf("contacts_hidden.count = %d, want 3: two of Rep3's and the departed seat's, never the archived one", hidden.Count)
+		t.Errorf("contacts_hidden.count = %d, want 3: two of Rep3's and the departed Rep2's, never the archived one", hidden.Count)
 	}
 	if len(hidden.Holders) != 1 || ids.UUID(hidden.Holders[0].UserId) != e.Rep3 {
-		t.Errorf("holders = %+v, want Rep3 once: never the departed seat, never the archived contact's owner", hidden.Holders)
+		t.Errorf("holders = %+v, want Rep3 once and never the departed Rep2", hidden.Holders)
 	}
 	wire, err := json.Marshal(page)
 	if err != nil {
@@ -107,17 +109,24 @@ func TestCompanyContactsStateHowManyAreHiddenAndWhoHoldsThem(t *testing.T) {
 	}
 }
 
-func TestAnUnboundedReaderIsToldNothingIsHidden(t *testing.T) {
+// An admin reads every contact except a capture-private one, which answers to
+// its owner alone. So the admin is told about that one, and only that one.
+func TestAnAdminIsToldOnlyAboutTheCapturePrivateContacts(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Shared Account", &e.Rep1)
-	seedEmployee(t, e, company, "Rep3's Contact", e.Rep3, true)
+	seedEmployee(t, e, company, "Rep3's Shared Contact", e.Rep3, false)
+	seedEmployee(t, e, company, "Rep3's Private Contact", e.Rep3, true)
 
 	page, err := companySurfaceService(e).Assemble(e.Admin(), companyIDOf(company))
 	if err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
-	if page.ContactsHidden == nil || page.ContactsHidden.Count != 0 || len(page.ContactsHidden.Holders) != 0 {
-		t.Errorf("contacts_hidden = %+v, want count 0 and no holders for an unbounded reader", page.ContactsHidden)
+	if page.Contacts == nil || len(page.Contacts.Data) != 1 {
+		t.Fatalf("contacts = %+v, want the shared contact only", page.Contacts)
+	}
+	hidden := page.ContactsHidden
+	if hidden == nil || hidden.Count != 1 || len(hidden.Holders) != 1 || ids.UUID(hidden.Holders[0].UserId) != e.Rep3 {
+		t.Errorf("contacts_hidden = %+v, want the one private contact, held by Rep3", hidden)
 	}
 }
 
