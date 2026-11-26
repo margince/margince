@@ -303,3 +303,4 @@
 1795668965_a_link_suggestion_may_ask_one_colleague.down.sql | activity_link_suggestion | deletes only the suggestions Margince itself made, a small set of deal questions
 1795668967_open_which_deal_tasks_move_into_the_link_suggestion_queue.up.sql | *, activity, activity_link_suggestion | the WITH statement is the insert of the moved questions; only open "which deal" question tasks of live full-seat colleagues are read and closed, at most one per conversation and colleague, with one suggestion row per deal each offered
 1795668967_open_which_deal_tasks_move_into_the_link_suggestion_queue.down.sql | activity_link_suggestion | deletes only the suggestions Margince itself made, the same small set of deal questions
+1795668968_the_link_suggestion_producer_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
