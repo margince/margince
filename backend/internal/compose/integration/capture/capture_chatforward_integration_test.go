@@ -5,9 +5,9 @@
 
 package capture
 
-// A member's chat account is verified by a code sent from it, and a verified
-// member's forward to a company chat account files the original author's
-// message. Every case runs through capture.FileChatMessage over the sink
+// A code sent from a member's chat account confirms it. A confirmed member's
+// forward to a company chat account files the original author's message.
+// Every case runs through capture.FileChatMessage over the sink
 // production composes.
 
 import (

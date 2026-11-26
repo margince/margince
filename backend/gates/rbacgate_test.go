@@ -3,6 +3,7 @@
 
 //gate:kind reachability H2
 
+//craft:ignore large-file the file is a table of one ratified line per store entry point, and a split would scatter it
 package gates
 
 // Store and Service entry points must reach an auth gate or carry a ratified reason.

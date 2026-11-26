@@ -302,3 +302,4 @@
 1795665583_a_zalo_message_can_name_its_channel.down.sql | * | the down migration is a single SELECT 1; the provider remains available to historical foreign keys and no row changes
 1795670301_a_member_chat_account_columns_check_their_text_limits.up.sql | * | replaces the two text-bound triggers of app_user, and no row changes
 1795670301_a_member_chat_account_columns_check_their_text_limits.down.sql | * | restores the previous two text-bound triggers of app_user, and no row changes
+1795670303_the_member_chat_account_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

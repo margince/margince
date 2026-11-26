@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -232,7 +231,7 @@ func ChatMemberTx(ctx context.Context, tx pgx.Tx, network ChatNetwork, scope, ac
 }
 
 // RedeemChatCodeTx verifies the account that sent text as a member's own when
-// the text is exactly that member's pending, unexpired code. It reports whether
+// the text is that member's pending, unexpired code and nothing else. It reports whether
 // text was a pending code, so the caller files nothing for one. A code that is
 // wrong or expired changes nothing and reports false. An account another member
 // already verified is refused.

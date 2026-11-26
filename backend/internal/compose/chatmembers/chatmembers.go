@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package chatmembers joins the capture sink's two questions about a member's
-// chat account to the identity module that stores the verified accounts: who
-// owns this account, and is this message the code that verifies it.
+// Package chatmembers answers the capture sink's two questions about a member's
+// chat account from the identity module. Who owns this account? Is this message
+// the code that confirms it?
 package chatmembers
 
 import (

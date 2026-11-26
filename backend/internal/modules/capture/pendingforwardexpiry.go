@@ -18,8 +18,8 @@ import (
 const expiredForwardBatch = 500
 
 // SelectExpiredForwardsTx is the held forwards older than their window at now.
-// Nobody but their member has read them, and no colleague holds a copy, so the
-// whole selection is the sole copy and goes to the purge executor as such.
+// Only their member has read them and no colleague holds a copy. The whole
+// selection is therefore the sole copy, and the purge executor takes it as such.
 func SelectExpiredForwardsTx(ctx context.Context, tx pgx.Tx, now time.Time) (PurgeSubject, error) {
 	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE `+pendingforward.Predicate("a")+`
 		AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.created_at < $1 ORDER BY a.id LIMIT $2`, now.Add(-pendingforward.Window), expiredForwardBatch)

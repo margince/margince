@@ -3,12 +3,11 @@
 
 package capture
 
-// A workspace member who forwards a customer's message from their own chat app
-// to a company account files the customer's message, never a contact for the
-// member. The check sits in FileChatMessage, so every network takes the same
-// path: Telegram says who wrote the message, WhatsApp and Zalo say only that it
-// was forwarded. A forward from anyone who is not a member is ordinary
-// correspondence of that sender.
+// A member who forwards a customer's message from their own chat app to a
+// company account files the customer's message, never a contact for the member.
+// The check sits in FileChatMessage, so every network takes the same path.
+// Telegram says who wrote the message. WhatsApp and Zalo say only that it was
+// forwarded. A forward from a non-member is that sender's own correspondence.
 
 import (
 	"context"
@@ -60,6 +59,14 @@ func (s *Sink) RedeemChatCode(ctx context.Context, provider, scope, channelUserI
 		return DeleteRawCaptureTx(ctx, tx, original)
 	})
 	return redeemed, err
+}
+
+// memberAccounts is what a sink knows of members' chat accounts. A nil members
+// recognises nobody, so every forward files as its sender's own message. A nil
+// codes confirms no account.
+type memberAccounts struct {
+	members MemberIdentities
+	codes   ChatCodeRedeemer
 }
 
 // WithMemberIdentities returns a copy that recognises members by finder. Compose passes ApprovedAccountMembers.
@@ -137,8 +144,8 @@ func heldForwardRecord(rec connector.NormalizedRecord) connector.NormalizedRecor
 	return rec
 }
 
-// redeemChatCode reports whether an inbound message is exactly a member's
-// pending verification code. Such a message is never filed.
+// redeemChatCode reports whether an inbound message is a member's pending
+// verification code and nothing else. Such a message is never filed.
 func redeemChatCode(ctx context.Context, sink connector.Sink, binding connector.ChatBinding, msg connector.ChatMessage) (bool, error) {
 	redeemer, ok := sink.(connector.ChatCodeRedeemer)
 	if !ok || msg.Direction != connector.DirectionInbound || msg.Forward != nil {

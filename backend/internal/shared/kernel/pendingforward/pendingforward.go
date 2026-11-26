@@ -20,9 +20,9 @@ const Window = 7 * 24 * time.Hour
 const AudienceReason = "no_counterparty"
 
 // Predicate is the SQL condition a pending forward satisfies, for the activity
-// table under alias. A chat message is always filed with a counterparty, so a
-// chat message held with no counterparty and linked to no record is a forward
-// that is waiting to be filed. Who may read it is left to the audience gate.
+// table under alias. A chat message is always filed with a counterparty. One
+// held with none and linked to no record is therefore a forward waiting to be
+// filed. The audience gate decides who may read it.
 func Predicate(alias string) string {
 	return alias + `.kind = 'message' AND ` + alias + `.channel_provider IS NOT NULL
 	 AND ` + alias + `.audience = 'participants' AND ` + alias + `.audience_reason = '` + AudienceReason + `'
