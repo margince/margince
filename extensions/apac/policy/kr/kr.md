@@ -2,14 +2,21 @@
 jurisdiction: kr
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Act on Promotion of Information and Communications Network Utilization and Information Protection"
     effective: 2014-11-29
     provision: "art. 50"
     source-url: https://www.law.go.kr/법령/정보통신망이용촉진및정보보호등에관한법률
+    text-url: "https://www.law.go.kr/LSW/lsInfoR.do?lsiSeq=290001&efYd=20261002&chrClsCd=010202&ancYnChk=0"
+    text-digest: 337e1748f0440b0b07fc563077c819f2db3b7d1f7f01d92be8d83036fa303f90
+    text-fetched: 2026-11-25
   - name: "Enforcement Decree of the Act on Promotion of Information and Communications Network Utilization and Information Protection"
     provision: "arts. 61 and 62-2"
     source-url: https://www.law.go.kr/법령/정보통신망이용촉진및정보보호등에관한법률시행령
+    text-url: "https://www.law.go.kr/LSW/lsInfoR.do?lsiSeq=290483&efYd=20261002&chrClsCd=010202&ancYnChk=0"
+    text-digest: dd29911852573b53770a4eb336394924d580defe5bc3c8a108ce4580409030ae
+    text-fetched: 2026-11-25
 reply-window: 8760h
 deal-follow-up-window: 4368h
 marketing-exceptions: []

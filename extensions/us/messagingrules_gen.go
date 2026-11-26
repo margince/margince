@@ -19,11 +19,17 @@ func messagingRules() []messaging.Rules {
 			EffectiveFrom: time.Date(2004, time.January, 1, 0, 0, 0, 0, time.UTC),
 			Provision:     "15 U.S.C. 7704(a)(3), (a)(4) and (a)(5)",
 			SourceURL:     "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section7704&num=0&edition=prelim",
+			TextURL:       "https://www.govinfo.gov/link/uscode/15/7704?type=usc&year=mostrecent&link-type=html",
+			TextDigest:    "6c95bd853551c56281aee1f2285e61a1572ce2dd388df7ba1303088ae6c37f3f",
+			TextFetchedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		}, {
 			Name:          "CAN-SPAM Rule (16 CFR Part 316)",
 			EffectiveFrom: time.Date(2008, time.July, 7, 0, 0, 0, 0, time.UTC),
 			Provision:     "16 CFR 316.5",
 			SourceURL:     "https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-316",
+			TextURL:       "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=316",
+			TextDigest:    "191be6209091480fd834d97a1accba754589d43003e5537ec2f2c6c57c2acf12",
+			TextFetchedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		}},
 		ReplyWindow:        8760 * time.Hour,
 		DealFollowUpWindow: 4368 * time.Hour,
@@ -39,7 +45,8 @@ func messagingRules() []messaging.Rules {
 			MarketingOnly: true,
 		}},
 		Provenance: messaging.Provenance{
-			CreatedAt: time.Date(2026, time.November, 24, 0, 0, 0, 0, time.UTC),
+			CreatedAt:       time.Date(2026, time.November, 24, 0, 0, 0, 0, time.UTC),
+			SourceCheckedAt: time.Date(2026, time.November, 25, 0, 0, 0, 0, time.UTC),
 		},
 		Citations: []messaging.Citation{{
 			Code:       "objection_route",
@@ -66,6 +73,6 @@ func messagingRules() []messaging.Rules {
 			Instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)",
 			Provision:  "15 U.S.C. 7704(a)(4)(A)",
 		}},
-		Digest: "73e5542acc63eb284b0b9cb39e1424d45f5b02072aab3ad0de79e3b9e9074dac",
+		Digest: "f3b7be4b07749fc546901c130bd4476fa536f9628ddefe9f34692b70bf6066a6",
 	}}
 }
