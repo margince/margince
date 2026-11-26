@@ -43,3 +43,11 @@ func TestEveryCurrencyWithAMinorUnitRuleIsAssigned(t *testing.T) {
 		}
 	}
 }
+
+func TestTheCodesForNoCurrencyAndForTestsNameNoMoney(t *testing.T) {
+	for code, money := range map[string]bool{"EUR": true, "XAU": true, "XDR": true, "XXX": false, "XTS": false, "ZZZ": false} {
+		if got := NamesMoney(code); got != money {
+			t.Errorf("NamesMoney(%q) = %v, want %v", code, got, money)
+		}
+	}
+}

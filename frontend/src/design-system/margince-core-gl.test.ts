@@ -5,6 +5,12 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import { readHue } from "./margince-core-color";
+import {
+  MAX_POINTS,
+  POINT_CAP_CSS,
+  pointGrid,
+  pointsFor,
+} from "./margince-core-gl";
 
 // The seam between the design tokens and a shader, which both the Core and the
 // lit window edge read through. A shader cannot read a custom property, so this
@@ -39,5 +45,82 @@ describe("reading a colour token for a shader", () => {
     document.documentElement.style.setProperty("--test-hue", "rebeccapurple");
 
     expect(readHue("--test-hue")).toEqual([0.5, 0.5, 0.5]);
+  });
+});
+
+describe("the points for a canvas size", () => {
+  const count = (g: { along: number; across: number }) =>
+    4 * g.along * g.across;
+
+  it.each([22, 30, 38, 44, 50, 56, 79])(
+    "keeps the small-orb grid at %i CSS px",
+    (css) => {
+      for (const dpr of [1, 2]) {
+        expect(pointsFor(css, css * dpr)).toEqual({
+          ...pointGrid(css * dpr),
+          soft: 0,
+        });
+      }
+    },
+  );
+
+  it.each([
+    [48, 36],
+    [44, 22],
+  ])("keeps the small-orb grid for %i CSS px on %i device px", (css, side) => {
+    expect(pointsFor(css, side)).toEqual({ ...pointGrid(side), soft: 0 });
+  });
+
+  it("ramps the large treatment in from 80 to 112 CSS px", () => {
+    expect(pointsFor(80, 160).soft).toBe(0);
+    expect(pointsFor(96, 192).soft).toBe(0.5);
+    expect(pointsFor(112, 224).soft).toBe(1);
+    expect(pointsFor(300, 600).soft).toBe(1);
+  });
+
+  it("never draws a point larger than the panel's, at any large size", () => {
+    for (let css = 80; css <= 320; css += 7) {
+      for (const dpr of [1, 1.5, 2]) {
+        const side = Math.round(css * dpr);
+        expect(pointsFor(css, side).pointPx).toBeLessThanOrEqual(
+          POINT_CAP_CSS * (side / css) + 1e-9,
+        );
+      }
+    }
+  });
+
+  it("draws a capped point at the cap, with density raised by one over the root of the shrink", () => {
+    // 224 CSS px is the onboarding glass: uncapped, its points would be 8 px.
+    const capped = pointsFor(224, 448);
+    const shrink = (POINT_CAP_CSS * 2) / pointGrid(448, 1.8, 1.5).pointPx;
+    expect(capped).toEqual({
+      ...pointGrid(448, 1.8 / Math.sqrt(shrink), 1.5),
+      pointPx: POINT_CAP_CSS * 2,
+      soft: 1,
+    });
+    expect(count(capped)).toBe(93896);
+  });
+
+  it.each([
+    [122, 21160],
+    [152, 36240],
+    [173, 50268],
+  ])("lays out %i CSS px at ratio 2 as %i points", (css, points) => {
+    expect(count(pointsFor(css, css * 2))).toBe(points);
+  });
+
+  it.each([
+    [600, 300],
+    [600, 600],
+    [2000, 2000],
+    [1000, 2000],
+  ])("keeps %i CSS px on %i device px within the point limit", (css, side) => {
+    expect(count(pointsFor(css, side))).toBeLessThanOrEqual(MAX_POINTS);
+  });
+
+  it("grows the count with the area, so grain spacing holds", () => {
+    const panel = count(pointsFor(122, 244));
+    const signIn = count(pointsFor(152, 304));
+    expect(signIn / panel).toBeGreaterThan((152 / 122) ** 2 * 0.9);
   });
 });
