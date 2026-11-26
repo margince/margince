@@ -22,16 +22,15 @@ const benchMobile = process.env.MARGINCE_BENCH_MOBILE === "1";
 const benchHome = process.env.MARGINCE_BENCH_HOME === "1";
 const benchSpecs = ["**/perf-mobile.spec.ts", "**/bench-home.spec.ts"];
 
-// The secondary-engine smoke run (`make e2e-secondary`): the specs tagged
-// `@smoke` in WebKit and Firefox, on Playwright's own engine builds. It is a
-// switch rather than always-on projects because a project present in every run
-// would put the other two engines into `pnpm e2e` and the pull request lane,
-// which stay on Chromium. With the switch set, the Chromium project is not
-// defined, so the run collects nothing else.
+// The secondary-engine smoke run (`make e2e-secondary`) runs the specs tagged
+// `@smoke` in WebKit and Firefox, on Playwright's own engine builds.
+// It is an env var because projects defined in every run would add the two
+// engines to `pnpm e2e` and the pull request lane. Those stay on Chromium.
+// With it set, no Chromium project exists, so the run collects nothing else.
 const secondary = process.env.MARGINCE_E2E_SECONDARY === "1";
 const smoke = /@smoke/;
-// A device descriptor carries its own viewport, which beats the one in `use`
-// below, so it is set again here to keep the layout the specs are written at.
+// A device descriptor carries its own viewport, which beats the one in `use`.
+// It is set again here to keep the layout the specs are written at.
 const desktop = { width: 1280, height: 800 };
 
 export default defineConfig({
