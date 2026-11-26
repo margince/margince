@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/standingline"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -40,7 +41,7 @@ func TestAMailOnAContactWritesTheLineItsPageShows(t *testing.T) {
 	e := integration.Setup(t)
 	const address = "anna@kunde.example"
 	contact := seedLinkedContact(t, e, address)
-	now := time.Now().UTC()
+	now := clocktest.Now(t).UTC()
 	subject, body, direction := "Re: Rollout plan", "The plan works for us. Please send the contract draft by Friday.", "inbound"
 	mail, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: &direction, OccurredAt: &now,
@@ -52,7 +53,7 @@ func TestAMailOnAContactWritesTheLineItsPageShows(t *testing.T) {
 	}
 	lane := &scriptedLine{text: "Anna confirmed the rollout plan and asked for the contract draft by Friday."}
 	refresher := standingline.NewRefresher(e.Pool, activities.NewStore(InstallationDB(e.Pool)), lane,
-		func() string { return "test" }, time.Now)
+		func() string { return "test" }, func() time.Time { return now })
 	system := principal.SystemActing(e.Admin(), standingLineActor)
 
 	for range 2 {

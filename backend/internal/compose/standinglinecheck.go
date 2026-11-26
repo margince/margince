@@ -4,13 +4,11 @@
 package compose
 
 // The How it stands check: an activity landing on a contact, company or
-// project asks whether that record's status line still holds
-// (compose/standingline). The cg:standing-line consumer queues one check per
-// activity, and the job does the reading and the model call.
+// project asks whether that record's status line still holds. The
+// cg:standing-line consumer (standingline.Trigger) queues one check per activity.
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"time"
 
@@ -19,21 +17,15 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/standingline"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // standingLineActor names the check as the principal of its reads and writes.
 const standingLineActor = "system:standing-line"
-
-// standingLineBacklogWindow skips replayed history: a new consumer group
-// starts at the stream's beginning, and an old activity is not news.
-const standingLineBacklogWindow = 7 * 24 * time.Hour
 
 // StandingLineCheckArgs is one check of the records one activity landed on.
 type StandingLineCheckArgs struct {
@@ -90,57 +82,11 @@ type StandingLineEnqueuer interface {
 	EnqueueTx(ctx context.Context, tx pgx.Tx, args river.JobArgs, opts *river.InsertOpts) error
 }
 
-// StandingLineTrigger queues a check for each activity that lands or changes.
-type StandingLineTrigger struct {
-	pool      *pgxpool.Pool
-	queue     StandingLineEnqueuer
-	workspace func(context.Context) (ids.WorkspaceID, error)
-	log       *slog.Logger
-	now       func() time.Time
-}
-
 // NewStandingLineTrigger builds the cg:standing-line consumer.
-func NewStandingLineTrigger(pool *pgxpool.Pool, queue StandingLineEnqueuer, log *slog.Logger) *StandingLineTrigger {
-	return &StandingLineTrigger{
-		pool: pool, queue: queue, workspace: identity.NewService(pool).InstallationWorkspace,
-		log: log, now: time.Now,
-	}
-}
-
-// HandleEvent queues one check for an activity that may move the picture.
-func (t *StandingLineTrigger) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if !events.StandingLineTypes.Has(env.Type) || t.now().Sub(env.OccurredAt) > standingLineBacklogWindow {
-		return nil
-	}
-	if !t.moves(ctx, env) {
-		return nil
-	}
-	ws, err := t.workspace(ctx)
-	if err != nil {
-		return err
-	}
-	return pgx.BeginFunc(ctx, t.pool, func(tx pgx.Tx) error {
-		return t.queue.EnqueueTx(ctx, tx, StandingLineCheckArgs{Workspace: ws.UUID, ActivityID: env.Entity.ID},
+func NewStandingLineTrigger(pool *pgxpool.Pool, queue StandingLineEnqueuer, log *slog.Logger) *standingline.Trigger {
+	enqueue := func(ctx context.Context, tx pgx.Tx, ws ids.WorkspaceID, activity ids.UUID) error {
+		return queue.EnqueueTx(ctx, tx, StandingLineCheckArgs{Workspace: ws.UUID, ActivityID: activity},
 			standingLineCheckInsertOpts())
-	})
-}
-
-// moves says whether the event can change where a record stands. That is a
-// new activity other than a task, or one filed or marked held later. Margince
-// files many tasks of its own, and what is owed is on the page.
-func (t *StandingLineTrigger) moves(ctx context.Context, env events.Envelope) bool {
-	if env.Type == eventActivityUpdated {
-		var updated crmcontracts.PublicEventActivityUpdated
-		if err := json.Unmarshal(env.Payload, &updated); err != nil {
-			t.log.WarnContext(ctx, "standing line trigger: unreadable payload", "event", env.EventID.String(), "err", err)
-			return false
-		}
-		return updated.ChangedFields.Relinked != nil || updated.ChangedFields.MeetingStatus != nil
 	}
-	var captured crmcontracts.PublicEventActivityCaptured
-	if err := json.Unmarshal(env.Payload, &captured); err != nil {
-		t.log.WarnContext(ctx, "standing line trigger: unreadable payload", "event", env.EventID.String(), "err", err)
-		return false
-	}
-	return captured.Kind != string(crmcontracts.ActivityKindTask)
+	return standingline.NewTrigger(pool, enqueue, identity.NewService(pool).InstallationWorkspace, log)
 }

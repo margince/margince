@@ -20,17 +20,17 @@ Also called: which model should I use, best model, recommended model, which LLM,
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 29 | 9 | 0 | 0 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 29 | 9 | 0 | 0 |
-| Anthropic Claude | global cloud | 33 | 5 | 0 | 0 |
+| Google Gemini | global cloud | 29 | 8 | 0 | 1 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 29 | 8 | 0 | 1 |
+| Anthropic Claude | global cloud | 33 | 4 | 0 | 1 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
-| Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 8 | 6 |
+| Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 7 | 7 |
 | Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 0 | 4 | 33 |
 | Mistral models in the EU, through OpenRouter | EU-hosted cloud | 11 | 2 | 12 | 13 |
 | Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 38 |
 | Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 38 |
 
-98 of these 201 grades were measured on an older version of Margince and wait for a re-check.
+97 of these 197 grades were measured on an older version of Margince and wait for a re-check.
 
 ### What does a grade of a Margince AI feature mean?
 A grade of a Margince AI feature says how often it was right. **Ready** means right in at least 90 of every 100 tries: turn it on. **Usable with care** means right in most tries: have someone look over what it makes. **Not reliable yet** means wrong too often: leave it off. **Not measured** means nobody has tested that feature on that model yet.
@@ -45,7 +45,7 @@ Also called: grade, rating, certified, how reliable is the AI.
 | Google Gemini in the EU, through Vertex AI | none |
 | Anthropic Claude | none |
 | OpenAI GPT-6, through OpenRouter | Thread confidentiality check<br>First-time sender check<br>Meeting follow-up extraction |
-| Open models from OpenAI and Mistral, through OpenRouter | Message classification<br>First-time sender check<br>Buying-role reading<br>Website research<br>Stage evidence extraction<br>Record summary<br>Tag suggestions<br>Meeting follow-up extraction |
+| Open models from OpenAI and Mistral, through OpenRouter | Message classification<br>First-time sender check<br>Buying-role reading<br>Website research<br>Stage evidence extraction<br>Tag suggestions<br>Meeting follow-up extraction |
 | Gemma 4 you could run yourself, through OpenRouter | First-time sender check<br>Signature enrichment<br>Unanswered-message triage<br>Checking whether the reply answered the request |
 | Mistral models in the EU, through OpenRouter | First-time sender check<br>Onboarding read<br>Reply drafting<br>Offer drafting<br>Unanswered-message triage<br>Website research<br>Website fact extraction<br>Stage evidence extraction<br>Meeting follow-up extraction<br>Voice DNA build<br>What last week taught<br>Weekly review narrative |
 | Gemma 4 on your own server, through Ollama | none |
@@ -71,7 +71,7 @@ Also called: untested assistant, another AI tool, my own agent.
 The job by job results are in [Your AI assistant: test results](mcp-tool-coverage.md).
 
 ### What did you test, and what not?
-For Margince AI we ran 345 test cases. Each one is an example with a known right answer, in one of the 62 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
+For Margince AI we ran 347 test cases. Each one is an example with a known right answer, in one of the 64 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
 Also called: how is the AI tested, test coverage, certification.
 
 ## Where to go next

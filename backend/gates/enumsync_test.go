@@ -167,6 +167,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// generated_by whether or not it holds this vocabulary.
 	"company_scan.generated_by":      {"internal/contracts", "WrittenBy"},
 	"generated_summary.generated_by": {"internal/contracts", "WrittenBy"},
+	"task_explanation.generated_by":  {"internal/contracts", "WrittenBy"},
 	"generated_summary.kind":         {"internal/platform/generatedsummary", "Kind"},
 
 	// Found by the vocabulary census in vocabularycensus_test.go. Each type is the one
