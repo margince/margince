@@ -171,7 +171,7 @@ The sources on offer are the add-ons your installation was built with. Margince 
 
 After the first sync, the card lists the source's customers. Press **Link** on each one and pick its company. A company can have more than one customer in the source. Margince never links them by itself, so a guess never puts money on the wrong company.
 
-The sync runs every six hours. **Sync now** runs it sooner. Margince only reads from the source and never writes to it.
+The sync runs every six hours. **Sync now** runs it sooner, and so does each **Link**, so a linked company's invoices do not wait for the next one. Margince only reads from the source and never writes to it.
 Until one is connected, the **Finance** card reads "No accounting system connected."
 Also called: connect finance, link accounting, sync invoices, connect a ledger, bookkeeping integration.
 

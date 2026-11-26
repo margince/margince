@@ -247,6 +247,10 @@ END $$;
 -- what makes this a demonstration of the real path rather than a table of
 -- rows nobody produced — and it is the only way the hash discipline, the
 -- credit-note placement and the derived statuses are exercised at all.
+--
+-- The connection starts as a connected one does, `connecting` until its first
+-- pass. `make seed-dev` queues that pass through the API once this file has
+-- run, because the pass mirrors only the links made below.
 DO $$
 DECLARE
   ws   uuid;
@@ -264,8 +268,11 @@ BEGIN
   IF conn IS NULL THEN
     INSERT INTO finance_connection
            (provider, status, captured_by)
-    VALUES ('offline_demo', 'active', 'system:seed')
+    VALUES ('offline_demo', 'connecting', 'system:seed')
     RETURNING id INTO conn;
+    INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
+    VALUES ('system', 'system:seed', 'create', 'finance_connection', conn,
+            jsonb_build_object('status', 'connecting', 'last_error_code', ''));
   END IF;
 
   -- The directory the links name, as the finance-demo unit lists it and with

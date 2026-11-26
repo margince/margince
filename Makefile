@@ -578,10 +578,12 @@ ext-imports:
 ## seed-dev — create/refresh the demo installation (admin@demo.test /
 ## demo-password-123) through the public API, then seed
 ## demo FX rates (SQL — fx_rate has no API). Stack must be running
-## (make dev). Idempotent; re-runs log in instead of re-bootstrapping.
+## (make dev). Idempotent; re-runs log in instead of re-bootstrapping. Last, it
+## queues the first finance sync for the customers the SQL linked.
 seed-dev:
 	./scripts/seed-dev.sh
 	$(MAKE) -C backend seed-dev-db
+	./scripts/seed-dev.sh --queue-finance-sync
 
 ## seed-analytics — invented records for every Analytics Overview state,
 ## through the public API, on a stack that `make seed-dev` already seeded.
