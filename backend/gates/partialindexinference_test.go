@@ -40,12 +40,6 @@ var (
 	conflictWords = requiredWords(conflictTarget)
 )
 
-// mayInferOnConflict is the byte check in front of conflictTarget: a text
-// holding none of its words cannot match it.
-func mayInferOnConflict(text string) bool {
-	return conflictWords == nil || mayHoldFolded(text, conflictWords...)
-}
-
 // uniqueIndex is one index's shape, as the committed catalog states it.
 type uniqueIndex struct {
 	name      string
@@ -277,7 +271,7 @@ func TestAnUpsertOntoAPartialIndexRepeatsItsPredicate(t *testing.T) {
 	indexes := uniqueIndexesByTable(t)
 	var examined int
 	for _, statement := range everyUpsertInTheTree(t) {
-		if !mayInferOnConflict(statement.sql) {
+		if !mayHoldWordsOf(statement.sql, conflictWords) {
 			continue
 		}
 		target := insertTarget.FindStringSubmatch(statement.sql)
@@ -354,7 +348,7 @@ func everyUpsertInTheTree(t *testing.T) []upsertStatement {
 			if err != nil {
 				t.Fatalf("reading %s: %v", path, err)
 			}
-			if !mayInferOnConflict(string(src)) {
+			if !mayHoldWordsOf(string(src), conflictWords) {
 				continue
 			}
 			// statementsIn rather than a per-literal reader: a statement written

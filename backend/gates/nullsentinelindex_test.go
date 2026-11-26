@@ -312,7 +312,7 @@ func TestNoUpsertInfersASentinelIndex(t *testing.T) {
 		read++
 		// One literal holds the whole match, because joining literals puts a
 		// newline where the pattern wants a space.
-		if onConflictWords != nil && !mayHoldFolded(string(body), onConflictWords...) {
+		if !mayHoldWordsOf(string(body), onConflictWords) {
 			continue
 		}
 		// The string literals, not the file: a census over raw bytes reads prose

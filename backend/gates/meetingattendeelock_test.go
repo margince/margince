@@ -123,7 +123,7 @@ func assertTheTextAgrees(t *testing.T, byDir map[string][]gatekit.ParsedFile) {
 	}
 	searched := map[string]bool{}
 	for path, src := range internalSources(t) {
-		if mayHoldWordsOf(src, participantWriteWords) && participantWrite.Match(src) {
+		if mayHoldWordsOf(string(src), participantWriteWords) && participantWrite.Match(src) {
 			searched[path] = true
 		}
 	}
@@ -263,17 +263,11 @@ var (
 	attendeeCopyWords     = requiredWords(attendeeCopy)
 )
 
-// mayHoldWordsOf is the byte check in front of a scan of raw source: a file
-// holding none of a pattern's words cannot match it.
-func mayHoldWordsOf(src []byte, words []string) bool {
-	return words == nil || mayHoldFolded(string(src), words...)
-}
-
 // A COPY writes rows with no statement the census can read, so it is refused.
 func TestNothingCopiesIntoTheAttendeeTable(t *testing.T) {
 	t.Parallel()
 	for path, src := range internalSources(t) {
-		if mayHoldWordsOf(src, attendeeCopyWords) && attendeeCopy.Match(src) {
+		if mayHoldWordsOf(string(src), attendeeCopyWords) && attendeeCopy.Match(src) {
 			t.Errorf("%s copies into activity_participant. Write the rows with a statement that takes the attendee lock", path)
 		}
 	}

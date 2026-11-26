@@ -22,13 +22,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"slices"
 	"strings"
 	"sync"
 	"testing"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -154,13 +151,19 @@ var trackedIndex = sync.OnceValues(func() ([]trackedFile, error) {
 	return files, nil
 })
 
-// mayHoldFolded is the cheap question in front of a case-insensitive scan: it
-// is false only when text holds none of words in any case, so a scan it skips
-// could not have matched.
+// mayHoldWordsOf is the byte check in front of a pattern, given what
+// requiredWords derived from it: nil words promise nothing, so the text is read.
+func mayHoldWordsOf(text string, words []string) bool {
+	return words == nil || mayHoldFolded(text, words...)
+}
+
 // foldsToASCIIUnlowered is the one rune (?i) matches to an ASCII letter that
 // strings.ToLower leaves alone: ſ, which folds to s.
 const foldsToASCIIUnlowered = 'ſ'
 
+// mayHoldFolded is the cheap question in front of a case-insensitive scan. It
+// is false only when text holds none of words in any case, so a scan it skips
+// could not have matched.
 func mayHoldFolded(text string, words ...string) bool {
 	if strings.ContainsRune(text, foldsToASCIIUnlowered) {
 		return true
@@ -172,24 +175,4 @@ func mayHoldFolded(text string, words ...string) bool {
 		}
 	}
 	return false
-}
-
-// The fold the regexp engine uses is derived here from the Unicode tables Go
-// ships, so a rune a later table adds is caught.
-func TestMayHoldFoldedNeverSkipsTextACaseInsensitiveWordMatches(t *testing.T) {
-	t.Parallel()
-	for r := rune(utf8.RuneSelf); r <= unicode.MaxRune; r++ {
-		for fold := unicode.SimpleFold(r); fold != r; fold = unicode.SimpleFold(fold) {
-			if fold >= utf8.RuneSelf || !unicode.IsLetter(fold) {
-				continue
-			}
-			word := string(unicode.ToLower(fold))
-			if !regexp.MustCompile("(?i)" + word).MatchString(string(r)) {
-				t.Fatalf("(?i)%s does not match U+%04X, so this test no longer reads the fold the regexp engine uses", word, r)
-			}
-			if !mayHoldFolded(string(r), word) {
-				t.Errorf("(?i)%s matches U+%04X, and mayHoldFolded skips text holding it", word, r)
-			}
-		}
-	}
 }

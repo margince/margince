@@ -73,7 +73,7 @@ var domainClaimWords = [][]string{requiredWords(readsDomainClaim), requiredWords
 
 func mayAskWhoOwnsADomain(src string) bool {
 	for _, words := range domainClaimWords {
-		if words == nil || mayHoldFolded(src, words...) {
+		if mayHoldWordsOf(src, words) {
 			return true
 		}
 	}

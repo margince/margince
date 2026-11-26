@@ -43,6 +43,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -199,7 +201,7 @@ var forbiddenWords = func() [][]string {
 // mayMatchForbidden is false only when line holds none of the words pattern i
 // requires. A pattern that requires none is always asked.
 func mayMatchForbidden(i int, line string) bool {
-	return forbiddenWords[i] == nil || mayHoldFolded(line, forbiddenWords[i]...)
+	return mayHoldWordsOf(line, forbiddenWords[i])
 }
 
 // requiredWords returns lower-case literals of which every match of re holds at
@@ -255,6 +257,26 @@ func shortestWord(words []string) int {
 		shortest = min(shortest, len(word))
 	}
 	return shortest
+}
+
+// The fold the regexp engine uses is derived here from the Unicode tables Go
+// ships, so a rune a later table adds is caught.
+func TestMayHoldFoldedNeverSkipsTextACaseInsensitiveWordMatches(t *testing.T) {
+	t.Parallel()
+	for r := rune(utf8.RuneSelf); r <= unicode.MaxRune; r++ {
+		for fold := unicode.SimpleFold(r); fold != r; fold = unicode.SimpleFold(fold) {
+			if fold >= utf8.RuneSelf || !unicode.IsLetter(fold) {
+				continue
+			}
+			word := string(unicode.ToLower(fold))
+			if !regexp.MustCompile("(?i)" + word).MatchString(string(r)) {
+				t.Fatalf("(?i)%s does not match U+%04X, so this test no longer reads the fold the regexp engine uses", word, r)
+			}
+			if !mayHoldFolded(string(r), word) {
+				t.Errorf("(?i)%s matches U+%04X, and mayHoldFolded skips text holding it", word, r)
+			}
+		}
+	}
 }
 
 func TestRequiredWordsAreWordsEveryMatchHolds(t *testing.T) {
