@@ -244,9 +244,15 @@ func TestAnUploadVerbPublishesTheFileItTakes(t *testing.T) {
 	if err := json.Unmarshal(spec.InputSchema, &shape); err != nil {
 		t.Fatal(err)
 	}
-	for _, arg := range []string{"filename", "content_type", "content_base64"} {
+	for _, arg := range []string{"filename", "content_type"} {
 		if !slices.Contains(shape.Required, arg) || shape.Properties[arg] == nil {
 			t.Errorf("%s is not a required published argument: %s", arg, spec.InputSchema)
+		}
+	}
+	// The file comes one way or the other, so neither way is required.
+	for _, arg := range []string{"content_base64", "content_text"} {
+		if slices.Contains(shape.Required, arg) || shape.Properties[arg] == nil {
+			t.Errorf("%s is not an optional published argument: %s", arg, spec.InputSchema)
 		}
 	}
 	if shape.Properties[routeBodyArg] != nil {
@@ -272,6 +278,23 @@ func TestAnUploadVerbSendsTheDecodedFile(t *testing.T) {
 	}
 }
 
+func TestAnUploadVerbSendsATextFileAsItIs(t *testing.T) {
+	var got RouteCall
+	tool := routeVerbTool{verb: uploadLogoVerb, run: func(_ context.Context, call RouteCall) (json.RawMessage, error) {
+		got = call
+		return json.RawMessage(`{}`), nil
+	}}
+	in := mustMarshal(map[string]string{
+		"filename": "handover.txt", "content_type": "text/plain", "content_text": "Schlüssel liegt beim Pförtner",
+	})
+	if _, err := tool.Handle(t.Context(), in); err != nil {
+		t.Fatal(err)
+	}
+	if string(got.File.Content) != "Schlüssel liegt beim Pförtner" || len(got.File.Content) != 31 {
+		t.Errorf("file = %q (%d bytes), want the text as its UTF-8 bytes", got.File.Content, len(got.File.Content))
+	}
+}
+
 func TestAnUploadVerbRefusesAFileItCannotSend(t *testing.T) {
 	good := base64.StdEncoding.EncodeToString([]byte("x"))
 	huge := base64.StdEncoding.EncodeToString(make([]byte, MaxInlineFileBytes+1))
@@ -284,6 +307,8 @@ func TestAnUploadVerbRefusesAFileItCannotSend(t *testing.T) {
 		"not base64":   {map[string]string{"filename": "a.png", "content_type": "image/png", "content_base64": "!!"}, "content_base64"},
 		"empty":        {map[string]string{"filename": "a.png", "content_type": "image/png", "content_base64": ""}, "content_base64"},
 		"past a limit": {map[string]string{"filename": "a.png", "content_type": "image/png", "content_base64": huge}, "over the"},
+		"sent twice": {map[string]string{"filename": "a.txt", "content_type": "text/plain", "content_base64": good,
+			"content_text": "x"}, "not both"},
 	} {
 		tool := routeVerbTool{verb: uploadLogoVerb, run: func(context.Context, RouteCall) (json.RawMessage, error) {
 			t.Errorf("%s reached the route", name)

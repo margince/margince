@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 53796,
+    "tokens": 54056,
     "median_tool_tokens": 806,
-    "mean_tool_tokens": 1120
+    "mean_tool_tokens": 1125
   },
   "agents": [
     {
@@ -93,15 +93,15 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3239
+      "tokens": 3307
+    },
+    {
+      "name": "change_activities",
+      "tokens": 3029
     },
     {
       "name": "read_workspace",
       "tokens": 2994
-    },
-    {
-      "name": "change_activities",
-      "tokens": 2977
     },
     {
       "name": "change_state",
@@ -116,12 +116,12 @@
       "tokens": 2014
     },
     {
-      "name": "read_view",
-      "tokens": 1921
+      "name": "change_capture",
+      "tokens": 1958
     },
     {
-      "name": "change_capture",
-      "tokens": 1891
+      "name": "read_view",
+      "tokens": 1921
     },
     {
       "name": "change_attention",
@@ -132,12 +132,12 @@
       "tokens": 1678
     },
     {
-      "name": "read_analytics",
-      "tokens": 1373
+      "name": "run_research",
+      "tokens": 1419
     },
     {
-      "name": "run_research",
-      "tokens": 1365
+      "name": "read_analytics",
+      "tokens": 1373
     },
     {
       "name": "change_compliance",
@@ -245,7 +245,7 @@
     },
     {
       "name": "list_documents",
-      "tokens": 331
+      "tokens": 351
     },
     {
       "name": "read_project",

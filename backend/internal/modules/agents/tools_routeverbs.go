@@ -164,8 +164,9 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	if v.UploadField != "" {
 		properties[routeFileName] = `{"type":"string","description":"The file's name, with its extension"}`
 		properties[routeFileType] = `{"type":"string","description":"The file's media type, e.g. image/png"}`
-		properties[argContentBase64] = `{"type":"string","description":"The whole file, standard base64 with = padding"}`
-		required = append(required, routeFileName, routeFileType, argContentBase64)
+		properties[argContentBase64] = contentBase64Schema
+		properties[argContentText] = contentTextSchema
+		required = append(required, routeFileName, routeFileType)
 		maxArgs = MaxMCPRequestBytes
 	}
 	members := make([]string, 0, len(properties))
@@ -256,7 +257,7 @@ func bindUpload(args map[string]json.RawMessage, call *RouteCall) error {
 	if err := requireMediaType(declared); err != nil {
 		return err
 	}
-	content, err := decodeFile(text(argContentBase64), MaxInlineFileBytes)
+	content, err := fileContent(text(argContentBase64), text(argContentText), MaxInlineFileBytes)
 	if err != nil {
 		return err
 	}
@@ -268,7 +269,7 @@ func bindUpload(args map[string]json.RawMessage, call *RouteCall) error {
 // verb does not publish rather than dropping it.
 func (v RouteVerb) bind(key string, raw json.RawMessage, call *RouteCall) error {
 	switch {
-	case v.UploadField != "" && (key == routeFileName || key == routeFileType || key == argContentBase64):
+	case v.UploadField != "" && slices.Contains([]string{routeFileName, routeFileType, argContentBase64, argContentText}, key):
 		return nil
 	case key == routeBodyArg && v.Body:
 		call.Body = raw
@@ -324,7 +325,7 @@ func (v RouteVerb) arguments() []string {
 		names = append(names, routeBodyArg)
 	}
 	if v.UploadField != "" {
-		names = append(names, routeFileName, routeFileType, argContentBase64)
+		names = append(names, routeFileName, routeFileType, argContentBase64, argContentText)
 	}
 	if len(names) == 0 {
 		return []string{"no arguments"}
@@ -465,7 +466,7 @@ type routeActionShape struct {
 	AskUserFirst bool            `json:"ask_user_first,omitempty"`
 	Body         json.RawMessage `json:"body,omitempty"`
 	// UploadsAFile is true for an action that takes filename, content_type and
-	// content_base64.
+	// content_base64 or content_text.
 	UploadsAFile bool `json:"uploads_a_file,omitempty"`
 }
 

@@ -262,8 +262,8 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 10 (9–11) | 11 (10–12) | 3.5 (3–4) | - | **8** Promises come back as suggestions | `change_activities` or `create_record` |
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 14.5 (13–16) | 10 (9–11) | 0.5 (0–1) | - | **8** Promises come back as suggestions | `change_activities` or `create_record` |
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness, transcript parser) | 2/3 | 2 | 12 (10–14) | - | 2 (1–5) | - | **8** Promises come back as suggestions | `change_activities` or `create_record` |
-| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 4 | 5 | 0 | - | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | - |
-| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 6.5 (6–7) | 11 | 0 | - | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | - |
+| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded, on an earlier listing (scenario, tool copy, server instructions and resources, harness) | 2/2 | 2 | 4 | 5 | 0 | - | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | - |
+| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (scenario, tool copy, server instructions and resources, harness) | 2/2 | 2 | 6.5 (6–7) | 11 | 0 | - | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | - |
 | [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL**, re-graded, on an earlier listing (scenario, tool copy, server instructions and resources, harness, transcript parser) | 0/2 | 2 | 12.5 (6–19) | - | 7 (1–13) | - | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | - |
 | [case102_shorter_in_my_voice](../../e2e/llm/scenarios/case102-shorter-in-my-voice.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 3 | 4 | 0 | - | **1** The voice is the user's own | `change_my_settings` |
 | [case102_shorter_in_my_voice](../../e2e/llm/scenarios/case102-shorter-in-my-voice.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 4 | 4.5 (4–5) | 0 | - | **1** The voice is the user's own | `change_my_settings` |
@@ -439,9 +439,9 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case63_is_she_already_here](../../e2e/llm/scenarios/case63-is-she-already-here.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 3 | 4 | 0 | - | **1** Is this contact already here is the identify engine | - |
 | [case63_is_she_already_here](../../e2e/llm/scenarios/case63-is-she-already-here.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 9 (8–10) | 6.5 (6–7) | 0 | - | **1** Is this contact already here is the identify engine | - |
 | [case63_is_she_already_here](../../e2e/llm/scenarios/case63-is-she-already-here.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness, transcript parser) | 2/2 | 2 | 7 (6–8) | - | 1 | - | **1** Is this contact already here is the identify engine | - |
-| [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness) | 2/3 | 2 | 6 (5–7) | 7 (6–8) | 1 | - | **1** Catch-up and the brief each use their own view | - |
-| [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 10 (9–11) | 6 | 2.5 (2–3) | - | **1** Catch-up and the brief each use their own view | - |
-| [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (scenario, tool copy, server instructions and resources, harness, transcript parser) | 2/2 | 2 | 16 (14–18) | - | 3.5 (1–6) | - | **1** Catch-up and the brief each use their own view | - |
+| [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded, on an earlier listing (scenario, tool copy, server instructions and resources, judge, harness) | 2/3 | 2 | 6 (5–7) | 7 (6–8) | 1 | - | **1** Catch-up and the brief each use their own view | - |
+| [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded, on an earlier listing (scenario, tool copy, server instructions and resources, judge, harness) | 2/2 | 2 | 10 (9–11) | 6 | 2.5 (2–3) | - | **1** Catch-up and the brief each use their own view | - |
+| [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (scenario, tool copy, server instructions and resources, judge, harness, transcript parser) | 2/2 | 2 | 16 (14–18) | - | 3.5 (1–6) | - | **1** Catch-up and the brief each use their own view | - |
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 7 (6–8) | 8 (7–9) | 2 (1–3) | - | **1** Ask before archiving what the user did not name | - |
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 21 (19–23) | 9.5 (9–10) | 0 | - | **1** Ask before archiving what the user did not name | - |
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness, transcript parser) | 2/3 | 2 | 12 (10–14) | - | 3 (2–3) | - | **1** Ask before archiving what the user did not name | - |
@@ -658,8 +658,8 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
 | `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
+| `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
@@ -685,8 +685,8 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
 | `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
+| `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
@@ -704,8 +704,8 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
 | `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
+| `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |

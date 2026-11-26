@@ -53,6 +53,35 @@ func TestARouteThatAnswersAFileAnswersItsBytesAndName(t *testing.T) {
 	}
 }
 
+// A text file reads back as text as well, so a model need not decode base64 by
+// hand. Bytes that are not UTF-8, or not text, answer as base64 alone.
+func TestATextFileAnswersItsTextBesideItsBytes(t *testing.T) {
+	verb := agents.RouteVerb{Verb: "download_attachment", Method: http.MethodGet}
+	for name, tc := range map[string]struct {
+		contentType string
+		content     []byte
+		want        string
+	}{
+		"UTF-8 text":       {"text/plain; charset=utf-8", []byte("Schlüssel liegt beim Pförtner"), "Schlüssel liegt beim Pförtner"},
+		"text, not UTF-8":  {"text/plain", []byte{'P', 0xf6, 'r'}, ""},
+		"a file, not text": {"application/pdf", []byte("%PDF-1.7"), ""},
+	} {
+		raw, err := routeAnswer(verb, recorded(http.StatusOK, tc.contentType, "", tc.content))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got struct {
+			ContentText *string `json:"content_text"`
+		}
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Fatal(err)
+		}
+		if (tc.want == "") != (got.ContentText == nil) || (got.ContentText != nil && *got.ContentText != tc.want) {
+			t.Errorf("%s answered %s, want content_text %q", name, raw, tc.want)
+		}
+	}
+}
+
 func TestAnEmptyFileIsStillAFile(t *testing.T) {
 	raw, err := routeAnswer(agents.RouteVerb{Verb: "download_attachment", Method: http.MethodGet}, recorded(http.StatusOK, "text/csv", "", nil))
 	if err != nil {

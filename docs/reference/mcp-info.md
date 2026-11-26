@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 244.7 KB |
+| Tool catalog | 245.5 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 64038 |
+| Approx. wire tokens | 64244 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 148.4 KB | 60% | Yes, every step |
+| Descriptions (incl. governance clause) | 51.1 KB | 20% | Yes, every step |
+| Input schemas | 149.2 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **199.4 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **200.2 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,9 +68,9 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 892 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2977 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 3029 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1833 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1891 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1958 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1289 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
@@ -78,7 +78,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 1017 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 816 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 2014 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3239 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3307 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2365 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 652 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 375 |
@@ -89,7 +89,7 @@ descriptions and input schemas are what each step pays for.
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 448 |
 | [`find_records`](#find_records) | Find records | yes |  | 2050 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
-| [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
+| [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 351 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
 | [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1373 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
@@ -107,7 +107,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_view`](#read_view) | Read a view | yes |  | 1921 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2994 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
-| [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
+| [`run_research`](#run_research) | Run AI work for your user |  |  | 1419 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 527 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 698 |
@@ -913,7 +913,11 @@ archive_document, assign_inquiry.)
       "type": "string"
     },
     "content_base64": {
-      "description": "attach only: The whole file, standard base64 with = padding",
+      "description": "attach only: The whole file, standard base64 with = padding; send this or content_text",
+      "type": "string"
+    },
+    "content_text": {
+      "description": "attach only: A text file's whole contents, as they are; send this instead of content_base64 for text, which then needs no encoding",
       "type": "string"
     },
     "content_type": {
@@ -1300,7 +1304,11 @@ withdraw_owner_identity.)
       "type": "string"
     },
     "content_base64": {
-      "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: The whole file, standard base64 with = padding",
+      "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: The whole file, standard base64 with = padding; send this or content_text",
+      "type": "string"
+    },
+    "content_text": {
+      "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: A text file's whole contents, as they are; send this instead of content_base64 for text, which then needs no encoding",
       "type": "string"
     },
     "content_type": {
@@ -2172,7 +2180,11 @@ update_exit_criterion, update_web_form, upsert_partner.)
       "type": "string"
     },
     "content_base64": {
-      "description": "upload_company_logo, upload_company_logo_icon, upload_legal_entity_logo only: The whole file, standard base64 with = padding",
+      "description": "upload_company_logo, upload_company_logo_icon, upload_legal_entity_logo only: The whole file, standard base64 with = padding; send this or content_text",
+      "type": "string"
+    },
+    "content_text": {
+      "description": "upload_company_logo, upload_company_logo_icon, upload_legal_entity_logo only: A text file's whole contents, as they are; send this instead of content_base64 for text, which then needs no encoding",
       "type": "string"
     },
     "content_type": {
@@ -4388,12 +4400,12 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
 ```text
 List the files stored on a company, contact, deal, lead, project or activity, newest first: name,
 type, size, who added them and the contract each is filed against. Send entity_type and entity_id to
-list, or a file's id to read its contents. A stored file answers as content_base64, up to 6.2 MB; a
-larger one is refused with the limit. A document link or a withheld mail attachment has no bytes to
-read, so it is refused too. Check the list before attaching a file again, so the record does not
-carry the same file twice. Use read_view with view company_documents or deal_documents for a
-company's or deal's document register, filtered by category, contract or state. Keep next_cursor to
-read the next page.
+list, or a file's id to read its contents. A stored file answers as content_base64, and a text file
+also as content_text, up to 6.2 MB; a larger one is refused with the limit. A document link or a
+withheld mail attachment has no bytes to read, so it is refused too. Check the list before attaching
+a file again, so the record does not carry the same file twice. Use read_view with view
+company_documents or deal_documents for a company's or deal's document register, filtered by
+category, contract or state. Keep next_cursor to read the next page.
 ```
 
 <details><summary>Input schema</summary>
@@ -4423,7 +4435,7 @@ read the next page.
       "type": "string"
     },
     "id": {
-      "description": "A document's id from this list; naming it answers that file's contents as content_base64",
+      "description": "A document's id from this list; naming it answers that file's contents as content_base64, and a text file's also as content_text",
       "type": "string"
     },
     "limit": {

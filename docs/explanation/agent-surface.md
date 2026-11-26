@@ -81,7 +81,9 @@ agent on MCP and REST. It is what one MCP request carries inline, or the operato
 when that is smaller. A human's upload keeps the route's own limit. An agent reads a file through
 `list_documents` by naming its `id`, or through the file actions of `read_details`. The answer is
 `content_base64`, up to `agents.MaxInlineFileBytes`; `routeAnswer`
-(`internal/compose/routeverbseam.go`) refuses a larger file.
+(`internal/compose/routeverbseam.go`) refuses a larger file. A UTF-8 `text/*` file also answers as
+`content_text`. An agent attaching a text file may send it the same way, as `content_text`, instead of
+base64. A model with no shell writes base64 by hand, and drops letters doing so.
 
 `TestNoAgentLoopAttachesAToolThatCarriesAFile` (`internal/compose/agentcatalog_test.go`) fails when a
 scheduled agent's tool list names any tool whose input bound is over 1 MiB. The size and type bounds
