@@ -35,12 +35,18 @@ type standingColumns struct {
 // order their parts appear in the statement. A deal adds its stage and its
 // masked money in dealStanding.
 var standingReads = []standingColumns{
-	{hitType: entityContact, jobTitle: "t.title", lastActivity: lastActivityColumn,
-		clockRows: occurredday.LinkedClockRowsSQL("contact_id", "t.id", occurredday.ActivityClockAdmitsSQL)},
-	{hitType: entityCompany, lastActivity: lastActivityColumn,
-		clockRows: storekit.CompanyClockRowsSQL("t")},
-	{hitType: entityDeal, state: "t.status", dueOn: "t.expected_close_date", lastActivity: lastActivityColumn,
-		clockRows: occurredday.LinkedClockRowsSQL("deal_id", "t.id", occurredday.DealClockAdmitsSQL("t.id"))},
+	{
+		hitType: entityContact, jobTitle: "t.title", lastActivity: lastActivityColumn,
+		clockRows: occurredday.LinkedClockRowsSQL("contact_id", "t.id", occurredday.ActivityClockAdmitsSQL),
+	},
+	{
+		hitType: entityCompany, lastActivity: lastActivityColumn,
+		clockRows: storekit.CompanyClockRowsSQL("t"),
+	},
+	{
+		hitType: entityDeal, state: "t.status", dueOn: "t.expected_close_date", lastActivity: lastActivityColumn,
+		clockRows: occurredday.LinkedClockRowsSQL("deal_id", "t.id", occurredday.DealClockAdmitsSQL("t.id")),
+	},
 	{hitType: entityLead, state: "t.status"},
 	{hitType: entityProject, state: "t.phase", dueOn: "t.target_end_date"},
 }

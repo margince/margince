@@ -282,8 +282,10 @@ func TestADateOnlyProgressDatedTodayFarEastIsNotTheFuture(t *testing.T) {
 	}
 	today := time.Date(2026, 11, 26, 12, 0, 0, 0, time.UTC)
 	justAfterMidnight := time.Date(2026, 11, 26, 0, 30, 0, 0, kiritimati)
-	in := ViabilityInput{CreatedAt: today.AddDate(-1, 0, 0), LastCustomerProgressAt: &today,
-		LastCustomerProgressDateOnly: true, MailCovered: true}
+	in := ViabilityInput{
+		CreatedAt: today.AddDate(-1, 0, 0), LastCustomerProgressAt: &today,
+		LastCustomerProgressDateOnly: true, MailCovered: true,
+	}
 	if got := AssessViability(in, justAfterMidnight, kiritimati).SilentDays; got != 0 {
 		t.Errorf("silent days = %d after progress dated today, want 0", got)
 	}
