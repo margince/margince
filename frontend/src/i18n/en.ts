@@ -4156,6 +4156,8 @@ export const en = {
   "standing.title": "How it stands · {date}",
   "standing.noteMore": "Show more",
   "standing.noteLess": "Show less",
+  "standing.citations.source": "The activity",
+  "standing.citations.from": "Read from",
   "standing.latest.title": "Latest",
   "standing.latest.open": "Open in History",
   "standing.sources.records": "From CRM records",

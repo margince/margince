@@ -42216,7 +42216,7 @@ type Company360 struct {
 
 	// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
 	// the background when that activity landed. Shared by the record's readers, and served
-	// only to a reader who may open every activity it was written from.
+	// only to a reader who may open every activity it cites.
 	StandingLine *StandingLine `json:"standing_line,omitempty"`
 
 	// StateStrip The three readings a company page leads with (AC-company-13, PO-F-4). Each half is
@@ -45704,7 +45704,7 @@ type Contact360 struct {
 
 	// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
 	// the background when that activity landed. Shared by the record's readers, and served
-	// only to a reader who may open every activity it was written from.
+	// only to a reader who may open every activity it cites.
 	StandingLine *StandingLine `json:"standing_line,omitempty"`
 
 	// Strength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
@@ -62456,7 +62456,7 @@ type Project360 struct {
 
 	// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
 	// the background when that activity landed. Shared by the record's readers, and served
-	// only to a reader who may open every activity it was written from.
+	// only to a reader who may open every activity it cites.
 	StandingLine *StandingLine `json:"standing_line,omitempty"`
 }
 
@@ -70128,9 +70128,10 @@ type StageTransitionRecord struct {
 
 // StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
 // the background when that activity landed. Shared by the record's readers, and served
-// only to a reader who may open every activity it was written from.
+// only to a reader who may open every activity it cites.
 type StandingLine struct {
-	// ActivityIds Every activity the sentence was written from, newest first.
+	// ActivityIds The activities the sentence rests on, as the model cited them. The page opens
+	// each one, so a reader can check the line against what was said.
 	ActivityIds []openapi_types.UUID `json:"activity_ids"`
 	Text        string               `json:"text"`
 	WrittenAt   time.Time            `json:"written_at"`

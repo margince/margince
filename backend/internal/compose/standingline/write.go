@@ -90,6 +90,8 @@ type Answer struct {
 	// Text is the new line. Empty with Keep false: the activities say too
 	// little, and the page keeps its own reading.
 	Text string
+	// Cited are the activities the line rests on, as the model cited them.
+	Cited []string
 }
 
 // Write asks the lane whether the line still holds, and for a new one if not.
@@ -128,7 +130,17 @@ func ParseLine(reply string, in Input) (Answer, error) {
 	if len(kept) == 0 {
 		return Answer{}, nil
 	}
-	return Answer{Text: kept[0].Text}, nil
+	cited := make([]string, 0, len(kept[0].Evidence))
+	for _, evidence := range kept[0].Evidence {
+		if evidence.EntityType == citeActivity && !slices.Contains(cited, evidence.EntityID) {
+			cited = append(cited, evidence.EntityID)
+		}
+	}
+	if len(cited) == 0 {
+		// A line that cites nothing could not be withheld from a reader.
+		return Answer{}, nil
+	}
+	return Answer{Text: kept[0].Text, Cited: cited}, nil
 }
 
 // stockPhrases are status lines that would fit any record: who wrote, never

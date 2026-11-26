@@ -106,9 +106,9 @@ func (r *Refresher) check(ctx context.Context, record generatedsummary.StandingR
 			// Kept, or too little to say: the line stands and this input is read.
 			return generatedsummary.TouchStandingLineTx(ctx, tx, record, fingerprint)
 		}
-		evidence := make([]ids.UUID, len(in.Recent))
-		for i, act := range in.Recent {
-			parsed, err := ids.Parse(act.ID)
+		evidence := make([]ids.UUID, len(answer.Cited))
+		for i, cited := range answer.Cited {
+			parsed, err := ids.Parse(cited)
 			if err != nil {
 				return fmt.Errorf("cite an activity in a status line: %w", err)
 			}

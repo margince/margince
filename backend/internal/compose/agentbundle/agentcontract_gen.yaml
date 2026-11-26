@@ -36248,13 +36248,15 @@ components:
       description: |-
         Where a record stands after its latest activity, in one sentence the model wrote in
         the background when that activity landed. Shared by the record's readers, and served
-        only to a reader who may open every activity it was written from.
+        only to a reader who may open every activity it cites.
       required: [text, activity_ids, written_at]
       properties:
         text: {type: string}
         activity_ids:
           type: array
-          description: Every activity the sentence was written from, newest first.
+          description: |-
+            The activities the sentence rests on, as the model cited them. The page opens
+            each one, so a reader can check the line against what was said.
           items: {type: string, format: uuid}
         written_at: {type: string, format: date-time}
     ContactConsentGuard:

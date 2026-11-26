@@ -60,6 +60,9 @@ func TestALineSaysWhatTheNewestMailSaid(t *testing.T) {
 	if got.Keep || got.Text != want {
 		t.Fatalf("answer = %+v, want the new line", got)
 	}
+	if len(got.Cited) != 1 || got.Cited[0] != acceptedID {
+		t.Fatalf("the line cites %v, want only the mail it rests on", got.Cited)
+	}
 }
 
 func TestAStockLineIsRefused(t *testing.T) {

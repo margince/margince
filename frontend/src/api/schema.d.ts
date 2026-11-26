@@ -38807,11 +38807,14 @@ export interface components {
         /**
          * @description Where a record stands after its latest activity, in one sentence the model wrote in
          *     the background when that activity landed. Shared by the record's readers, and served
-         *     only to a reader who may open every activity it was written from.
+         *     only to a reader who may open every activity it cites.
          */
         StandingLine: {
             text: string;
-            /** @description Every activity the sentence was written from, newest first. */
+            /**
+             * @description The activities the sentence rests on, as the model cited them. The page opens
+             *     each one, so a reader can check the line against what was said.
+             */
             activity_ids: string[];
             /** Format: date-time */
             written_at: string;
