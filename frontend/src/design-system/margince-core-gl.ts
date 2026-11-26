@@ -89,11 +89,17 @@ const LARGE_RAMP = 32;
 /** The largest point a large orb draws, in CSS px: the agent panel's own. */
 export const POINT_CAP_CSS = 2.3;
 
+/** The most points one draw lays out, whatever the size and pixel ratio. */
+export const MAX_POINTS = 100_000;
+
+/** How far the cap may shrink a point before the count stops growing. */
+const MIN_SHRINK = 0.5;
+
 /**
  * The points for a canvas of `cssSide` CSS px drawn at `side` device px.
  *
- * A large orb gets more and softer points, never larger ones than the panel's.
- * Past that cap it gets more points instead, so its grain stays as sharp.
+ * Above 80 CSS px the points grow softer and denser. A point wider than the cap
+ * is drawn at the cap, with density raised by one over the root of the shrink.
  */
 export function pointsFor(
   cssSide: number,
@@ -108,11 +114,14 @@ export function pointsFor(
   if (shrink >= 1) {
     return { ...grid, soft: large };
   }
-  return {
-    ...pointGrid(side, density / Math.sqrt(shrink), pointScale),
-    pointPx: capPx,
-    soft: large,
-  };
+  const raised = density / Math.sqrt(Math.max(shrink, MIN_SHRINK));
+  const dense = pointGrid(side, raised, pointScale);
+  const count = 4 * dense.along * dense.across;
+  const fitted =
+    count > MAX_POINTS
+      ? pointGrid(side, (raised * MAX_POINTS * 0.98) / count, pointScale)
+      : dense;
+  return { ...fitted, pointPx: capPx, soft: large };
 }
 
 function compile(

@@ -99,14 +99,16 @@ void main(){
   /* each ribbon shows most of its loop and fades in and out at the ends */
   float arcLen = 0.76 + 0.05 * sin(0.23 * t + 1.7 * L);
   float arc = fract(u + 0.21 * L - 0.012 * t);
-  /* The last ribbon is the gold cluster. All its grain sits on a shorter arc,
-     so it reads as one warm crescent rather than a thread. */
+  /* The last ribbon is the gold cluster: the arc map run backwards over 0.42
+     of its loop packs all its grain there, into one warm crescent. */
   float gold = step(LAYERS - 1.5, L);
   if(gold > 0.5){
     arcLen = 0.42;
     arc *= arcLen;
     u = fract(arc - 0.21 * L + 0.012 * t);
   } else if(arc > arcLen){ hide(); return; }
+  /* For gold this divides the scale back out. Folded away, rounding moves
+     pixels a level, so it stays. */
   float s = arc / arcLen;
   float ends = smoothstep(0.0, 0.08, s) * (1.0 - smoothstep(0.86, 1.0, s));
 
@@ -272,8 +274,8 @@ void main(){
   vec3 col = vec3(0.0);
   float alpha = 0.0;
   if(pd < 1.0 + 2.0 / (sr * iResolution.y)){
-    /* The lens bends only the outer quarter of the radius. The middle shows the
-       ribbons straight, and the rim squeezes them inward like thick glass. */
+    /* The lens bends only the outer quarter of the radius, squeezing the
+       ribbons inward there. The middle shows them straight. */
     float bend = pow(smoothstep(0.75, 1.0, pd), 1.5);
     vec2 q = p - n * 0.70 * bend;
     float split = 0.030 * bend;
@@ -345,8 +347,8 @@ void main(){
        hole in it rather than a sphere on it */
     col   = mix(body + ball * DARKBODY, ball + body, uPaper);
 
-    /* The polish, fixed to the room: per-channel fresnel, a hairline lip, a
-       broad sheen with a glint. Tinted, as white on a coloured body reads as plastic. */
+    /* Fixed polish: per-channel fresnel, a hairline lip, a broad sheen and a
+       glint. Tinted, since white on a coloured body reads as plastic. */
     vec3 nrm = vec3(p, ndv);
     float rim = 1.0 - ndv;
     vec3 fres = vec3(pow(rim, 3.05), pow(rim, 3.30), pow(rim, 3.62));

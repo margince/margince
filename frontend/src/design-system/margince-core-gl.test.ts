@@ -5,7 +5,12 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import { readHue } from "./margince-core-color";
-import { POINT_CAP_CSS, pointGrid, pointsFor } from "./margince-core-gl";
+import {
+  MAX_POINTS,
+  POINT_CAP_CSS,
+  pointGrid,
+  pointsFor,
+} from "./margince-core-gl";
 
 // The seam between the design tokens and a shader, which both the Core and the
 // lit window edge read through. A shader cannot read a custom property, so this
@@ -77,13 +82,33 @@ describe("the points for a canvas size", () => {
     }
   });
 
-  it("gives a capped orb more points rather than larger ones", () => {
+  it("draws a capped point at the cap, with density raised by one over the root of the shrink", () => {
     // 224 CSS px is the onboarding glass: uncapped, its points would be 8 px.
     const capped = pointsFor(224, 448);
-    const uncapped = pointGrid(448, 1.8, 1.5);
-    expect(uncapped.pointPx).toBeGreaterThan(capped.pointPx);
-    expect(capped.pointPx).toBeCloseTo(POINT_CAP_CSS * 2, 9);
-    expect(count(capped)).toBeGreaterThan(count(uncapped));
+    const shrink = (POINT_CAP_CSS * 2) / pointGrid(448, 1.8, 1.5).pointPx;
+    expect(capped).toEqual({
+      ...pointGrid(448, 1.8 / Math.sqrt(shrink), 1.5),
+      pointPx: POINT_CAP_CSS * 2,
+      soft: 1,
+    });
+    expect(count(capped)).toBe(93896);
+  });
+
+  it.each([
+    [122, 21160],
+    [152, 36240],
+    [173, 50268],
+  ])("lays out %i CSS px at ratio 2 as %i points", (css, points) => {
+    expect(count(pointsFor(css, css * 2))).toBe(points);
+  });
+
+  it.each([
+    [600, 300],
+    [600, 600],
+    [2000, 2000],
+    [1000, 2000],
+  ])("keeps %i CSS px on %i device px within the point limit", (css, side) => {
+    expect(count(pointsFor(css, side))).toBeLessThanOrEqual(MAX_POINTS);
   });
 
   it("grows the count with the area, so grain spacing holds", () => {
