@@ -54,8 +54,8 @@ func (e *dedupeEnv) beginHeldSidecarWrite(
 		t.Fatalf("reading the in-flight write's backend pid: %v", err)
 	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE `+pgx.Identifier{table}.Sanitize()+
-			` SET value = $2, version = version + 1 WHERE id = $1`, id, value); err != nil {
+		`UPDATE field_provenance SET value = $2, version = version + 1 WHERE id = $1 AND value IS NOT NULL`,
+		id, value); err != nil {
 		t.Fatalf("the in-flight write on %s: %v", table, err)
 	}
 	return tx, pid

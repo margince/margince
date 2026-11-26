@@ -457,3 +457,43 @@ func TestUnreferencedImportKeysAnswersAReleasedKey(t *testing.T) {
 		t.Errorf("a key only a released run names = (%v, %v), want it unreferenced so the reaper deletes it", unreferenced, err)
 	}
 }
+
+func TestAListedDraftCarriesTheRowsItsUploadCounted(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	counted, err := s.CreateDraftRun(ctx, CreateDraftRunInput{
+		SourceRef: "ws/import/" + ids.NewV7().String(), Source: "import_api", FileName: "contacts.csv",
+		Profile: []byte(`{"row_count":7,"columns":[]}`),
+	})
+	if err != nil {
+		t.Fatalf("CreateDraftRun: %v", err)
+	}
+	uncounted := newDraft(ctx, t, s, "")
+	listed, _, err := s.ListStaged(ctx, "", 10, ViewDrafts)
+	if err != nil {
+		t.Fatalf("ListStaged: %v", err)
+	}
+	rows := map[RunID]*int{}
+	for _, run := range listed {
+		rows[run.ID] = run.UploadRows
+		if run.Profile != nil {
+			t.Errorf("listed run %s carries its profile, want only the row count", run.ID)
+		}
+	}
+	if got := rows[counted.ID]; got == nil || *got != 7 {
+		t.Errorf("the listed draft counts %v rows, want the 7 its upload counted", got)
+	}
+	if got, found := rows[uncounted.ID]; !found || got != nil {
+		t.Errorf("a draft whose profile holds no count lists %v (found %v), want it listed with none", got, found)
+	}
+	if read := mustGetStaged(ctx, t, s, counted.ID); read.UploadRows == nil || *read.UploadRows != 7 {
+		t.Errorf("the draft read alone counts %v rows, want 7", read.UploadRows)
+	}
+	cancelled, err := s.Cancel(ctx, counted.ID)
+	if err != nil {
+		t.Fatalf("Cancel: %v", err)
+	}
+	if cancelled.UploadRows != nil {
+		t.Errorf("a cancelled draft counts %d rows, want none once its profile is gone", *cancelled.UploadRows)
+	}
+}

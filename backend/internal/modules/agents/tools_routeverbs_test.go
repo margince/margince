@@ -226,6 +226,19 @@ func TestAWritesAnswerSchemaAdmitsTheCutAnswer(t *testing.T) {
 	}
 }
 
+// A write's spec owns its derived answer schema. A holder that writes into it
+// does not change the verb's next spec.
+func TestAWriteVerbSpecOwnsItsAnswerSchema(t *testing.T) {
+	answer := json.RawMessage(`{"type":"object","required":["id"],"properties":{"id":{"type":"string"}}}`)
+	write := routeVerbTool{verb: RouteVerb{Verb: "w", Method: http.MethodPost, Pattern: "/v1/w", Scope: principal.ScopeWrite, AnswerSchema: answer}}
+	first := write.Spec().OutputSchema
+	want := string(first)
+	clear(first)
+	if got := string(write.Spec().OutputSchema); got != want {
+		t.Errorf("the second spec advertises %q, want %q", got, want)
+	}
+}
+
 var uploadLogoVerb = RouteVerb{
 	Verb: "upload_company_logo", Router: "change_settings", Action: "upload_company_logo", Op: "uploadAnchorCompanyLogo",
 	Method: http.MethodPost, Pattern: "/v1/company/logo", Scope: principal.ScopeWrite, UploadField: "file",

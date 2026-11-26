@@ -117,3 +117,25 @@ func TestAReportRoundTripsWithAndWithoutACode(t *testing.T) {
 		t.Fatalf("old row = %+v, want its text and no code", old)
 	}
 }
+
+// A test run has written nothing, so its dropped link is still to come; a run
+// that has written says it was dropped. Each twin differs only in that tense.
+func TestADroppedLinkIsToldInTheTenseOfItsRun(t *testing.T) {
+	for dropped, willDrop := range willDropTwin {
+		if got := Why(dropped).Told(false).Code; got != willDrop {
+			t.Errorf("%s before the run wrote = %s, want %s", dropped, got, willDrop)
+		}
+		if got := Why(willDrop).Told(true).Code; got != dropped {
+			t.Errorf("%s once the run wrote = %s, want %s", willDrop, got, dropped)
+		}
+		for lang, tense := range droppedTense {
+			written, before := reasonCatalog[dropped].text[lang], reasonCatalog[willDrop].text[lang]
+			if !strings.HasSuffix(written, tense[0]) || before != strings.TrimSuffix(written, tense[0])+tense[1] {
+				t.Errorf("%s in %s: %q and %q, want the same cause with %q, then %q", dropped, lang, written, before, tense[0], tense[1])
+			}
+		}
+	}
+	if got := Why(ReasonTagNew).Told(false); got.Code != ReasonTagNew {
+		t.Errorf("a code with no twin changed to %s", got.Code)
+	}
+}

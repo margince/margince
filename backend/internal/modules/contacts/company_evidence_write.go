@@ -24,8 +24,9 @@ import (
 // are written in the one shape writeEvidence spells; everything a caller has
 // to supply is here, and a third sidecar would supply the same five things.
 type evidenceWrite[T any] struct {
-	// table is the sidecar being written, for the guarded patch and the audit row.
-	table string
+	// entity names the claim's kind in the audit row. Every kind is stored in
+	// field_provenance, which is what the lock and the patch reach.
+	entity string
 	// archived is the write's archived-row filter, declared here beside its own
 	// table so the claim "this table has no archived_at" stays checkable at the
 	// call site rather than being inherited from the shared writer.
@@ -98,6 +99,9 @@ func writeEvidence[T any](
 		if err := auth.HoldWritableLive(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
+		if err := moveLegacyEvidence(ctx, tx, entityCompany, companyID.UUID); err != nil {
+			return err
+		}
 		// The transaction's own clock, so every row this write stamps agrees
 		// and a test can pin it without the store carrying a clock.
 		var now time.Time
@@ -116,7 +120,7 @@ func writeEvidence[T any](
 		// window left an audit entry answering "what did it say before I fixed
 		// it" with a value the fix never replaced — and, for a removal, naming
 		// a claim other than the one that was deleted.
-		lock, err := storekit.LockRow(ctx, tx, w.table, id, w.archived)
+		lock, err := storekit.LockRow(ctx, tx, tableEvidence, id, w.archived)
 		if err != nil {
 			return err
 		}
@@ -165,13 +169,13 @@ func writeEvidence[T any](
 		// together — which is exactly what the write-shape gate reads.
 		var auditID ids.UUID
 		if created {
-			auditID, err = storekit.AuditEvent(ctx, tx, "create", w.table, before.ID, p.After())
+			auditID, err = storekit.AuditEvent(ctx, tx, "create", w.entity, before.ID, p.After())
 		} else {
-			auditID, err = storekit.Audit(ctx, tx, "update", w.table,
+			auditID, err = storekit.Audit(ctx, tx, "update", w.entity,
 				before.ID, before.auditImage(), p.After())
 		}
 		if err != nil {
-			return fmt.Errorf("audit %s write: %w", w.table, err)
+			return fmt.Errorf("audit %s write: %w", w.entity, err)
 		}
 		if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID,
 			crmcontracts.PublicEventCompanyUpdated{
@@ -237,14 +241,14 @@ func removeEvidenceRow[T any](
 	w evidenceWrite[T], before evidenceRow,
 ) error {
 	if _, err := tx.Exec(ctx,
-		`DELETE FROM `+pgx.Identifier{w.table}.Sanitize()+` WHERE id = $1`,
+		`DELETE FROM field_provenance WHERE id = $1 AND value IS NOT NULL`,
 		before.ID); err != nil {
-		return fmt.Errorf("delete %s row: %w", w.table, err)
+		return fmt.Errorf("delete %s row: %w", w.entity, err)
 	}
-	auditID, err := storekit.Audit(ctx, tx, "delete", w.table,
+	auditID, err := storekit.Audit(ctx, tx, "delete", w.entity,
 		before.ID, before.auditImage(), nil)
 	if err != nil {
-		return fmt.Errorf("audit %s removal: %w", w.table, err)
+		return fmt.Errorf("audit %s removal: %w", w.entity, err)
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID,
 		crmcontracts.PublicEventCompanyUpdated{

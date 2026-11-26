@@ -234,7 +234,7 @@ func TestAContactsRequestStillAsksNothingWhenNoNumberIsStated(t *testing.T) {
 	v := setupVatRecheck(t)
 	ctx := v.Admin()
 	if _, err := v.Pool.Exec(ctx,
-		`DELETE FROM company_profile_field WHERE company_id = $1 AND field = 'register_vat'`,
+		`DELETE FROM field_provenance WHERE object_type = 'company' AND value IS NOT NULL AND object_id = $1 AND field_name = 'register_vat'`,
 		v.companyID.UUID); err != nil {
 		t.Fatalf("clear the stated number: %v", err)
 	}

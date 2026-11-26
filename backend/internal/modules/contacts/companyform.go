@@ -29,6 +29,9 @@ import (
 // fills blanks), and every one onto its provenance row. Returns what changed,
 // for the audit delta.
 func writeCompanyFields(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, by string, fields map[string]*string) (map[string]any, error) {
+	if err := moveLegacyEvidence(ctx, tx, entityCompany, companyID.UUID); err != nil {
+		return nil, err
+	}
 	applied := map[string]any{}
 	renamed := false
 	for _, spec := range companyFields {
@@ -48,8 +51,8 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 		}
 		if trimmed == "" {
 			if _, err := tx.Exec(ctx,
-				`DELETE FROM company_profile_field
-				 WHERE company_id = $1 AND field = $2`,
+				`DELETE FROM field_provenance
+				 WHERE object_type = 'company' AND object_id = $1 AND field_name = $2 AND value IS NOT NULL`,
 				companyID, field); err != nil {
 				return nil, fmt.Errorf("clear company field %s: %w", field, err)
 			}

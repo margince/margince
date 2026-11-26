@@ -4,6 +4,7 @@
 package currencylock
 
 import (
+	"maps"
 	"strings"
 	"testing"
 )
@@ -61,6 +62,26 @@ func TestALockWithNoKnownReasonHasNoProse(t *testing.T) {
 		}
 		if lock.Refusal() == "" {
 			t.Errorf("%s: Refusal() is empty, want a sentence a refused write can carry", name)
+		}
+	}
+}
+
+func TestTheParamsStateTheFactsAndLeaveAnUnnamedBaseOut(t *testing.T) {
+	for name, tc := range map[string]struct {
+		lock Lock
+		want map[string]string
+	}{
+		"a rate sheet names its base": {
+			Lock{Reason: RateSheet, Count: 2, BaseCurrency: "EUR"},
+			map[string]string{"reason": "rate_sheet", "count": "2", "base_currency": "EUR"},
+		},
+		"frozen rates name no table and no base": {
+			Lock{Reason: RatesFrozen, Count: 12, Frozen: []Counted{{"deal", 12}}},
+			map[string]string{"reason": "rates_frozen", "count": "12"},
+		},
+	} {
+		if got := tc.lock.Params(); !maps.Equal(got, tc.want) {
+			t.Errorf("%s: Params() = %v, want %v", name, got, tc.want)
 		}
 	}
 }
