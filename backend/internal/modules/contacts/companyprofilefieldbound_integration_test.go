@@ -20,7 +20,7 @@ import (
 func TestASiteReadValuePastTheLimitLandsCut(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	limit := textbounds.LimitOf("public.company_profile_field.value")
+	limit := textbounds.LimitOf("public.field_provenance.value")
 	long := strings.Repeat("ế", limit+10)
 	companyID, err := e.store.ApplyColdStartProfile(ctx, ApplyColdStartProfileInput{
 		SourceURL: "https://longread.example/about",
@@ -39,7 +39,7 @@ func TestASiteReadValuePastTheLimitLandsCut(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("reading the icp row: %v", err)
 	}
-	if value != limit || snippet != textbounds.LimitOf("public.company_profile_field.evidence_snippet") {
+	if value != limit || snippet != textbounds.LimitOf("public.field_provenance.evidence_snippet") {
 		t.Fatalf("stored %d and %d characters, want both cut to the limit", value, snippet)
 	}
 }
@@ -49,7 +49,7 @@ func TestAProfileFieldCorrectionPastTheLimitIsRefused(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
-	limit := textbounds.LimitOf("public.company_profile_field.value")
+	limit := textbounds.LimitOf("public.field_provenance.value")
 	corrected := strings.Repeat("a", limit+1)
 
 	_, err := e.store.UpdateCompanyProfileField(ctx, companyID, "icp", ProfileFieldWriteInput{Value: &corrected})

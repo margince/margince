@@ -82,7 +82,7 @@ func carryFieldAuthors(ctx context.Context, tx pgx.Tx, from, to ids.CompanyID, f
 		err := tx.QueryRow(ctx, `
 			SELECT source, captured_by
 			FROM field_provenance
-			WHERE object_type = 'company' AND object_id = $1 AND field_name = $2
+			WHERE object_type = 'company' AND object_id = $1 AND field_name = $2 AND value IS NULL
 			ORDER BY captured_at DESC, id DESC
 			LIMIT 1`, from, field).Scan(&source, &by)
 		if errors.Is(err, pgx.ErrNoRows) {

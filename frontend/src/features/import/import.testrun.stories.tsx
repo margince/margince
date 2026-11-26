@@ -11,7 +11,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ProblemTable } from "./import.testrun";
+import { ProblemTable } from "./import.problems";
 import { ImportWizardPage } from "./import.wizard";
 import type { ImportRowIssue } from "./importtypes";
 
