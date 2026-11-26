@@ -330,7 +330,7 @@ func TestACommentOverSeveralLinesKeepsTheLineCount(t *testing.T) {
 
 // A short first paragraph makes the step back for overlap land one byte into
 // the next span. When that byte is inside a rune, the walk reached the start of
-// the window and gave up, handing back a cut in the middle of a character.
+// the window and gave up. It handed back a cut in the middle of a character.
 func TestAShortFirstParagraphNeverStartsASpanInsideARune(t *testing.T) {
 	text := "Đ" + strings.Repeat("a", 117) + "\n\n" + strings.Repeat("từ ", 600)
 	for i, c := range ChunkText(text) {

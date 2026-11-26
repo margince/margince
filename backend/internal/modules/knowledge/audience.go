@@ -54,8 +54,8 @@ func (m audienceMatcher) allows(meta map[string]string) bool {
 }
 
 // allowedDocumentsIn lists the live documents of the corpus the filter allows.
-// The ranking query takes this list, so a passage of any other document is never
-// selected, never reaches the model and never reaches the quote check.
+// The ranking query takes this list, so a passage of any other document is
+// never selected and never reaches the model or the quote check.
 func allowedDocumentsIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, m audienceMatcher) ([]string, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id::text, meta FROM knowledge_document WHERE corpus_id = $1 AND archived_at IS NULL`, corpusID)

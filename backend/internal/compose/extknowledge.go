@@ -6,13 +6,10 @@ package compose
 // The knowledge capability of the extension Runtime: a unit files the documents
 // it reads from its provider into the corpus the core keeps for it.
 //
-// What a unit gets is a door onto the knowledge store's own filing, not a
-// second path around it. The corpus is the unit's, found by the unit's name in
-// the table below, so there is no corpus argument to get wrong. The accepted
-// types, the document size ceiling, the per-corpus passage ceiling and the
-// ingest queue are the upload route's own. The write runs on the invocation's
-// principal: a job tick as the job, a request as the member who made it, whose
-// knowledge_document grant is then checked as it is for an upload.
+// A unit gets a door onto the knowledge store's own filing, not a second path
+// around it. The corpus is found by the unit's name in the table below, and
+// the types, ceilings and queue are the upload route's own. The write runs as
+// the invocation's principal, checked as for an upload.
 
 import (
 	"bytes"
@@ -25,8 +22,8 @@ import (
 )
 
 // extensionCorpora is the units the core keeps a corpus for. The key is the unit
-// name and the corpus's managed_source is the same word, which the schema's
-// CHECK also lists: adding a unit here is a migration too.
+// name, and the corpus's managed_source is the same word. The schema's CHECK
+// also lists it, so adding a unit here is a migration too.
 var extensionCorpora = map[string]knowledge.ManagedCorpus{
 	"gdocs": {
 		Source: knowledge.GDocsSource,
@@ -91,8 +88,8 @@ func (k runtimeKnowledge) DeleteDocument(ctx context.Context, externalID string)
 }
 
 // knowledgeRefusal maps what the store refuses a filing for onto the published
-// vocabulary, so a unit tells "your input" from "try later" without importing a
-// core type.
+// vocabulary. A unit then tells "your input" from "try later" without importing
+// a core type.
 func knowledgeRefusal(err error) error {
 	var unsupported *knowledge.UnsupportedTypeError
 	var filed *knowledge.AlreadyFiledError

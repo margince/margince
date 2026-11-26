@@ -7,7 +7,7 @@ package integration
 
 // The audience filter of the corpus ask, over the real retrieval query.
 //
-// NOT RUN when it was written: it needs the integration database, which the
+// Not run when it was written: it needs the integration database, which the
 // author did not start. Run it with
 // `make test-it DIR=backend/internal/compose/integration RUN=Audience`.
 

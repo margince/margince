@@ -5,8 +5,8 @@
 
 package integration
 
-// A document an extension keeps in step with its source: one row per source id,
-// replaced when the source changes, left alone when it does not.
+// A document an extension keeps in step with its source. It has one row per
+// source id, replaced when the source changes and left alone when it does not.
 
 import (
 	"errors"

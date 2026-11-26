@@ -3,15 +3,11 @@
 
 package knowledge
 
-// A document that lives somewhere else and is kept in step with it: an
-// extension files the source's current text under the id the source gave it.
-// A second filing of the same id replaces the first; the same bytes again do
-// nothing.
-//
-// The ingest is not touched. A replacement swaps the row's bytes and puts it back
-// to queued in ONE transaction, so the ingest that follows is an ordinary first
-// attempt, and its idempotent-retry protocol (BeginIngest deletes the earlier
-// passages) is what swaps the passages.
+// A document kept in step with its source: an extension files the source's
+// text under the id the source gave it. A second filing replaces the first,
+// and the same bytes again do nothing. The ingest is not touched. A replacement
+// swaps the bytes and requeues the row in one transaction, and the retry
+// protocol (BeginIngest deletes the earlier passages) swaps the passages.
 
 import (
 	"context"
@@ -82,9 +78,9 @@ const (
 )
 
 // IngestBusyError is a replacement refused while the earlier version is being
-// read: an ingest that already started would finish on the old bytes and mark
-// the document done, and the queued one for the new bytes would be folded into
-// it. The caller tries again later.
+// read. An ingest already started would finish on the old bytes and mark the
+// document done. The queued one for the new bytes would be folded into it. The
+// caller tries again later.
 type IngestBusyError struct{ Filename string }
 
 func (e *IngestBusyError) Error() string {
@@ -110,9 +106,9 @@ func validateExternal(in *ExternalDocument) error {
 			return err
 		}
 		// A value is shown beside a citation, so it may not carry what rewrites
-		// the line it sits on: a control character, a newline, or a format
-		// character such as a bidirectional override or isolate. Refused rather
-		// than stripped, so the source's text is never silently altered.
+		// the line it sits on. That means a control character, a newline, or a
+		// format character such as a bidirectional override. It is refused, not
+		// stripped, so the source's text is never silently altered.
 		if i := strings.IndexFunc(v, func(r rune) bool {
 			return unicode.IsControl(r) || unicode.In(r, unicode.Cf, unicode.Zl, unicode.Zp)
 		}); i >= 0 {
@@ -210,19 +206,26 @@ func (s *Store) UpsertExternal(
 		// upload does.
 		return none, "", errors.Join(err, s.dropUnreferenced(ctx, key))
 	}
+	return out, outcome, s.deleteSuperseded(ctx, outcome, key, oldKey)
+}
+
+// deleteSuperseded removes the bytes the filing left unreferenced. An identical
+// filing that lost a race leaves the new key, with its ledger entry already
+// cleared. A replacement leaves the old one.
+func (s *Store) deleteSuperseded(ctx context.Context, outcome ExternalOutcome, key, oldKey string) error {
 	if outcome == ExternalUnchanged {
-		// Lost a race to an identical filing; the ledger entry is already cleared.
 		if err := s.blob.Delete(ctx, key); err != nil {
-			return out, outcome, fmt.Errorf("delete the duplicate stored document: %w", err)
+			return fmt.Errorf("delete the duplicate stored document: %w", err)
 		}
-		return out, outcome, nil
+		return nil
 	}
-	if oldKey != "" {
-		if err := s.blob.Delete(ctx, oldKey); err != nil {
-			return out, outcome, fmt.Errorf("delete the replaced stored document: %w", err)
-		}
+	if oldKey == "" {
+		return nil
 	}
-	return out, outcome, nil
+	if err := s.blob.Delete(ctx, oldKey); err != nil {
+		return fmt.Errorf("delete the replaced stored document: %w", err)
+	}
+	return nil
 }
 
 type externalFiling struct {
@@ -319,6 +322,7 @@ func (s *Store) dropUnreferenced(ctx context.Context, key string) error {
 	return s.tx(ctx, func(tx pgx.Tx) error { return storedobjects.Clear(ctx, tx, key) })
 }
 
+//craft:ignore naked-any the value is a query argument that is either SQL NULL or a map
 func metaOrNil(m map[string]string) any {
 	if len(m) == 0 {
 		return nil

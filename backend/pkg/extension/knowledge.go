@@ -8,9 +8,8 @@
 package extension
 
 // A unit that reads documents from somewhere else puts them in the corpus the
-// core keeps for it. The core files them exactly as an upload is filed: the same
-// accepted types, the same size ceiling, the same per-corpus passage ceiling,
-// the same ingest queue. A unit chooses none of those and cannot get past them.
+// core keeps for it. The core files them as an upload is filed, with the same
+// accepted types, size ceiling, per-corpus passage ceiling and ingest queue. A unit chooses none of those and cannot get past them.
 
 import (
 	"context"

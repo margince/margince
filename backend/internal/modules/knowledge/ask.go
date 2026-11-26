@@ -145,9 +145,8 @@ type Readiness struct {
 //
 // It returns Outcome=answered together with the passages ONLY when the corpus
 // was searched in full and something cleared its grounding floor. Every other
-// outcome comes back with no passages, because a passage below the floor must
-// not reach the model: a claim citing one would pass the quote check and
-// re-open exactly the hole the floor exists to close.
+// outcome comes back with no passages: a passage below the floor must not reach
+// the model.
 func (s *Store) Retrieve(ctx context.Context, corpusID ids.UUID, question string, e vectorkit.Embedder) (Readiness, []Passage, error) {
 	return s.RetrieveFor(ctx, corpusID, question, e, nil)
 }
