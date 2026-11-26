@@ -335,20 +335,12 @@ func WithAgentVolume(meter *agentvolume.Meter) Option {
 // hybrid retrieval can use its vector half for a caller and not only for a
 // background job.
 //
-// It rebuilds the tool registry, because the registry is where the lane is
-// consumed: the intent retriever, search_context and the query executor are all
-// constructed inside it. An option that set the field without rebuilding would
-// leave a Server whose embedder is bound and whose tools still rank lexically —
-// a divergence nothing would report, because a lexically ranked page looks
-// exactly like a semantic one that found little.
-//
 // Without this option the lane stays unbound, which is a real deployment (a role
 // with no model path, or a routing config that binds no embeddings model) rather
 // than a broken one: every ranked answer says which lane ranked it.
 func WithRetrievalEmbedder(embedder search.Embedder) Option {
-	return func(s *Server, pool *pgxpool.Pool) {
+	return func(s *Server, _ *pgxpool.Pool) {
 		s.retrievalEmbedder = embedder
-		s.rebuildToolRegistry(pool)
 	}
 }
 
@@ -419,7 +411,6 @@ func WithPublicBaseURL(base string) Option {
 		// would deadlock a rollout on its own ingress.
 		s.originProbe = newPublicOriginProbe(base, newOriginProbeClient(), time.Now)
 		s.publicOrigin = s.originStatus
-		s.rebuildToolRegistry(pool)
 	}
 }
 
@@ -440,9 +431,8 @@ func WithAPIBaseURL(base string) Option {
 // that wired one without the other would serve a surface accepting messages
 // nothing will carry.
 func WithDelivery(stager DeliveryMachinery) Option {
-	return func(s *Server, pool *pgxpool.Pool) {
+	return func(s *Server, _ *pgxpool.Pool) {
 		s.send.Delivery = stager
-		s.rebuildToolRegistry(pool)
 	}
 }
 
@@ -451,9 +441,8 @@ func WithDelivery(stager DeliveryMachinery) Option {
 // what to do about it instead of being handed a 202 for a message that can only
 // park.
 func WithSendAuthority(authority activities.SendAuthority) Option {
-	return func(s *Server, pool *pgxpool.Pool) {
+	return func(s *Server, _ *pgxpool.Pool) {
 		s.send.SendAuthority = authority
-		s.rebuildToolRegistry(pool)
 	}
 }
 

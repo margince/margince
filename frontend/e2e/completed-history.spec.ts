@@ -18,7 +18,7 @@ const changes: components["schemas"]["MagicLine"][] = [
   actor: { type: "system", id: "capture" },
 }));
 
-test("three completed Home preview items remain in Change history after navigation", async ({
+test("three small changes on Home remain in Change history after navigation", async ({
   page,
 }) => {
   await mockApi(page);
@@ -59,13 +59,14 @@ test("three completed Home preview items remain in Change history after navigati
       }),
   );
   await page.goto("/#/home");
-  const preview = page.locator(".brief-done-preview");
+  const done = page.getByRole("region", { name: "Done for you" });
+  await done.getByText(/^\d+ small changes$/).click();
   for (const sentence of [
     "Created contact",
     "Created company",
     "Created project",
   ]) {
-    await expect(preview).toContainText(sentence);
+    await expect(done).toContainText(sentence);
   }
   await page.getByRole("link", { name: "Change history", exact: true }).click();
   const history = page.locator("#worklist-change-history");

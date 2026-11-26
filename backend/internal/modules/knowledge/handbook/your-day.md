@@ -193,7 +193,7 @@ The work counts come from the current Worklist read, and each part of Home can r
 ### Done for you
 **Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals Margince changed in the last 7 days and holds **Change history**, which opens the Worklist at its **Change history** panel. Each deal it changed is a card, and the last card holds the small changes, such as **8 small changes**.
 
-A short preview under the heading shows up to three recent changes in two lines, even when there are only small changes. Deal cards start closed. Press a card to read its changes; one deal is open at a time. **Small changes** starts closed and shows only its count until you open it.
+The cards start right under the heading, and the section shows even when there are only small changes. Deal cards start closed. Press a card to read its changes; one deal is open at a time. **Small changes** starts closed and shows only its count until you open it.
 
 The small-changes card holds the work Margince did beside the deals, such as saving an email or recording an invoice. It shows only records that you or your team own, or that someone shared with you. An email Margince scheduled for you shows only to you. Changes that read the same show as one step with a count, such as **Saved an email** with **4 changes**. Each line keeps its own **Undo**, and one that touched several records opens with **View 2 changes**, which says what changed on each. **Details** under each one says when it happened, who did it, why, and why it cannot be undone when it cannot.
 
@@ -354,7 +354,7 @@ A task you or a colleague wrote without a due date waits at the end, under **No 
 
 ### Change history
 
-**Change history**, on the Worklist, reads the same changes and time window as the Home preview. Press **Show recent changes** to read the action, record, time and status. **Details** on a change works as it does under **Done for you**. A long list ends in **Show more**, which loads the next changes.
+**Change history**, on the Worklist, reads the same changes and time window as **Done for you** on Home. Press **Show recent changes** to read the action, record, time and status. **Details** on a change works as it does under **Done for you**. A long list ends in **Show more**, which loads the next changes.
 
 When there is nothing: "No actions taken on your behalf today." A read that fails says it could not read the changes instead.
 

@@ -222,11 +222,13 @@ Where that file is there, `check.py` reads from it which calls were made, which 
 
 A good model needs fewer rounds, so the lane counts them. After each scenario it prints an `efficiency:` line, and the verdict keeps an `efficiency` object. Each count is given as the middle value of the runs, with the least and the most.
 
-The counts are tool calls, model turns, refused calls, prompt tokens and output tokens. How long a run lasted is there too when the transcript carries `duration_ms`. A refused call includes a bare tool name that the CLI turned away. Where the server's record is there, `refused by the client` counts the calls in the transcript that never reached the server. A run with no last result is left out, and `runs` says how many runs are behind the numbers.
+The counts are tool calls, model turns, refused calls, retries, prompt tokens and output tokens. How long a run lasted is there too when the transcript carries `duration_ms`. A refused call includes a bare tool name that the CLI turned away.
+
+A retry is a refused call made once more, with the same tool and action. So a model that learns from one refusal scores one retry, and one that keeps trying scores more. Where the server's record is there, `refused by the client` counts the calls in the transcript that never reached the server. A run with no last result is left out, and `runs` says how many runs are behind the numbers.
 
 A turn is one request to the model, and a Gemini run counts its agent's answers. The codex CLI reports no such count. So a GPT verdict has no turns, and the page shows `-`.
 
-These numbers never fail a case and never change the exit code. A scenario can set `expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true` and the `efficiency:` line ends with `slow`. The page shows the calls and turns for each case and model, and the calls per case for each model. A verdict from before this measure shows `-`.
+These numbers never fail a case and never change the exit code. A scenario can set `expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true` and the `efficiency:` line ends with `slow`. The page shows the calls, turns, refused calls and retries for each case and model, and the middle value of each for each model. A verdict from before this measure shows `-`.
 
 ### The end state
 

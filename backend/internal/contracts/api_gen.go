@@ -66529,7 +66529,7 @@ type RouterActions struct {
 		// Route The method and route, for example POST /v1/record-grants.
 		Route string `json:"route"`
 
-		// UploadsAFile Whether it takes filename, content_type and content_base64.
+		// UploadsAFile Whether it takes filename, content_type and content_base64 or content_text.
 		UploadsAFile *bool `json:"uploads_a_file,omitempty"`
 	} `json:"actions"`
 
@@ -72131,7 +72131,8 @@ type UpdateInstallationSettingsRequest struct {
 	AgentWritesPerWindow *int `json:"agent_writes_per_window,omitempty" maximum:"5000" minimum:"10"`
 
 	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
-	// rate against the current base.
+	// rate against the current base. The refusal's `params` mirror `BaseCurrencyLock`:
+	// `reason`, `count` as a decimal string, and `base_currency` when the lock names one.
 	BaseCurrency *string `json:"base_currency,omitempty"`
 
 	// BaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
