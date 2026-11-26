@@ -341,13 +341,10 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 		if err != nil {
 			return err
 		}
-		decider, ok := principal.Actor(ctx)
+		// The approver, also when somebody else re-drives a failed effect.
+		approver, ok := approvals.ReleasedBy(ctx)
 		if !ok {
-			return errors.New("compose: follow-up effect without a deciding principal")
-		}
-		execCtx, err := agentForActor(ctx, overnightAgent)
-		if err != nil {
-			return err
+			return errors.New("compose: follow-up effect without the member who approved it")
 		}
 		// Redemption and the write in ONE transaction. Consuming the approval
 		// first and writing after leaves the two able to disagree: the approval
@@ -362,15 +359,18 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 		var gone string
 		err = svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
 			func(tx pgx.Tx) error {
+				execCtx, err := agentForReleaserTx(ctx, tx, overnightAgent)
+				if err != nil {
+					return err
+				}
 				// Asked again here: a next step or a close landing between the
 				// precheck and this write makes the follow-up unneeded. The
 				// redemption commits with nothing written, and the decider is
 				// told why.
-				var err error
 				if gone, err = stillowed.FollowUpTx(ctx, tx, proposal.DealID.UUID, now().UTC()); err != nil || gone != "" {
 					return err
 				}
-				doer, err := followUpDoer(ctx, tx, proposal, decider.UserID)
+				doer, err := followUpDoer(ctx, tx, proposal, approver)
 				if err != nil {
 					return err
 				}

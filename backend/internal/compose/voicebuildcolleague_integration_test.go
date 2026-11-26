@@ -34,17 +34,19 @@ func TestAVoiceBuildWorksAsItsRequestersAgentAndKeepsItsRowAsTheSystem(t *testin
 	if finished.Status != "succeeded" {
 		t.Fatalf("build = %+v, want succeeded", finished)
 	}
-	if n := env.e.WsCount(t, `SELECT count(*) FROM audit_log
-		WHERE entity_type = 'voice_build' AND entity_id = $1
-		  AND actor_type = 'system' AND actor_id = 'system:voice_build' AND on_behalf_of = $2`,
-		build.ID, env.e.Rep1); n == 0 {
-		t.Error("no build-row change was kept by system:voice_build for Rep1; the claim is the system's bookkeeping")
+	// The claim and the finish are the run's bookkeeping, so each is the
+	// system's, on behalf of Rep1.
+	for _, status := range []string{"running", "succeeded"} {
+		if n := env.e.WsCount(t, `SELECT count(*) FROM audit_log
+			WHERE entity_type = 'voice_build' AND entity_id = $1 AND after->>'status' = $2
+			  AND actor_type = 'system' AND actor_id = 'system:voice_build' AND on_behalf_of = $3`,
+			build.ID, status, env.e.Rep1); n != 1 {
+			t.Errorf("%d moves to %s kept by system:voice_build for Rep1, want 1", n, status)
+		}
 	}
 	if n := env.e.WsCount(t, `SELECT count(*) FROM audit_log
-		WHERE entity_type = 'voice_profile_version'
-		  AND actor_type = 'agent' AND actor_id = 'agent:voice-builder' AND on_behalf_of = $1`,
-		env.e.Rep1); n != 1 {
-		t.Errorf("%d versions written by agent:voice-builder for Rep1, want 1: the voice is the agent's work", n)
+		WHERE entity_type = 'voice_build' AND entity_id = $1 AND actor_type = 'agent'`, build.ID); n != 0 {
+		t.Errorf("%d build-row changes were made by the agent, want 0: the row is the system's", n)
 	}
 }
 

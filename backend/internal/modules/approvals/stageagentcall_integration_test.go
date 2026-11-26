@@ -347,12 +347,27 @@ func TestAnAgentWithNoPassportIsRefusedTheStaging(t *testing.T) {
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:no-passport", OnBehalfOf: e.rep,
-	})
-	if _, _, err := e.svc.StageAgentCall(ctx, e.agentCall(target)); err == nil {
-		t.Fatal("staged an agent call with no passport — the row it wrote is indistinguishable " +
-			"from a server proposal, and the credential could then release it")
+	// Each shape names nobody in particular. One acts for a person who is not
+	// its user. One holds a user and grants and acts for no one. One acts for
+	// somebody who is not a member of this workspace.
+	for name, agent := range map[string]principal.Principal{
+		"acting for a person it is not": {
+			Type: principal.PrincipalAgent, ID: "agent:no-passport", OnBehalfOf: e.rep,
+		},
+		"holding grants, acting for no one": {
+			Type: principal.PrincipalAgent, ID: "agent:no-passport", UserID: e.rep,
+			Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+		},
+		"acting for somebody who is not a member": func() principal.Principal {
+			stranger := ids.NewV7()
+			return principal.Principal{
+				Type: principal.PrincipalAgent, ID: "agent:no-passport", UserID: stranger, OnBehalfOf: stranger,
+			}
+		}(),
+	} {
+		if _, _, err := e.svc.StageAgentCall(principal.WithActor(ctx, agent), e.agentCall(target)); err == nil {
+			t.Errorf("%s: staged an agent call with no passport, a row that names nobody to answer it", name)
+		}
 	}
 	var staged int
 	if err := e.owner.QueryRow(context.Background(),

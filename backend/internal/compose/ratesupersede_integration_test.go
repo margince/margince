@@ -47,7 +47,7 @@ func stageFxIdentity(ctx context.Context, t *testing.T, svc *approvals.Service, 
 func TestIdentityStagingSupersedesStalePending(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	svc := rateSvc(e)
+	svc := rateSvc(t, e)
 
 	stale := stageFxIdentity(ctx, t, svc, e.WS, "GBP", "1.1", "1.0")
 	other := stageFxIdentity(ctx, t, svc, e.WS, "USD", "0.9", "0.8")

@@ -61,15 +61,24 @@ func payloadNamesItsOwner(p principal.Principal, in StageInput) error {
 	return nil
 }
 
-// attributableStager refuses an agent with neither a passport nor a person it
-// acts for. Its row would name nobody and read as a server proposal, with no
-// self-approval for agentMayDecide to refuse. The product's own job acting for
-// a named person stages without a passport: its row names that person, and no
-// credential exists to release it.
+// attributableStager refuses an agent with neither a passport nor the one
+// person it acts for. Such a row would name nobody and read as a server
+// proposal, with no self-approval for agentMayDecide to refuse.
+//
+// The product's own job acting for a named person stages without a passport.
+// It carries that person as both its user and the one it acts for. An agent
+// whose two ids differ acts for nobody in particular. resolveDecider then
+// holds that person to a live member.
 func attributableStager(p principal.Principal) error {
-	if p.Type != principal.PrincipalAgent || p.PassportID != ids.Nil || p.OnBehalfOf != ids.Nil {
+	if p.Type != principal.PrincipalAgent || p.PassportID != ids.Nil || actsForItsOwnPerson(p) {
 		return nil
 	}
-	return errors.New("crmapprovals: an agent stages on its passport or for a named person — a proposal " +
-		"carrying neither is indistinguishable from one the server made, and the credential could then release it")
+	return errors.New("crmapprovals: an agent stages on its passport or for the one person it acts for — a " +
+		"proposal carrying neither is indistinguishable from one the server made, and the credential could then release it")
+}
+
+// actsForItsOwnPerson is a passportless agent carrying one person as both its
+// user and the one it acts for.
+func actsForItsOwnPerson(p principal.Principal) bool {
+	return p.PassportID == ids.Nil && !p.OnBehalfOf.IsZero() && p.UserID == p.OnBehalfOf
 }

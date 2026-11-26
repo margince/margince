@@ -275,11 +275,11 @@ func lifecycleAcceptEffect(svc *approvals.Service, store *contacts.Store, now fu
 		}
 		// The write carries the machine provenance, since the stage came from
 		// the account's correspondence, and runs under the decider's grants.
-		execCtx, err := agentForActor(ctx, lifecycleProposalActor)
-		if err != nil {
-			return err
-		}
 		return svc.RedeemAndApply(ctx, approvalID, lifecycleProposalKind, diffHash, func(tx pgx.Tx) error {
+			execCtx, err := agentForReleaserTx(ctx, tx, lifecycleProposalActor)
+			if err != nil {
+				return err
+			}
 			if err := lifecyclereview.Revalidate(ctx, tx, proposal.CompanyID, proposal.SignalID, proposal.Evidence, now()); err != nil {
 				return err
 			}
@@ -291,7 +291,7 @@ func lifecycleAcceptEffect(svc *approvals.Service, store *contacts.Store, now fu
 			if err != nil || !moved {
 				return err
 			}
-			_, err = signals.AcknowledgeCoveredForCompanyTx(execCtx, ctx, tx,
+			_, err = signals.AcknowledgeCoveredForCompanyTx(execCtx, execCtx, tx,
 				proposal.CompanyID.UUID, signalKindContractEnded, []ids.UUID{proposal.SignalID})
 			return err
 		})

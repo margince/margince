@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -61,13 +62,19 @@ func agentForTx(users *identity.Service, colleague ids.UUID, actorID string) fun
 		if err != nil {
 			return nil, fmt.Errorf("compose: authority of the colleague to act for: %w", err)
 		}
-		agent, err := agentPrincipalFor(authz.HumanPrincipal(colleague, rbac, seat), actorID)
-		if err != nil {
-			return nil, err
-		}
-		lang, err := identity.ReadingLanguageTx(ctx, tx, agent)
-		return withOwnersLanguage(ctx, agent, lang, err)
+		return agentFromAuthorityTx(ctx, tx, colleague, actorID, rbac, seat)
 	}
+}
+
+// agentFromAuthorityTx is the agent for colleague built from the authority
+// the transaction just read.
+func agentFromAuthorityTx(ctx context.Context, tx pgx.Tx, colleague ids.UUID, actorID string, rbac authz.RBAC, seat principal.SeatType) (context.Context, error) {
+	agent, err := agentPrincipalFor(authz.HumanPrincipal(colleague, rbac, seat), actorID)
+	if err != nil {
+		return nil, err
+	}
+	lang, err := identity.ReadingLanguageTx(ctx, tx, agent)
+	return withOwnersLanguage(ctx, agent, lang, err)
 }
 
 // agentPrincipalFor is the agent acting for colleague under actorID. storekit
@@ -91,9 +98,10 @@ func agentPrincipalFor(colleague principal.Principal, actorID string) (principal
 	}, nil
 }
 
-// agentForActor binds actorID acting for the principal on ctx, with that
-// principal's grants. An approved effect or an accepted reading writes as the
-// product's agent, held to what the human who released it may do.
+// agentForActor binds actorID acting for the human signed in on ctx, with the
+// grants that request was authenticated with. A write the human starts in the
+// request itself, such as accepting a reading, runs through it. An approval's
+// effect may run later or for somebody else, so it uses agentForReleaserTx.
 func agentForActor(ctx context.Context, actorID string) (context.Context, error) {
 	human, ok := principal.Actor(ctx)
 	if !ok {
@@ -104,6 +112,23 @@ func agentForActor(ctx context.Context, actorID string) (context.Context, error)
 		return nil, err
 	}
 	return principal.WithActor(ctx, agent), nil
+}
+
+// agentForReleaserTx binds actorID acting for the member who approved the work
+// an effect releases, with that member's grants as tx reads them. A re-drive
+// asked for by somebody else still acts for the approver. A demotion or a
+// departure committed before the effect refuses it, and the approval records
+// the failure.
+func agentForReleaserTx(ctx context.Context, tx pgx.Tx, actorID string) (context.Context, error) {
+	member, ok := approvals.ReleasedBy(ctx)
+	if !ok {
+		return nil, fmt.Errorf("compose: %s writes only for the member who approved it, and none is bound", actorID)
+	}
+	rbac, seat, err := identity.EffectiveAuthorityTx(ctx, tx, member)
+	if err != nil {
+		return nil, fmt.Errorf("compose: authority of the member who approved %s: %w", actorID, err)
+	}
+	return agentFromAuthorityTx(ctx, tx, member, actorID, rbac, seat)
 }
 
 // colleagueJob names the two principals of a job the product runs for a named

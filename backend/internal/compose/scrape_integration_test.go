@@ -169,6 +169,9 @@ func TestScrapeDegradesHonestly(t *testing.T) {
 
 func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 	e := integration.Setup(t)
+	// The effect writes under the approver's live grants, and the harness
+	// seeds seats with no role.
+	e.GrantRole(t, e.Rep2, "admin")
 	// Human already set the industry; legal_name is empty.
 	companyID := insertCompany(t, e, e.Rep1, "acme.example", "Handcrafted Industry")
 	fake := ai.NewFakeClient().Script(acmeExtraction, acmeExtraction)

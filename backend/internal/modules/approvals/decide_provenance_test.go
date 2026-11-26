@@ -14,8 +14,11 @@ package approvals
 // distinction is actually made.
 
 import (
+	"context"
+	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -42,6 +45,7 @@ func TestServerProposedTurnsOnThePassport(t *testing.T) {
 // release the call it made.
 func TestAnAgentStagesOnItsPassportOrForANamedPerson(t *testing.T) {
 	minted := ids.From[ids.PassportKind](ids.NewV7())
+	person := ids.NewV7()
 	for name, tc := range map[string]struct {
 		actor   principal.Principal
 		refused bool
@@ -59,8 +63,22 @@ func TestAnAgentStagesOnItsPassportOrForANamedPerson(t *testing.T) {
 		// that person in on_behalf_of, and no credential exists to release it.
 		"an agent presenting none, acting for a named person": {
 			actor: principal.Principal{
+				Type: principal.PrincipalAgent, ID: "agent:x", UserID: person, OnBehalfOf: person,
+			},
+		},
+		// Two independent ids name nobody in particular: whose job is it?
+		"an agent presenting none, its user and its principal two people": {
+			actor: principal.Principal{
 				Type: principal.PrincipalAgent, ID: "agent:x", UserID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
 			},
+			refused: true,
+		},
+		"an agent presenting none, with grants and a user but acting for no one": {
+			actor: principal.Principal{
+				Type: principal.PrincipalAgent, ID: "agent:x", UserID: person,
+				Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+			},
+			refused: true,
 		},
 		// The case the refusal must not reach. A nightly sweep and a site read
 		// propose on nobody's credential, and their NULL is the one this column
@@ -82,5 +100,26 @@ func TestAnAgentStagesOnItsPassportOrForANamedPerson(t *testing.T) {
 				t.Errorf("refused a legitimate stager: %v", err)
 			}
 		})
+	}
+}
+
+// The product's own job stages with no passport, so the passport comparison
+// cannot see it approving its own row. It is refused by the id it staged
+// under, and the person it acts for, or another job for them, still decides.
+func TestAJobDoesNotApproveTheRowItStaged(t *testing.T) {
+	person := ids.NewV7()
+	on := ids.From[ids.UserKind](person)
+	staged := row{Kind: "advance_deal", ProposedBy: "agent:rate-refresh", OnBehalfOf: &on}
+	job := principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:rate-refresh", UserID: person, OnBehalfOf: person,
+		Scopes: principal.NewScopeSet(principal.ScopeWrite),
+	}
+	if err := agentMayDecide(context.Background(), job, staged, true, ownReleaseAllowed); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("the job that staged the row approved it (%v), want a permission denial", err)
+	}
+	other := job
+	other.ID = "agent:auto-apply"
+	if err := agentMayDecide(context.Background(), other, staged, true, ownReleaseAllowed); err != nil {
+		t.Fatalf("another job acting for the same person was refused: %v", err)
 	}
 }

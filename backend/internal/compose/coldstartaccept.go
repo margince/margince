@@ -134,10 +134,6 @@ func coldstartAcceptEffect(svc *approvals.Service, store *contacts.Store) approv
 		// agent:coldstart. This row carries the machine provenance the 360
 		// renders as "read from your site". A company the decider may not
 		// write refuses the apply, and the approval records the failure.
-		execCtx, err := agentForActor(ctx, "agent:coldstart")
-		if err != nil {
-			return err
-		}
 		// The single-use redemption IS the idempotency claim: whoever consumes
 		// the approval executes; anyone else finds it consumed. Redeemed in the
 		// write's OWN transaction, so a failed apply leaves the approval
@@ -148,7 +144,11 @@ func coldstartAcceptEffect(svc *approvals.Service, store *contacts.Store) approv
 		// the redemption asserts that human's authority, the write carries the
 		// machine provenance.
 		return svc.RedeemAndApply(ctx, approvalID, "coldstart", diffHash, func(tx pgx.Tx) error {
-			_, err := store.ApplyColdStartProfileTx(execCtx, tx, contacts.ApplyColdStartProfileInput{
+			execCtx, err := agentForReleaserTx(ctx, tx, "agent:coldstart")
+			if err != nil {
+				return err
+			}
+			_, err = store.ApplyColdStartProfileTx(execCtx, tx, contacts.ApplyColdStartProfileInput{
 				SourceURL: sourceURL,
 				Fields:    fields,
 			})

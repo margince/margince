@@ -52,6 +52,9 @@ const acmePage = fixturePage(`Acme GmbH — Onboard your team in minutes, not we
 
 func TestColdStartStagesOnlyEvidencedFields(t *testing.T) {
 	e := integration.Setup(t)
+	// The effect writes under the approver's live grants, and the harness
+	// seeds seats with no role.
+	e.GrantRole(t, e.Rep2, "admin")
 	fake := ai.NewFakeClient().Script(`{"fields":[
 		{"field":"value_proposition","value":"Fast onboarding","evidence_snippet":"Onboard your team in minutes, not weeks","confidence":0.9},
 		{"field":"icp","value":"RevOps at SaaS scale-ups","evidence_snippet":"Built for RevOps leaders at scaling SaaS companies","confidence":0.7},
@@ -300,6 +303,9 @@ func TestColdStartRefusesWhenNothingSurvivesTheGate(t *testing.T) {
 // exactly once even if the decision path re-fires.
 func TestColdStartAcceptWritesProfileOntoCompany(t *testing.T) {
 	e := integration.Setup(t)
+	// The effect writes under the approver's live grants, and the harness
+	// seeds seats with no role.
+	e.GrantRole(t, e.Rep2, "admin")
 	extraction := `{"fields":[
 		{"field":"legal_name","value":"Acme GmbH","evidence_snippet":"Acme GmbH","confidence":0.95},
 		{"field":"industry","value":"Software","evidence_snippet":"scaling SaaS companies","confidence":0.6},

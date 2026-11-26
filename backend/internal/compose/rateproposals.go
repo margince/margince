@@ -90,22 +90,11 @@ func stageRateProposal(ctx context.Context, svc *approvals.Service, kind, target
 // each time for one named admin.
 const rateRefreshAgentID = "agent:rate-refresh"
 
-// rateRefreshActor binds the agent a rate-refresh effect applies under, acting
-// for the deciding admin with the admin's grants. A decider who may not write
-// the rate sheet gets the effect refused, and the approval records it.
-func rateRefreshActor(ctx context.Context) (context.Context, error) {
-	return agentForActor(ctx, rateRefreshAgentID)
-}
-
 func fxRateAcceptEffect(svc *approvals.Service, store *deals.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		var p fxRateProposal
 		if err := json.Unmarshal(proposedChange, &p); err != nil {
 			return fmt.Errorf("compose: fx rate proposal payload: %w", err)
-		}
-		execCtx, err := rateRefreshActor(ctx)
-		if err != nil {
-			return err
 		}
 		// Redeem the authority object and apply the sheet write in ONE
 		// transaction: a failed write leaves the approval unconsumed and the
@@ -114,6 +103,12 @@ func fxRateAcceptEffect(svc *approvals.Service, store *deals.Store) approvals.Ap
 		// pinned to that SAME day, so a cross-midnight apply fails the
 		// past-date guard rather than overwriting the new day's scheduled row.
 		return svc.RedeemAndApply(ctx, approvalID, fxRateProposalKind, diffHash, func(tx pgx.Tx) error {
+			// The approving admin's grants, as this transaction reads them,
+			// decide whether the sheet may be written.
+			execCtx, err := agentForReleaserTx(ctx, tx, rateRefreshAgentID)
+			if err != nil {
+				return err
+			}
 			// The diff was computed against the rate then in force; if the sheet
 			// moved since (manual write, competing approval), applying would
 			// silently restore a stale value — refuse and roll back instead. The

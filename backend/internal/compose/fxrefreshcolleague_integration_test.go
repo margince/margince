@@ -66,7 +66,7 @@ func TestAnFxRefreshForAnAdminWithoutTheGrantFailsAndStagesNothing(t *testing.T)
 func TestAnApprovedFxRateIsWrittenByTheAgentForTheDecider(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	svc := rateSvc(e)
+	svc := rateSvc(t, e)
 	id := stageProposal(ctx, t, svc, fxRateProposalKind, fxRateTargetType, e.WS,
 		map[string]string{"from_currency": "USD", "rate": "0.9"}, "USD → EUR 0.9")
 

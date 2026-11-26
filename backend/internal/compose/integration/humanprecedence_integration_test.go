@@ -209,7 +209,7 @@ func automaticWork(t *testing.T, e *apptest.AppEnv) context.Context {
 	}
 	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), ws), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:automatic", OnBehalfOf: colleague,
+		Type: principal.PrincipalAgent, ID: "agent:automatic", UserID: colleague, OnBehalfOf: colleague,
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),
 	})
 }

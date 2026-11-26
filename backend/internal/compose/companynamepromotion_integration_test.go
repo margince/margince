@@ -281,6 +281,9 @@ func TestCompanyNamePromotionDoesNotReofferADeclinedRename(t *testing.T) {
 // under the decider's grants.
 func TestAnApprovedCompanyRenameIsWrittenByTheAgentForTheDecider(t *testing.T) {
 	e := integration.Setup(t)
+	// The effect writes under the approver's live grants, and the harness
+	// seeds seats with no role.
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
 	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))

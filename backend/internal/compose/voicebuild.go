@@ -357,7 +357,7 @@ func (w *voiceBuildWorker) run(books, work context.Context, buildID ids.UUID, in
 	}
 	// The completing write must outlive a job timeout that fires mid-run: a
 	// canceled work context must never strand a finished artifact unrecorded.
-	terminal, cancel := terminalCtx(work)
+	terminal, cancel := terminalCtx(books)
 	defer cancel()
 	_, err = w.store.CompleteBuild(terminal, buildID, claimTime(input), ai.VoiceBuildOutcome{
 		Language:     said.Lang(),

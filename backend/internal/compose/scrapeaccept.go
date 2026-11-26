@@ -33,10 +33,6 @@ func scrapeAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals
 		// agent:scrape. That human is on the decision's own audit row, and
 		// this one carries the machine provenance the 360 renders as "read
 		// from the company's site".
-		execCtx, err := agentForActor(ctx, "agent:scrape")
-		if err != nil {
-			return err
-		}
 		// The single-use redemption IS the idempotency claim: whoever consumes
 		// the approval executes; anyone else finds it consumed. Redeemed in the
 		// write's OWN transaction, so a failed apply leaves the approval
@@ -47,6 +43,10 @@ func scrapeAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals
 		// the redemption is an assertion of that human's authority, and the
 		// write carries the machine provenance the 360 renders.
 		return svc.RedeemAndApply(ctx, approvalID, enrichProposalKind, diffHash, func(tx pgx.Tx) error {
+			execCtx, err := agentForReleaserTx(ctx, tx, "agent:scrape")
+			if err != nil {
+				return err
+			}
 			return store.ApplyEnrichmentTx(execCtx, tx, companyID, contacts.ApplyColdStartProfileInput{
 				SourceURL: sourceURL,
 				Fields:    fields,
