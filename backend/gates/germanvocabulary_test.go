@@ -5,21 +5,16 @@
 
 package gates
 
-// The German the server writes uses no word the style page retires.
+// The German the server writes uses no word the style page retires. The
+// Never column of docs/reference/ui-copy-style-de.md owns the list, and the
+// frontend census reads the same column, so neither side keeps a copy.
 //
-// docs/reference/ui-copy-style-de.md owns the list: its Vocabulary table sets
-// each retired word in code format in the Never column. The frontend census
-// (frontend/census/rules/copy-style-de.census.ts) reads that column for the
-// screens, and this gate reads the same column for every German string in the
-// Go sources. Neither keeps a copy of the list.
-//
-// A German string is found by the shape that marks it German, not by a list of
-// catalogs, so a new catalog is read the day it is written:
+// German is found by the shape that marks it, so a new catalog is read the day
+// it is written. The shapes:
 //
 //   - the value of a key named De, German or german, or textlang.German;
 //   - the body of a switch case on German or textlang.German;
-//   - the middle of a positional English, German, Vietnamese row: three string
-//     arguments or elements in a row whose third is Vietnamese.
+//   - the middle of an English, German, Vietnamese row of string literals.
 
 import (
 	"fmt"
@@ -261,9 +256,8 @@ func namesGerman(expr ast.Expr) bool {
 	return false
 }
 
-// rowGerman answers the German of each English, German, Vietnamese run in a
-// list: three string literals in a row whose third carries a letter only
-// Vietnamese writes.
+// rowGerman answers the middle of each run of three string literals whose
+// third carries a letter only Vietnamese writes.
 func rowGerman(list []ast.Expr) []ast.Expr {
 	var german []ast.Expr
 	for i := 0; i+2 < len(list); i++ {
