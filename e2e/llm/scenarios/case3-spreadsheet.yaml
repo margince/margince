@@ -40,18 +40,6 @@ may_call:
   - query_workspace
   - search_records
 
-must_mention:
-  # MECHANICAL, both. Criterion 1 needs the usable count to appear at all, and
-  # criterion 6 needs the unusable row named — a count and a noun are what a
-  # regex reads reliably, and neither of these has leaked.
-  # ANCHORED TO WHAT IS COUNTED. A bare "3|three" is satisfied by a row
-  # number, an id or a date — the same defect case 10 fixed
-  # its own bare digit for. What this criterion is about is how many rows the
-  # dry run would write, so the number has to be beside the noun.
-  - "(?:creat\w*|import\w*|add\w*|anleg\w*)[^.]{0,20}\(?\*{0,2}\b(?:3|three|drei)\b\)?(?:[^.]{0,20}(?:rows?|records?|companies|organi[sz]ations?|contacts?|contacts|Zeilen|Datensätze)|\s*[:\-*•—|]|\s*\n)|\b(?:3|three|drei)\b[^.]{0,20}(?:creat\w*|import\w*|new\b|angelegt)(?:[^.]{0,20}(?:rows?|records?|companies|organi[sz]ations?|contacts?|contacts|Zeilen|Datensätze)|\s*[:\-*•—|]|\s*\n)|\b(?:3|three|drei)\s+(?:\w+\s+){0,3}(?:rows?|records?|companies|organi[sz]ations?|contacts?|contacts|Zeilen|Datensätze)"
-  # And the unusable row is REPORTED, not merely a sentence containing the
-  # word "row". Anchored to the row being left out, in either order.
-  - "(?:skip\w*|left out|(?:not|n['’]t) imported|unusable|rejected|übersprung\w*)[^.]{0,60}(?:row|record|line|name|Zeile|Datensatz)|(?:row|record|line|Zeile)[^.]{0,60}(?:skip\w*|left out|no name|blank|unusable|leer|fehlt|could(?: not|n['’]t) be (?:used|imported))"
 
 # CRITERION 1's REAL QUESTION IS SEMANTIC and had no guard that could fail.
 # The case is about showing the numbers BEFORE anything is written, and the only
@@ -60,9 +48,10 @@ must_mention:
 # off. The round that noticed built a regex for it, and that regex has to tell a
 # forecast from a report ("would create three companies" versus "created three
 # companies") by refusing to cross a list of hedging words, which is a tense
-# distinction inside a sentence rather than a string a pattern can find. The
-# count above says the numbers were reported; this says WHEN.
+# distinction inside a sentence rather than a string a pattern can find. Criterion 6
+# below judges the count and the skipped row; this says WHEN.
 judge:
+  - "Criterion 6. The answer says three of the four rows would become companies, and that the row with no name (the Köln one) would be skipped or cannot be imported as it is. Answer no if it gives another count, or never mentions that row."
   - "Criterion 1. The answer reports what the import would do before anything is written, and never tells the reader that the rows were created, imported, added or are now live. A preview stated in the future or the conditional — 'this would create three companies', '3 rows will be created once you confirm', 'nothing has been written yet' — is exactly right: answer yes. Answer no if the answer reports the import as already done."
 
 
