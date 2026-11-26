@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -185,9 +186,7 @@ func (s *ChannelStore) disconnectChatAccount(ctx context.Context, provider strin
 			return err
 		}
 		after := make(map[string]any, len(before))
-		for k, v := range before {
-			after[k] = v
-		}
+		maps.Copy(after, before)
 		after[columnStatus] = channelStatusDisconnected
 		if _, err := tx.Exec(ctx, `UPDATE channel_connection SET status = $2, archived_at = now() WHERE id = $1`,
 			id, channelStatusDisconnected); err != nil {
