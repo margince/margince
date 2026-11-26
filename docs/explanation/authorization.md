@@ -193,7 +193,8 @@ record. The other direction answers 403 `merge_direction`.
 
 Outside a filed pair, a merge into a record the caller may read but not change answers 403
 `merge_target_read_only`. Its message is the sentence the merge picker shows for that record. A
-target the caller cannot see answers a bare 409, so the refusal does not confirm that it exists.
+target the caller cannot see answers a bare 409, so the refusal does not confirm that it exists. An
+id no record holds answers the same 409.
 
 A pair is filed while a live `dedupe_candidate` row names those two records with the disposition
 `open`. A `merged` row counts only when this transaction marked it (`disposed_at = now()`). The

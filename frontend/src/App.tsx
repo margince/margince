@@ -74,6 +74,7 @@ const CommandPalette = lazy(async () => ({
 const PUBLIC_SCREENS: ReadonlySet<Screen> = new Set([
   "book",
   "confirm",
+  "confirm-merge",
   "preferences",
   "unsubscribe",
   "room",

@@ -284,9 +284,10 @@ func TestAMergedAwayDealLeavesTheStageEntriesTheReportsCount(t *testing.T) {
 	}
 }
 
-// A target that does not exist answers the same conflict as one out of the
-// caller's scope. A merge then cannot be used to ask which ids exist.
-func TestAMergeIntoAMissingTargetAnswersLikeOneOutOfScope(t *testing.T) {
+// A target that does not exist answers the conflict an unseen one answers, so a
+// merge cannot be used to ask which ids exist. Every seat reads every deal, so a
+// colleague's deal is read-only to the rep and the refusal says so.
+func TestAMergeIntoAMissingTargetAnswersLikeOneUnseen(t *testing.T) {
 	e := Setup(t)
 	_, source, target := twoDealsOnOneCompany(t, e)
 	e.WsExec(t, `UPDATE deal SET owner_id = $2 WHERE id = $1`, source, e.Rep1)
@@ -294,10 +295,17 @@ func TestAMergeIntoAMissingTargetAnswersLikeOneOutOfScope(t *testing.T) {
 		Objects:  map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}},
 		RowScope: principal.RowScopeOwn,
 	})
-	_, outOfScope := e.Deals.MergeDeal(rep, source, target, nil)
 	_, missing := e.Deals.MergeDeal(rep, source, ids.New[ids.DealKind](), nil)
-	if !errors.Is(outOfScope, apperrors.ErrConflict) || !errors.Is(missing, apperrors.ErrConflict) {
-		t.Fatalf("out of scope → %v, missing → %v; both want a conflict", outOfScope, missing)
+	if !errors.Is(missing, apperrors.ErrConflict) {
+		t.Fatalf("merge into a missing deal → %v, want a conflict", missing)
+	}
+	_, readOnly := e.Deals.MergeDeal(rep, source, target, nil)
+	fault, ok := errors.AsType[apperrors.MessageFault](readOnly)
+	if !ok || !errors.Is(readOnly, apperrors.ErrPermissionDenied) {
+		t.Fatalf("merge into a colleague's deal → %v, want permission-denied with a reason", readOnly)
+	}
+	if code, _ := fault.MessageFault(); code != "merge_target_read_only" {
+		t.Fatalf("merge into a colleague's deal answered code %q, want merge_target_read_only", code)
 	}
 	one := e.SeedContact(t, "Merge Subject", nil)
 	_, err := e.Contacts.MergeContact(e.Admin(), ContactIDOf(one), ids.New[ids.ContactKind](), nil)

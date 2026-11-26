@@ -313,6 +313,7 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	// which rebuilds the sync over the vault it brings.
 	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, log, s.priceCatalogues))
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool), budgetFullUsers, aiDeferredWork(pool))}
+	s.teamRulesHandlers = teamRulesHandlers{Store: s.aiAdminHandlers.store}
 	s.ownDomainHandlers = ownDomainHandlers{
 		store:    capture.NewOwnDomainStore(InstallationDB(pool)).WithRemoved(queueStageEvidenceReread),
 		evidence: deals.NewStore(InstallationDB(pool), DealsInstallation()), log: log,

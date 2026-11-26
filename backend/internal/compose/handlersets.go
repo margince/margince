@@ -70,6 +70,7 @@ type (
 	channelHandlers         = capture.ChannelHandlers
 	chatLinkHandlers        = chatlinks.Handlers
 	chatEventHandlers       = chatlinks.EventHandlers
+	whatsAppEventHandlers   = capture.WhatsAppEventHandlers
 	traceHandlers           = capture.TraceHandlers
 	pipelineTraceHandlers   = pipelinetrace.Handlers
 	contactsHandlers        = contacts.Handlers
@@ -88,6 +89,7 @@ type (
 	privacyHandlers         = privacy.Handlers
 	automationHandlers      = automation.Handlers
 	voiceHandlers           = ai.Handlers
+	teamRulesHandlers       = ai.TeamRulesHandlers
 	customfieldsHandlers    = customfields.Handlers
 	webhooksHandlers        = webhooks.Handlers
 	webFormsHandlers        = webforms.Handlers

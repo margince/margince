@@ -18,6 +18,7 @@ func TestEveryProductPreviewExplainsItsPurposeInEachLanguage(t *testing.T) {
 			words.NotificationSubject,
 			words.ResetSubject,
 			words.InviteSubject,
+			words.MergeSubject,
 			words.RoomSubject,
 			words.NoticeSubject,
 			words.ConfirmRecordSubject,

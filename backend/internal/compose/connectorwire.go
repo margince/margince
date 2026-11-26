@@ -12,6 +12,7 @@ package compose
 import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 )
@@ -35,6 +36,7 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 		MailPosture:            postureOnWire(v.MailPosture),
 		ContextTag:             contextTagOnWire(v.ContextTag),
 		HistoryBaseline:        historyBaselineOnWire(v.HistoryBaseline),
+		HistoryNarrowing:       capturehealth.HistoryNarrowingOf(v.HistoryNarrowing),
 		CanBackfill:            v.CanBackfill,
 	}
 	if v.Concern != "" {

@@ -48,6 +48,7 @@ const addressesAreOpen = "mail addresses a message or a request named; any addre
 
 // openTextArrays are the text arrays whose set the database does not close.
 var openTextArrays = gatekit.Waive(map[string]string{
+	"raw_capture.channel_subjects":                        "channel identities as `provider:account`, written by every network that stores a raw original; the providers own the set",
 	"activity.redacted_fields":                            "names of activity columns, written by the privacy erasure paths; the set moves with the schema",
 	"comms_outbound.redacted_fields":                      "names of comms_outbound columns, written by the privacy erasure paths; the set moves with the schema",
 	"capture_connection.provider_scopes":                  "the OAuth scopes the provider granted, stored as it returned them; the provider owns the set",

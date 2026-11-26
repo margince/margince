@@ -79,6 +79,8 @@ const (
 type replyDraftFixture struct {
 	Activity replyActivityData        `json:"activity"`
 	Voice    *replyDraftVoiceArtifact `json:"voice"`
+	// TeamRules is the workspace's saved text, empty when it saved none.
+	TeamRules string `json:"team_rules,omitempty"`
 }
 
 // replyDraftVoiceArtifact is the active profile pair a voiced call injects,
@@ -126,6 +128,7 @@ func (replyDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepa
 	if err != nil {
 		return nil, err
 	}
+	voice.TeamRules = f.TeamRules
 	// A correct draft differs from an incorrect one in the register alone, so
 	// the expectation IS that token rather than a wrapper carrying it.
 	var want string

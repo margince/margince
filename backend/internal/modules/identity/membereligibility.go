@@ -27,10 +27,32 @@ const (
 	mergedFromField   = "merged_from"
 )
 
+// The three ways an account counts as used. unusedMemberSQL, the roster's
+// refusal reasons and the retirement preview all read these fragments, so the
+// offer and the reason it gives come from one definition.
+func passwordSetSQL(alias string) string { return alias + `.password_hash IS NOT NULL` }
+
+func signedInSQL(alias string) string {
+	return `(` + alias + `.last_active_at IS NOT NULL
+ OR EXISTS (SELECT 1 FROM session used WHERE used.user_id = ` + alias + `.id))`
+}
+
+func providerLinkedSQL(alias string) string {
+	return `EXISTS (SELECT 1 FROM federated_identity linked WHERE linked.user_id = ` + alias + `.id)`
+}
+
 func unusedMemberSQL(alias string) string {
-	return alias + `.password_hash IS NULL AND ` + alias + `.last_active_at IS NULL
- AND NOT EXISTS (SELECT 1 FROM session used WHERE used.user_id = ` + alias + `.id)
- AND NOT EXISTS (SELECT 1 FROM federated_identity linked WHERE linked.user_id = ` + alias + `.id)`
+	return `NOT (` + passwordSetSQL(alias) + ` OR ` + signedInSQL(alias) + ` OR ` + providerLinkedSQL(alias) + `)`
+}
+
+// memberUsage is which of the three signs of use an account shows.
+type memberUsage struct{ PasswordSet, SignedIn, ProviderLinked bool }
+
+func (u memberUsage) unused() bool { return !u.PasswordSet && !u.SignedIn && !u.ProviderLinked }
+
+// memberUsageColumns selects the three flags in memberUsage's field order.
+func memberUsageColumns(alias string) string {
+	return passwordSetSQL(alias) + `, ` + signedInSQL(alias) + `, ` + providerLinkedSQL(alias)
 }
 
 func requireUnusedMemberEmail(ctx context.Context, tx pgx.Tx, member ids.UserID) error {

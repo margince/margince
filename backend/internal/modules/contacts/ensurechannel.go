@@ -127,9 +127,7 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 	// second binding — and the erasure writes by contact_id, so the rival it
 	// never named keeps the erased human's account and name for good.
 	if err := storekit.LockSubjectKeys(ctx, tx,
-		[]storekit.ChannelIdentityKey{
-			{Provider: in.Identity.Provider, ChannelUserID: in.Identity.ChannelUserID},
-		},
+		channelKeysOf(in.Identity),
 		// The address is locked too, and it is the half that covers the subject
 		// this path can otherwise reach mid-erasure: a human known only from
 		// mail holds no channel account, so an eraser locking accounts alone
@@ -186,26 +184,24 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 	if err := s.linkActivityToContact(ctx, tx, in.ActivityID, res.ContactID); err != nil {
 		return EnsureChannelCounterpartyResult{}, err
 	}
+	// The identity the record names beside the main one belongs to the same
+	// human, so the contact holds both and an erasure suppresses both.
+	// One another contact already holds stays with that contact.
+	if alias := in.Identity.Alias; alias != nil {
+		if _, err := ResolveOrCreateChannelIdentity(ctx, tx, res.ContactID, *alias); err != nil && !errors.Is(err, ErrChannelIdentityInOtherScope) {
+			return EnsureChannelCounterpartyResult{}, err
+		}
+	}
 	return res, nil
 }
 
-// channelSubjectSuppressed asks both keys the subject can have been erased by.
-//
-// The channel key is the one this path always has. The address is asked only
-// when the record carries one, and asking it is not optional politeness: an
-// erasure keyed on an address would otherwise be undone by the subject's next
-// direct message, which arrives naming them by an account the suppression list
-// has never heard of. A13 says deletion sticks; it has to stick on every key the
-// record can be recognised by, not on the one this path happened to start with.
-func (s *Store) channelSubjectSuppressed(ctx context.Context, tx pgx.Tx, in EnsureChannelCounterpartyInput) (bool, error) {
-	suppressed, err := storekit.ChannelIdentitySuppressed(ctx, tx, in.Identity.Provider, in.Identity.ChannelUserID)
-	if err != nil || suppressed {
-		return suppressed, err
+// channelKeysOf names the identity and its aliases as the suppression list keys them.
+func channelKeysOf(ci connector.ChannelIdentity) []storekit.ChannelIdentityKey {
+	var keys []storekit.ChannelIdentityKey
+	for _, each := range ci.All() {
+		keys = append(keys, storekit.ChannelIdentityKey{Provider: each.Provider, ChannelUserID: storekit.ChannelSuppressionAccount(each.AccountScope, each.ChannelUserID)})
 	}
-	if in.CorroboratingEmail == "" {
-		return false, nil
-	}
-	return storekit.EmailSuppressed(ctx, tx, in.CorroboratingEmail)
+	return keys
 }
 
 // resolveChannelContact runs PO-F-1 over the channel identity and, when nothing

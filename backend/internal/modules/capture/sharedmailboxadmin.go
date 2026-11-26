@@ -31,15 +31,27 @@ type SharedMailboxView struct {
 	// UnreadFrom..UnreadTo is a span no sync read, which a history import
 	// recovers. Both nil when there is none.
 	UnreadFrom, UnreadTo *time.Time
+	// HistoryNarrowing is nil unless earlier mail is still being narrowed.
+	HistoryNarrowing *HistoryNarrowing
+	narrowingHeld    *bool
 }
 
-const sharedMailboxColumns = `id, provider, account_label, reader_team_id, mail_posture, status, connected_by, connected_at, backup_owner_id, unread_from, unread_to`
+const sharedMailboxColumns = `id, provider, account_label, reader_team_id, mail_posture, status, connected_by, connected_at, backup_owner_id, unread_from, unread_to, history_narrowing_held`
 
 func scanSharedMailbox(row pgx.Row) (SharedMailboxView, error) {
 	var v SharedMailboxView
 	err := row.Scan(&v.ID, &v.Provider, &v.Address, &v.ReaderTeam, &v.Posture, &v.Status, &v.ConnectedBy, &v.ConnectedAt, &v.BackupOwner,
-		&v.UnreadFrom, &v.UnreadTo)
+		&v.UnreadFrom, &v.UnreadTo, &v.narrowingHeld)
 	return v, err
+}
+
+// withNarrowingTx fills in the progress of a pending history narrowing.
+func (v *SharedMailboxView) withNarrowingTx(ctx context.Context, tx pgx.Tx) error {
+	progress, pending, err := historyNarrowingTx(ctx, tx, mailboxScope(v.ID), v.narrowingHeld)
+	if pending {
+		v.HistoryNarrowing = &progress
+	}
+	return err
 }
 
 // SharedMailboxes lists the installation's shared mailboxes, disconnected ones
@@ -55,8 +67,15 @@ func (r *Registry) SharedMailboxes(ctx context.Context) ([]SharedMailboxView, er
 		if err != nil {
 			return err
 		}
-		out, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (SharedMailboxView, error) { return scanSharedMailbox(row) })
-		return err
+		if out, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (SharedMailboxView, error) { return scanSharedMailbox(row) }); err != nil {
+			return err
+		}
+		for i := range out {
+			if err := out[i].withNarrowingTx(ctx, tx); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("capture: listing the shared mailboxes: %w", err)
@@ -72,8 +91,10 @@ func (r *Registry) SharedMailbox(ctx context.Context, id ids.UUID) (SharedMailbo
 	var v SharedMailboxView
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		v, err = sharedMailboxTx(ctx, tx, id, "")
-		return err
+		if v, err = sharedMailboxTx(ctx, tx, id, ""); err != nil {
+			return err
+		}
+		return v.withNarrowingTx(ctx, tx)
 	})
 	return v, err
 }
@@ -142,13 +163,13 @@ func (r *Registry) ChangeSharedMailbox(ctx context.Context, id ids.UUID, in Shar
 	var out SharedMailboxView
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = r.changeSharedMailboxTx(ctx, tx, id, in)
+		out, err = changeSharedMailboxTx(ctx, tx, id, in)
 		return err
 	})
 	return out, err
 }
 
-func (r *Registry) changeSharedMailboxTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in SharedChange) (SharedMailboxView, error) {
+func changeSharedMailboxTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in SharedChange) (SharedMailboxView, error) {
 	prior, err := sharedMailboxTx(ctx, tx, id, "FOR UPDATE")
 	if err != nil {
 		return prior, err
@@ -170,7 +191,15 @@ func (r *Registry) changeSharedMailboxTx(ctx context.Context, tx pgx.Tx, id ids.
 	// Asked whether or not the visibility moved: an admin may narrow the
 	// history of a mailbox that is already held.
 	if in.ApplyToHistory && in.Posture != nil {
-		return next, r.narrowSharedHistoryTx(ctx, tx, next)
+		if err := requestHistoryNarrowingTx(ctx, tx, sharedConnection(next.ID), next.Posture); err != nil {
+			return prior, err
+		}
+		if next, err = sharedMailboxTx(ctx, tx, next.ID, ""); err != nil {
+			return prior, err
+		}
+	}
+	if err := next.withNarrowingTx(ctx, tx); err != nil {
+		return prior, err
 	}
 	return next, nil
 }
@@ -208,18 +237,6 @@ func changeSharedPostureTx(ctx context.Context, tx pgx.Tx, before SharedMailboxV
 	next := before
 	next.Posture = posture
 	return next, announceSharedChangeTx(ctx, tx, sharedChangeVisibility, before, next)
-}
-
-// narrowSharedHistoryTx applies the mailbox's visibility to the mail it already
-// captured, and records that it did on the mailbox's trail.
-func (r *Registry) narrowSharedHistoryTx(ctx context.Context, tx pgx.Tx, box SharedMailboxView) error {
-	if err := r.narrowHistoryTo(ctx, tx, mailboxImporter(box.ID), box.Posture); err != nil {
-		return err
-	}
-	image := sharedMailboxImage(box)
-	narrowed := sharedMailboxImage(box)
-	narrowed["history_narrowed_to"] = box.Posture
-	return announceSharedMailboxTx(ctx, tx, auditVerbUpdate, sharedChangeVisibility, box.ID, image, narrowed)
 }
 
 func announceSharedChangeTx(ctx context.Context, tx pgx.Tx, change string, before, after SharedMailboxView) error {

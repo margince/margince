@@ -14,6 +14,7 @@ func (c Copy) Preview(subject string) string {
 		{c.NotificationSubject, c.NotificationPreview},
 		{c.ResetSubject, c.ResetPreview},
 		{c.InviteSubject, c.InvitePreview},
+		{c.MergeSubject, c.MergePreview},
 		{c.RoomSubject, c.RoomPreview},
 		{c.NoticeSubject, c.NoticePreview},
 		{c.ConfirmRecordSubject, c.ConfirmRecordPreview},
