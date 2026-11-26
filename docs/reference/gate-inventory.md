@@ -311,6 +311,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `captureseatlessrows_test.go` | H2 | A shared mailbox is a capture\_connection with no user, and its import rows name the connection instead of a seat. |
 | `capturesinkseams_test.go` | H3 | Every optional seam the capture Sink offers is wired by the composition root. |
 | `catalogoptionsreaders_test.go` | H2 | Who may read a custom field's options. |
+| `chatonepath_test.go` | H2 | Every chat network receives, files, changes and sends through the same core functions. |
 | `checklegsplit_test.go` | H3 | CI splits the backend gate's fan-out over two jobs: deterministic-gates runs `make check-backend CHECK\_LEGS="…"` and backend-lint runs `make check-static`. |
 | `childsetaudit_test.go` | H2 | Every writer of a child set moves the parent record's version. |
 | `claimedspelling_test.go` | H3 | A constant whose doc comment says it is spelled once is making a checkable statement, and until now nothing checked it. |
