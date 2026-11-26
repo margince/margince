@@ -38,15 +38,16 @@ var parses = holder[parseKey, *ast.File]{entries: map[parseKey]*held[*ast.File]{
 // module is held once per comment mode rather than twice.
 func ParseFile(path string, mode parser.Mode) (*ast.File, error) {
 	mode &^= parser.SkipObjectResolution
-	file, err := heldPath(path)
+	fixed := treeFixed.Load()
+	file, err := heldPath(path, fixed)
 	if err != nil {
 		return nil, err
 	}
-	name, err := positionName(path, file)
+	name, err := positionName(path, file, fixed)
 	if err != nil {
 		return nil, err
 	}
-	entry, err := parses.at(parseKey{file: file, name: name, mode: mode}, file, treeFixed.Load() && holdable(file))
+	entry, err := parses.at(parseKey{file: file, name: name, mode: mode}, file, fixed && holdable(file))
 	if err != nil {
 		return nil, err
 	}
@@ -60,11 +61,11 @@ func ParseFile(path string, mode parser.Mode) (*ast.File, error) {
 }
 
 // positionName is the filename ParseFile's positions carry for path, held as file.
-func positionName(path, file string) (string, error) {
+func positionName(path, file string, fixed bool) (string, error) {
 	if !holdable(file) {
 		return path, nil
 	}
-	dir, err := workingDir()
+	dir, err := workingDir(fixed)
 	if err != nil {
 		return "", err
 	}

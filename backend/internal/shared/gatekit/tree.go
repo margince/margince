@@ -88,11 +88,11 @@ func sameVersion(held, now os.FileInfo) bool {
 
 // heldPath is the one key a file is held under, whatever its caller's
 // spelling: "internal/x.go" and "../backend/internal/x.go" are one file.
-func heldPath(path string) (string, error) {
+func heldPath(path string, fixed bool) (string, error) {
 	if filepath.IsAbs(path) {
 		return filepath.Clean(path), nil
 	}
-	dir, err := workingDir()
+	dir, err := workingDir(fixed)
 	if err != nil {
 		return "", err
 	}
@@ -103,8 +103,8 @@ func heldPath(path string) (string, error) {
 // a fixed tree answers a held path without a syscall.
 var fixedWorkingDir = sync.OnceValues(os.Getwd)
 
-func workingDir() (string, error) {
-	if treeFixed.Load() {
+func workingDir(fixed bool) (string, error) {
+	if fixed {
 		return fixedWorkingDir()
 	}
 	return os.Getwd()
@@ -134,14 +134,15 @@ var (
 // them. Their capacity is their length, so an append copies rather than writes
 // into a neighbour's view. CheckSharedBytes checks the promise after a run.
 func ReadFile(path string) ([]byte, error) {
-	key, err := heldPath(path)
+	fixed := treeFixed.Load()
+	key, err := heldPath(path, fixed)
 	if err != nil {
 		return nil, err
 	}
 	if !holdable(key) {
 		return os.ReadFile(path) // #nosec G304 -- a gate names the files of its own tree or fixture
 	}
-	entry, err := files.at(key, key, treeFixed.Load())
+	entry, err := files.at(key, key, fixed)
 	if err != nil || !entry.info.Mode().IsRegular() {
 		return os.ReadFile(path) // #nosec G304 -- the os error is the answer a caller already handles
 	}
@@ -157,14 +158,15 @@ func ReadFile(path string) ([]byte, error) {
 // directory. The slice is the caller's own; the entries are shared and
 // immutable.
 func ReadDir(dir string) ([]fs.DirEntry, error) {
-	key, err := heldPath(dir)
+	fixed := treeFixed.Load()
+	key, err := heldPath(dir, fixed)
 	if err != nil {
 		return nil, err
 	}
 	if !holdable(key) {
 		return os.ReadDir(dir)
 	}
-	entry, err := dirs.at(key, key, treeFixed.Load())
+	entry, err := dirs.at(key, key, fixed)
 	if err != nil || !entry.info.IsDir() {
 		return os.ReadDir(dir)
 	}

@@ -160,6 +160,45 @@ func TestEverySpellingOfOneFileSharesOneCopyOfItsBytes(t *testing.T) {
 	}
 }
 
+func TestAFixedTreeResolvesAPathAgainstTheDirectoryItWasFixedIn(t *testing.T) {
+	here, err := heldPath("tree.go", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(t.TempDir())
+	if again, err := heldPath("tree.go", true); err != nil || again != here {
+		t.Errorf("a fixed tree resolved tree.go to %q (%v) after the directory moved, want %q, where it was fixed",
+			again, err, here)
+	}
+	if moved, err := heldPath("tree.go", false); err != nil || moved == here {
+		t.Errorf("an unfixed tree resolved tree.go to %q (%v), the directory it no longer runs in", moved, err)
+	}
+}
+
+func TestALostWorkingDirectoryIsAnErrorNotAnotherFile(t *testing.T) {
+	inTree, err := filepath.Abs("tree.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gone := t.TempDir()
+	t.Chdir(gone)
+	if err := os.Remove(gone); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadFile("tree.go"); err == nil {
+		t.Error("a relative read with no working directory answered bytes instead of an error")
+	}
+	if _, err := ReadDir("."); err == nil {
+		t.Error("a relative listing with no working directory answered entries instead of an error")
+	}
+	if _, err := ParseFile("tree.go", 0); err == nil {
+		t.Error("a relative parse with no working directory answered a tree instead of an error")
+	}
+	if _, err := ParseFile(inTree, 0); err == nil {
+		t.Error("a tree file was parsed with no working directory to name its positions against")
+	}
+}
+
 func TestAFixtureRewrittenWithinOneClockTickIsReadFresh(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "fixture.txt")
