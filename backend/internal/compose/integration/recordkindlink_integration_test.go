@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -31,8 +32,7 @@ const probeKind = "ext:kindlink:thing"
 func kindFixture(t *testing.T) (live, archived ids.UUID) {
 	t.Helper()
 	kindTable(t, "ext_kindlink_thing", `id uuid PRIMARY KEY, archived_at timestamptz, code text NOT NULL UNIQUE`)
-	recordkinds.Reset()
-	t.Cleanup(recordkinds.Reset)
+	extregistrytest.Reset(t)
 	recordkinds.Register("kindlink", []extension.RecordKindDeclaration{{
 		Kind: "thing", DisplayName: "Thing", Table: "ext_kindlink_thing",
 		Fields:     []extension.RecordKindField{{Name: "code", Label: "Code"}},

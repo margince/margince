@@ -239,7 +239,7 @@ func nameStillFree(ctx context.Context, tx pgx.Tx, id ids.PipelineID) error {
 			SELECT 1 FROM pipeline live
 			 WHERE live.archived_at IS NULL
 			   AND live.id <> $1
-			   AND live.name = (SELECT name FROM pipeline WHERE id = $1)
+			   AND lower(btrim(live.name)) = (SELECT lower(btrim(name)) FROM pipeline WHERE id = $1)
 		)`, id).Scan(&taken); err != nil {
 		return fmt.Errorf("check whether a restored pipeline's name is free: %w", err)
 	}

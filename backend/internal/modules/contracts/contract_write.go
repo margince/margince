@@ -102,7 +102,7 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	}
 
 	id := ids.New[ids.ContractKind]()
-	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, []any{
+	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, active, in.CustomFields, []any{
 		id, in.CompanyID, in.DealID, in.ProjectID, in.ContractNumber, in.Title,
 		in.ValueMinor, in.Currency, in.ValueBasis, in.StartsOn, in.EndsOn, in.RenewalOn,
 		in.AutoRenew, in.NoticePeriodDays, in.PaymentTermDays, in.SignedOn, in.Source, by,
@@ -216,7 +216,7 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		if err := storekit.EnsureIfMatch(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
 			return err
 		}
-		if err := storekit.SetCustomFieldPatch(patch, active, in.AdditionalProperties, existing.AdditionalProperties); err != nil {
+		if err := storekit.SetCustomFieldPatchIn(ctx, tx, patch, active, in.AdditionalProperties, existing.AdditionalProperties); err != nil {
 			return err
 		}
 		if patch.Empty() {

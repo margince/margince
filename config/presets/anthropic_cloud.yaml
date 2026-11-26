@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=../margince.schema.json
+# Model setup: Anthropic Claude
+# config/presets/anthropic_cloud.yaml — the chat tiers on Claude, embeddings on Gemini.
+#
+# NOT YET MEASURED: no certification record exists for this setup, so no task is
+# graded on it and none of its answers is known to be good enough. Certify it
+# with the command below; its grades then appear in docs/reference/ai-certification.md
+# under this file's name. Until then, do not bind this preset to a workspace whose
+# confidentiality decisions matter.
+#
+# It pairs the tiers the way gemini_cloud.yaml does: the small, cheap model leads
+# the short-answer and cheap tasks, and the larger one leads premium and frontier.
+# So a record of one setup reads against the other tier by tier.
+#
+#     make e2e-ai ROUTING=config/presets/anthropic_cloud.yaml \
+#       JUDGE=gemini:gemini-3.1-flash-lite
+#
+# The judge is a Gemini model on purpose: the default judge (Claude, through
+# `claude -p`) refuses a Claude candidate, and the run never takes a judge from
+# the routing. One judge grades the whole sweep.
+#
+# Needs ANTHROPIC_API_KEY for the tiers and GEMINI_API_KEY for the embeddings,
+# because Anthropic serves no embedding model. Not loaded automatically — see
+# README.md.
+version: 1
+
+seeds:
+  ai_routing:
+    # cloud_frontier: the Anthropic API states no EU processing region, so
+    # nothing here keeps text in the EU.
+    profile: cloud_frontier     # eu_hosted | sovereign | cloud_frontier
+    tiers:
+      local_small: { provider: anthropic, model: claude-haiku-5-5 }
+      cheap_cloud: { provider: anthropic, model: claude-haiku-5-5 }
+      premium:     { provider: anthropic, model: claude-sonnet-5-5 }
+      frontier:    { provider: anthropic, model: claude-sonnet-5-5 }
+    # No thinking_level: that field is Gemini's. The Anthropic adapter picks its
+    # own effort per request, and a tier cannot set one.
+    #
+    # The same three tasks gemini_cloud.yaml walks premium first, so the two
+    # setups are compared on the same ladders.
+    task_ladders:
+      agent_loop: [premium, cheap_cloud]
+      nl_search: [premium, cheap_cloud]
+      voice_build: [premium, cheap_cloud]
+    # Anthropic has no embedding model, so the embed lane rides Gemini, as in
+    # gemini_cloud.yaml. 1536 is one of gemini-embedding-001's output widths.
+    embeddings:
+      provider: gemini
+      model: gemini-embedding-001
+      dimensions: 1536

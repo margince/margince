@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer leaves Bruno Kellner's lead as live work in the queue ('I have left him exactly as he was, sitting in the queue') without reporting him as disqualified or closed off, nor proposing closure and asking the user's approval.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer either reports Bruno Kellner's lead as disqualified or closed off, or proposes closing it and asks the user's yes before doing so. Answer no if it makes him a contact, or leaves him as live work without saying either.",
+  "answer": "Two of the three are sorted.\n\n**Ines Waldner** replied to our mail asking for a call, so she is a contact now.\n\n**Bruno Kellner** has one outbound from March and a note that the address bounced. I have left him exactly as he was, sitting in the queue.\n\n**Piet Brandsma** was half empty. The mail domain gives Brandsma Koeltechniek, which is on the record now, and the title is still blank — that one needs a person."
+}

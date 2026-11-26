@@ -29,7 +29,7 @@ const REFUSED: ActivityGate = {
   refusedId: "log-refused",
   pending: false,
   sentenceId: "log-refused",
-  refusalKey: "record.logActivityRefused",
+  refusalKey: "record.roleReadsOnly",
 };
 
 function verbs(activity: ActivityGate, opened: LogDrawer = null) {

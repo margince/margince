@@ -106,7 +106,7 @@ function noFigureReason(
 
 type StripLifecycle = NonNullable<
   Company360["state_strip"]
->["account"]["lifecycle"];
+>["account"]["status"];
 
 // The stages whose page leads with a money figure are every account we bill
 // and a former customer. The trailing year is a fact about invoices.

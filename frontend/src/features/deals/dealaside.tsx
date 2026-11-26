@@ -469,8 +469,8 @@ function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
   const company = useEmployerSummary(companyId).data;
   const name = company?.display_name;
   const stage =
-    company?.lifecycle && company.lifecycle !== "unknown"
-      ? t(labelFor(LIFECYCLE_LABELS, company.lifecycle))
+    company?.status && company.status !== "unknown"
+      ? t(labelFor(LIFECYCLE_LABELS, company.status))
       : undefined;
   const facts = [
     stage,

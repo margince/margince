@@ -1,0 +1,133 @@
+{
+  "task": "voice_build",
+  "provider": "anthropic",
+  "served_model": "claude-sonnet-5-5",
+  "env_class": "cloud_frontier",
+  "prompt_version": "p52347802575305f372014b4eb0c4112c",
+  "corpus_version": "v1",
+  "verdict": "certified",
+  "runs": 12,
+  "passed": 12,
+  "reliability": 1,
+  "reported_accepted": 12,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "context_owed": 0,
+  "judge_score_p50": 92,
+  "judge_score_min": 75,
+  "latency_p50": 2107,
+  "latency_p95": 22110,
+  "mean_tokens": 2549,
+  "mean_tokens_in": 1883,
+  "mean_tokens_out": 665,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 0,
+  "judge_served_model": "gemini-3.1-flash-lite",
+  "judge_provider": "gemini",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "ran_at": "2026-11-25T06:40:08Z",
+  "scenarios": [
+    {
+      "scenario": "the_card_shows_a_line_in_the_built_voice",
+      "site": "demo_draft",
+      "stamp": "0610384120c70261a9918583e8896854004c7cd1397c6a23977ff26f92b6011dba832293ffe4ac702ba0ee3829c9cda4fc49242d12a57cc6afd7726d83f0718f71fb3413086576e8f9d29e80787b872036f5751efa1e5758c39298441348a9d3",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        90,
+        85,
+        85
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "owner_voice_candidate_from_authored_messages",
+      "site": "derive",
+      "stamp": "43165cb652b7210dac9780d46dbfde4708f5c02219a5299813eff70f19aa51bec0bea4551611a654e3cec42deeac7af756c85650b33817d2b6196120f53270bbc1b80f3241f12b44981b2af6fcdd9623a2838afc155168ca5df349a670136887",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        95,
+        95,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "held_out_draft_sits_close_to_the_author",
+      "site": "eval_draft",
+      "stamp": "46ec2c902cbc6795e25bd99d5abc744c41b930c92bb8dc7fcf7a020b6261acdd7154cc87dd9db2d066146248fe7d68851e6a78a4cad2e8b509206c1d2eda8df26e4fe3ac3b239e3f5672fd4399057fc0449f0c965cb1617c4fa94be59229e43a",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        90,
+        75,
+        85
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "judge_ranks_the_author_rhythm_above_generic_ai_prose",
+      "site": "eval_scores",
+      "stamp": "fb7cc7459d3940c77497d9a60a598879287a5d4803a11f94a2619184e525661486fcc04f0909381b3b66ca33dbee3333bc8a57f4fc10a5ce237356cd333ac3f2de8933921dc64500b47c9fb97396b4263e4206cbc80dc34efb1a49d1b7eeaad7",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

@@ -12,6 +12,8 @@ package graph
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"slices"
 	"time"
 
 	"golang.org/x/sync/semaphore"
@@ -30,6 +32,37 @@ const backfillPageSize = 100
 // mailbox. Live sync and a send need requests of their own, so the built-in
 // two leave room for both; a setting may use all four.
 const maxBackfillFetchWorkers = 4
+
+// failedInARowEndsPage ends a page whose messages keep failing one after
+// another: a run of them is almost always the database, not the messages.
+const failedInARowEndsPage = 5
+
+// endsPage reports a failure that belongs to the page, not to one message.
+func endsPage(ctx context.Context, err error) bool {
+	return ctx.Err() != nil ||
+		errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) ||
+		errors.Is(err, connector.ErrRateLimited) || errors.Is(err, connector.ErrAuthRejected) ||
+		errors.Is(err, connector.ErrUnreachable) || errors.Is(err, connector.ErrCursorGone)
+}
+
+// faultOf names the message when a fetch got an HTTP answer in the 5xx range.
+// That is the one error that can be the message's own, when the provider
+// answers for it every time. A transport failure carries no answer and stays
+// an outage.
+func faultOf(id string, err error) error {
+	var pe *connector.ProviderError
+	if errors.As(err, &pe) && pe.Status >= 500 && errors.Is(err, connector.ErrUnreachable) {
+		return &connector.MessageFaultError{ID: id, Err: err}
+	}
+	return err
+}
+
+// stalledFault says the error is a fetch fault of a message the engine
+// asked the page to walk past.
+func stalledFault(err error, skipIDs []string) bool {
+	var mf *connector.MessageFaultError
+	return errors.As(err, &mf) && slices.Contains(skipIDs, mf.ID)
+}
 
 // walk answers the page's page size and its walk, tuned by the installation.
 func (c *Connector) walk() (pageSize int, walk orderedfetch.Walk[[]byte]) {
@@ -85,6 +118,8 @@ func (c *Connector) backfillPageWith(
 		return connector.BackfillPageResult{}, err
 	}
 	pageSize, walk := c.walk()
+	skipIDs := connector.BackfillSkipFrom(ctx)
+	walk.Halts = func(err error) bool { return !errors.Is(err, connector.ErrSkip) && !stalledFault(err, skipIDs) }
 	msgs, next, err := c.api.ListAfter(ctx, access, after, pageToken, pageSize)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
@@ -95,6 +130,7 @@ func (c *Connector) backfillPageWith(
 	// token. Mail outside the synced folders is not counted, as in the estimate.
 	progress := connector.BackfillProgressFrom(ctx)
 	var walked []MessageRef
+	failedInRow := 0
 	for _, msg := range msgs {
 		if _, synced := folders[msg.ParentFolderID]; synced {
 			walked = append(walked, msg)
@@ -104,21 +140,35 @@ func (c *Connector) backfillPageWith(
 		func(ctx context.Context, i int) ([]byte, error) {
 			// Through the folder the listing found it in, so a message moved to
 			// Junk Email since is refused by Graph instead of read.
-			return c.api.GetMIME(ctx, access, walked[i].ParentFolderID, walked[i].ID)
+			raw, err := c.api.GetMIME(ctx, access, walked[i].ParentFolderID, walked[i].ID)
+			return raw, faultOf(walked[i].ID, err)
 		},
 		func(i int, raw []byte, err error) error {
 			msg := walked[i]
 			captured, err := c.backfillOne(ctx, raw, err, msg, sink, owner, folders[msg.ParentFolderID] == folderSent)
-			if err != nil {
+			switch {
+			case err == nil:
+				failedInRow = 0
+			case endsPage(ctx, err) && (ctx.Err() != nil || !stalledFault(err, skipIDs)):
 				return err
+			default:
+				// One message the capture refuses is walked past and counted;
+				// a run of them ends the page, as in the Gmail walk.
+				failedInRow++
+				if failedInRow >= failedInARowEndsPage {
+					return err
+				}
+				res.Failed++
+				slog.WarnContext(ctx, "graph: backfill walked past a message it could not capture",
+					"message", msg.ID, "error_class", "internal", "err", err)
 			}
 			res.Scanned++
 			if captured {
 				res.Captured++
-			} else {
+			} else if err == nil {
 				res.Skipped++
 			}
-			progress.Observed(ctx, res.Scanned, res.Captured, res.Skipped)
+			progress.Observed(ctx, res.Scanned, res.Captured, res.Skipped+res.Failed)
 			return nil
 		})
 	if err != nil {

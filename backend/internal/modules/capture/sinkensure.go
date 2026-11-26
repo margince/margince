@@ -157,6 +157,11 @@ func (d counterpartyDecision) traced(outcome TraceOutcome, reason string) counte
 // classes that do not create are finished here.
 func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, activityID ids.UUID) (counterpartyDecision, error) {
 	cp := rec.Counterparty
+	// A member who chose the subject has said whom the message is about, and
+	// resolving the sender by identity could file it on somebody else.
+	if rec.Counterparty.ChosenSubject() != nil {
+		return counterpartyDecision{}.traced(TraceCaptured, traceReasonChosenSubject), nil
+	}
 	// A channel record takes its own decision (sinkchannel.go) and does not
 	// enter the ladder below: every tier of it reads a mail address or a mail
 	// domain, and its deferral ledger is keyed on the address itself.

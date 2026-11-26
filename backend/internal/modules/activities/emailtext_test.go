@@ -27,7 +27,9 @@ import (
 // below share it, and the shared runner asserts all three fields for every one
 // of them.
 type splitCase struct {
-	name    string
+	name string
+	// subject is the mail's own, empty where the case does not turn on it.
+	subject string
 	body    string
 	main    string
 	trimmed string
@@ -46,7 +48,7 @@ func runSplitCases(t *testing.T, cases []splitCase) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := SplitEmailBody(tc.body)
+			got := SplitEmailBody(tc.body, tc.subject)
 			if got.Main != tc.main {
 				t.Errorf("main:\n got %q\nwant %q", got.Main, tc.main)
 			}
@@ -289,6 +291,106 @@ func TestQuotedHistoryIsTrimmedAndNamedAsOne(t *testing.T) {
 	})
 }
 
+// A forward's first header block opens the forwarded mail, which stays in the
+// message. The same block under a reply's subject is older mail and folds.
+func TestAForwardKeepsTheMailItForwards(t *testing.T) {
+	t.Parallel()
+	runSplitCases(t, []splitCase{
+		{
+			name:    "a German Outlook forward with no forward line keeps the forwarded mail",
+			subject: "WG: Angebot",
+			body:    "Zur Info.\n\nVon: Max Muster <max@kunde.de>\nGesendet: Dienstag, 12. August 2026 09:14\nAn: Lars\nBetreff: Angebot\n\nPasst Dienstag?",
+			main:    "Zur Info.\n\nVon: Max Muster <max@kunde.de>\nGesendet: Dienstag, 12. August 2026 09:14\nAn: Lars\nBetreff: Angebot\n\nPasst Dienstag?",
+		},
+		{
+			name:    "the same block under a reply subject folds",
+			subject: "AW: Angebot",
+			body:    "Zur Info.\n\nVon: Max Muster <max@kunde.de>\nGesendet: Dienstag, 12. August 2026 09:14\nAn: Lars\nBetreff: Angebot\n\nPasst Dienstag?",
+			main:    "Zur Info.",
+			trimmed: "Von: Max Muster <max@kunde.de>\nGesendet: Dienstag, 12. August 2026 09:14\nAn: Lars\nBetreff: Angebot\n\nPasst Dienstag?",
+			tail:    TailQuote,
+		},
+		{
+			name:    "a reply to a forward is a reply",
+			subject: "Re: Fwd: Angebot",
+			body:    "Gut, dann so.\n\nFrom: Max Muster\nSent: Tuesday, 12 August 2026\nTo: Lars\n\nPasst Dienstag?",
+			main:    "Gut, dann so.",
+			trimmed: "From: Max Muster\nSent: Tuesday, 12 August 2026\nTo: Lars\n\nPasst Dienstag?",
+			tail:    TailQuote,
+		},
+		{
+			name:    "a Gmail forward line and its sender block stay in the message",
+			subject: "Fwd: Angebot",
+			body:    "Siehe unten.\n\n---------- Forwarded message ---------\nFrom: Max Muster <max@kunde.de>\nDate: Tue, 12 Aug 2026 09:14\nSubject: Angebot\nTo: Lars\n\nPasst Dienstag?",
+			main:    "Siehe unten.\n\n---------- Forwarded message ---------\nFrom: Max Muster <max@kunde.de>\nDate: Tue, 12 Aug 2026 09:14\nSubject: Angebot\nTo: Lars\n\nPasst Dienstag?",
+		},
+		{
+			name:    "an Apple Mail forward keeps the block under its blank line",
+			subject: "Fwd: Angebot",
+			body:    "FYI\n\nBegin forwarded message:\n\nFrom: Max Muster <max@kunde.de>\nSubject: Angebot\nDate: 12 August 2026\nTo: Lars\n\nPasst Dienstag?",
+			main:    "FYI\n\nBegin forwarded message:\n\nFrom: Max Muster <max@kunde.de>\nSubject: Angebot\nDate: 12 August 2026\nTo: Lars\n\nPasst Dienstag?",
+		},
+		{
+			name:    "an Outlook divider over the forwarded block stays with it",
+			subject: "WG: Angebot",
+			body:    "Zur Info.\n\n________________________________\nVon: Max Muster\nGesendet: Dienstag\nAn: Lars\n\nPasst Dienstag?",
+			main:    "Zur Info.\n\n________________________________\nVon: Max Muster\nGesendet: Dienstag\nAn: Lars\n\nPasst Dienstag?",
+		},
+		{
+			name:    "the history the forwarded mail quotes still folds",
+			subject: "WG: Angebot",
+			body:    "Zur Info.\n\nVon: Max Muster\nGesendet: Dienstag\nAn: Lars\n\nPasst Dienstag?\n\nVon: Lars\nGesendet: Montag\nAn: Max Muster\n\nWann passt es?",
+			main:    "Zur Info.\n\nVon: Max Muster\nGesendet: Dienstag\nAn: Lars\n\nPasst Dienstag?",
+			trimmed: "Von: Lars\nGesendet: Montag\nAn: Max Muster\n\nWann passt es?",
+			tail:    TailQuote,
+		},
+		{
+			name:    "a forward with no note of its own opens on the forwarded block",
+			subject: "FW: Angebot",
+			body:    "Von: Max Muster\nGesendet: Dienstag\nAn: Lars\n\nPasst Dienstag?\n\nVon: Lars\nGesendet: Montag\nAn: Max Muster\n\nWann passt es?",
+			main:    "Von: Max Muster\nGesendet: Dienstag\nAn: Lars\n\nPasst Dienstag?",
+			trimmed: "Von: Lars\nGesendet: Montag\nAn: Max Muster\n\nWann passt es?",
+			tail:    TailQuote,
+		},
+		{
+			name:    "a quote right under the forwarded block still folds",
+			subject: "FW: Pricing",
+			body:    "FYI\n\nFrom: Dana\nSent: Monday\nTo: Sales\nTerms.\n> Earlier message",
+			main:    "FYI\n\nFrom: Dana\nSent: Monday\nTo: Sales\nTerms.",
+			trimmed: "> Earlier message",
+			tail:    TailQuote,
+		},
+		{
+			name:    "an inline reply in the note does not hide the forwarded mail",
+			subject: "FW: Pricing",
+			body:    "Regarding this:\n> Please send the terms\nHere they are.\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nNet thirty.",
+			main:    "Regarding this:\n> Please send the terms\nHere they are.\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nNet thirty.",
+		},
+		{
+			name:    "a second header right under the forwarded block opens the history",
+			subject: "FW: Pricing",
+			body:    "FYI\n\nFrom: Dana\nSent: Monday\nTo: Sales\nTerms.\nFrom: Sales\nSent: Friday\nTo: Dana\nOld terms.",
+			main:    "FYI\n\nFrom: Dana\nSent: Monday\nTo: Sales\nTerms.",
+			trimmed: "From: Sales\nSent: Friday\nTo: Dana\nOld terms.",
+			tail:    TailQuote,
+		},
+		{
+			name:    "a sign-off above the forwarded block closes only the note",
+			subject: "FW: Pricing",
+			body:    "FYI\n\nBest regards\nAlice\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nTerms.",
+			main:    "FYI\n\nBest regards\nAlice\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nTerms.",
+		},
+		{
+			name:    "a quote marker in a forward still folds",
+			subject: "Fwd: Angebot",
+			body:    "Ja, passt.\n\n> Passt Dienstag?",
+			main:    "Ja, passt.",
+			trimmed: "> Passt Dienstag?",
+			tail:    TailQuote,
+		},
+	})
+}
+
 // The boundary the search value is cut at. An inline answer stays in the
 // message; quoted mail folds only when nothing follows it.
 func TestOnlyQuotedEarlierMailLeavesTheMessage(t *testing.T) {
@@ -334,7 +436,7 @@ func TestEmailSummaryTextIsOneLineOfTheSendersOwnWords(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := EmailSummaryText(tc.body); got != tc.want {
+			if got := EmailSummaryText(tc.body, ""); got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})

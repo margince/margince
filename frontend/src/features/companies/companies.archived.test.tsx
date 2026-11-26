@@ -26,7 +26,7 @@ afterEach(() => {
 
 const archived = {
   ...company,
-  lifecycle: "customer",
+  status: "customer",
   writable: false,
   archived_at: "2026-07-14T09:00:00Z",
 };

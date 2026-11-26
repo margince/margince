@@ -3,8 +3,14 @@
 
 import { useId } from "react";
 import type { MessageKey } from "../i18n/en";
-import { useCanWrite } from "../lib/capability";
+import {
+  type RbacObject,
+  useGrantRefused,
+  useWriteBlock,
+  type WriteBlock,
+} from "../lib/capability";
 import { useMe } from "../lib/session";
+import { WRITE_BLOCK_REFUSAL } from "../lib/writerefusal";
 import type { WritingMomentVerb } from "../lib/writeverbs";
 
 /**
@@ -41,24 +47,50 @@ export function writableTarget(
     : record;
 }
 
+/**
+ * Gates the activity verbs on a record of kind `object`. Blaming the role
+ * needs a role that may not change that record either; one that may is only
+ * missing this action.
+ */
 export function useActivityGate(
+  object: RbacObject,
   record?: AttachTarget | null,
-  permissionRefusal: MessageKey = "record.logActivityRefused",
 ): ActivityGate {
-  // useCanWrite, not useCan: Log and Add task issue the same POST, and a read
-  // seat is refused before RBAC is consulted.
+  // Log, Add task and Book issue the same POST, and a read seat is refused
+  // before RBAC is consulted.
   const me = useMe();
-  const canLog = useCanWrite("activity", "create");
+  const block = useWriteBlock(object);
+  const writeRefused = useGrantRefused({
+    object: "activity",
+    action: "create",
+  });
   const sentenceId = useId();
   const known = me.data?.authorization !== undefined;
-  const refusalKey =
-    known && !canLog ? permissionRefusal : attachRefusal(record);
+  const refusalKey = activityRefusal(block, writeRefused, record);
   return {
     refusedId: refusalKey ? sentenceId : undefined,
     refusalKey,
     pending: !known || record === null,
     sentenceId,
   };
+}
+
+function activityRefusal(
+  block: WriteBlock | undefined,
+  writeRefused: boolean,
+  record: AttachTarget | null | undefined,
+): MessageKey | undefined {
+  const attach = attachRefusal(record);
+  if (block === "seat") {
+    return WRITE_BLOCK_REFUSAL.seat;
+  }
+  if (!writeRefused && !attach) {
+    return undefined;
+  }
+  if (block === "role") {
+    return WRITE_BLOCK_REFUSAL.role;
+  }
+  return writeRefused ? "record.actionRefused" : attach;
 }
 
 function attachRefusal(
@@ -79,5 +111,5 @@ export function useWritingVerbOffered(
   _verb: WritingMomentVerb,
   contact?: AttachTarget,
 ): boolean {
-  return useActivityGate(contact).refusalKey === undefined;
+  return useActivityGate("contact", contact).refusalKey === undefined;
 }

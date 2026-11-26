@@ -176,7 +176,7 @@ describe("what the editor opens on", () => {
     renderFields([field({})]);
 
     await user.click(await screen.findByRole("button", { name: "Edit" }));
-    const input = screen.getByRole("textbox", { name: "Title" });
+    const input = screen.getByRole("textbox", { name: "Job title" });
     await user.clear(input);
     await user.type(input, "Typed by mistake");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
@@ -203,8 +203,8 @@ describe("what the editor opens on", () => {
     const { show } = renderFields([field({})]);
 
     await user.click(await screen.findByRole("button", { name: "Edit" }));
-    expect(screen.getByRole("dialog", { name: "Title" })).toBeTruthy();
-    const input = screen.getByRole("textbox", { name: "Title" });
+    expect(screen.getByRole("dialog", { name: "Job title" })).toBeTruthy();
+    const input = screen.getByRole("textbox", { name: "Job title" });
     await user.clear(input);
     await user.type(input, "Head of Purchasing");
 
@@ -247,7 +247,7 @@ describe("an emptied correction", () => {
     renderFields([field({})]);
 
     await user.click(await screen.findByRole("button", { name: "Edit" }));
-    const input = screen.getByRole("textbox", { name: "Title" });
+    const input = screen.getByRole("textbox", { name: "Job title" });
     await user.clear(input);
     const posts = vi.fn();
     vi.stubGlobal(
@@ -261,7 +261,7 @@ describe("an emptied correction", () => {
     );
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(screen.getByText("Title is required.")).toBeTruthy();
+    expect(screen.getByText("Job title is required.")).toBeTruthy();
     expect(document.activeElement).toBe(input);
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(posts).not.toHaveBeenCalled();

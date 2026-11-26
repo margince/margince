@@ -64,7 +64,7 @@ func TestALogoIsHeldByAUsersAgentAndNotByAutomaticWork(t *testing.T) {
 			ctx := e.as()
 			companyID := seedLogoCompany(ctx, t, e, "Nordwind Energie AG", "nordwind.test")
 			if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-				if _, err := tx.Exec(ctx, `UPDATE company SET logo_object_key = 'k', logo_origin = 'upload' WHERE id = $1`, companyID); err != nil {
+				if _, err := tx.Exec(ctx, `UPDATE company SET logo_object_key = 'k', logo_source = 'upload' WHERE id = $1`, companyID); err != nil {
 					return err
 				}
 				return storekit.StampFields(ctx, tx, "company", companyID.UUID, CompanySourceAgent, stamp,

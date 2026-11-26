@@ -39,7 +39,7 @@ const company: Company = {
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
   legal_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   owner_id: "u-1",
   // The reader may change this account, which is the header's ordinary state
   // and the one its editable pieces (stage, owner) are drawn in. Absent reads
@@ -117,7 +117,7 @@ const roster = [
 // The strip and its menu share the page's activity gate, read inside the
 // providers the way the page reads it.
 function HeaderVerbs({ record }: Readonly<{ record: Company }>) {
-  const activity = useActivityGate();
+  const activity = useActivityGate("company");
   return (
     <>
       <CompanyHeaderActions

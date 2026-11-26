@@ -159,7 +159,7 @@ func runeStartAtOrBefore(text string, offset int) int {
 	if offset > len(text) {
 		offset = len(text)
 	}
-	for back := 0; back < utf8.UTFMax && offset-back > 0; back++ {
+	for back := 0; back < utf8.UTFMax && offset-back >= 0; back++ {
 		if utf8.RuneStart(text[offset-back]) {
 			return offset - back
 		}

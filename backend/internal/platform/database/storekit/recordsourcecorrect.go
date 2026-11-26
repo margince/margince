@@ -20,6 +20,14 @@ const (
 	recordSourceRunKey = "data_task_run"
 )
 
+// RecordSourceCorrectionSQL tests that the audit row aliased alias is one a
+// source correction wrote. It moved no field a member typed, so a reader asking
+// whether somebody worked on the record leaves it out.
+func RecordSourceCorrectionSQL(alias string) string {
+	return "(coalesce(" + alias + ".evidence, '{}'::jsonb) ? '" + recordSourceRunKey + "' AND " +
+		alias + ".after - '" + RecordSourceField + "' = '{}'::jsonb)"
+}
+
 // RecordSourceCorrection is one row a source correction moved, with the audit
 // row that keeps the value it replaced.
 type RecordSourceCorrection struct {

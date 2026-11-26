@@ -187,12 +187,12 @@ func roleMailboxListsIn(t *testing.T, roots ...string) []string {
 			if strings.Contains(filepath.ToSlash(path), roleMailboxOwner) {
 				continue
 			}
-			raw, err := gatekit.ReadFile(path)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
-				t.Fatalf("read %s: %v", path, err)
+				t.Fatalf("parse %s: %v", path, err)
 			}
 			scanned++
-			found = append(found, roleMailboxListsInSource(t, path, string(raw))...)
+			found = append(found, roleMailboxListsInFile(path, file)...)
 		}
 	}
 	// A census that read nothing cannot tell a clean tree from a broken walk.
@@ -207,11 +207,15 @@ func roleMailboxListsIn(t *testing.T, roots ...string) []string {
 // composite literal in one source file naming two or more DISTINCT role tokens.
 func roleMailboxListsInSource(t *testing.T, name, code string) []string {
 	t.Helper()
-	fset := gatekit.SourceFileSet()
-	file, err := parser.ParseFile(fset, name, code, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), name, code, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", name, err)
 	}
+	return roleMailboxListsInFile(name, file)
+}
+
+func roleMailboxListsInFile(name string, file *ast.File) []string {
+	fset := gatekit.SourceFileSet()
 	// Constants declared in this file, resolved to a fixed point so that
 	// `const a = "support"; const b = a` cannot hide a list behind one
 	// indirection. Same reasoning, and the same helper, as the consumer-mail

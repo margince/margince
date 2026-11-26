@@ -109,7 +109,7 @@ func RecordTagInterestAnswersTx(ctx context.Context, tx pgx.Tx, vocabulary strin
 			   FOR SHARE OF a
 			ON CONFLICT (activity_id) DO UPDATE
 			   SET vocabulary_digest = EXCLUDED.vocabulary_digest, content_digest = EXCLUDED.content_digest,
-			       tag_ids = EXCLUDED.tag_ids, read_at = now()`,
+			       tag_ids = EXCLUDED.tag_ids`,
 			answer.ActivityID, vocabulary, answer.ContentDigest, tags); err != nil {
 			return fmt.Errorf("collections: recording what the tag suggestion model read: %w", err)
 		}

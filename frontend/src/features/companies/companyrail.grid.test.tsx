@@ -65,7 +65,7 @@ describe("the details' Edit links", () => {
     stub();
     renderRail();
     const about = await openSection(userEvent.setup(), "About");
-    for (const name of [/^Industry/, /^Employees/, /^Lifecycle/]) {
+    for (const name of [/^Industry/, /^Company size/, /^Lifecycle/]) {
       expect(within(about).getByRole("combobox", { name })).toBeVisible();
     }
     expect(within(about).queryByLabelText("City")).toBeNull();
@@ -134,13 +134,13 @@ describe("CompanyRail", () => {
     };
     renderRail({ view: view({ company: bare }) });
     expect(screen.queryByText("Industry")).toBeNull();
-    expect(screen.queryByText("Employees")).toBeNull();
+    expect(screen.queryByText("Company size")).toBeNull();
 
     await userEvent.click(
       screen.getByRole("button", { name: /^Show \d+ empty fields$/ }),
     );
     expect(screen.getByText("Industry")).toBeVisible();
-    expect(screen.getByText("Employees")).toBeVisible();
+    expect(screen.getByText("Company size")).toBeVisible();
     expect(screen.getByRole("region", { name: "Address" })).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Hide empty fields" }),
@@ -299,7 +299,7 @@ describe("CompanyRail", () => {
     );
     await user.click(within(about).getByRole("button", { name: "Save" }));
     await waitFor(() =>
-      expect(patchBody).toMatchObject({ lifecycle: "prospect" }),
+      expect(patchBody).toMatchObject({ status: "prospect" }),
     );
   });
 

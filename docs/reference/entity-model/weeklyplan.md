@@ -6,7 +6,7 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 
 ## weekly_plan
 
-12 columns · primary key `(id)` · referenced by 1 foreign key
+11 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -20,7 +20,6 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 | `status` | `text`, default `'open'::text` | yes | `closed` once the weekly job has settled the week and frozen its outcome into the review. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
@@ -52,7 +51,7 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 
 ## weekly_plan_commitment
 
-23 columns · primary key `(id)` · referenced by 0 foreign keys
+22 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -77,7 +76,6 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 | `state` | `text`, default `'open'::text` | yes | `missed` is written by the week's close over a commitment left open; a rep settles their own as done or dropped. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**

@@ -108,7 +108,7 @@ func (s *Store) updateProjectInTx(
 	if err := refuseMovedTargetEnd(current, in); err != nil {
 		return crmcontracts.Project{}, err
 	}
-	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+	if err := storekit.SetCustomFieldPatchIn(ctx, tx, p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return crmcontracts.Project{}, err
 	}
 	if p.Empty() {

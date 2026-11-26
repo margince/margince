@@ -46,7 +46,7 @@ func TestAStageNamesItselfPerLanguage(t *testing.T) {
 		t.Errorf("the names-only save did not audit the names: before %v, after %v", before, image)
 	}
 
-	renamed := "Won"
+	renamed := "Signed"
 	after, err := e.store.UpdateStage(ctx, id, UpdateStageInput{Name: &renamed})
 	if err != nil {
 		t.Fatal(err)

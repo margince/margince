@@ -19,7 +19,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const REFUSED = "You do not have permission to add tasks";
+const REFUSED =
+  "Your role can only read. Ask an administrator for another role.";
 
 it("draws a refused next step with the server's reason and writes no task", async () => {
   const three60 = {

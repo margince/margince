@@ -157,6 +157,16 @@
   outline-offset: 2px;
 }
 
+/* A chip that opens a panel is a button, which brings its own type and cursor. */
+button.chip {
+  font: inherit;
+  cursor: pointer;
+}
+button.chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Same shape as the file chip it sits beside, so the same answer. */
 .chip-link {
   transition:
@@ -310,7 +320,6 @@
   column-gap: normal;
   align-items: center;
   width: 100%;
-  text-align: start;
   color: inherit;
   text-decoration: none;
 }

@@ -52,7 +52,7 @@ const unknownSourceLabel = "an unrecognized tool"
 // relabelled because its author's authority narrowed afterwards — see
 // windowFromSnapshot.
 func sourceVocabulary(specs []mcp.ToolSpec) map[string]bool {
-	known := map[string]bool{outputValidatorSource: true}
+	known := map[string]bool{outputValidatorSource: true, outcomeCheckSource: true}
 	for _, spec := range specs {
 		known[spec.Name] = true
 	}

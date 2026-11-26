@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // Connector is the seam every integration implements, registered in the
@@ -485,9 +486,8 @@ type NaturalKey struct {
 const EmailSourceSystem = "email"
 
 // ExtensionSourceSystemPrefix namespaces every record an extension unit lands,
-// so a unit can never spell a core connector's identity. Spelled here because
-// compose WRITES it onto a unit's records and capture's admit check READS it.
-const ExtensionSourceSystemPrefix = "ext:"
+// so a unit can never spell a core connector's identity.
+const ExtensionSourceSystemPrefix = extension.QualifiedPrefix
 
 type (
 	Cursor    []byte // opaque incremental-sync watermark

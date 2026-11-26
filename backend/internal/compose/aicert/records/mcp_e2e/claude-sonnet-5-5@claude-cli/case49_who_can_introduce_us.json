@@ -7,32 +7,37 @@
     4
   ],
   "passed": 2,
-  "runs": 2,
+  "runs": 3,
   "pass_at": 2,
   "driver": "claude:cli",
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
   "stamp": {
     "scenario": "487ee84b288294dd",
-    "tools": "2fab8ff230a8b4aa",
-    "instructions": "c5c644eee9719be0",
+    "tools": "0e5e6706a36a491d",
+    "instructions": "d707a123fe53827f",
     "judge": "claude-haiku-5-5",
-    "harness": "024566e70b0c3db3",
-    "commit": "a5805302daaf514720917d1768dd8ecc376bee69",
-    "ran_at": "2026-11-22T09:53:23Z",
-    "graded_commit": "43efe5d1f04ce6aea932838d625278cfa438cc2f",
-    "graded_at": "2026-11-22T15:29:41Z"
+    "harness": "0fe690d35efcc703",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "63922f0d5214101ce8fd648757b5dce3558da74d",
+    "ran_at": "2026-11-26T03:23:57Z",
+    "graded_commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "graded_at": "2026-11-26T04:00:48Z"
   },
   "usage": {
-    "input_tokens": 24,
-    "output_tokens": 6292,
-    "cache_creation_input_tokens": 183766,
-    "cache_read_input_tokens": 1164515,
-    "runs_measured": 2,
-    "runs_costed": 2,
-    "cost_usd": 0.9145
+    "input_tokens": 26,
+    "output_tokens": 7665,
+    "cache_creation_input_tokens": 134792,
+    "cache_read_input_tokens": 1162035,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.7321
   },
   "tools_by_run": [
     {
@@ -42,20 +47,23 @@
         "find_records",
         "list_records",
         "read_attention",
+        "read_record",
         "read_relationships",
         "read_reporting",
         "read_reports",
         "search_context",
         "search_records",
         "whats_slipping_this_week"
+      ],
+      "refused": [
+        "find_records"
       ]
     },
     {
-      "passed": true,
+      "passed": false,
       "tools": [
         "at_risk_relationships",
         "find_records",
-        "list_records",
         "read_attention",
         "read_relationships",
         "read_reporting",
@@ -63,40 +71,65 @@
         "search_context",
         "search_records",
         "whats_slipping_this_week"
+      ],
+      "refused": [
+        "find_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "find_records",
+        "read_attention",
+        "read_relationships",
+        "read_reporting",
+        "read_reports",
+        "search_context",
+        "search_records",
+        "whats_slipping_this_week"
+      ],
+      "refused": [
+        "find_records"
       ]
     }
   ],
   "efficiency": {
-    "runs": 2,
+    "runs": 3,
     "calls": {
-      "median": 12.5,
-      "min": 12,
-      "max": 13
+      "median": 9,
+      "min": 8,
+      "max": 12
     },
     "turns": {
-      "median": 13.5,
-      "min": 13,
-      "max": 14
+      "median": 10,
+      "min": 9,
+      "max": 13
     },
     "refused": {
-      "median": 4,
-      "min": 4,
-      "max": 4
+      "median": 1,
+      "min": 1,
+      "max": 2
+    },
+    "retries": {
+      "median": 1,
+      "min": 1,
+      "max": 2
     },
     "prompt_tokens": {
-      "median": 674152.5,
-      "min": 646348,
-      "max": 701957
+      "median": 388877,
+      "min": 275221,
+      "max": 632755
     },
     "output_tokens": {
-      "median": 3146,
-      "min": 2910,
-      "max": 3382
+      "median": 2134,
+      "min": 2114,
+      "max": 3417
     },
     "duration_ms": {
-      "median": 35322.5,
-      "min": 33207,
-      "max": 37438
+      "median": 33344,
+      "min": 19679,
+      "max": 90190
     }
   }
 }

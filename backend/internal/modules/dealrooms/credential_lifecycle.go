@@ -52,11 +52,11 @@ func issueCredentialFor(ctx context.Context, tx pgx.Tx, participantID ids.DealRo
 	// unique constraint on (participant_id, attempt_no) refuses the loser.
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO deal_room_invitation
-		     (participant_id, attempt_no, token_hash, expires_at, source, captured_by)
+		     (participant_id, attempt_no, token_hash, expires_at, captured_by)
 		 VALUES ($1,
 		         (SELECT coalesce(max(attempt_no), 0) + 1 FROM deal_room_invitation WHERE participant_id = $1),
-		         $2, $3, $4, $5)`,
-		participantID, digest, expiresAt, sourceCredential, by); err != nil {
+		         $2, $3, $4)`,
+		participantID, digest, expiresAt, by); err != nil {
 		if storekit.IsUniqueViolation(err) {
 			// Another resend for this participant committed between our
 			// supersede and our insert. Reported as a conflict rather than
@@ -69,8 +69,8 @@ func issueCredentialFor(ctx context.Context, tx pgx.Tx, participantID ids.DealRo
 	return expiresAt, nil
 }
 
-// sourceCredential is the provenance every invitation row carries: the server
-// minted it, no import or connector did.
+// sourceCredential is the provenance of a row the server minted for a room
+// visitor: a preview seat, or a buyer's thread. No import or connector did.
 const sourceCredential = "system"
 
 // invitingUser is the human recorded as having admitted the participant, or nil
@@ -110,25 +110,17 @@ func (s *Store) RecordInvitationSend(ctx context.Context, participantID ids.Deal
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		var reason *string
 		column := "sent_at"
 		if sendErr != nil {
 			column = "failed_at"
-			// The relay's own words, bounded: a reason is for a seller to read,
-			// not a place to accumulate a stack trace.
-			text := sendErr.Error()
-			if len(text) > failureReasonLimit {
-				text = text[:failureReasonLimit]
-			}
-			reason = &text
 		}
 		// The column is a compile-time literal chosen by the branch above, never
 		// a value off a request.
 		if _, err := tx.Exec(ctx,
-			`UPDATE deal_room_invitation SET `+column+` = now(), failure_reason = $2
-			  WHERE participant_id = $1 AND token_hash = $3
+			`UPDATE deal_room_invitation SET `+column+` = now()
+			  WHERE participant_id = $1 AND token_hash = $2
 			    AND consumed_at IS NULL AND superseded_at IS NULL`,
-			participantID, reason, digestOfCredential(credential)); err != nil {
+			participantID, digestOfCredential(credential)); err != nil {
 			return fmt.Errorf("record deal room invitation delivery: %w", err)
 		}
 		return nil
@@ -157,6 +149,3 @@ func (s *Store) InvitationMailable(ctx context.Context, credential, email string
 	}
 	return current == email, nil
 }
-
-// failureReasonLimit bounds what a relay's refusal may write into the row.
-const failureReasonLimit = 500

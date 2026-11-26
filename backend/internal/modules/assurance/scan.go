@@ -30,6 +30,7 @@ type Scanner struct {
 	store    *Store
 	signals  SignalSubjectsFunc
 	calls    CallSubjectsFunc
+	pairs    PairSubjectsFunc
 	subjects SubjectsFunc
 	// dealSubjects reads one deal, for a pass queued because it changed.
 	dealSubjects DealSubjectsFunc
@@ -199,6 +200,9 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time) (Result, error) {
 		if err == nil {
 			err = s.askCalls(ctx, tx, now, &pass)
 		}
+		if err == nil {
+			err = s.askPairs(ctx, tx, now, nil, &pass)
+		}
 		if err != nil {
 			out.Status = StatusIncomplete
 			out.Readiness = ReadinessChecksIncomplete
@@ -242,6 +246,16 @@ func (s *Scanner) closeAbsent(ctx context.Context, tx pgx.Tx, coverage []SourceC
 		return err
 	}
 	out.Cleared = cleared
+	if s.pairs != nil {
+		// Pair findings are not a rule's, so clearableTypes never names them,
+		// and a one-deal pass that never read the pairs must not close them.
+		// Only a full pass that read them says a pair is gone.
+		pairs, err := s.store.CloseCleared(ctx, tx, []string{TypeDuplicateMotion}, pass.deals, pass.seen)
+		if err != nil {
+			return err
+		}
+		out.Cleared += pairs
+	}
 	for _, sweep := range []struct {
 		wired bool
 		fn    func(context.Context, pgx.Tx, []string) (int64, error)

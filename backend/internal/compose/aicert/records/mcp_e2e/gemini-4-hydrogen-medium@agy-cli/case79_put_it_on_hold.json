@@ -3,8 +3,8 @@
   "criteria": [
     1
   ],
-  "passed": 2,
-  "runs": 2,
+  "passed": 3,
+  "runs": 3,
   "pass_at": 2,
   "driver": "gemini:cli",
   "effort": "reasoning medium",
@@ -12,22 +12,26 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "64c7b268b90c0197",
-    "tools": "d3489e3d05911ae2",
-    "instructions": "c5c644eee9719be0",
-    "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
-    "ran_at": "2026-11-21T19:18:47Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:34:28Z"
+    "scenario": "ee53990341e38099",
+    "tools": "60f6d8a3a7cc3485",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T10:28:01Z",
+    "graded_commit": "8d1a2e3f3d0e19ca67b1a23f47f3c2d8686628c3",
+    "graded_at": "2026-11-25T10:49:55Z"
   },
   "usage": {
-    "input_tokens": 50420,
-    "output_tokens": 9275,
+    "input_tokens": 73385,
+    "output_tokens": 18478,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 159682,
-    "runs_measured": 2,
+    "cache_read_input_tokens": 186777,
+    "runs_measured": 3,
     "runs_costed": 0,
     "cost_usd": null
   },
@@ -36,15 +40,13 @@
       "passed": true,
       "tools": [
         "catch_me_up_on",
-        "change_compliance",
         "describe_router_actions",
         "find_records",
         "list_legal_holds",
-        "place_legal_hold",
         "read_context",
-        "read_record",
         "read_workspace",
-        "search_records"
+        "search_records",
+        "whoami"
       ]
     },
     {
@@ -62,34 +64,48 @@
         "search_records",
         "whoami"
       ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "list_legal_holds",
+        "list_records",
+        "read_context",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
     }
   ],
   "efficiency": {
-    "runs": 2,
+    "runs": 3,
     "calls": {
-      "median": 8.5,
-      "min": 8,
+      "median": 9,
+      "min": 6,
       "max": 9
     },
     "turns": {
-      "median": 7.5,
-      "min": 7,
+      "median": 6,
+      "min": 5,
       "max": 8
     },
     "refused": {
-      "median": 0,
+      "median": 1,
       "min": 0,
-      "max": 0
+      "max": 1
     },
     "prompt_tokens": {
-      "median": 105051,
-      "min": 95489,
-      "max": 114613
+      "median": 80042,
+      "min": 62396,
+      "max": 117724
     },
     "output_tokens": {
-      "median": 4637.5,
-      "min": 4604,
-      "max": 4671
+      "median": 5656,
+      "min": 5092,
+      "max": 7730
     }
   }
 }

@@ -73,7 +73,7 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, owners MeasurableOwner
 // expansion cannot make an originally private edition public.
 func editionPublishedToReader(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	var b bindings
-	audience, err := audienceClause(ctx, &b)
+	audience, err := audienceClause(ctx, b.add)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (s *Service) ListEditions(ctx context.Context, reportID ids.UUID, after *id
 			return err
 		}
 		var b bindings
-		audience, err := audienceClause(ctx, &b)
+		audience, err := audienceClause(ctx, b.add)
 		if err != nil {
 			return err
 		}

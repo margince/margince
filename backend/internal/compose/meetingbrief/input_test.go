@@ -116,7 +116,7 @@ func TestAttendeeRoleIsShownOnlyWhenBuiltIn(t *testing.T) {
 	}{
 		{"contact", "en", "", "Anna Berg, CFO"},
 		{"Key contact", "de", "", "Anna Berg, CFO"},
-		{" Champion ", "de", "champion", "Anna Berg, CFO, Fürsprecher"},
+		{" Champion ", "de", "champion", "Anna Berg, CFO, Champion"},
 		{"economic_buyer", "en", "economic_buyer", "Anna Berg, CFO, economic buyer"},
 	}
 	for _, c := range cases {

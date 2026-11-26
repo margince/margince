@@ -46,9 +46,9 @@ func foldPairsSQL(advanceSnapshot bool) string {
 		)
 		INSERT INTO graph_interaction_edge AS e
 		    (user_id, contact_id, last_at, last_inbound_at, last_outbound_at, last_met_at,
-		     count_90d, in_count_90d, out_count_90d, sent_count_90d, late_count_90d, late_out_count_90d, count_total, computed_at, read_snapshot)
+		     count_90d, in_count_90d, out_count_90d, sent_count_90d, late_count_90d, late_out_count_90d, count_total, read_snapshot)
 		SELECT f.user_id, f.contact_id, f.last_at, f.last_inbound_at, f.last_outbound_at, f.last_met_at,
-		       f.count_90d, f.in_90d, f.out_90d, f.sent_90d, f.late_90d, f.late_out_90d, f.count_total, now(), pg_current_snapshot()
+		       f.count_90d, f.in_90d, f.out_90d, f.sent_90d, f.late_90d, f.late_out_90d, f.count_total, pg_current_snapshot()
 		  FROM folded f
 		 ORDER BY f.user_id, f.contact_id
 		ON CONFLICT (user_id, contact_id) DO UPDATE SET

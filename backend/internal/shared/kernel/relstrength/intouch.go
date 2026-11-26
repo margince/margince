@@ -174,6 +174,13 @@ func WorkspaceAudienceSQL(alias string) string {
 	return threadverdict.WorkspaceAudienceSQL(alias)
 }
 
+// VisibleToAllSQL admits an activity every member may read. A check runs as the
+// system and its answer reaches every reader, so a limited or restricted
+// message must not move it.
+func VisibleToAllSQL(alias string) string {
+	return "(" + WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL)"
+}
+
 // How an account's contact stands, by what made it so.
 const (
 	InTouchWrote  = "wrote"  // they wrote to us inside InTouchDays

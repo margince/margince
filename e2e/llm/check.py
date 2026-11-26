@@ -89,6 +89,7 @@ import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import calllog  # noqa: E402  — the server's record of a run's calls
 import judge  # noqa: E402  — the semantic half, imported after its directory is on the path
 
 # The head of the problem a judged criterion reports. Named rather than spelled
@@ -131,6 +132,15 @@ def checked_path(path):
 
 def _open_checked(path):
     return open(checked_path(path), encoding="utf-8")
+
+
+def server_calls(transcript_path):
+    """The run's tool calls as the server recorded them, or None when the lane
+    cut no call log beside this transcript (the REST door has none)."""
+    path = calllog.path_for(transcript_path)
+    if not os.path.exists(path):
+        return None
+    return calllog.read(checked_path(path))
 
 
 # Every key a scenario may carry, and its shape. A key outside this table is a
@@ -456,6 +466,22 @@ def read_run(path):
             elif block.get("type") == "text":
                 said.append(block.get("text", ""))
 
+    # The server's record, where there is one, decides which calls reached it
+    # and how each was answered; the transcript keeps the prose.
+    server = server_calls(path)
+    if server is not None:
+        # An attempt the server never received still counts as one, so a
+        # forbidding check reads it; it is a refused call.
+        unreceived = _unreceived(attempts, server)
+        attempts, failed, results = [], {}, {}
+        for index, record in enumerate(server):
+            attempts.append((index, record.get("tool", ""), record.get("arguments") or {}))
+            failed[index] = not calllog.worked(record) and not staged(record.get("answer"))
+            results[index] = record.get("answer") or ""
+        for index, (_, name, arguments) in enumerate(unreceived):
+            attempts.append((("client", index), name, arguments))
+            failed[("client", index)] = True
+
     routes = load_routes()
     called, calls, worked, refused, answers = [], [], [], [], []
     for call_id, name, arguments in attempts:
@@ -474,6 +500,18 @@ def read_run(path):
         if call_id in results:
             answers += [(each, results[call_id]) for each, _ in both]
     return Run(called, "\n".join(said), calls, final, worked, refused, answers)
+
+
+def _unreceived(attempts, server):
+    """The transcript's attempts that no server record answers, matched by bare
+    tool name and arguments, one record each."""
+    left = list(attempts)
+    for record in server:
+        for at, (_, name, arguments) in enumerate(left):
+            if name.rsplit("__", 1)[-1] == record.get("tool") and (arguments or {}) == (record.get("arguments") or {}):
+                del left[at]
+                break
+    return left
 
 
 # A confirm-first write comes back as an error that staged it for a human, or
@@ -600,13 +638,14 @@ WorkedOut = collections.namedtuple("WorkedOut", "criterion answer problems")
 
 
 def tools_by_run(paths, passing):
-    """Each run's tools whose call worked, by bare name, and whether the run
-    passed. The coverage page counts only a passing run's tools as driven."""
+    """Each run's tools whose call worked and those it had refused, by bare name,
+    and whether the run passed. The coverage page counts only a passing run's
+    worked tools as driven."""
     runs = []
     for path in paths:
         if os.path.exists(path):
             tools = sorted({name.rsplit("__", 1)[-1] for name, _ in read_run(path).worked})
-            runs.append({"passed": path in passing, "tools": tools})
+            runs.append({"passed": path in passing, "tools": tools, "refused": refused_tools(path)})
     return runs
 
 
@@ -898,7 +937,10 @@ def read_effort(path):
     calls would read as the most direct run of all. A key the transcript does
     not carry is absent, never 0.
     """
-    calls, refused, result = 0, 0, None
+    calls, refused, retries, result = 0, 0, 0, None
+    # A retry is the same call made again after it was refused, so a model that
+    # learns from one refusal scores one retry, and one that keeps trying scores more.
+    asked, refused_calls = {}, set()
     with _open_checked(path) as handle:
         for line in handle:
             try:
@@ -914,11 +956,23 @@ def read_effort(path):
                     continue
                 if block.get("type") == "tool_use":
                     calls += 1
+                    call = _call_key(block)
+                    asked[block.get("id")] = call
+                    if call in refused_calls:
+                        retries += 1
+                        refused_calls.discard(call)
                 elif block.get("type") == "tool_result" and _refused_result(block):
                     refused += 1
+                    refused_calls.add(asked.get(block.get("tool_use_id")))
     if result is None:
         return None
-    effort = {"calls": calls, "refused": refused}
+    effort = {"calls": calls, "refused": refused, "retries": retries}
+    server = server_calls(path)
+    if server is not None:
+        # Attempts the server never received: the client refused them itself.
+        # A refusal at the door was the server's, though its record names no method.
+        door = calllog.door_refusals(checked_path(calllog.path_for(path)))
+        effort["client_refused"] = max(calls - len(server) - door, 0)
     for field in ("num_turns", "duration_ms"):
         if isinstance(result.get(field), int):
             effort["turns" if field == "num_turns" else field] = result[field]
@@ -930,13 +984,42 @@ def read_effort(path):
     return effort
 
 
+def _call_key(block):
+    """A call by its bare tool name and the action it picks, so a CLI-refused bare
+    name and its prefixed retry are one call, and two actions of a router are two."""
+    arguments = block.get("input") if isinstance(block.get("input"), dict) else {}
+    picked = next((arguments[key] for key in ("action", "as") if isinstance(arguments.get(key), str)), "")
+    return str(block.get("name") or "").rsplit("__", 1)[-1], picked
+
+
+def refused_tools(path):
+    """The bare names of the tools whose calls this run had refused, sorted."""
+    asked, names = {}, set()
+    with _open_checked(path) as handle:
+        for line in handle:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            for block in (event.get("message") or {}).get("content") or []:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "tool_use":
+                    asked[block.get("id")] = _call_key(block)[0]
+                elif block.get("type") == "tool_result" and _refused_result(block):
+                    names.add(asked.get(block.get("tool_use_id"), ""))
+    return sorted(name for name in names if name)
+
+
 def _refused_result(block):
     if block.get("is_error") and not staged(block.get("content")):
         return True
     return bool(_NO_SUCH_TOOL.search(_tool_result_text(block)))
 
 
-_EFFORT_METRICS = ("calls", "turns", "refused", "prompt_tokens", "output_tokens", "duration_ms")
+_EFFORT_METRICS = ("calls", "turns", "refused", "retries", "client_refused", "prompt_tokens", "output_tokens", "duration_ms")
 
 
 def _spread(values):
@@ -970,10 +1053,11 @@ def efficiency_line(measured):
     if measured is None:
         return "  efficiency: no run finished, nothing measured"
     parts = [f"{measured['runs']} run(s) finished"]
-    for metric in ("calls", "turns", "refused"):
+    for metric in ("calls", "turns", "refused", "retries", "client_refused"):
         if metric in measured:
             spread = measured[metric]
-            parts.append(f"{metric} {spread['median']} ({spread['min']}-{spread['max']})")
+            label = "refused by the client" if metric == "client_refused" else metric
+            parts.append(f"{label} {spread['median']} ({spread['min']}-{spread['max']})")
     if "duration_ms" in measured:
         parts.append(f"{measured['duration_ms']['median'] / 1000:.1f}s median")
     slow = ""
@@ -1295,6 +1379,7 @@ def check(scenario, transcript_path):
     attempt, because a wrong claim or a forbidden call counts wherever it is."""
     scenario = for_door(scenario, transcript_path)
     run = read_run(transcript_path)
+    server = server_calls(transcript_path)
     # A send the lane's stack cannot deliver is refused by design, and the
     # scenario grades what the answer says about it: there the call is the
     # outcome whether or not the server took it.
@@ -1365,7 +1450,8 @@ def check(scenario, transcript_path):
 
     figures = scenario.get("figures_from_results")
     if figures == "true":
-        problems.extend(worked_out_problems(run, read_tool_results(transcript_path)))
+        results = read_tool_results(transcript_path) if server is None else [r.get("answer") or "" for r in server]
+        problems.extend(worked_out_problems(run, results))
     elif figures is not None:
         problems.append(f"figures_from_results is {figures!r}; the only value is true")
 
@@ -1374,8 +1460,9 @@ def check(scenario, transcript_path):
     # it could not reach — that is JudgeUnavailable, and it propagates out of
     # here rather than being caught and scored, because a criterion nobody
     # decided is not a criterion the answer failed.
+    evidence = calllog.evidence(server) if server else ""
     for criterion in scenario.get("judge", []):
-        held, reason = judge.verdict(criterion, run.final)
+        held, reason = judge.verdict(criterion, run.final, evidence)
         if not held:
             problems.append(f"{JUDGED_NO} {criterion}\n      the judge's reason: {reason}")
 

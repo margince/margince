@@ -246,17 +246,14 @@ func (s *Store) ReversalAnsweredThis(
 // affects nothing rather than stamping a second reversal over the first.
 // Reporting that to the caller as "already reversed" is what makes a repeated
 // Undo idempotent instead of a toggle.
-func markReversed(
-	ctx context.Context, tx pgx.Tx, correctionID, reversalAuditID ids.UUID, by string,
-) (bool, error) {
+func markReversed(ctx context.Context, tx pgx.Tx, correctionID ids.UUID, by string) (bool, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return false, err
 	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE deal_correction
-		   SET reversed_at = now(), reversed_by = $2, reversal_audit_id = $3,
-		       updated_at = now(), version = version + 1
-		 WHERE id = $1 AND reversed_at IS NULL`, correctionID, by, reversalAuditID)
+		   SET reversed_at = now(), reversed_by = $2, updated_at = now(), version = version + 1
+		 WHERE id = $1 AND reversed_at IS NULL`, correctionID, by)
 	if err != nil {
 		return false, fmt.Errorf("deals: marking the correction reversed: %w", err)
 	}

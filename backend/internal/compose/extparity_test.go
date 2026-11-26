@@ -310,7 +310,7 @@ func TestAnUndeclaredRouteCannotBeMounted(t *testing.T) {
 
 	for name, verb := range map[string]extension.Verb{
 		"a core route":                      outsideNamespace,
-		"a path template":                   templated,
+		"an id right after the unit":        templated,
 		"another unit's namespace":          otherUnit,
 		"a method outside the admitted set": unadmittedMethod,
 		"a read-scoped PUT":                 readScopedPut,

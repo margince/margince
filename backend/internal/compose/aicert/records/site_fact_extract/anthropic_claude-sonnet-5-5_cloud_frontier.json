@@ -1,0 +1,118 @@
+{
+  "task": "site_fact_extract",
+  "provider": "anthropic",
+  "served_model": "claude-sonnet-5-5",
+  "env_class": "cloud_frontier",
+  "prompt_version": "p7986e72539646ad827f7be8649cb87f8",
+  "corpus_version": "v1",
+  "verdict": "certified",
+  "runs": 18,
+  "passed": 18,
+  "reliability": 1,
+  "reported_accepted": 18,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "single_call",
+  "context_applied": false,
+  "context_scopes": null,
+  "context_owed": 0,
+  "judge_score_p50": 90,
+  "judge_score_min": 75,
+  "latency_p50": 2238,
+  "latency_p95": 3973,
+  "mean_tokens": 2426,
+  "mean_tokens_in": 2272,
+  "mean_tokens_out": 154,
+  "mean_cached_tokens": 1517,
+  "mean_cache_write_tokens": 421,
+  "est_cost_microusd": 0,
+  "judge_served_model": "gemini-3.1-flash-lite",
+  "judge_provider": "gemini",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "ran_at": "2026-11-25T06:31:03Z",
+  "scenarios": [
+    {
+      "scenario": "services_page_offering_facts",
+      "site": "page_facts",
+      "stamp": "dbc0191bceca42b4a0b1f2dc61bace6a0cd019d2546f13c7870222b56ed5b7f4cf6602f1242aa27f3fd529dcd856bd0a241ba96f73c6905d548da9efe4979654713568c7a6923581a36522b71b0082c1a9b48f3ccb9bdf5466f0105b050ecb78",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 6,
+      "passed": 6,
+      "judge_scores": [
+        75,
+        75,
+        75,
+        75,
+        75,
+        75
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 6,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "impressum_page_company_facts_and_entities",
+      "site": "page_facts",
+      "stamp": "6a2001274107934ffaa1e0775fb4266763129cdfd44ed08fdc8ee146e9c66b205ba76e6e82a69215aa08fe27f2d44361a05277162e80e9a11354dbe2515847acacc83f7e059570745aab313b9a769d241fa3b03077cb70100fe6374c38b54cf5",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 6,
+      "passed": 6,
+      "judge_scores": [
+        90,
+        100,
+        90,
+        90,
+        90,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 6,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "customer_story_credits_the_customer_not_the_reader",
+      "site": "page_facts",
+      "stamp": "5a6daac8be1da3537aa7a2e4629fa1617cadf4d4d5ee22849234add057d871031af7673195bd3382f29a00aa4084cfb883c1d3ccb5c3bb2f7da2e5d56a9a48874fc92811852c19ad3b3aa1568f5e3af9e17d888bd5f4376b4b28ee926c57a6c6",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 6,
+      "passed": 6,
+      "judge_scores": [
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 6,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

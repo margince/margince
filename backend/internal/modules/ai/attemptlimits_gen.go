@@ -8,12 +8,15 @@ package ai
 import "time"
 
 var certifiedAttemptTimeouts = map[Task]certifiedLimit{
-	// records/chat_task_reading/gemini_gemini-3.1-flash-lite_cloud_frontier.json: p95 1.335s
+	// records/chat_task_reading/anthropic_claude-haiku-5-5_cloud_frontier.json: p95 3.516s
 	"chat_task_reading": {limit: 30 * time.Second, measured: []boundModel{
+		{provider: "anthropic", model: "claude-haiku-5-5"},
 		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 	}},
 	// records/cold_start/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 59.19s
 	"cold_start": {limit: 89 * time.Second, measured: []boundModel{
+		{provider: "anthropic", model: "claude-haiku-5-5"},
+		{provider: "anthropic", model: "claude-sonnet-5-5"},
 		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
@@ -28,6 +31,8 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 	}},
 	// records/deal_health/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 1m11.792s
 	"deal_health": {limit: 108 * time.Second, measured: []boundModel{
+		{provider: "anthropic", model: "claude-haiku-5-5"},
+		{provider: "anthropic", model: "claude-sonnet-5-5"},
 		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.6-flash"},
@@ -40,11 +45,15 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "openai_compatible", model: "openai/gpt-oss-120b"},
 		{provider: "openai_compatible", model: "qwen/qwen3.8-27b"},
 	}},
-	// records/draft_reply/gemini_gemini-3.1-pro-preview_cloud_frontier.json: p95 12.492s
+	// records/draft_reply/anthropic_claude-haiku-5-5_cloud_frontier.json: p95 14.653s
 	"draft_reply": {limit: 30 * time.Second, measured: []boundModel{
+		{provider: "anthropic", model: "claude-haiku-5-5"},
+		{provider: "anthropic", model: "claude-sonnet-5-5"},
+		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.1-pro-preview"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
+		{provider: "gemini", model: "gemini-3.8-flash"},
 		{provider: "openai_compatible", model: "google/gemma-4-31b-it"},
 		{provider: "openai_compatible", model: "openai/gpt-6-luna"},
 		{provider: "openai_compatible", model: "openai/gpt-6-sol"},
@@ -52,6 +61,8 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 	}},
 	// records/growth_fit/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 3m43.062s
 	"growth_fit": {limit: 300 * time.Second, measured: []boundModel{
+		{provider: "anthropic", model: "claude-haiku-5-5"},
+		{provider: "anthropic", model: "claude-sonnet-5-5"},
 		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
@@ -67,6 +78,7 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 	}},
 	// records/nl_search/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 19.151s
 	"nl_search": {limit: 30 * time.Second, measured: []boundModel{
+		{provider: "anthropic", model: "claude-haiku-5-5"},
 		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
@@ -81,6 +93,8 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 	}},
 	// records/offer_draft/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 1m20.239s
 	"offer_draft": {limit: 121 * time.Second, measured: []boundModel{
+		{provider: "anthropic", model: "claude-haiku-5-5"},
+		{provider: "anthropic", model: "claude-sonnet-5-5"},
 		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
@@ -95,6 +109,8 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 	}},
 	// records/propose_roles/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 2m0.039s
 	"propose_roles": {limit: 181 * time.Second, measured: []boundModel{
+		{provider: "anthropic", model: "claude-haiku-5-5"},
+		{provider: "anthropic", model: "claude-sonnet-5-5"},
 		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
@@ -109,6 +125,8 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 	}},
 	// records/report_interpret/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 1m54.742s
 	"report_interpret": {limit: 173 * time.Second, measured: []boundModel{
+		{provider: "anthropic", model: "claude-haiku-5-5"},
+		{provider: "anthropic", model: "claude-sonnet-5-5"},
 		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.6-flash"},
 		{provider: "gemini", model: "gemini-3.8-flash"},
@@ -118,6 +136,8 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 	}},
 	// records/report_setup/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 1m11.016s
 	"report_setup": {limit: 107 * time.Second, measured: []boundModel{
+		{provider: "anthropic", model: "claude-haiku-5-5"},
+		{provider: "anthropic", model: "claude-sonnet-5-5"},
 		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.6-flash"},
 		{provider: "gemini", model: "gemini-3.8-flash"},
@@ -127,6 +147,8 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 	}},
 	// records/rewrite/gemini_gemini-3.8-flash_cloud_frontier.json: p95 4.954s
 	"rewrite": {limit: 30 * time.Second, measured: []boundModel{
+		{provider: "anthropic", model: "claude-haiku-5-5"},
+		{provider: "anthropic", model: "claude-sonnet-5-5"},
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
 		{provider: "gemini", model: "gemini-3.6-flash"},
 		{provider: "gemini", model: "gemini-3.8-flash"},

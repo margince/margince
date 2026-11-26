@@ -141,14 +141,14 @@ var introTable = map[textlang.Lang]introPhrases{
 	},
 	textlang.German: {
 		IntroSubject: "Können Sie uns bei %s vorstellen?",
-		IntroBody: "Hallo %s,\n\nbei uns ist etwas zu %s aufgekommen: %s. Sie kennen dort " +
-			"die richtigen Ansprechpartner - wären Sie bereit, uns vorzustellen?\n\n%s",
+		IntroBody: "Hallo %s,\n\nbei uns hat sich etwas zu %s ergeben: %s. Sie kennen dort " +
+			"die richtigen Kontakte. Wären Sie bereit, uns vorzustellen?\n\n%s",
 		DirectSubject: "Kurze Anfrage zu %s",
-		DirectBody: "Hallo %s,\n\nich melde mich, weil wir etwas zu %s aufgenommen haben: %s. " +
+		DirectBody: "Hallo %s,\n\nich melde mich, da wir etwas zu %s erfahren haben: %s. " +
 			"Da wir %s, wollte ich das direkt mit Ihnen besprechen.\n\n%s",
 		Disclosure: draftfloor.AIProvenanceNotice(textlang.German),
 		Relationships: map[crmcontracts.SignalWarmContactRelationshipKind]string{
-			crmcontracts.SignalWarmContactRelationshipKindDealStakeholder: "gemeinsam an einem Vorgang arbeiten",
+			crmcontracts.SignalWarmContactRelationshipKindDealStakeholder: "gemeinsam an einem Deal arbeiten",
 			crmcontracts.SignalWarmContactRelationshipKindEmployment:      "über Ihr Unternehmen in Kontakt stehen",
 		},
 	},

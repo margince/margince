@@ -13,6 +13,11 @@ func TestAppValidate(t *testing.T) {
 	if err := good.Validate("x"); err != nil {
 		t.Fatalf("a well-formed app was refused: %v", err)
 	}
+	untitled := good
+	untitled.Label = ""
+	if err := untitled.Validate("x"); err != nil {
+		t.Fatalf("an app with no label of its own was refused: %v", err)
+	}
 	for name, mutate := range map[string]func(*App){
 		"an unknown icon":       func(a *App) { a.Icon = "rocket" },
 		"a label with a space":  func(a *App) { a.Label = "ext x" },

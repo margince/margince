@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { within } from "storybook/test";
+import { AGENT_RULES_SUBPAGE } from "../../lib/settingsrouting";
 import {
   installFetchStub,
   jsonResponse,
@@ -17,7 +18,7 @@ const meta: Meta<typeof AiAccessTab> = {
 };
 export default meta;
 type Story = StoryObj<typeof AiAccessTab>;
-function settings() {
+function settings(subpage?: string) {
   installFetchStub({
     "GET /me": meRoute({}),
     "GET /.well-known/oauth-protected-resource": () =>
@@ -46,21 +47,30 @@ function settings() {
   });
   return (
     <StoryProviders>
-      <AiAccessTab />
+      <AiAccessTab subpage={subpage} />
     </StoryProviders>
   );
 }
-async function showRules({ canvasElement }: { canvasElement: HTMLElement }) {
+// Your agent stands open on the page, so the mutes need no section opened.
+async function showMutes({ canvasElement }: { canvasElement: HTMLElement }) {
   const canvas = within(canvasElement);
-  await userEvent.click(await canvas.findByText("For developers"));
-  await userEvent.click(
-    await canvas.findByRole("button", { name: "Agent rules" }),
-  );
   (await canvas.findByText("Personal approval mutes")).scrollIntoView();
 }
-export const PersonalReview: Story = { render: settings, play: showRules };
+export const PersonalReview: Story = {
+  render: () => settings(),
+  play: showMutes,
+};
 export const PersonalReviewDark: Story = {
-  render: settings,
-  play: showRules,
+  render: () => settings(),
+  play: showMutes,
   globals: { theme: "dark" },
+};
+// Arrived on Agent rules' own address: For developers open on that tab.
+export const AgentRulesAddress: Story = {
+  render: () => settings(AGENT_RULES_SUBPAGE),
+};
+export const AgentRulesAddressPhone: Story = {
+  render: () => settings(AGENT_RULES_SUBPAGE),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

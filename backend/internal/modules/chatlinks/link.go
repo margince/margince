@@ -82,7 +82,7 @@ func stateOf(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) (State, e
 	var connected bool
 	var connection ids.UUID
 	err := tx.QueryRow(ctx, `SELECT id, address, status = 'connected' FROM channel_connection
-		WHERE provider = $1 AND archived_at IS NULL`, ProviderDispact).Scan(&connection, &address, &connected)
+		WHERE provider = $1 AND archived_at IS NULL AND account_id IS NULL AND parent_connection_id IS NULL`, ProviderDispact).Scan(&connection, &address, &connected)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return State{State: StateOff}, nil
 	}

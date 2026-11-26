@@ -30,7 +30,7 @@ func (s *ChannelStore) List(ctx context.Context) ([]ChannelConnection, error) {
 	var out []ChannelConnection
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT `+channelConnectionColumns+
-			` FROM channel_connection WHERE archived_at IS NULL ORDER BY created_at DESC, id DESC`)
+			` FROM channel_connection WHERE archived_at IS NULL AND `+botConnectionRow+` ORDER BY created_at DESC, id DESC`)
 		if err != nil {
 			return err
 		}

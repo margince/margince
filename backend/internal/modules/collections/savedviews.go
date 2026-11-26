@@ -169,9 +169,9 @@ func (s *Store) CreateSavedView(ctx context.Context, in CreateSavedViewInput) (s
 		return savedViewRow{}, err
 	}
 	in.Name = name
-	if _, declared := recordkinds.Lookup(in.Resource); recordkinds.IsExtensionName(in.Resource) && !declared {
+	if kindUnavailable(ctx, in.Resource) {
 		return savedViewRow{}, &BadInputError{Field: "resource", Reason: fmt.Sprintf(
-			"no installed extension declares %q; read GET /v1/record-kinds for the kinds there are", in.Resource)}
+			"%q is not a record kind you can read; read GET /v1/record-kinds for the kinds there are", in.Resource)}
 	}
 	if in.Query == nil {
 		return savedViewRow{}, &BadInputError{Field: viewQueryField, Reason: "must not be null"}
@@ -251,6 +251,9 @@ func (s *Store) validateViewFilter(ctx context.Context, resource string, query m
 	filterMap, isTree := rawFilter.(map[string]any)
 	if !isTree {
 		return &BadInputError{Field: viewQueryField, Reason: "filter state must be a filter tree"}
+	}
+	if kindUnavailable(ctx, engineKey) {
+		return &BadInputError{Field: viewQueryField, Reason: "the records of this view are unavailable"}
 	}
 	engine, ok, err := s.SegmentEngine(ctx, engineKey)
 	if err != nil {

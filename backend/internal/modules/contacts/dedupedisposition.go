@@ -86,11 +86,10 @@ func (s *Store) DisposeDedupeCandidate(ctx context.Context, id ids.UUID, disposi
 		}
 	case dispositionNotDuplicate:
 		// Per arm, not before the switch. The merge arm takes its own
-		// write-authority probe through mergePair, with an asymmetry this one
-		// does not share: mergePair answers a BARE CONFLICT for a target the
-		// caller cannot change, deliberately, so the refusal names no record
-		// the caller has not already been handed. A probe out here would
-		// pre-empt that with 403 and change a refusal this fix is not about.
+		// write-authority probe through recordmerge.Pair. Pair answers a bare
+		// conflict for a target the caller cannot see. So its refusal names no
+		// record the caller has not already been handed. A probe out here would
+		// pre-empt that with a 403.
 		if err := s.writePairDecision(ctx, row, func(ctx context.Context, tx pgx.Tx) error {
 			return setDedupeDispositionTx(ctx, tx, row.ID, dispositionNotDuplicate, actor.UserID)
 		}); err != nil {

@@ -60,6 +60,8 @@ import (
 // EnsureActivityContentVisible.
 var audienceScopeMarkers = []string{
 	"ActivityContentClause", "ActivityMessageContentClause", "ActivityAudienceArm", "AudienceWorkspaceOnly", "WorkspaceAudienceSQL", "AutomaticMailContent",
+	// WorkspaceAudienceSQL plus the restricted-message test, for a system pass.
+	"VisibleToAllSQL",
 	// Gates a statement's activities once; TestEveryContentGateRendersItsMarkOnce
 	// in platform/auth holds that it renders the content gate.
 	"ContentReadableActivitiesSQL",
@@ -167,6 +169,8 @@ var audienceReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/modules/activities/meetingbodyrender.go:RenderMeetingBodyTx":               "the render writer reads the subject and language of the row it rewrites, under its lock, to detect the language as capture does and to record what changed. The row's audience is untouched, and nothing it reads reaches a caller",
 	"internal/modules/activities/requestremainder.go:groundedRemainderTx":                "the settlement writer reads the request's own body, after the hold check locked it, only to ask whether the model's remaining text quotes it. The answer keeps or drops that text; no body reaches a caller, and the reminder keeps its own audience",
 	"internal/modules/activities/mailbodyrestore.go:RestoreMailBodyTx":                   "the restoration writer reads the row it rewrites, under its lock, to record what changed. The row's audience is untouched, and nothing it reads reaches a caller but the thread key",
+	"internal/modules/activities/mailbodyrestore.go:restoredOwnEnd":                      "the restoration writer reads the subject of the row it rewrites, under its lock, to derive where the restored body's own text ends. Only that count leaves it, and it is stored on the same row",
+	"internal/modules/activities/assertedtakeover.go:takenOverOwnEnd":                    "the take-over reads the live row it rewrites, under its lock, to derive where the text it leaves ends. Only that count leaves it, and it is stored on the same row",
 	"internal/modules/privacy/retentionselectors.go:RetentionService.evaluatePolicy":     "the selectors, executed: they name which activities a policy DESTROYS, and the content columns in them are tests for whether there is content left to destroy (`a.body IS NOT NULL`), never a projection: the query returns ids handed to the destruction executors. Gating them on the audience would exempt limited mail from retention — a colleague's held message kept forever because nobody may read it, which is the opposite of what the audience protects",
 	"internal/modules/privacy/erasure_manualreview.go:Eraser.flagManualSubjectMentions":  "the Art. 17 erasure looks for unlinked notes that may still name the erased contact, as the system principal. Only note ids leave the query, and they become privacy-review notices for operators who may read every record; no subject or body text leaves it. Gating it on an audience would leave a limited note that names the subject unreviewed",
 	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":                      "locks the unlinked notes the erasure rewrites, before it rewrites them. Only ids leave the query, and the erasure must reach every note that names the subject whoever may read it, because the duty to erase does not depend on the audience",

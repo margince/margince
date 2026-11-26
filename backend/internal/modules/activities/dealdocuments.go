@@ -219,14 +219,10 @@ func (s *Store) setDealDocumentHidden(ctx context.Context, dealID, attachmentID 
 		if err := ensureInDealDocuments(ctx, tx, dealID, attachmentID); err != nil {
 			return err
 		}
-		by, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return err
-		}
 		if hidden {
-			_, err = tx.Exec(ctx, `INSERT INTO deal_document_hide (deal_id, attachment_id, hidden_by)
-			                       VALUES ($1, $2, $3) ON CONFLICT (deal_id, attachment_id) DO NOTHING`,
-				dealID, attachmentID, by)
+			_, err = tx.Exec(ctx, `INSERT INTO deal_document_hide (deal_id, attachment_id)
+			                       VALUES ($1, $2) ON CONFLICT (deal_id, attachment_id) DO NOTHING`,
+				dealID, attachmentID)
 		} else {
 			_, err = tx.Exec(ctx, `DELETE FROM deal_document_hide WHERE deal_id = $1 AND attachment_id = $2`,
 				dealID, attachmentID)

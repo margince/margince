@@ -70,7 +70,28 @@ describe("a reader the server does not let archive this contact", () => {
     expect(
       document.getElementById(verb.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe(en["contact.archiveRefused"]);
+    ).toBe(en["record.archiveRefused"]);
+  });
+});
+
+describe("a reader whose role only reads", () => {
+  it("names the role, not the owner, on the page and on archive", async () => {
+    const readOnly: Contact360 = {
+      ...view,
+      contact: { ...view.contact, archivable: false, writable: false },
+    };
+    mount("overview", readOnly, [], {}, { contact: ["read"] });
+
+    await screen.findAllByText(en["record.roleReadsOnly"]);
+    expect(screen.queryByText(en["contact.notYoursToChange"])).toBeNull();
+    await openRecordMenu();
+    const verb = await screen.findByTestId("archive-record");
+    await waitFor(() =>
+      expect(
+        document.getElementById(verb.getAttribute("aria-describedby") ?? "")
+          ?.textContent,
+      ).toBe(en["record.roleReadsOnly"]),
+    );
   });
 });
 
@@ -110,9 +131,9 @@ describe("the header's core record verbs — edit, merge, archive", () => {
       document.querySelector(".record-split-lines")?.textContent ?? "";
     await waitFor(() => expect(subtitle()).toContain("Old title"));
     await userEvent.click(
-      await screen.findByRole("button", { name: /^Change Title/ }),
+      await screen.findByRole("button", { name: /^Change Job title/ }),
     );
-    const title = await screen.findByRole("textbox", { name: "Title" });
+    const title = await screen.findByRole("textbox", { name: "Job title" });
     await userEvent.clear(title);
     await userEvent.type(title, "New title{Enter}");
 
@@ -292,7 +313,7 @@ describe("the left column edits a contact's fields", () => {
       await left.findByRole("button", { name: "Edit About" }),
     );
     const about = within(await screen.findByRole("dialog", { name: "About" }));
-    const title = about.getByRole("textbox", { name: "Title" });
+    const title = about.getByRole("textbox", { name: "Job title" });
     await userEvent.clear(title);
     await userEvent.type(title, "New title");
     await userEvent.click(about.getByRole("button", { name: "Save" }));

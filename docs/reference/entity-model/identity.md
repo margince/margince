@@ -316,6 +316,9 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `oauth_authorization_code_code_hash_check`: `CHECK ((code_hash ~ '^[0-9a-f]{64}$'))`
 - `oauth_authorization_code_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `oauth_authorization_code_scopes_present`: `CHECK ((cardinality(scopes) > 0))`
+- `oauth_authorization_code_scopes_vocabulary`: `CHECK ((scopes <@ ARRAY['read', 'draft', 'write', 'send', 'enrich', 'offline_access']))`
+- `oauth_authorization_code_work_areas_vocabulary`: `CHECK ((work_areas <@ ARRAY['business', 'compliance', 'capture', 'workspace_settings', 'admin_settings', 'own_account', 'agent_governance', 'operator', 'public']))`
 - `oauth_code_unique`: `UNIQUE (code_hash)`
 
 **Indexes**
@@ -389,6 +392,12 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `client_id` | `oauth_client` | the parent cannot be deleted while this row points at it |
 | `lent_passport_id` | `passport` | deleting the parent keeps this row and clears the link |
 | `user_id` | `app_user` | deleting the parent deletes this row |
+
+**Rules**
+
+- `oauth_grant_scopes_present`: `CHECK ((cardinality(scopes) > 0))`
+- `oauth_grant_scopes_vocabulary`: `CHECK ((scopes <@ ARRAY['read', 'draft', 'write', 'send', 'enrich']))`
+- `oauth_grant_work_areas_vocabulary`: `CHECK ((work_areas <@ ARRAY['business', 'compliance', 'capture', 'workspace_settings', 'admin_settings', 'own_account', 'agent_governance', 'operator', 'public']))`
 
 **Indexes**
 
@@ -522,8 +531,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `passport_app_caller_pair`: `CHECK (((app_issuer IS NULL) = (app_subject IS NULL)))`
 - `passport_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `passport_scopes_present`: `CHECK ((cardinality(scopes) > 0))`
+- `passport_scopes_vocabulary`: `CHECK ((scopes <@ ARRAY['read', 'draft', 'write', 'send', 'enrich']))`
 - `passport_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `passport_token_hash_key`: `UNIQUE (token_hash)`
+- `passport_work_areas_vocabulary`: `CHECK ((work_areas <@ ARRAY['business', 'compliance', 'capture', 'workspace_settings', 'admin_settings', 'own_account', 'agent_governance', 'operator', 'public']))`
 - `uq_passport_id_owner`: `UNIQUE (id, on_behalf_of)`
 
 **Indexes**
@@ -737,7 +749,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## team
 
-6 columns · primary key `(id)` · referenced by 10 foreign keys
+6 columns · primary key `(id)` · referenced by 11 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -756,7 +768,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `team_name_unique`: `unique, btree (name) WHERE (archived_at IS NULL)`
+- `team_name_unique`: `unique, btree (lower(btrim(name))) WHERE (archived_at IS NULL)`
 - `team_pkey`: `unique, btree (id)`
 
 **Triggers**
