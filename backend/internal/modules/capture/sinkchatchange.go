@@ -129,6 +129,9 @@ func (s *Sink) editChatMessage(
 			return err
 		case applied:
 			outcome = connector.ChatChangeApplied
+			if err := s.reopenEditedChatTx(ctx, tx, key, actor.UserID); err != nil {
+				return err
+			}
 			if !superseded.IsZero() {
 				return DeleteRawCaptureTx(ctx, tx, superseded)
 			}
