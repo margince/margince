@@ -173,12 +173,6 @@ func goSplitterConst(t *testing.T, name string) int {
 	return 0
 }
 
-// tsComments strips comments before anything is parsed. Without it a line
-// MENTIONING a sign-off keeps this gate green after the real entry is deleted —
-// the lesson frontendminorunits_test.go records, applied here before it costs
-// anything.
-var tsComments = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
-
 var (
 	// A declaration's body, up to the terminator its opening bracket implies.
 	tsDeclaration = regexp.MustCompile(`(?s)const\s+([A-Z][A-Z0-9_]*)\s*=\s*(new Set\(\[|\[|/)`)
@@ -202,7 +196,9 @@ func tsSplitterTables(t *testing.T) map[string][]string {
 	if err != nil {
 		t.Fatalf("reading %s: %v", tsSplitter, err)
 	}
-	source := tsComments.ReplaceAllString(string(raw), " ")
+	// Stripped first: a comment MENTIONING a sign-off would keep this gate green
+	// after the real entry is deleted.
+	source := tsWithoutComments(string(raw))
 	out := map[string][]string{}
 	for _, match := range tsDeclaration.FindAllStringSubmatchIndex(source, -1) {
 		name := source[match[2]:match[3]]
@@ -278,7 +274,7 @@ func tsSplitterConst(t *testing.T, name string) int {
 	if err != nil {
 		t.Fatalf("reading %s: %v", tsSplitter, err)
 	}
-	source := tsComments.ReplaceAllString(string(raw), " ")
+	source := tsWithoutComments(string(raw))
 	for _, m := range tsNumber.FindAllStringSubmatch(source, -1) {
 		if m[1] == name {
 			parsed, convErr := strconv.Atoi(m[2])
