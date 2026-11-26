@@ -215,7 +215,7 @@ func Write(
 	if lane == nil {
 		return floor, crmcontracts.WrittenByDeterministic
 	}
-	written, err := writeChecked(ctx, lane, surface, in, voice)
+	written, err := writeChecked(ai.WithFloor(ctx), lane, surface, in, voice)
 	if err != nil {
 		// The error is deliberately swallowed rather than returned — it is a
 		// fact about the lane, not about the record, and there is nothing the

@@ -55,7 +55,7 @@ func writeIntroNote(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, err
 	}
-	if written, modelErr := noteFromModel(ctx, lane, facts, teamRules); modelErr == nil {
+	if written, modelErr := noteFromModel(ai.WithFloor(ctx), lane, facts, teamRules); modelErr == nil {
 		return wireIntroNote(written, crmcontracts.WrittenByModel, facts), nil
 	}
 	// A failed model note degrades to the floor, which is still a sendable note.

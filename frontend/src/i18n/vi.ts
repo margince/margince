@@ -2069,6 +2069,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.queue.back": "Quay lại Danh sách công việc",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Xem Danh sách công việc",
+  "brief.queue.count_one": "{count} mục trong Danh sách công việc",
+  "brief.queue.count_other": "{count} mục trong Danh sách công việc",
   "brief.queue.hide": "Ẩn Danh sách công việc",
   "brief.team.planUnavailable":
     "Không có kế hoạch hiện tại nào của {name} mà bạn có quyền xem.",
@@ -6991,6 +6993,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.rejectConfirm": "Đánh dấu báo giá này là đã từ chối?",
   "offer.rejectReason": "Lý do (không bắt buộc)",
   "offer.regenerate": "Tạo lại phiên bản",
+  "offer.regeneratedPlain": "Đã sao chép mà không có thay đổi từ AI.",
   "offer.writeUnsure":
     "Margince không xác định được thao tác đã thành công hay chưa. Hãy kiểm tra các báo giá của deal trước khi thử lại.",
   "offer.aiDisclosureTitle": "Báo giá có AI hỗ trợ",
@@ -7117,6 +7120,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.week.quiet":
     "Chưa ghi nhận công việc hoàn tất hay biến động deal nào.",
 
+  "brief.first.shownOf": "Hiển thị {shown} trên {total}",
   "brief.feed.changedBadge_one": "1 đã thay đổi",
   "brief.feed.changedBadge_other": "{count} đã thay đổi",
   "brief.feed.loading": "Đang tải Bản tin sáng…",
@@ -7417,6 +7421,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.readings.leadsBasis": "Việc cần làm đã lên kế hoạch cho lead",
   "brief.readings.leadsDue": "Hạn tiếp theo {value}",
   "brief.rail": "Ngữ cảnh",
+  "brief.firstDay.title": "Ngày đầu tiên của bạn trên Trang chủ",
+  "brief.firstDay.what":
+    "Trang chủ cho thấy việc cần bạn hôm nay, những gì Margince đã làm cho bạn và các cuộc họp của bạn. Mỗi sáng, trang mở đầu bằng Bản tin sáng của bạn.",
+  "brief.firstDay.briefTonight":
+    "Bản tin sáng đầu tiên của bạn được chuẩn bị qua đêm và hiện trên Trang chủ vào sáng mai.",
+  "brief.firstDay.briefOff":
+    "Margince chỉ chuẩn bị Bản tin sáng qua đêm khi bạn cho phép.",
+  "brief.firstDay.turnOn": "Bật chuẩn bị qua đêm",
+  "brief.firstDay.briefLater":
+    "Bản tin sáng của bạn sẽ hiện trên Trang chủ khi đã được chuẩn bị.",
+  "brief.firstDay.setup": "Việc cần thiết lập tiếp theo",
   "brief.rail.numbers": "Số liệu",
   "extensionReports.withheld": "Đã ẩn: quá ít bản ghi để hiển thị",
   "extensionReports.unavailable": "Không tải được báo cáo này.",
@@ -9924,30 +9939,41 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.summarize.queued": "Đang chờ tóm tắt",
   "agent.activity.summarize.running": "Đang viết tóm tắt…",
   "agent.activity.summarize.done": "Tóm tắt đã sẵn sàng",
-  "agent.activity.summarize.degraded": "Quá trình tóm tắt bị gián đoạn",
+  "agent.activity.summarize.degraded":
+    "Tóm tắt được viết mà không có đầy đủ hỗ trợ từ AI",
   "agent.activity.summarize.failed": "Không thể tạo tóm tắt",
   "agent.activity.summarize.stalled": "Quá trình tóm tắt kéo dài bất thường",
   "agent.activity.summarizeNamed.queued": "Đang chờ tóm tắt {name}",
   "agent.activity.summarizeNamed.running": "Đang tóm tắt {name}…",
   "agent.activity.summarizeNamed.done": "Tóm tắt {name} đã sẵn sàng",
   "agent.activity.summarizeNamed.degraded":
-    "Quá trình tóm tắt {name} bị gián đoạn",
+    "Tóm tắt {name} được viết mà không có đầy đủ hỗ trợ từ AI",
   "agent.activity.summarizeNamed.failed": "Không thể tóm tắt {name}",
   "agent.activity.summarizeNamed.stalled":
     "Quá trình tóm tắt {name} kéo dài bất thường",
-  "agent.activity.draftReply.queued": "Đang chờ soạn bản nháp trả lời",
-  "agent.activity.draftReply.running": "Đang soạn thư trả lời…",
-  "agent.activity.draftReply.done": "Bản nháp trả lời đã sẵn sàng",
-  "agent.activity.draftReply.degraded":
-    "Quá trình soạn bản nháp trả lời bị gián đoạn",
-  "agent.activity.draftReply.failed": "Không thể soạn bản nháp trả lời",
-  "agent.activity.draftReply.stalled":
-    "Quá trình soạn bản nháp trả lời kéo dài bất thường",
+  "agent.activity.draftEmail.queued": "Đang chờ soạn bản nháp email",
+  "agent.activity.draftEmail.running": "Đang soạn email…",
+  "agent.activity.draftEmail.done": "Bản nháp email đã sẵn sàng",
+  "agent.activity.draftEmail.degraded":
+    "Bản nháp email được soạn mà không có đầy đủ hỗ trợ từ AI",
+  "agent.activity.draftEmail.failed": "Không thể soạn bản nháp email",
+  "agent.activity.draftEmail.stalled":
+    "Quá trình soạn bản nháp email kéo dài bất thường",
+  "agent.activity.draftEmailNamed.queued":
+    "Đang chờ soạn bản nháp email về {name}",
+  "agent.activity.draftEmailNamed.running": "Đang soạn email về {name}…",
+  "agent.activity.draftEmailNamed.done": "Bản nháp email về {name} đã sẵn sàng",
+  "agent.activity.draftEmailNamed.degraded":
+    "Bản nháp email về {name} được soạn mà không có đầy đủ hỗ trợ từ AI",
+  "agent.activity.draftEmailNamed.failed":
+    "Không thể soạn bản nháp email về {name}",
+  "agent.activity.draftEmailNamed.stalled":
+    "Quá trình soạn bản nháp email về {name} kéo dài bất thường",
   "agent.activity.offerDraft.queued": "Đang chờ soạn bản nháp báo giá",
   "agent.activity.offerDraft.running": "Đang soạn báo giá…",
   "agent.activity.offerDraft.done": "Bản nháp báo giá đã sẵn sàng",
   "agent.activity.offerDraft.degraded":
-    "Quá trình soạn bản nháp báo giá bị gián đoạn",
+    "Bản nháp báo giá được soạn mà không có đầy đủ hỗ trợ từ AI",
   "agent.activity.offerDraft.failed": "Không thể soạn bản nháp báo giá",
   "agent.activity.offerDraft.stalled":
     "Quá trình soạn bản nháp báo giá kéo dài bất thường",
@@ -9957,7 +9983,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.draftReplyNamed.done":
     "Bản nháp trả lời “{name}” đã sẵn sàng",
   "agent.activity.draftReplyNamed.degraded":
-    "Quá trình soạn bản nháp trả lời “{name}” bị gián đoạn",
+    "Bản nháp trả lời “{name}” được soạn mà không có đầy đủ hỗ trợ từ AI",
   "agent.activity.draftReplyNamed.failed":
     "Không thể soạn bản nháp trả lời “{name}”",
   "agent.activity.draftReplyNamed.stalled":
@@ -9968,7 +9994,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.offerDraftNamed.done":
     "Bản nháp báo giá cho {name} đã sẵn sàng",
   "agent.activity.offerDraftNamed.degraded":
-    "Quá trình soạn bản nháp báo giá cho {name} bị gián đoạn",
+    "Bản nháp báo giá cho {name} được soạn mà không có đầy đủ hỗ trợ từ AI",
   "agent.activity.offerDraftNamed.failed":
     "Không thể soạn bản nháp báo giá cho {name}",
   "agent.activity.offerDraftNamed.stalled":
@@ -22774,6 +22800,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "employment.dateHint": "YYYY-MM hoặc YYYY-MM-DD. Để trống nếu chưa biết.",
   "employment.more": "Xem thêm vị trí công tác",
 
+  "magic.heading.firstBrief": "Trước bản tin sáng đầu tiên",
   "magic.heading.brief": "Kể từ bản tin sáng gần nhất",
   "magic.loading": "Đang đọc những gì hệ thống đã làm",
   "magic.lane.done": "Margince đã làm giúp bạn",

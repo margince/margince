@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { type Translator, translate } from "../i18n";
-import { describeHit } from "./palettestanding";
+import { describeHit } from "./searchstanding";
 
 type SearchResult = components["schemas"]["SearchResult"];
 

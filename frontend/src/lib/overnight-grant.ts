@@ -56,9 +56,10 @@ export function forgetOvernightChoice(): void {
 }
 
 /** Reads every scheduled agent's standing answer for the signed-in rep. */
-export function useAgentGrants() {
+export function useAgentGrants(enabled = true) {
   return useQuery({
     queryKey: GRANTS_KEY,
+    enabled,
     queryFn: async () => {
       const data = unwrap(await api.GET("/me/agent-grants"));
       return data.data;
@@ -98,4 +99,24 @@ export function overnightGrants(
   return OVERNIGHT_AGENTS.map((spec) =>
     grants.find((grant) => grant.spec === spec),
   );
+}
+
+/**
+ * The rep's one answer as the overnight agents stand on it. It reads as granted
+ * only when every agent has the grant. A rep who answered before the sweep was
+ * offered sees the question open and can answer it for both. Lapsed and
+ * outgrown differ from a decline, because the rep already agreed. Each names its
+ * cause, since either degrades the 2am run silently.
+ */
+export function grantStanding(grants: readonly MyAgentGrant[]) {
+  const own = overnightGrants(grants);
+  const granted = own.every((grant) => grant?.state === "granted");
+  return {
+    granted,
+    lapsed: granted && own.some((grant) => !grant?.credential_usable),
+    outgrown:
+      granted &&
+      own.every((grant) => grant?.credential_usable === true) &&
+      own.some((grant) => !grant?.credential_funds_agent),
+  };
 }

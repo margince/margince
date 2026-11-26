@@ -10,7 +10,7 @@ import { LEAD_STATUS_LABEL } from "../format/leadstatus";
 import { isProjectPhase, PHASE_LABEL } from "../format/projectphase";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { labelFor } from "../lib/labelfor";
+import { labelFor } from "./labelfor";
 
 type SearchResult = components["schemas"]["SearchResult"];
 type Lead = components["schemas"]["Lead"];

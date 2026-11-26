@@ -51,7 +51,7 @@ func writeIntroRequest(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, err
 	}
-	if written, modelErr := introFromModel(ctx, lane, facts, teamRules); modelErr == nil {
+	if written, modelErr := introFromModel(ai.WithFloor(ctx), lane, facts, teamRules); modelErr == nil {
 		return wireIntroRequest(written, crmcontracts.WrittenByModel, facts), nil
 	}
 	// A failed model draft degrades to the floor: the reader gets a sendable

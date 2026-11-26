@@ -62,11 +62,14 @@ export function MagicPanel({
   visibleReceiptIds = [],
   lanes = MAGIC_LANES,
   embedded = false,
+  heading = "magic.heading.brief",
 }: Readonly<{
   visibleApprovalIds?: readonly string[];
   visibleReceiptIds?: readonly string[];
   lanes?: readonly MagicLane[];
   embedded?: boolean;
+  /** What the waiting lanes are counted since; Home names the first brief before one exists. */
+  heading?: MessageKey;
 }> = {}) {
   const t = useT();
   const { locale } = useLocale();
@@ -154,7 +157,7 @@ export function MagicPanel({
   return (
     <section className="brief-section" aria-labelledby={titleId}>
       <Eyebrow as="h2" id={titleId} className="brief-section-label">
-        {t("magic.heading.brief")}
+        {t(heading)}
       </Eyebrow>
       {body}
     </section>

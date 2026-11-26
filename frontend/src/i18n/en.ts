@@ -2040,6 +2040,8 @@ export const en = {
   "brief.queue.back": "Back to Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
+  "brief.queue.count_one": "{count} item in the Worklist",
+  "brief.queue.count_other": "{count} items in the Worklist",
   "brief.queue.hide": "Hide Worklist",
   "brief.team.planUnavailable": "No current plan visible to you for {name}.",
   "brief.team.noCommitments": "{name} has no commitments in this plan.",
@@ -7129,6 +7131,7 @@ export const en = {
   "offer.rejectConfirm": "Mark this offer as rejected?",
   "offer.rejectReason": "Reason (optional)",
   "offer.regenerate": "Regenerate revision",
+  "offer.regeneratedPlain": "Copied without AI changes.",
   "offer.writeUnsure":
     "Margince could not tell whether that went through. Check the deal’s offers before you try again.",
   "offer.aiDisclosureTitle": "AI-assisted offer",
@@ -7281,6 +7284,7 @@ export const en = {
   "brief.week.quiet": "No completed work or deal movement recorded.",
 
   // What is on screen out of what the day holds, on the panel's own line.
+  "brief.first.shownOf": "{shown} of {total} shown",
   "brief.feed.changedBadge_one": "1 changed",
   "brief.feed.changedBadge_other": "{count} changed",
   "brief.feed.loading": "Loading Morning brief…",
@@ -7596,6 +7600,17 @@ export const en = {
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",
   "brief.rail": "Context",
+  "brief.firstDay.title": "Your first day on Home",
+  "brief.firstDay.what":
+    "Home shows what needs you today, what Margince did for you and your meetings. Each morning it opens with your Morning brief.",
+  "brief.firstDay.briefTonight":
+    "Your first Morning brief is prepared overnight and opens Home tomorrow.",
+  "brief.firstDay.briefOff":
+    "Margince prepares a Morning brief overnight only once you allow it.",
+  "brief.firstDay.turnOn": "Turn on overnight preparation",
+  "brief.firstDay.briefLater":
+    "Your Morning brief opens Home once one has been prepared for you.",
+  "brief.firstDay.setup": "Set up next",
   "brief.rail.numbers": "Numbers",
   "extensionReports.withheld": "Withheld: too few records to show",
   "extensionReports.unavailable": "This report could not be loaded.",
@@ -10154,7 +10169,7 @@ export const en = {
   "agent.activity.summarize.queued": "Summary queued",
   "agent.activity.summarize.running": "Writing summary…",
   "agent.activity.summarize.done": "Summary ready",
-  "agent.activity.summarize.degraded": "Summary stopped partway",
+  "agent.activity.summarize.degraded": "Summary made without full AI help",
   "agent.activity.summarize.failed": "Summary failed",
   "agent.activity.summarize.stalled": "Summary is taking unusually long",
   // The same six with the record NAMED — the company, the contact or the
@@ -10164,27 +10179,36 @@ export const en = {
   "agent.activity.summarizeNamed.queued": "Summary of {name} queued",
   "agent.activity.summarizeNamed.running": "Summarizing {name}…",
   "agent.activity.summarizeNamed.done": "Summary of {name} ready",
-  "agent.activity.summarizeNamed.degraded": "Summary of {name} stopped partway",
+  "agent.activity.summarizeNamed.degraded":
+    "Summary of {name} made without full AI help",
   "agent.activity.summarizeNamed.failed": "Summary of {name} failed",
   "agent.activity.summarizeNamed.stalled":
     "Summary of {name} is taking unusually long",
-  "agent.activity.draftReply.queued": "Reply draft queued",
-  "agent.activity.draftReply.running": "Drafting reply…",
-  "agent.activity.draftReply.done": "Draft reply ready",
-  "agent.activity.draftReply.degraded": "Reply draft stopped partway",
-  "agent.activity.draftReply.failed": "Reply draft failed",
-  "agent.activity.draftReply.stalled": "Reply draft is taking unusually long",
+  "agent.activity.draftEmail.queued": "Email draft queued",
+  "agent.activity.draftEmail.running": "Drafting email…",
+  "agent.activity.draftEmail.done": "Email draft ready",
+  "agent.activity.draftEmail.degraded": "Email draft made without full AI help",
+  "agent.activity.draftEmail.failed": "Email draft failed",
+  "agent.activity.draftEmail.stalled": "Email draft is taking unusually long",
+  "agent.activity.draftEmailNamed.queued": "Email draft about {name} queued",
+  "agent.activity.draftEmailNamed.running": "Drafting an email about {name}…",
+  "agent.activity.draftEmailNamed.done": "Email draft about {name} ready",
+  "agent.activity.draftEmailNamed.degraded":
+    "Email draft about {name} made without full AI help",
+  "agent.activity.draftEmailNamed.failed": "Email draft about {name} failed",
+  "agent.activity.draftEmailNamed.stalled":
+    "Email draft about {name} is taking unusually long",
   "agent.activity.offerDraft.queued": "Offer draft queued",
   "agent.activity.offerDraft.running": "Drafting offer…",
   "agent.activity.offerDraft.done": "Draft offer ready",
-  "agent.activity.offerDraft.degraded": "Offer draft stopped partway",
+  "agent.activity.offerDraft.degraded": "Offer draft made without full AI help",
   "agent.activity.offerDraft.failed": "Offer draft failed",
   "agent.activity.offerDraft.stalled": "Offer draft is taking unusually long",
   "agent.activity.draftReplyNamed.queued": "Reply draft for “{name}” queued",
   "agent.activity.draftReplyNamed.running": "Drafting a reply to “{name}”…",
   "agent.activity.draftReplyNamed.done": "Draft reply to “{name}” ready",
   "agent.activity.draftReplyNamed.degraded":
-    "Reply draft for “{name}” stopped partway",
+    "Reply draft for “{name}” made without full AI help",
   "agent.activity.draftReplyNamed.failed": "Reply draft for “{name}” failed",
   "agent.activity.draftReplyNamed.stalled":
     "Reply draft for “{name}” is taking unusually long",
@@ -10192,7 +10216,7 @@ export const en = {
   "agent.activity.offerDraftNamed.running": "Drafting an offer for {name}…",
   "agent.activity.offerDraftNamed.done": "Draft offer for {name} ready",
   "agent.activity.offerDraftNamed.degraded":
-    "Offer draft for {name} stopped partway",
+    "Offer draft for {name} made without full AI help",
   "agent.activity.offerDraftNamed.failed": "Offer draft for {name} failed",
   "agent.activity.offerDraftNamed.stalled":
     "Offer draft for {name} is taking unusually long",
@@ -23057,6 +23081,7 @@ export const en = {
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
   // the client half of a mirror the server sends keys against. So the set is
   // the contract (src/lib/magickeys.ts), not one screen's copy.
+  "magic.heading.firstBrief": "Before your first brief",
   "magic.heading.brief": "Since your last brief",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",
