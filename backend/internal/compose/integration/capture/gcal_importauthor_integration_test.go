@@ -101,8 +101,8 @@ func TestAnImporterWhoCannotChangeTheMeetingFilesItsOwn(t *testing.T) {
 
 // A copy stored before imports bound to the author's calendar is folded onto
 // the author's calendar meeting at the same instant under the same title. The
-// calendar meeting gains the copy's records. Any other import stays as it is,
-// and so does a copy whose importer may not change the calendar meeting now:
+// calendar meeting gains the copy's records. Any other import stays as it is.
+// So does a copy whose importer may not change the calendar meeting now, since
 // the live import would not have bound it either.
 func TestTheImportedCopiesTaskFoldsOnlyTheAuthorsCalendarCopy(t *testing.T) {
 	for _, tc := range []struct {

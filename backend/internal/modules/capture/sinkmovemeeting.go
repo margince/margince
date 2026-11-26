@@ -125,8 +125,8 @@ func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, slot c
 	})
 }
 
-// meetingToMove is the live meeting stored under the key, or else the one this
-// seat's calendar matched the event onto when this calendar may move it.
+// meetingToMove is the live meeting stored under the key. Failing that, it is
+// the row this seat's calendar matched the event onto, if calendarMayMove allows.
 func (s *Sink) meetingToMove(ctx context.Context, tx pgx.Tx, key connector.NaturalKey) (ids.ActivityID, bool, error) {
 	var id ids.ActivityID
 	err := tx.QueryRow(ctx, `

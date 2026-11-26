@@ -171,14 +171,10 @@ func TestARefusedCancelDoesNotOpenTheIdentityFallback(t *testing.T) {
 	}
 }
 
-// The zero id is the load-bearing half of the refusal contract: a caller that
-// read the row's real id back would treat the refusal as a find, which is
-// exactly what would send CancelIdentifiedMeeting looking for another meeting
-// under the wrong belief that nothing was captured under the key. Asked
-// directly of the constructor, because the Sink above has its OWN, looser
-// protection (mayLookPastNaturalKey's bare key-equality EXISTS) that refuses the
-// fallback whenever a row exists in any state — so an end-to-end test through
-// the Sink cannot tell a correct zero id apart from the found row's real one.
+// A refusal answers the zero id. A caller reading the row's real id would take
+// the refusal for a find. This asks the constructor directly. The Sink refuses
+// the fallback whenever any row exists under the key (mayLookPastNaturalKey).
+// So a test through the Sink cannot tell the zero id from the real one.
 func TestARefusedCancelReturnsTheZeroActivityID(t *testing.T) {
 	e := integration.Setup(t)
 	captureMeeting(t, e, e.AdminUser)

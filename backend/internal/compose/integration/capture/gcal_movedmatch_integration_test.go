@@ -6,9 +6,8 @@
 package capture
 
 // A one-off meeting this seat's calendar matched onto a row another door filed,
-// and then moved. The event's identity names the new start, and no row is
-// stored under the calendar's own key, so only the seat's own delivery of the
-// event still reaches that row.
+// and then moved. The event's identity names the new start. No row is stored
+// under the calendar's own key, so only the seat's own delivery reaches it.
 
 import (
 	"testing"

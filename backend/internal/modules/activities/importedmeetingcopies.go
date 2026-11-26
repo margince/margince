@@ -22,10 +22,9 @@ import (
 // ImportedMeetingCopiesDataTask folds a meeting an importer stored beside the
 // calendar meeting of the seat it names as the author. Such imports hold no
 // meeting identity: the author's calendar held it first, and the import door
-// did not bind across seats. The calendar meeting gains the copy's record
-// links. The copy's own text stays on the archived copy, so unarchiving it
-// undoes the fold. A copy folds only when its importer may still change the
-// calendar meeting, the check the live import makes before it binds.
+// did not bind across seats. The calendar meeting gains the copy's links, and
+// unarchiving the copy undoes the fold. A copy folds only when its importer may
+// still change the calendar meeting, as the live import checks before it binds.
 func ImportedMeetingCopiesDataTask(store *Store, importer ImporterPrincipal) datatask.Task {
 	return datatask.Task{
 		ID: "core/1795580400_imported_meeting_copies", Version: 1,
