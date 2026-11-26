@@ -21,57 +21,78 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// BuyerThreadList is the buyer's conversation plus one fact about what it
+// leaves out: HiddenOwn is true when a thread this buyer's seat wrote in is
+// withheld because its file is no longer shared. It carries no count and no
+// file, and stays false for a thread only the seller wrote in, so it tells the
+// buyer nothing they did not write about.
+type BuyerThreadList struct {
+	Threads   []crmcontracts.DealRoomThread
+	HiddenOwn bool
+}
+
 // BuyerThreads lists the conversation. Empty while the room serves no content.
 //
-// A thread on a document is shown only while the latest release NAMES that
-// document: a thread the seller opened on a file they have not yet published
-// would otherwise hand the buyer the file's existence and the seller's words
-// about it. Room-level threads are always shown.
-func (s *Store) BuyerThreads(ctx context.Context, sess Session, documentID *ids.UUID) ([]crmcontracts.DealRoomThread, error) {
+// A thread on a document is shown only while that document is in view: a
+// thread the seller opened on a file they have not yet published would
+// otherwise hand the buyer the file's existence and the seller's words about
+// it. Room-level threads are always shown. The filtering is announced, not
+// silent: HiddenOwn tells the buyer about their own withheld conversations.
+func (s *Store) BuyerThreads(ctx context.Context, sess Session, documentID *ids.UUID) (BuyerThreadList, error) {
 	if sess.ID == ids.Nil {
-		return nil, apperrors.ErrPermissionDenied
+		return BuyerThreadList{}, apperrors.ErrPermissionDenied
 	}
-	var out []crmcontracts.DealRoomThread
+	out := BuyerThreadList{Threads: []crmcontracts.DealRoomThread{}}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// Asked of the ROOM, not inferred from an empty document list: a live
 		// room with nothing in it yet serves its conversation, and reading
 		// "no documents" as "serves nothing" would take that away. A paused or
-		// finished room answers with no threads at all — the document-scoped
-		// ones already fall out below, and the room-level ones did not, so the
-		// conversation went on being served while the room served nothing else.
+		// finished room answers with no threads at all, and the buyer is
+		// already told the room's state.
 		st, err := readStanding(ctx, tx, sess.RoomID)
 		if err != nil {
 			return err
 		}
 		if !servesContent(st.access()) {
-			out = []crmcontracts.DealRoomThread{}
-			return nil
-		}
-		docs, err := visibleDocuments(ctx, tx, sess.RoomID)
-		if err != nil {
-			return err
-		}
-		visible := map[openapi_types.UUID]bool{}
-		for _, d := range docs {
-			visible[d.Id] = true
-		}
-		if documentID != nil && !visible[openapi_types.UUID(*documentID)] {
-			out = []crmcontracts.DealRoomThread{}
 			return nil
 		}
 		all, err := threadRows(ctx, tx, sess.RoomID, documentID)
 		if err != nil {
 			return err
 		}
-		out = make([]crmcontracts.DealRoomThread, 0, len(all))
+		var hidden []ids.UUID
 		for _, th := range all {
-			if th.DocumentId == nil || visible[*th.DocumentId] {
-				out = append(out, th)
+			if th.VisibleToBuyer {
+				out.Threads = append(out.Threads, th)
+			} else {
+				hidden = append(hidden, ids.UUID(th.Id))
 			}
 		}
-		return nil
+		out.HiddenOwn, err = anyWrittenBy(ctx, tx, sess, hidden)
+		return err
 	})
 	return out, err
+}
+
+// anyWrittenBy reports whether the session's seat opened or commented in any of
+// the threads.
+func anyWrittenBy(ctx context.Context, tx pgx.Tx, sess Session, threadIDs []ids.UUID) (bool, error) {
+	if len(threadIDs) == 0 {
+		return false, nil
+	}
+	var wrote bool
+	err := tx.QueryRow(ctx,
+		`SELECT EXISTS (
+		   SELECT 1 FROM deal_room_thread t
+		    WHERE t.room_id = $1 AND t.id = ANY($2) AND t.author_participant_id = $3
+		 ) OR EXISTS (
+		   SELECT 1 FROM deal_room_comment c
+		    WHERE c.room_id = $1 AND c.thread_id = ANY($2) AND c.author_participant_id = $3)`,
+		sess.RoomID, threadIDs, sess.ParticipantID).Scan(&wrote)
+	if err != nil {
+		return false, fmt.Errorf("read which withheld threads the buyer wrote in: %w", err)
+	}
+	return wrote, nil
 }
 
 // liveRoomForBuyerWrite settles what every buyer write needs: the seat is held
@@ -188,7 +209,9 @@ func (s *Store) ReplyAsBuyer(ctx context.Context, sess Session, threadID ids.UUI
 
 // ensureThreadStillVisible refuses a thread the buyer's own list would not show
 // them: one about a document that has left the room, or whose file has left the
-// deal's Files area. A thread about the room as a whole is always theirs.
+// deal's Files area. A thread about the room as a whole is always theirs. The
+// list announces such a withdrawal; a held id still answers 404, because a
+// direct fetch is no place to explain.
 //
 // ErrNotFound, not a permission error: the buyer is entitled to be here, and
 // telling them a specific thread exists but is closed to them says more about

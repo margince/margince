@@ -46,6 +46,14 @@ func visibleDocuments(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) ([]
 	if !servesContent(st.access()) {
 		return []buyerDocument{}, nil
 	}
+	return documentsInView(ctx, tx, roomID)
+}
+
+// documentsInView is the document rule alone, with no room-state check: the
+// live entries whose file is still in the deal's Files area. Both sides ask it
+// who can still read what, so the seller's mark on a thread and the buyer's
+// filtering of it cannot drift apart.
+func documentsInView(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) ([]buyerDocument, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT d.id, d.attachment_id, d.group_key, d.title, d.position,
 		       a.filename, a.content_type, a.byte_size

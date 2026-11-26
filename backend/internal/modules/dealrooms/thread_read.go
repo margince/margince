@@ -77,7 +77,34 @@ func threadRows(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, documentI
 	if err := attachComments(ctx, tx, roomID, out, byID); err != nil {
 		return nil, err
 	}
+	if err := markBuyerSight(ctx, tx, roomID, out); err != nil {
+		return nil, err
+	}
 	return out, nil
+}
+
+// buyerSeesThread is the one answer to "can the buyer read this conversation":
+// a room-level thread always, a document thread while its document is in view.
+// The buyer's list filters on it and the seller's list marks with it.
+func buyerSeesThread(inView map[openapi_types.UUID]bool, th crmcontracts.DealRoomThread) bool {
+	return th.DocumentId == nil || inView[*th.DocumentId]
+}
+
+// markBuyerSight sets VisibleToBuyer on every thread from buyerSeesThread. Room
+// state is left out: a paused room says so to both sides already.
+func markBuyerSight(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, threads []crmcontracts.DealRoomThread) error {
+	docs, err := documentsInView(ctx, tx, roomID)
+	if err != nil {
+		return err
+	}
+	inView := make(map[openapi_types.UUID]bool, len(docs))
+	for _, d := range docs {
+		inView[d.Id] = true
+	}
+	for i := range threads {
+		threads[i].VisibleToBuyer = buyerSeesThread(inView, threads[i])
+	}
+	return nil
 }
 
 func scanThread(row rowScanner) (crmcontracts.DealRoomThread, error) {
@@ -134,6 +161,9 @@ func readThread(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, threadID 
 	}
 	threads := []crmcontracts.DealRoomThread{th}
 	if err := attachComments(ctx, tx, roomID, threads, map[openapi_types.UUID]int{th.Id: 0}); err != nil {
+		return crmcontracts.DealRoomThread{}, err
+	}
+	if err := markBuyerSight(ctx, tx, roomID, threads); err != nil {
 		return crmcontracts.DealRoomThread{}, err
 	}
 	return threads[0], nil

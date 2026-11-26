@@ -40680,6 +40680,14 @@ type BuyerRoomParticipant struct {
 	Id         openapi_types.UUID            `json:"id"`
 }
 
+// BuyerRoomThreadListResponse defines model for BuyerRoomThreadListResponse.
+type BuyerRoomThreadListResponse struct {
+	Data []DealRoomThread `json:"data"`
+
+	// HiddenOwnConversations True when a conversation this buyer wrote in is withheld because its file is no longer shared. No count and no file.
+	HiddenOwnConversations bool `json:"hidden_own_conversations"`
+}
+
 // BuyerRoomView defines model for BuyerRoomView.
 type BuyerRoomView struct {
 	// Access Whether the session admits the caller to content right now. `live` — the room
@@ -50993,6 +51001,9 @@ type DealRoomThread struct {
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+
+	// VisibleToBuyer False when the buyer's own list withholds this thread because its file is no longer shared. Always true on the buyer's side. Room state is not part of it.
+	VisibleToBuyer bool `json:"visible_to_buyer"`
 }
 
 // DealRoomThreadListResponse defines model for DealRoomThreadListResponse.
