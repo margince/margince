@@ -383,7 +383,11 @@ function NewRoleAction({
               />
             )}
           </Field>
-          <DialogRefusal title={t("roles.notCreated")} message={create.isError ? roleRefusalOf(create.error, t) : null} />
+          {create.isError && (
+            <Callout tone="danger" kind="outcome" title={t("roles.notCreated")}>
+              {roleRefusalOf(create.error, t)}
+            </Callout>
+          )}
         </form>
         <div className="actions">
           <Button

@@ -380,9 +380,25 @@ export function AddDocumentDialog({
             {t("docs.add.partial")}
           </Callout>
         )}
-        {/* Oversize and permission denied need different next moves. */}
-<DialogRefusal title={t("docs.add.failedTitle")} message={upload.isError ? problemMessageOf(upload.error, t, t("docs.add.failed")) : null} />
-        <DialogRefusal title={t("docs.add.linkFailedTitle")} message={link.isError ? problemMessageOf(link.error, t, t("docs.add.linkFailed")) : null} />
+        {upload.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("docs.add.failedTitle")}
+          >
+            {/* Oversize and permission denied need different next moves. */}
+            {problemMessageOf(upload.error, t, t("docs.add.failed"))}
+          </Callout>
+        )}
+        {link.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("docs.add.linkFailedTitle")}
+          >
+            {problemMessageOf(link.error, t, t("docs.add.linkFailed"))}
+          </Callout>
+        )}
         {source === "link" && (
           <LinkAddressField url={url} onChange={setUrl} hint={preview.hint} />
         )}

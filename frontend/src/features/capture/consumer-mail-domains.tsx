@@ -404,7 +404,15 @@ function AddConsumerMailDialog({
           )}
         </Field>
         {!canManage && <p id={carveOutDenialId}>{t("consumerMail.addOnly")}</p>}
-        <DialogRefusal title={t("consumerMail.addFailed")} message={ add.isError && domainQuestionOf(add.error) === null ? captureValueMessage(add.error, "domain", t, add.variables?.domain) : null } />
+        {add.isError && domainQuestionOf(add.error) === null && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("consumerMail.addFailed")}
+          >
+            {captureValueMessage(add.error, "domain", t, add.variables?.domain)}
+          </Callout>
+        )}
         {add.isError && add.variables?.domain === typed && (
           <DomainQuestionCallout
             error={add.error}

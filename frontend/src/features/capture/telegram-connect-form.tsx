@@ -262,7 +262,15 @@ export function BotConnectForm({
                 keepsSaved={connection?.eventsSecretSet === true}
               />
             )}
-            <DialogRefusal title={t("connectors.telegramConnectFailed")} message={errorMessage} />
+            {errorMessage && (
+              <Callout
+                tone="danger"
+                kind="outcome"
+                title={t("connectors.telegramConnectFailed")}
+              >
+                {errorMessage}
+              </Callout>
+            )}
           </form>
           <div className="actions">
             <Button

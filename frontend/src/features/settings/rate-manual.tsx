@@ -16,6 +16,7 @@ import {
 import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
+import { WriteRefused } from "../../design-system/querystates";
 import { type FieldFaults, useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { todayIn } from "../../format/calendarday";
@@ -33,7 +34,6 @@ import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 import { DECISION_PROVIDERS, PROVIDERS } from "../ai/ai-routing-fields";
 import { PER_MTOK_PRICE } from "./priceinput";
 import "./rates.css";
-import { DialogRefusal } from "../../design-system/panelnotices";
 
 type SheetRow = components["schemas"]["AiModelRate"];
 type PriceWrite = components["schemas"]["SetAiModelRateRequest"];
@@ -260,7 +260,7 @@ export function PriceForm({
       {malformed ? (
         <ErrorLine>{t("aiRates.manual.malformed")}</ErrorLine>
       ) : null}
-      <DialogRefusal title={t("settings.rates.notSaved")} message={error} />
+      <WriteRefused titleKey="settings.rates.notSaved" message={error} />
     </div>
   );
   const actions = (

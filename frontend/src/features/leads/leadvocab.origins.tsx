@@ -120,7 +120,15 @@ function AddOriginDialog({
           create.mutate({ label: name, intent }, { onSuccess: onClose });
         })}
       >
-        <DialogRefusal title={t("leadOrigins.notAdded")} message={refused.problem} />
+        {refused.problem && (
+          <Callout
+            kind="outcome"
+            tone="danger"
+            title={t("leadOrigins.notAdded")}
+          >
+            {refused.problem}
+          </Callout>
+        )}
         <Field
           label={labelLabel}
           required

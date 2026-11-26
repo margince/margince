@@ -145,7 +145,9 @@ export function PaletteAnswer({
   if (error) {
     return (
       <div className="palette-answer">
-        <DialogRefusal title={t("corpusAsk.failed")} error={error} />
+        <Callout tone="danger" kind="outcome" title={t("corpusAsk.failed")}>
+          {problemMessageOf(error, t)}
+        </Callout>
       </div>
     );
   }
@@ -162,7 +164,15 @@ export function PaletteAnswer({
     return (
       <section className="palette-answer" aria-label={t("palette.answerAria")}>
         <p>{t("palette.dataUnsupportedOnly")}</p>
-        <DialogRefusal title={t("palette.dataUnavailable")} error={result.dataError} />
+        {result.dataError ? (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("palette.dataUnavailable")}
+          >
+            {problemMessageOf(result.dataError, t)}
+          </Callout>
+        ) : null}
         <Button
           onClick={() => {
             onLeave();

@@ -172,7 +172,15 @@ function LinkedInProfileRow() {
               />
             )}
           </Field>
-          <DialogRefusal title={t("linkedinImport.saveFailed")} error={save.error} />
+          {save.isError && (
+            <Callout
+              kind="outcome"
+              tone="danger"
+              title={t("linkedinImport.saveFailed")}
+            >
+              {problemMessageOf(save.error, t)}
+            </Callout>
+          )}
         </form>
         <div className="actions">
           <Button type="button" onClick={close} disabled={save.isPending}>

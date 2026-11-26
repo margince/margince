@@ -458,7 +458,15 @@ export function EmbedReindexCard() {
                       the meaning in colour only. An `outcome` of opening this
                       dialog, so it is spoken: it names the thing standing
                       between the reader and the act. */}
-                  <DialogRefusal title={t("embedreindex.previewFailed")} error={preview.error} />
+                  {preview.isError && (
+                    <Callout
+                      tone="danger"
+                      kind="outcome"
+                      title={t("embedreindex.previewFailed")}
+                    >
+                      {problemMessageOf(preview.error, t)}
+                    </Callout>
+                  )}
                   <EstimateBody preview={preview.data} locale={locale} t={t} />
                 </ConfirmModal>
               )}

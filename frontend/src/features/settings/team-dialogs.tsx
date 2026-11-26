@@ -291,7 +291,15 @@ export function TeamMembersModal({
         ) : (
           <p className="t-caption">{t("users.teamMembersReadOnly")}</p>
         )}
-        <DialogRefusal title={t("users.teamNotChanged")} error={setMember.error} />
+        {setMember.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("users.teamNotChanged")}
+          >
+            {problemMessageOf(setMember.error, t)}
+          </Callout>
+        )}
         <RosterPartialNote partial={usersPartial} />
       </div>
       <div className="actions">

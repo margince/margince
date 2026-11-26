@@ -224,7 +224,15 @@ export function BindingEditor({
             {t("aiRouting.conflictHelp")}
           </Callout>
         )}
-        <DialogRefusal title={t("aiRouting.saveFailed")} error={save.isError && !isConflict(save.error) ? save.error : null} />
+        {save.isError && !isConflict(save.error) && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("aiRouting.saveFailed")}
+          >
+            {problemMessageOf(save.error, t)}
+          </Callout>
+        )}
       </DrawerBody>
       <DrawerFoot className="actions">
         {draft.kind === "decisions" && base.binding !== undefined && (

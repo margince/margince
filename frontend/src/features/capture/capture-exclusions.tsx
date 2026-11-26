@@ -433,7 +433,15 @@ function ExcludeDialog({
             )}
           </Field>
         )}
-        <DialogRefusal title={t("captureExclusions.containersUnreadable")} message={ picking && !folders.isPending && folders.isError ? t("captureExclusions.containersUnreadableBody") : null } />
+        {picking && !folders.isPending && folders.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("captureExclusions.containersUnreadable")}
+          >
+            {t("captureExclusions.containersUnreadableBody")}
+          </Callout>
+        )}
         {picking &&
           !folders.isPending &&
           !folders.isError &&
@@ -462,7 +470,15 @@ function ExcludeDialog({
             </Callout>
           )}
         {refused && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
-        <DialogRefusal title={t("captureSettings.addFailed")} message={ add.isError ? captureValueMessage(add.error, add.variables?.kind, t) : null } />
+        {add.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("captureSettings.addFailed")}
+          >
+            {captureValueMessage(add.error, add.variables?.kind, t)}
+          </Callout>
+        )}
       </form>
       <div className="actions">
         <Button type="button" onClick={onClose}>

@@ -167,7 +167,13 @@ export function ProjectFilingModal({
       pending={undo.isPending}
       error={undo.isError ? problemMessageOf(undo.error, t) : undefined}
     >
-      {filing.isError && !state && !filing.isFetching ? ( <DialogRefusal title={t("projectFiling.unread")} error={filing.error} /> ) : (
+      {filing.isError && !state && !filing.isFetching ? (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={problemMessageOf(filing.error, t)}
+        />
+      ) : (
         <FilingBody
           state={state}
           done={Boolean(undone)}

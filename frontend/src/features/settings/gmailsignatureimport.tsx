@@ -75,7 +75,14 @@ export function GmailSignatureImport({
           title={t(labelFor(NOT_TAKEN, answer.state))}
         />
       )}
-      <DialogRefusal title={t("settings.signatureGmailUnread")} error={read.error} />
+      {read.isError && (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          live="status"
+          title={problemMessageOf(read.error, t)}
+        />
+      )}
     </>
   );
 }

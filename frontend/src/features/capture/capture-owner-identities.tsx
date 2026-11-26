@@ -350,7 +350,20 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             />
           )}
         </Field>
-        <DialogRefusal title={t("ownerIdentities.addFailed")} message={ add.isError && domainQuestionOf(add.error) === null ? captureValueMessage( add.error, add.variables?.kind, t, add.variables?.value, ) : null } />
+        {add.isError && domainQuestionOf(add.error) === null && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("ownerIdentities.addFailed")}
+          >
+            {captureValueMessage(
+              add.error,
+              add.variables?.kind,
+              t,
+              add.variables?.value,
+            )}
+          </Callout>
+        )}
         {add.isError &&
           add.variables?.value === value &&
           add.variables?.kind === kind && (

@@ -89,11 +89,21 @@ export function PurgeDialog({
         {!outcome && <p>{t("capturePurge.intro")}</p>}
         {outcome && <PurgeReceipt outcome={outcome} />}
         {changed && previewed && <p>{t("capturePurge.changed")}</p>}
-        <DialogRefusal title={t(
-  // A permission refusal is answered before the cascade starts, so
-  // nothing was destroyed; any other failure may have come halfway.
-  problemCodeOf(purge.error) === "permission_denied" ? "capturePurge.refused" : "capturePurge.failed",
-)} error={problemCodeOf(purge.error) === "conflict" ? null : purge.error} />
+        {purge.isError && problemCodeOf(purge.error) !== "conflict" && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t(
+              // A permission refusal is answered before the cascade starts, so
+              // nothing was destroyed; any other failure may have come halfway.
+              problemCodeOf(purge.error) === "permission_denied"
+                ? "capturePurge.refused"
+                : "capturePurge.failed",
+            )}
+          >
+            {problemMessageOf(purge.error, t)}
+          </Callout>
+        )}
       </div>
       <div className="actions">
         <span className="actions-pair">

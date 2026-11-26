@@ -17,7 +17,7 @@ import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
-import { QueryGate } from "../../design-system/querystates";
+import { QueryGate, WriteRefused } from "../../design-system/querystates";
 import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
@@ -32,7 +32,6 @@ import { useCompanyZone } from "../../lib/companyzone";
 import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { WithheldRateCard } from "./rates";
-import { DialogRefusal } from "../../design-system/panelnotices";
 
 type TaxRate = components["schemas"]["TaxRate"];
 type Category = TaxRate["category"];
@@ -260,9 +259,9 @@ function TaxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
             />
           )}
         </Field>
-        <DialogRefusal
-          title={t("taxRates.notSaved")}
-          error={save.error}
+        <WriteRefused
+          titleKey="taxRates.notSaved"
+          message={save.isError ? problemMessageOf(save.error, t) : null}
         />
       </form>
       <div className="actions">

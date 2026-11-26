@@ -19,13 +19,13 @@ import {
   TextInput,
 } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
+import { WriteRefused } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { characterCount } from "../../lib/charactercount";
 import { throwProblem } from "../../lib/problem";
 import { resetToSignedOut } from "../../lib/session";
 import { MintedPassport } from "./settings.passportuse";
-import { DialogRefusal } from "../../design-system/panelnotices";
 
 const PASSPORT_SCOPES = ["read", "draft", "write", "send", "enrich"] as const;
 type PassportScope = (typeof PASSPORT_SCOPES)[number];
@@ -220,7 +220,7 @@ export function MintDialog({
             value={areas}
             onChange={setAreas}
           />
-          <DialogRefusal title={t("settings.mintFailed")} error={mint.error} />
+          <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
         </form>
       )}
       <div className="actions">
