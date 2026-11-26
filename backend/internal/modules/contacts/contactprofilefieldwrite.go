@@ -94,12 +94,12 @@ func (p contactProfileFieldPrecedence) conflictClause(replacing bool) string {
 		// wrong, and offering it after a RESTORE would undo the undo.
 		return acceptanceUpdate
 	case replaceUnlessHumanHeld:
-		return acceptanceUpdate + ` WHERE NOT starts_with(contact_profile_field.captured_by, '` + principal.HumanIDPrefix + `')`
+		return acceptanceUpdate + ` WHERE NOT starts_with(field_provenance.captured_by, '` + principal.HumanIDPrefix + `')`
 	case supersedeOnNewerObservation:
 		if replacing {
 			return `DO UPDATE SET value = EXCLUDED.value,
 			    evidence_snippet = EXCLUDED.evidence_snippet,
-			    source_ref = EXCLUDED.source_ref,
+			    evidence_ref = EXCLUDED.evidence_ref,
 			    confidence = EXCLUDED.confidence,
 			    source = EXCLUDED.source,
 			    captured_by = EXCLUDED.captured_by,
@@ -110,27 +110,27 @@ func (p contactProfileFieldPrecedence) conflictClause(replacing bool) string {
 		}
 		return `DO UPDATE SET value = EXCLUDED.value,
 		    evidence_snippet = EXCLUDED.evidence_snippet,
-		    source_ref = EXCLUDED.source_ref,
+		    evidence_ref = EXCLUDED.evidence_ref,
 		    confidence = EXCLUDED.confidence,
 		    source = EXCLUDED.source,
 		    captured_by = EXCLUDED.captured_by,
 		    observed_at = EXCLUDED.observed_at,
 		    superseded_value = CASE
-		        WHEN contact_profile_field.value_key = ''
-		         AND contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
-		        THEN contact_profile_field.value
-		        ELSE contact_profile_field.superseded_value END,
+		        WHEN field_provenance.value_key = ''
+		         AND field_provenance.value IS DISTINCT FROM EXCLUDED.value
+		        THEN field_provenance.value
+		        ELSE field_provenance.superseded_value END,
 		    superseded_captured_by = CASE
-		        WHEN contact_profile_field.value_key = ''
-		         AND contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
-		        THEN contact_profile_field.captured_by
-		        ELSE contact_profile_field.superseded_captured_by END,
+		        WHEN field_provenance.value_key = ''
+		         AND field_provenance.value IS DISTINCT FROM EXCLUDED.value
+		        THEN field_provenance.captured_by
+		        ELSE field_provenance.superseded_captured_by END,
 		    superseded_observed_at = CASE
-		        WHEN contact_profile_field.value_key = ''
-		         AND contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
-		        THEN contact_profile_field.observed_at
-		        ELSE contact_profile_field.superseded_observed_at END
-		  WHERE EXCLUDED.observed_at > contact_profile_field.observed_at`
+		        WHEN field_provenance.value_key = ''
+		         AND field_provenance.value IS DISTINCT FROM EXCLUDED.value
+		        THEN field_provenance.observed_at
+		        ELSE field_provenance.superseded_observed_at END
+		  WHERE EXCLUDED.observed_at > field_provenance.observed_at`
 	case claimUnanswered:
 	}
 	return "DO NOTHING"
@@ -139,7 +139,7 @@ func (p contactProfileFieldPrecedence) conflictClause(replacing bool) string {
 // acceptanceUpdate replaces the whole row for an accepted value.
 const acceptanceUpdate = `DO UPDATE SET value = EXCLUDED.value,
 		    evidence_snippet = EXCLUDED.evidence_snippet,
-		    source_ref = EXCLUDED.source_ref,
+		    evidence_ref = EXCLUDED.evidence_ref,
 		    confidence = EXCLUDED.confidence,
 		    source = EXCLUDED.source,
 		    captured_by = EXCLUDED.captured_by,
@@ -210,8 +210,8 @@ func profileFieldValueKey(field, value string) string {
 // page stated to what their columns hold. A researcher's claim is not cut: it is
 // refused past the limit, so the user who typed it can shorten it.
 func machineProfileField(value, evidence string) (string, string) {
-	return textbounds.Fit("public.contact_profile_field.value", value),
-		textbounds.Fit("public.contact_profile_field.evidence_snippet", evidence)
+	return textbounds.Fit("public.field_provenance.value", value),
+		textbounds.Fit("public.field_provenance.evidence_snippet", evidence)
 }
 
 // writeContactProfileField writes one evidence row through writeProfileFieldRow,
@@ -263,6 +263,9 @@ func writeProfileFieldRow(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		}
 		return false, err
 	}
+	if err := moveLegacyEvidence(ctx, tx, entityContact, contactID.UUID); err != nil {
+		return false, err
+	}
 	valueKey := profileFieldValueKey(row.Field, row.Value)
 	replaces := ""
 	if row.Replaces != "" {
@@ -270,18 +273,20 @@ func writeProfileFieldRow(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 	}
 	tag, err := tx.Exec(ctx, `
 		WITH replaced AS (
-		    DELETE FROM contact_profile_field
-		     WHERE contact_id = $1::uuid AND field = $2::text
+		    DELETE FROM field_provenance
+		     WHERE object_type = 'contact' AND object_id = $1::uuid AND field_name = $2::text
+		       AND value IS NOT NULL
 		       AND $12::text <> '' AND value_key = $12::text AND value_key <> $11::text
 		    RETURNING value, captured_by, observed_at)
-		INSERT INTO contact_profile_field
-		  (contact_id, field, value_key, value, evidence_snippet, source_ref, confidence, source,
+		INSERT INTO field_provenance
+		  (object_type, object_id, field_name, value_key, value, evidence_snippet, evidence_ref, confidence, source,
 		   captured_by, observed_at, superseded_value, superseded_captured_by, superseded_observed_at)
-		SELECT $1::uuid, $2::text, $11::text, $3::text, $4::text, $5::text, $6::numeric, $7::text,
+		SELECT 'contact', $1::uuid, $2::text, $11::text, $3::text, $4::text, $5::text, $6::numeric, $7::text,
 		       $8::text, COALESCE($9::timestamptz, now()),
 		       COALESCE(r.value, NULLIF($10::text, ''), NULLIF($12::text, '')), r.captured_by, r.observed_at
 		  FROM (SELECT 1) AS one LEFT JOIN replaced r ON true
-		ON CONFLICT (contact_id, field, value_key) `+precedence.conflictClause(replaces != ""),
+		ON CONFLICT (object_type, object_id, field_name, value_key) WHERE value IS NOT NULL `+
+		precedence.conflictClause(replaces != ""),
 		contactID, row.Field, row.Value, row.EvidenceSnippet, row.SourceRef,
 		row.Confidence, row.Source, row.CapturedBy, row.ObservedAt, row.Superseded,
 		valueKey, replaces)
@@ -339,20 +344,27 @@ type droppedSupport struct {
 // dropProfileFieldSupportTx removes sourceRef from every signature row it
 // supports, moving a row still supported elsewhere onto that mail.
 func dropProfileFieldSupportTx(ctx context.Context, tx pgx.Tx, sourceRef string) ([]droppedSupport, error) {
+	if err := moveLegacySubjectsOf(ctx, tx, entityContact, `SELECT DISTINCT contact_id
+		  FROM contact_profile_field_legacy WHERE signature_support ? $1::text AND source = $2`,
+		sourceRef, enrichSource); err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `WITH dropped AS (
 		  SELECT f.id, f.signature_support - $1::text AS rest,
 		         coalesce((f.signature_support -> $1::text ->> 'street')::boolean, false) AS backed_street
-		    FROM contact_profile_field f WHERE f.signature_support ? $1::text AND f.source = $2 FOR UPDATE),
+		    FROM field_provenance f
+		   WHERE f.object_type = 'contact' AND f.value IS NOT NULL
+		     AND f.signature_support ? $1::text AND f.source = $2 FOR UPDATE),
 		 next AS (
 		  SELECT d.id, d.rest, d.backed_street, (SELECT min(k) FROM jsonb_object_keys(d.rest) k) AS ref FROM dropped d)
-		UPDATE contact_profile_field f
+		UPDATE field_provenance f
 		   SET signature_support = n.rest,
-		       source_ref = CASE WHEN f.source_ref = $1 AND n.ref IS NOT NULL THEN n.ref ELSE f.source_ref END,
-		       evidence_snippet = CASE WHEN f.source_ref = $1 AND n.ref IS NOT NULL
+		       evidence_ref = CASE WHEN f.evidence_ref = $1 AND n.ref IS NOT NULL THEN n.ref ELSE f.evidence_ref END,
+		       evidence_snippet = CASE WHEN f.evidence_ref = $1 AND n.ref IS NOT NULL
 		                               THEN n.rest -> n.ref ->> 'snippet' ELSE f.evidence_snippet END
 		  FROM next n
 		 WHERE f.id = n.id
-		RETURNING f.contact_id, f.value, f.field = $3 AND n.backed_street AND n.ref IS NOT NULL
+		RETURNING f.object_id, f.value, f.field_name = $3 AND n.backed_street AND n.ref IS NOT NULL
 		   AND NOT EXISTS (SELECT 1 FROM jsonb_each(n.rest) e WHERE (e.value ->> 'street')::boolean)`,
 		sourceRef, enrichSource, fieldAddress)
 	if err != nil {
@@ -368,11 +380,15 @@ func dropProfileFieldSupportTx(ctx context.Context, tx pgx.Tx, sourceRef string)
 // addSignatureSupportTx records that sourceRef states the value of one
 // signature evidence row, and reports whether such a row holds it.
 func addSignatureSupportTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, field, valueKey, value, sourceRef, snippet string) (bool, error) {
-	tag, err := tx.Exec(ctx, `UPDATE contact_profile_field
+	if err := moveLegacyEvidence(ctx, tx, entityContact, contactID.UUID); err != nil {
+		return false, err
+	}
+	tag, err := tx.Exec(ctx, `UPDATE field_provenance
 		   SET signature_support = signature_support || jsonb_build_object($5::text,
 		       jsonb_build_object('snippet', $6::text,
 		         'street', coalesce((signature_support -> $5::text ->> 'street')::boolean, false)))
-		 WHERE contact_id = $1 AND field = $2 AND value_key = $3 AND value = $4 AND source = $7`,
+		 WHERE object_type = 'contact' AND object_id = $1 AND field_name = $2 AND value_key = $3
+		   AND value = $4 AND source = $7`,
 		contactID, field, valueKey, value, sourceRef, snippet, enrichSource)
 	if err != nil {
 		return false, fmt.Errorf("contacts: recording the mail that states a signature's %s: %w", field, err)
@@ -383,9 +399,13 @@ func addSignatureSupportTx(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 // markStreetSupportTx records that sourceRef also vouched for the employer's
 // street the contact's address row states.
 func markStreetSupportTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string) error {
-	if _, err := tx.Exec(ctx, `UPDATE contact_profile_field
+	if err := moveLegacyEvidence(ctx, tx, entityContact, contactID.UUID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE field_provenance
 		   SET signature_support = jsonb_set(signature_support, ARRAY[$2::text, 'street'], 'true'::jsonb)
-		 WHERE contact_id = $1 AND field = $3 AND source = $4 AND signature_support ? $2::text`,
+		 WHERE object_type = 'contact' AND object_id = $1 AND field_name = $3 AND source = $4
+		   AND signature_support ? $2::text`,
 		contactID, sourceRef, fieldAddress, enrichSource); err != nil {
 		return fmt.Errorf("contacts: recording the mail that states an employer's street: %w", err)
 	}

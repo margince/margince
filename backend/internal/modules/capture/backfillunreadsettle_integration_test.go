@@ -15,15 +15,19 @@ import (
 )
 
 // oneLastPage is a history provider whose first page is its last.
-type oneLastPage struct{ checkpointHistory }
+type oneLastPage struct {
+	checkpointHistory
+	failed int
+}
 
-func (*oneLastPage) BackfillPage(context.Context, connector.Auth, time.Time, string, connector.Sink) (connector.BackfillPageResult, error) {
-	return connector.BackfillPageResult{Scanned: 1}, nil
+func (p *oneLastPage) BackfillPage(context.Context, connector.Auth, time.Time, string, connector.Sink) (connector.BackfillPageResult, error) {
+	return connector.BackfillPageResult{Scanned: 1 + p.failed, Failed: p.failed}, nil
 }
 
 // A finished history import settles the unread span it read. What it read goes,
 // and what is older than it reached stays. A span that ended after the import
-// was asked for is not one it covered.
+// was asked for is not one it covered. A run that failed a message did not read
+// its window.
 func TestAFinishedImportSettlesTheUnreadSpanItRead(t *testing.T) {
 	day := 24 * time.Hour
 	for _, c := range []struct {
@@ -31,15 +35,17 @@ func TestAFinishedImportSettlesTheUnreadSpanItRead(t *testing.T) {
 		// from and to are offsets from the import's after_date, in days.
 		from, to         int
 		endsAfterRequest bool
+		failed           int
 		wantFrom, wantTo *int
 	}{
 		{name: "inside the window", from: 10, to: 20},
 		{name: "older than the window", from: -10, to: 20, wantFrom: new(-10), wantTo: new(0)},
 		{name: "wholly older than the window", from: -20, to: -10, wantFrom: new(-20), wantTo: new(-10)},
 		{name: "ending after the import was asked for", from: 10, to: 20, endsAfterRequest: true, wantFrom: new(10), wantTo: new(20)},
+		{name: "read by a run that failed a message", from: -10, to: 20, failed: 1, wantFrom: new(-10), wantTo: new(20)},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			ctx, reg, run := admissionRunWith(t, &oneLastPage{})
+			ctx, reg, run := admissionRunWith(t, &oneLastPage{failed: c.failed})
 			owner, _ := setupCaptureDB(t)
 			var after time.Time
 			var connection ids.UUID
