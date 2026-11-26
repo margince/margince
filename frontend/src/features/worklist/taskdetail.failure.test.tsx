@@ -63,6 +63,10 @@ function stubWith(refusal: { status: number; code: string }) {
   return () => reads;
 }
 
+/** Opens the due chip, which holds Snooze and Move to. */
+const openDue = async (user: ReturnType<typeof userEvent.setup>) =>
+  user.click(await screen.findByRole("button", { name: /^Due / }));
+
 function open() {
   render(
     <StoryProviders>
@@ -82,7 +86,7 @@ test("Done on a task that changed elsewhere says so and offers a reload", async 
   expect(alert.textContent).toContain(en["common.versionSkew"]);
   const before = reads();
   await user.click(screen.getByRole("button", { name: "Reload" }));
-  await screen.findByRole("button", { name: "Snooze 1 day" });
+  await screen.findByRole("button", { name: /^Due / });
   expect(reads()).toBeGreaterThan(before);
   expect(screen.queryByRole("alert")).toBeNull();
 });
@@ -92,6 +96,7 @@ test("Snooze 1 day on a task that changed elsewhere says so", async () => {
   stubWith({ status: 409, code: "version_skew" });
   open();
 
+  await openDue(user);
   await user.click(await screen.findByRole("button", { name: "Snooze 1 day" }));
 
   const alert = await screen.findByRole("alert");
@@ -162,6 +167,7 @@ test("while a write on one task is in flight, every write control of another tas
   await user.click(await screen.findByRole("button", { name: "Done" }));
   await user.click(screen.getByRole("button", { name: "switch" }));
   await screen.findByText("Task task-2");
+  await openDue(user);
 
   for (const name of ["Done", "Snooze 1 day"]) {
     expect(screen.getByRole("button", { name }).hasAttribute("disabled")).toBe(

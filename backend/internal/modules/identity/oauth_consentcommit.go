@@ -101,7 +101,7 @@ func (s *Service) mintConsentedAuthorizationCode(
 	}
 	storedScopes := scopes
 	if req.Offline {
-		storedScopes = append(append([]string{}, scopes...), scopeOfflineAccess)
+		storedScopes = append(append([]string{}, scopes...), ScopeOfflineAccess)
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The AUTHORIZATION CODE: a single-use password the client posts at the

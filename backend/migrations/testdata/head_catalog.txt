@@ -5275,6 +5275,7 @@ public.deal_room_invitation.attempt_no integer NOT NULL gen=- def=1
 public.deal_room_invitation.captured_by text NOT NULL gen=- def=-
 public.deal_room_invitation.consumed_at timestamp with time zone gen=- def=-
 public.deal_room_invitation.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_room_invitation.deal_room_invitation_attempt_no_check CHECK ((attempt_no > 0))
 public.deal_room_invitation.deal_room_invitation_expires_after_creation CHECK ((expires_at > created_at))
 public.deal_room_invitation.deal_room_invitation_participant_fkey FOREIGN KEY (participant_id) REFERENCES deal_room_participant(id) ON DELETE CASCADE
 public.deal_room_invitation.deal_room_invitation_pkey PRIMARY KEY (id)
@@ -6142,7 +6143,9 @@ public.forecast_snapshot_pkey CREATE UNIQUE INDEX forecast_snapshot_pkey ON publ
 public.fx_rate acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.fx_rate.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.fx_rate.from_currency currency_code NOT NULL gen=- def=-
+public.fx_rate.fx_rate_pair_distinct CHECK (((from_currency)::bpchar <> (to_currency)::bpchar))
 public.fx_rate.fx_rate_pkey PRIMARY KEY (id)
+public.fx_rate.fx_rate_rate_positive CHECK ((rate > (0)::numeric))
 public.fx_rate.id uuid NOT NULL gen=- def=uuidv7()
 public.fx_rate.rate numeric(20,10) NOT NULL gen=- def=-
 public.fx_rate.rate_date date NOT NULL gen=- def=-
@@ -8076,6 +8079,8 @@ public.oauth_authorization_code.lent_passport_id uuid gen=- def=-
 public.oauth_authorization_code.oauth_authorization_code_code_hash_check CHECK ((code_hash ~ '^[0-9a-f]{64}$'::text))
 public.oauth_authorization_code.oauth_authorization_code_expires_after_creation CHECK ((expires_at > created_at))
 public.oauth_authorization_code.oauth_authorization_code_pkey PRIMARY KEY (id)
+public.oauth_authorization_code.oauth_authorization_code_scopes_present CHECK ((cardinality(scopes) > 0))
+public.oauth_authorization_code.oauth_authorization_code_scopes_vocabulary CHECK ((scopes <@ ARRAY['read'::text, 'draft'::text, 'write'::text, 'send'::text, 'enrich'::text, 'offline_access'::text]))
 public.oauth_authorization_code.oauth_authorization_code_work_areas_vocabulary CHECK ((work_areas <@ ARRAY['business'::text, 'compliance'::text, 'capture'::text, 'workspace_settings'::text, 'admin_settings'::text, 'own_account'::text, 'agent_governance'::text, 'operator'::text, 'public'::text]))
 public.oauth_authorization_code.oauth_code_lent_passport_fkey FOREIGN KEY (lent_passport_id) REFERENCES passport(id) ON DELETE SET NULL (lent_passport_id)
 public.oauth_authorization_code.oauth_code_unique UNIQUE (code_hash)
@@ -8118,6 +8123,7 @@ public.oauth_grant.lent_passport_id uuid gen=- def=-
 public.oauth_grant.oauth_grant_client_fkey FOREIGN KEY (client_id) REFERENCES oauth_client(client_id) ON DELETE RESTRICT
 public.oauth_grant.oauth_grant_lent_passport_fkey FOREIGN KEY (lent_passport_id) REFERENCES passport(id) ON DELETE SET NULL (lent_passport_id)
 public.oauth_grant.oauth_grant_pkey PRIMARY KEY (id)
+public.oauth_grant.oauth_grant_scopes_present CHECK ((cardinality(scopes) > 0))
 public.oauth_grant.oauth_grant_scopes_vocabulary CHECK ((scopes <@ ARRAY['read'::text, 'draft'::text, 'write'::text, 'send'::text, 'enrich'::text]))
 public.oauth_grant.oauth_grant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.oauth_grant.oauth_grant_work_areas_vocabulary CHECK ((work_areas <@ ARRAY['business'::text, 'compliance'::text, 'capture'::text, 'workspace_settings'::text, 'admin_settings'::text, 'own_account'::text, 'agent_governance'::text, 'operator'::text, 'public'::text]))
@@ -8418,6 +8424,7 @@ public.passport.passport_grant_fkey FOREIGN KEY (oauth_grant_id) REFERENCES oaut
 public.passport.passport_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.passport.passport_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE CASCADE
 public.passport.passport_pkey PRIMARY KEY (id)
+public.passport.passport_scopes_present CHECK ((cardinality(scopes) > 0))
 public.passport.passport_scopes_vocabulary CHECK ((scopes <@ ARRAY['read'::text, 'draft'::text, 'write'::text, 'send'::text, 'enrich'::text]))
 public.passport.passport_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.passport.passport_token_hash_key UNIQUE (token_hash)
