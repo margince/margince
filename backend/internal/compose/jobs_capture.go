@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/chatclarify"
 	"github.com/margince/margince/backend/internal/compose/whatsappedge"
 	"github.com/margince/margince/backend/internal/compose/zaloedge"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -204,6 +205,10 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// posture that retention is a promise about message content. A deployment
 	// that composed capture at all must expire it.
 	addDeclaredWorker[CaptureTraceSweepArgs](reg, &captureTraceSweepWorker{pool: pool, purger: NewCapturePurger(pool, NewRetentionServiceFor(InstallationDB(pool), cfg.Blobstore, log))})
+	addDeclaredWorker[ChatClarificationSweepArgs](reg, &chatClarificationSweepWorker{sweep: chatclarify.Sweep{
+		Pool: pool, Vault: cfg.ChannelVault, WhatsApp: cfg.ChatMedia.WhatsApp, Zalo: cfg.ChatMedia.Zalo,
+		Bot: chatclarify.BotOf(cfg.SendRegistry), Now: time.Now, Log: log,
+	}})
 }
 
 // GraphWatchConfig configures the Microsoft Graph subscription-renewal pass.

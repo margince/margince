@@ -502,6 +502,22 @@ kinds:
       retention this feature promises. An empty pass is one indexed probe.
 
 
+  chat_clarification_sweep:
+    role: worker
+    fleet: true
+    go_type: ChatClarificationSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1m
+    reason: >-
+      Every minute, so a colleague who forwarded messages to a company chat
+      account is asked who wrote them soon after the forwards stop, which is
+      two minutes after the last one. Each pass forms the batches that settled
+      and sends the questions owed. An empty pass is one indexed probe. A send is
+      claimed before the provider is called and a refused one is paced by its own
+      attempt count, so a pass never repeats a question.
+
   captured_deal_refile:
     role: worker
     go_type: CapturedDealRefileArgs

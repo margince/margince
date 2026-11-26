@@ -939,12 +939,21 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## raw_capture
 
-10 columns · primary key `(id)` · referenced by 2 foreign keys
+19 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `ask_attempts` | `smallint`, default `0` | yes |  |
+| `ask_batch_id` | `uuid` |  |  |
+| `ask_claimed_at` | `timestamp with time zone` |  |  |
+| `ask_followup_at` | `timestamp with time zone` |  |  |
+| `ask_message_ids` | `text[]`, default `'{}'::text[]` | yes |  |
+| `ask_next_at` | `timestamp with time zone` |  |  |
+| `ask_sent_at` | `timestamp with time zone` |  |  |
 | `channel_subjects` | `text[]` |  |  |
+| `held_by` | `uuid` |  |  |
+| `held_connection` | `uuid` |  |  |
 | `parts_slim_outcome` | `text` |  | One of `slimmed`, `no_proved_parts`, `unreadable_spelling`, `unrewritable_original`, `nothing_came_out`, `unencodable_result` and 1 more. |
 | `parts_slimmed_at` | `timestamp with time zone` |  |  |
 | `payload` | `jsonb` | yes |  |
@@ -963,6 +972,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `raw_capture_channel_subjects`: `gin (channel_subjects) WHERE (channel_subjects IS NOT NULL)`
+- `raw_capture_held_forward_idx`: `btree (held_by, held_connection) WHERE (held_by IS NOT NULL)`
 - `raw_capture_original_legacy_hints`: `btree (id) WHERE ((payload_object IS NOT NULL) AND ((((payload_object -> 'subjects') ->> 'version') IS DISTINCT FROM '1') OR (jsonb_typeof(((payload_object -> 'subjects') -> 'email_bits')) IS DISTINCT FROM 'array') OR (COALESCE(((payload_object -> 'subjects') ->> 'email_saturated'), 'false') <> 'false')))`
 - `raw_capture_original_subject_hints`: `gin (payload_object jsonb_path_ops) WHERE (payload_object IS NOT NULL)`
 - `raw_capture_payload_object_key`: `btree (((payload_object ->> 'key'))) WHERE (payload_object IS NOT NULL)`

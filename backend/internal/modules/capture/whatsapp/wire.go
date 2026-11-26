@@ -146,9 +146,21 @@ type wireMessage struct {
 		FrequentlyForwarded bool   `json:"frequently_forwarded"`
 		ID                  string `json:"id"`
 	} `json:"context"`
-	Edit   *wireRef    `json:"edit"`
-	Revoke *wireRef    `json:"revoke"`
-	Errors []wireError `json:"errors"`
+	Contacts []wireSharedContact `json:"contacts"`
+	Edit     *wireRef            `json:"edit"`
+	Revoke   *wireRef            `json:"revoke"`
+	Errors   []wireError         `json:"errors"`
+}
+
+// wireSharedContact is one card of a `contacts` message.
+type wireSharedContact struct {
+	Name struct {
+		FormattedName string `json:"formatted_name"`
+	} `json:"name"`
+	Phones []struct {
+		Phone string `json:"phone"`
+		WaID  string `json:"wa_id"`
+	} `json:"phones"`
 }
 
 type wireStatus struct {

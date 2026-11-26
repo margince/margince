@@ -19,12 +19,35 @@ func (e *CaptureOnlyConversationError) FieldFault() (field, code, message string
 	return "id", "conversation_capture_only", e.Error()
 }
 
-// RefuseCaptureOnlyThread is the one rule behind every refusal to reply into a
-// capture-only conversation. The send path and the agent's staging check both
-// call it, so a reply cannot be staged that the send would refuse.
-func RefuseCaptureOnlyThread(provider, threadKey string) error {
-	if IsCaptureOnlyThread(provider, threadKey) {
-		return &CaptureOnlyConversationError{Provider: provider}
+// SendPurpose says why a message goes into a chat.
+type SendPurpose int
+
+const (
+	// PurposeReply is a reply a colleague or an agent writes to a conversation.
+	PurposeReply SendPurpose = iota
+	// PurposeClarification is the question a company account asks a colleague
+	// about messages the colleague forwarded to it.
+	PurposeClarification
+)
+
+// AllowChannelSend is the one rule behind every refusal to send into a
+// capture-only conversation. A customer's business conversation is only read
+// here. The one exception is a clarification to a verified member of the
+// workspace, about what that member forwarded.
+//
+// The send path, the agent's staging check and the clarification job all call
+// it, so a message cannot be staged that the send would refuse.
+func AllowChannelSend(purpose SendPurpose, provider, threadKey string, recipientIsVerifiedMember bool) error {
+	if !IsCaptureOnlyThread(provider, threadKey) {
+		return nil
 	}
-	return nil
+	if purpose == PurposeClarification && recipientIsVerifiedMember {
+		return nil
+	}
+	return &CaptureOnlyConversationError{Provider: provider}
+}
+
+// RefuseCaptureOnlyThread refuses a reply into a capture-only conversation.
+func RefuseCaptureOnlyThread(provider, threadKey string) error {
+	return AllowChannelSend(PurposeReply, provider, threadKey, false)
 }

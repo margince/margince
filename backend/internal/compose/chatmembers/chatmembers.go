@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -61,4 +62,18 @@ func (m Members) RedeemCodeTx(ctx context.Context, tx pgx.Tx, provider, scope, a
 		return true, nil
 	}
 	return redeemed, err
+}
+
+// AccountOf is the account the member verified on the provider's network, with
+// the language the member reads Margince in.
+func (m Members) AccountOf(ctx context.Context, tx pgx.Tx, provider string, member ids.UUID) (capture.MemberAccount, bool, error) {
+	n, ok := network(provider, "")
+	if !ok {
+		return capture.MemberAccount{}, false, nil
+	}
+	account, found, err := identity.ChatAccountTx(ctx, tx, n, member)
+	if err != nil || !found {
+		return capture.MemberAccount{}, false, err
+	}
+	return capture.MemberAccount{Scope: account.Scope, ID: account.ID, Locale: account.Locale}, true, nil
 }

@@ -125,6 +125,10 @@ type telegramMessage struct {
 	Caption  string `json:"caption"`
 	// ForwardOrigin is set when the sender forwarded a message written elsewhere.
 	ForwardOrigin *telegramForwardOrigin `json:"forward_origin"`
+	// ReplyToMessage is the message this one answers, when it answers one.
+	ReplyToMessage *struct {
+		MessageID int64 `json:"message_id"`
+	} `json:"reply_to_message"`
 	telegramMedia
 }
 
@@ -326,6 +330,10 @@ func chatMessageOf(msg *telegramMessage, updateID int64, link *BusinessLink) (co
 		OccurredAt: time.Unix(msg.Date, 0).UTC(),
 		Forward:    chatForward(msg.ForwardOrigin),
 	}
+	if msg.ReplyToMessage != nil && msg.ReplyToMessage.MessageID > 0 {
+		chat.ReplyToID = fmt.Sprintf("%d", msg.ReplyToMessage.MessageID)
+	}
+	chat.SharedContact = sharedContactOf(msg.Contact)
 	if link != nil {
 		// Through a business link the other end of the private chat is the chat
 		// itself, whoever typed. The customer typed, or the owner did in their
@@ -339,6 +347,31 @@ func chatMessageOf(msg *telegramMessage, updateID int64, link *BusinessLink) (co
 		}
 	}
 	return chat, nil
+}
+
+// sharedContactOf reads the card of a contact message. A card for someone who
+// is not on Telegram carries a phone number and no account id.
+func sharedContactOf(raw json.RawMessage) *connector.ChatSharedContact {
+	if len(raw) == 0 {
+		return nil
+	}
+	var card struct {
+		PhoneNumber string `json:"phone_number"`
+		FirstName   string `json:"first_name"`
+		LastName    string `json:"last_name"`
+		UserID      int64  `json:"user_id"`
+	}
+	if err := json.Unmarshal(raw, &card); err != nil {
+		return nil
+	}
+	out := &connector.ChatSharedContact{DisplayName: strings.TrimSpace(card.FirstName + " " + card.LastName)}
+	if card.PhoneNumber != "" {
+		out.Phones = []string{card.PhoneNumber}
+	}
+	if card.UserID > 0 {
+		out.UserID = fmt.Sprintf("%d", card.UserID)
+	}
+	return out
 }
 
 // messageBody is what the timeline shows for one message. Telegram carries a

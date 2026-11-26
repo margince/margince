@@ -58,7 +58,7 @@ import (
 var erasureColumnBaseline = map[string][]string{
 	"legal_review": {"captured_by", "packet", "status"},
 	// Raw originals are deleted in full after their positive subject match is recorded; the preparatory metadata write leaves these columns for that deletion.
-	"raw_capture": {"channel_subjects", "parts_slim_outcome", "payload", "source_id", "source_system"},
+	"raw_capture": {"ask_message_ids", "channel_subjects", "parts_slim_outcome", "payload", "source_id", "source_system"},
 	// Audit identity and authority remain immutable when retained payloads are removed.
 	"audit_log": {"action", "actor_id", "actor_type", "authorization_rule", "entity_type"},
 	// Closed vocabularies, actor stamps and opaque thread keys survive the personal text.

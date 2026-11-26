@@ -131,3 +131,13 @@ These need a live OA and a Zalo app before you trust them:
 A member confirms one Zalo account, and that account is tied to one OA: Zalo user ids are per OA. A member who forwards
 customer messages through two OAs can have only the account for one of them recognised. A forward through the other is
 filed as the member's own message.
+
+## The question to a member
+
+The OA sends one kind of message: the question to a member who forwarded messages that name no author. It uses Zalo's
+customer-service message endpoint (`/v3.0/oa/message/cs`), so the OA needs its message quota for customer-service
+messages, and Zalo allows the message only within 48 hours after the member last wrote to the OA. Outside that
+window, or with no quota left, the batch stays held until it expires. The OA sends nothing to a customer.
+
+Zalo's webhook does not mark a message as forwarded, so no forward reaches this question from a Zalo OA yet. The send
+path, the answer path and the tests are in place for the day the webhook does.
