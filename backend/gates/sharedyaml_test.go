@@ -77,9 +77,15 @@ func heldYAML(raw []byte) *yamlParse {
 	return held
 }
 
+// callbackUnmarshaler is the older UnmarshalYAML form yaml.v3 still calls. Its
+// decode can fill a yaml.Node of its own from the held tree.
+type callbackUnmarshaler interface {
+	UnmarshalYAML(unmarshal func(any) error) error
+}
+
 var (
-	yamlNodeType    = reflect.TypeFor[yaml.Node]()
-	yamlUnmarshaler = reflect.TypeFor[yaml.Unmarshaler]()
+	yamlNodeType     = reflect.TypeFor[yaml.Node]()
+	yamlUnmarshalers = []reflect.Type{reflect.TypeFor[yaml.Unmarshaler](), reflect.TypeFor[callbackUnmarshaler]()}
 )
 
 // decodesWithoutNodes reports whether decoding into typ copies values out of
@@ -89,12 +95,21 @@ func decodesWithoutNodes(typ reflect.Type) bool {
 	return typ != nil && holdsNoNode(typ, map[reflect.Type]bool{})
 }
 
+func unmarshalsItself(typ reflect.Type) bool {
+	for _, form := range yamlUnmarshalers {
+		if typ.Implements(form) || reflect.PointerTo(typ).Implements(form) {
+			return true
+		}
+	}
+	return false
+}
+
 func holdsNoNode(typ reflect.Type, seen map[reflect.Type]bool) bool {
 	if seen[typ] {
 		return true
 	}
 	seen[typ] = true
-	if typ == yamlNodeType || typ.Implements(yamlUnmarshaler) || reflect.PointerTo(typ).Implements(yamlUnmarshaler) {
+	if typ == yamlNodeType || unmarshalsItself(typ) {
 		return false
 	}
 	switch typ.Kind() {
@@ -212,15 +227,21 @@ func TestANodeHoldingValueIsNeverDecodedFromTheHeldTree(t *testing.T) {
 	type withNode struct {
 		Info yaml.Node `yaml:"info"`
 	}
-	for _, out := range []any{&yaml.Node{}, &withNode{}, &map[string]yaml.Node{}, &[]*yaml.Node{}} {
+	for _, out := range []any{&yaml.Node{}, &withNode{}, &map[string]yaml.Node{}, &[]*yaml.Node{}, &decodedByCallback{}} {
 		if decodesWithoutNodes(reflect.TypeOf(out)) {
-			t.Errorf("%T holds a yaml.Node, so a shared decode would hand every caller the same node", out)
+			t.Errorf("%T can reach a yaml.Node, so a shared decode would hand every caller the same node", out)
 		}
 	}
 	if !decodesWithoutNodes(reflect.TypeFor[*map[string]any]()) {
 		t.Error("a map of plain values holds no node, and should decode from the held tree")
 	}
 }
+
+// decodedByCallback holds no field, and still decodes itself through the older
+// callback form.
+type decodedByCallback struct{}
+
+func (*decodedByCallback) UnmarshalYAML(func(any) error) error { return nil }
 
 func firstKey[V any](m map[string]V) string {
 	for key := range m {
