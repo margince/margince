@@ -95,11 +95,9 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 
 	p.WriteString("## By model\n\n")
 	p.WriteString("Which model drove the lane, and how it went. The tool columns further down are " +
-		"the same for every model, because what a case requires belongs to the scenario. " +
-		"What changes here is whether the driving succeeded.\n\n")
+		"the same for every model, because what a case requires belongs to the scenario. What changes here is whether the driving succeeded.\n\n")
 	p.WriteString("| Model | Cases run | Reached their bar | Below it | Runs passed | Reliability | " +
-		"Calls per case (median) | Refused per case | Retries per case | Slow |\n" +
-		"|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+		"Calls per case (median) | Refused per case | Retries per case | Slow |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, m := range r.Models {
 		fmt.Fprintf(p, "| `%s` | %d of %d | %d | %d | %d/%d | %.0f%% | %s | %s | %s | %d |\n",
 			m.Model, m.CasesRecorded, r.Totals.Cases, m.CasesHeld, m.CasesBelowBar,
@@ -126,8 +124,7 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## The use cases\n\n")
 	p.WriteString("One row per case per model that ran it. A case nobody has run appears once, " +
-		"marked `not run`, rather than being dropped: a case missing from this table would read " +
-		"as a case that does not exist.\n\n")
+		"marked `not run`, rather than being dropped: a case missing from this table would read as a case that does not exist.\n\n")
 	p.WriteString("| Case | Model | Result | Passed | Bar | Calls (median) | Turns (median) | Refused | Retries | Criteria | Requires |\n" +
 		"|---|---|---|---:|---:|---:|---:|---:|---:|---|---|\n")
 	for _, c := range r.Cases {
@@ -153,8 +150,7 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 				result += ", on an earlier listing (" + strings.Join(run.EarlierListing, ", ") + ")"
 			}
 			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s | %s | %s | %s | %s |\n",
-				link, run.Model, result, run.Passed, run.Runs, run.PassAt,
-				run.Efficiency.CallsCell(), run.Efficiency.TurnsCell(),
+				link, run.Model, result, run.Passed, run.Runs, run.PassAt, run.Efficiency.CallsCell(), run.Efficiency.TurnsCell(),
 				run.Efficiency.RefusedCell(), run.Efficiency.RetriesCell(), criteria, requiresColumn(c))
 		}
 	}

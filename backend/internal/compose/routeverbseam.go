@@ -6,7 +6,6 @@ package compose
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"mime"
@@ -15,7 +14,6 @@ import (
 	"net/textproto"
 	"slices"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -222,25 +220,13 @@ func answersAFile(contentType string) bool {
 	return contentType != "" && !strings.Contains(contentType, "json")
 }
 
-// fileAnswer carries a file's bytes in a JSON answer, as attach takes them. A
-// text file comes as text too, so a model reads it back without decoding base64.
+// fileAnswer carries a file's bytes in a JSON answer, as attach takes them.
 func fileAnswer(res *http.Response, content []byte) (json.RawMessage, error) {
 	var filename string
 	if _, params, err := mime.ParseMediaType(res.Header.Get("Content-Disposition")); err == nil {
 		filename = params["filename"]
 	}
-	declared := res.Header.Get("Content-Type")
-	var text string
-	if media, _, err := mime.ParseMediaType(declared); err == nil && strings.HasPrefix(media, "text/") && utf8.Valid(content) {
-		text = string(content)
-	}
-	return json.Marshal(struct {
-		Filename      string `json:"filename,omitempty"`
-		ContentType   string `json:"content_type"`
-		SizeBytes     int    `json:"size_bytes"`
-		ContentBase64 string `json:"content_base64"`
-		ContentText   string `json:"content_text,omitempty"`
-	}{filename, declared, len(content), base64.StdEncoding.EncodeToString(content), text})
+	return agents.FileAnswer(filename, res.Header.Get("Content-Type"), content)
 }
 
 // RouteVerbs lists the route-backed verbs this build serves, for the tests
