@@ -71,7 +71,14 @@ type waNumber struct {
 
 func (c *telegramEnv) connectNumber(t *testing.T, phoneID string) waNumber {
 	t.Helper()
-	n := waNumber{phoneID: phoneID, waba: "WABA-" + phoneID, secret: "secret-" + phoneID, team: c.readerTeam(t).String()}
+	return c.connectNumberFor(t, phoneID, c.readerTeam(t).String())
+}
+
+// connectNumberFor connects the number with an existing reader team, as a
+// reconnect of the same number must.
+func (c *telegramEnv) connectNumberFor(t *testing.T, phoneID, team string) waNumber {
+	t.Helper()
+	n := waNumber{phoneID: phoneID, waba: "WABA-" + phoneID, secret: "secret-" + phoneID, team: team}
 	var made struct {
 		Connection struct {
 			ID, MailVisibility, SeatID string
