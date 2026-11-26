@@ -166,7 +166,7 @@ const WAIVED: ReadonlyMap<
     "src/features/settings/team-dialogs.tsx",
     {
       count: 1,
-      why: "A team's member list: picking a person adds them, as each row's verb removes.",
+      why: "A team's member list: picking a member adds them, as each row's verb removes.",
     },
   ],
 ]);
