@@ -51909,7 +51909,7 @@ export interface components {
             display_name: string;
             /**
              * Format: email
-             * @description May change only before the account has been used to sign in.
+             * @description May change only before the account has been used to sign in. A new address holds at most 254 characters; an unchanged stored address may be longer.
              */
             email: string;
             /** @description Omit to keep the current roles. */
@@ -52124,7 +52124,7 @@ export interface components {
         FormerMemberRequest: {
             /**
              * Format: email
-             * @description Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused.
+             * @description Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused. A new address holds at most 254 characters. A longer stored address may still resolve a merged member to its survivor.
              */
             email: string;
             display_name: string;
@@ -60680,7 +60680,10 @@ export interface components {
             expires_at: string;
         };
         DealRoomLinkRequest: {
-            /** Format: email */
+            /**
+             * Format: email
+             * @description Looks up an existing participant; stored addresses past the current write limit are accepted.
+             */
             email: string;
         };
         /**
