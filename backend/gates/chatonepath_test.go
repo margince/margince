@@ -303,14 +303,15 @@ func recvNamed(fn *types.Func) *types.Named {
 	return n
 }
 
-// deriveIO reads each provider package for three sets. ioFuncs reach net/http.
-// direct call it themselves. sends are the Send* functions among ioFuncs. An
-// interface method counts when a method of that name does.
+// deriveIO computes, across every loaded package, the functions that reach
+// net/http (ioFuncs). A provider that sends through a shared helper still counts.
+// In each provider package, direct are the functions that call net/http or an
+// outside function that reaches it. Sends are the Send* functions among ioFuncs.
+// An interface method counts when a method of that name in its package does.
 func (c *chatPackages) deriveIO() {
-	for dir := range c.providers {
-		p := c.pkgAt(dir)
-		refs := map[types.Object]map[*types.Func]bool{}
-		names := map[string][]types.Object{}
+	refs := map[types.Object]map[*types.Func]bool{}
+	names := map[string][]types.Object{}
+	for _, p := range c.pkgs {
 		for _, f := range p.files {
 			for _, d := range f.Decls {
 				fd, ok := d.(*ast.FuncDecl)
@@ -319,7 +320,7 @@ func (c *chatPackages) deriveIO() {
 				}
 				self := p.info.Defs[fd.Name]
 				refs[self] = map[*types.Func]bool{}
-				names[fd.Name.Name] = append(names[fd.Name.Name], self)
+				names[p.path+"."+fd.Name.Name] = append(names[p.path+"."+fd.Name.Name], self)
 				ast.Inspect(fd.Body, func(n ast.Node) bool {
 					if id, ok := n.(*ast.Ident); ok {
 						if fn := funcOf(p.info.Uses[id]); fn != nil {
@@ -330,30 +331,38 @@ func (c *chatPackages) deriveIO() {
 				})
 			}
 		}
+	}
+	for self, used := range refs {
+		for fn := range used {
+			if isNetHTTPCall(fn) {
+				c.ioFuncs[self] = true
+			}
+		}
+	}
+	for changed := true; changed; {
+		changed = false
 		for self, used := range refs {
 			for fn := range used {
-				if isNetHTTPCall(fn) {
-					c.direct[self] = true
+				if !c.ioFuncs[self] && c.reachesIO(fn, names) {
 					c.ioFuncs[self] = true
+					changed = true
 				}
 			}
 		}
-		for changed := true; changed; {
-			changed = false
-			for self, used := range refs {
-				for fn := range used {
-					if !c.ioFuncs[self] && c.reachesIO(fn, names) {
-						c.ioFuncs[self] = true
-						changed = true
-					}
+	}
+	for dir := range c.providers {
+		p := c.pkgAt(dir)
+		for self, used := range refs {
+			if self.Pkg() != p.types {
+				continue
+			}
+			for fn := range used {
+				if isNetHTTPCall(fn) || (fn.Pkg() != p.types && c.reachesIO(fn, names)) {
+					c.direct[self] = true
 				}
 			}
-		}
-		for _, objs := range names {
-			for _, o := range objs {
-				if c.ioFuncs[o] && strings.HasPrefix(strings.ToLower(o.Name()), "send") && !isMessageSenderFunc(o.(*types.Func)) {
-					c.sends[o] = true
-				}
+			if c.ioFuncs[self] && strings.HasPrefix(strings.ToLower(self.Name()), "send") && !isMessageSenderFunc(self.(*types.Func)) {
+				c.sends[self] = true
 			}
 		}
 		c.markInterfaceSends(p, names)
@@ -365,13 +374,13 @@ func (c *chatPackages) reachesIO(fn *types.Func, names map[string][]types.Object
 		return true
 	}
 	n := recvNamed(fn)
-	if n == nil {
+	if n == nil || fn.Pkg() == nil {
 		return false
 	}
 	if _, isIface := n.Underlying().(*types.Interface); !isIface {
 		return false
 	}
-	return slices.ContainsFunc(names[fn.Name()], func(o types.Object) bool { return c.ioFuncs[o] })
+	return slices.ContainsFunc(names[fn.Pkg().Path()+"."+fn.Name()], func(o types.Object) bool { return c.ioFuncs[o] })
 }
 
 // markInterfaceSends adds the Send* methods of the package's interfaces whose
@@ -389,7 +398,7 @@ func (c *chatPackages) markInterfaceSends(p *typedPackage, names map[string][]ty
 		for i := range iface.NumExplicitMethods() {
 			m := iface.ExplicitMethod(i)
 			if strings.HasPrefix(strings.ToLower(m.Name()), "send") && !takesChannelMessage(m) &&
-				slices.ContainsFunc(names[m.Name()], func(o types.Object) bool { return c.ioFuncs[o] }) {
+				slices.ContainsFunc(names[p.path+"."+m.Name()], func(o types.Object) bool { return c.ioFuncs[o] }) {
 				c.sends[m] = true
 			}
 		}
