@@ -176,7 +176,7 @@ func TestARefusedCancelDoesNotOpenTheIdentityFallback(t *testing.T) {
 // exactly what would send CancelIdentifiedMeeting looking for another meeting
 // under the wrong belief that nothing was captured under the key. Asked
 // directly of the constructor, because the Sink above has its OWN, looser
-// protection (identityMayCancel's bare key-equality EXISTS) that refuses the
+// protection (mayLookPastNaturalKey's bare key-equality EXISTS) that refuses the
 // fallback whenever a row exists in any state — so an end-to-end test through
 // the Sink cannot tell a correct zero id apart from the found row's real one.
 func TestARefusedCancelReturnsTheZeroActivityID(t *testing.T) {

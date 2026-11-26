@@ -229,7 +229,14 @@ func importAuthorHoldsMeeting(ctx context.Context, tx pgx.Tx, incumbent ids.Acti
 	if actingHumanOf(stamp) != author.String() {
 		return false, nil
 	}
-	err = auth.EnsureActivityWritableIn(ctx, tx, incumbent.UUID, true)
+	return importerMayChangeMeeting(ctx, tx, incumbent)
+}
+
+// importerMayChangeMeeting is the one check an import passes before it lands on
+// a meeting it did not file: the importer acting in ctx may change it. The live
+// bind and the imported-copies task both ask it, so the two cannot drift.
+func importerMayChangeMeeting(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID) (bool, error) {
+	err := auth.EnsureActivityWritableIn(ctx, tx, meeting.UUID, true)
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return false, nil
 	}

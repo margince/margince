@@ -115,22 +115,37 @@ func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, slot c
 		if err != nil {
 			return err
 		}
-		var id ids.ActivityID
-		err = tx.QueryRow(ctx, `
-			SELECT id FROM activity
-			 WHERE source_system = $1 AND source_id = $2
-			   AND kind = 'meeting' AND restricted_at IS NULL AND archived_at IS NULL`,
-			key.SourceSystem, key.SourceID).Scan(&id)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("capture: finding the meeting to move: %w", err)
+		id, found, err := s.meetingToMove(ctx, tx, key)
+		if err != nil || !found {
+			return err
 		}
 		slot.Duration = StorableDuration(slot.Duration)
 		_, err = s.moveMeeting(ctx, tx, id, slot)
 		return err
 	})
+}
+
+// meetingToMove is the live meeting stored under the key, or else the one this
+// seat's calendar matched the event onto when this calendar may move it.
+func (s *Sink) meetingToMove(ctx context.Context, tx pgx.Tx, key connector.NaturalKey) (ids.ActivityID, bool, error) {
+	var id ids.ActivityID
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM activity
+		 WHERE source_system = $1 AND source_id = $2
+		   AND kind = 'meeting' AND restricted_at IS NULL AND archived_at IS NULL`,
+		key.SourceSystem, key.SourceID).Scan(&id)
+	if err == nil {
+		return id, true, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return ids.ActivityID{}, false, fmt.Errorf("capture: finding the meeting to move: %w", err)
+	}
+	delivered, held, err := s.meetingOfOwnDelivery(ctx, tx, key)
+	if err != nil || !held {
+		return ids.ActivityID{}, false, err
+	}
+	movable, err := s.calendarMayMove(ctx, tx, delivered, key)
+	return delivered, movable, err
 }
 
 // moveOnReplay moves a meeting a calendar delivered again under its own key
@@ -150,10 +165,8 @@ func (s *Sink) moveOnReplay(
 		return nil
 	}
 	if viaIdentity {
-		// An occurrence of a series keeps its identity when moved, so this
-		// calendar's own row is reached through it too, and moves.
-		own, found, err := ownLiveMeetingTx(ctx, tx, rec.NaturalKey, actorUserID(ctx))
-		if err != nil || !found || own != id {
+		movable, err := s.calendarMayMove(ctx, tx, id, rec.NaturalKey)
+		if err != nil || !movable {
 			return err
 		}
 	}
@@ -179,10 +192,9 @@ func replayIncumbent(ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields A
 }
 
 // settleMeetingReplay is what a proven replay of a meeting still owes the row.
-// That is its identity, guests, documents, current start and host. Only this
-// calendar's own row moves. Another door's row reached through the cross-door
-// identity stays, or a second calendar on the old time would move it back.
-// Either replay may hand the host to the organizer.
+// That is its identity, guests, documents, current start and host. The start
+// moves only where calendarMayMove allows it. Either replay may hand the host
+// to the organizer.
 func (s *Sink) settleMeetingReplay(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, viaIdentity bool,
 ) error {
@@ -233,6 +245,31 @@ func (s *Sink) foldOwnDuplicate(
 		return known, nil
 	}
 	return own, s.moveOnReplay(ctx, tx, own, rec, false)
+}
+
+// calendarMayMove says whether this calendar may move a meeting it reached past
+// its own key. Its own row moves: an occurrence of a series keeps its identity
+// when moved, so the row is reached through it too. A row it matched onto moves
+// as well, unless another seat's calendar filed it; that calendar moves it.
+// Any other row stays, or a second calendar on the old time would move it back.
+func (s *Sink) calendarMayMove(ctx context.Context, tx pgx.Tx, id ids.ActivityID, key connector.NaturalKey) (bool, error) {
+	seat := actorUserID(ctx)
+	own, found, err := ownLiveMeetingTx(ctx, tx, key, seat)
+	if err != nil || found {
+		return found && own == id, err
+	}
+	delivered, held, err := s.meetingOfOwnDelivery(ctx, tx, key)
+	if err != nil || !held || delivered != id {
+		return false, err
+	}
+	var system string
+	var filer *string
+	if err := tx.QueryRow(ctx, `SELECT source_system, `+auth.ConnectorSeatSQL("activity")+` FROM activity WHERE id = $1`,
+		id).Scan(&system, &filer); err != nil {
+		return false, fmt.Errorf("capture: reading which door filed a meeting: %w", err)
+	}
+	_, calendar := calendarWriteScopes[system]
+	return !calendar || (filer != nil && *filer == seat.String()), nil
 }
 
 // ownLiveMeetingTx is the live meeting this seat's calendar stored under the

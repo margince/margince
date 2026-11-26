@@ -439,8 +439,14 @@ func TestACalendarEventMatchedOntoAnImportBringsItsGuests(t *testing.T) {
 // export states it: one contact, and the calendar's identity for the meeting.
 func importMeetingFor(t *testing.T, e *integration.SearchEnv, contact ids.ContactID, uid string, start time.Time) ids.UUID {
 	t.Helper()
+	return importMeetingUnder(t, e, "meeting-1", contact, uid, start)
+}
+
+// importMeetingUnder is importMeetingFor under the export's own record id.
+func importMeetingUnder(t *testing.T, e *integration.SearchEnv, sourceID string, contact ids.ContactID, uid string, start time.Time) ids.UUID {
+	t.Helper()
 	instance := start.UTC().Format(time.RFC3339)
-	system, sourceID, subject := "hubspot", "meeting-1", "Quarterly review"
+	system, subject := "hubspot", "Quarterly review"
 	req := crmcontracts.CreateActivityRequest{
 		Kind:         crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
 		Subject:      &subject,

@@ -24,15 +24,19 @@ import (
 // meeting identity: the author's calendar held it first, and the import door
 // did not bind across seats. The calendar meeting gains the copy's record
 // links. The copy's own text stays on the archived copy, so unarchiving it
-// undoes the fold.
-func ImportedMeetingCopiesDataTask(store *Store) datatask.Task {
+// undoes the fold. A copy folds only when its importer may still change the
+// calendar meeting, the check the live import makes before it binds.
+func ImportedMeetingCopiesDataTask(store *Store, importer ImporterPrincipal) datatask.Task {
 	return datatask.Task{
 		ID: "core/1795580400_imported_meeting_copies", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1795580400_imported_meeting_copies"),
 		Steps: []datatask.Step{{
 			Name: "fold_imported_copies", Limit: 100, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
-			Estimate: estimateImportedMeetingCopies, Batch: store.foldImportedMeetingCopiesBatch,
+			Estimate: estimateImportedMeetingCopies,
+			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+				return store.foldImportedMeetingCopiesBatch(ctx, tx, in, importer)
+			},
 		}},
 	}
 }
@@ -74,7 +78,13 @@ func estimateImportedMeetingCopies(ctx context.Context, q datatask.Querier, maxi
 	return min(count, maximum), count > maximum, nil
 }
 
-func (s *Store) foldImportedMeetingCopiesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+// ImporterPrincipal is a live member's principal, role scope included, and false
+// for a seat that is no longer a live member. compose injects it.
+type ImporterPrincipal func(ctx context.Context, tx pgx.Tx, seat ids.UUID) (principal.Principal, bool, error)
+
+func (s *Store) foldImportedMeetingCopiesBatch(
+	ctx context.Context, tx pgx.Tx, in datatask.BatchIn, importer ImporterPrincipal,
+) (datatask.BatchOut, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return datatask.BatchOut{}, err
 	}
@@ -99,7 +109,7 @@ func (s *Store) foldImportedMeetingCopiesBatch(ctx context.Context, tx pgx.Tx, i
 	folded := 0
 	for _, p := range page {
 		scanned = append(scanned, p.imported)
-		done, err := s.foldImportedMeetingCopyTx(ctx, tx, ids.From[ids.ActivityKind](p.imported), ids.From[ids.ActivityKind](p.calendar))
+		done, err := s.foldImportedMeetingCopyTx(ctx, tx, importer, ids.From[ids.ActivityKind](p.imported), ids.From[ids.ActivityKind](p.calendar))
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
@@ -112,7 +122,9 @@ func (s *Store) foldImportedMeetingCopiesBatch(ctx context.Context, tx pgx.Tx, i
 
 // foldImportedMeetingCopyTx files the calendar meeting under every record the
 // imported copy was filed under, then retires the copy onto it.
-func (s *Store) foldImportedMeetingCopyTx(ctx context.Context, tx pgx.Tx, imported, calendar ids.ActivityID) (bool, error) {
+func (s *Store) foldImportedMeetingCopyTx(
+	ctx context.Context, tx pgx.Tx, importer ImporterPrincipal, imported, calendar ids.ActivityID,
+) (bool, error) {
 	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, imported.UUID, calendar.UUID); err != nil {
 		return false, err
 	}
@@ -124,6 +136,9 @@ func (s *Store) foldImportedMeetingCopyTx(ctx context.Context, tx pgx.Tx, import
 	}
 	if live != 2 {
 		return false, nil
+	}
+	if may, err := importedCopyMayFold(ctx, tx, importer, imported, calendar); err != nil || !may {
+		return false, err
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT l.entity_type, coalesce(l.contact_id, l.company_id, l.deal_id, l.lead_id, l.project_id)
@@ -150,4 +165,27 @@ func (s *Store) foldImportedMeetingCopyTx(ctx context.Context, tx pgx.Tx, import
 		return false, err
 	}
 	return true, RecomputeAudiencesTx(ctx, tx, []ids.ActivityID{calendar})
+}
+
+// importedCopyMayFold asks the live bind's question for the copy's importer.
+// The task runs as the system, so the importer's own principal, read now, takes
+// the place of the caller the live import has.
+func importedCopyMayFold(ctx context.Context, tx pgx.Tx, importer ImporterPrincipal, imported, calendar ids.ActivityID) (bool, error) {
+	var stamp string
+	if err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE id = $1`, imported).Scan(&stamp); err != nil {
+		return false, fmt.Errorf("activities: reading who imported a meeting copy: %w", err)
+	}
+	human := actingHumanOf(stamp)
+	if human == "" {
+		return false, nil
+	}
+	seat, err := ids.Parse(human)
+	if err != nil {
+		return false, err
+	}
+	acting, live, err := importer(ctx, tx, seat)
+	if err != nil || !live {
+		return false, err
+	}
+	return importerMayChangeMeeting(principal.WithActor(ctx, acting), tx, calendar)
 }
