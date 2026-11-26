@@ -151,8 +151,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   (`make e2e-ai`).
 - [certify-a-decision-site.md](how-to/certify-a-decision-site.md): test a model for one place in the code
   where it decides.
-- [re-certify-the-whole-corpus.md](how-to/re-certify-the-whole-corpus.md): test every model after a change to
-  the whole tree.
+- [re-certify-the-whole-corpus.md](how-to/re-certify-the-whole-corpus.md): test every model after a change to the whole tree.
+- [hunt-for-prompt-conflicts.md](how-to/hunt-for-prompt-conflicts.md): find rules in one prompt that disagree.
 - [add-an-ai-task.md](how-to/add-an-ai-task.md): add a new AI task.
 - [write-a-certification-case.md](how-to/write-a-certification-case.md): write a test case that
   certifies a model.
