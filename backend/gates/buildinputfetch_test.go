@@ -37,8 +37,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -78,7 +76,7 @@ func TestEveryGoWorkflowFallsThroughAFailingModuleProxy(t *testing.T) {
 		}
 		running++
 		var wf workflowEnv
-		if err := yaml.Unmarshal(raw, &wf); err != nil {
+		if err := unmarshalYAML(raw, &wf); err != nil {
 			t.Fatalf("%s: %v", path, err)
 		}
 		if got := wf.Env["GOPROXY"]; got != goProxyFallThrough {

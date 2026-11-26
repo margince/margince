@@ -318,7 +318,7 @@ func gateWorkflowDeclaring(t *testing.T, job string) string {
 			t.Fatalf("reading %s: %v", path, err)
 		}
 		var parsed workflow
-		if err := yaml.Unmarshal(body, &parsed); err != nil {
+		if err := unmarshalYAML(body, &parsed); err != nil {
 			// A workflow this gate cannot parse is not necessarily the one it
 			// wants; the assertion below fails if none of them is.
 			continue
@@ -350,7 +350,7 @@ func ciGateTargets(t *testing.T, path string) []string {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	var parsed workflow
-	if err := yaml.Unmarshal(body, &parsed); err != nil {
+	if err := unmarshalYAML(body, &parsed); err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
 	fanIn, ok := parsed.Jobs[requiredFanInJob]

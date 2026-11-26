@@ -23,8 +23,6 @@ import (
 	"strconv"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -90,7 +88,7 @@ func contractMaxProperties(t *testing.T, schema, property string) int {
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	shape, ok := doc.Components.Schemas[schema]

@@ -361,7 +361,7 @@ func successResponseSchemas(t *testing.T) map[string][]string {
 	var doc struct {
 		Paths map[string]map[string]yaml.Node `yaml:"paths"`
 	}
-	if err := yaml.Unmarshal(src, &doc); err != nil {
+	if err := unmarshalYAML(src, &doc); err != nil {
 		t.Fatalf("parsing api/crm.yaml: %v", err)
 	}
 	type responseBody struct {
@@ -644,7 +644,7 @@ func contractSchemaProperties(t *testing.T) map[string]map[string]string {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(src, &doc); err != nil {
+	if err := unmarshalYAML(src, &doc); err != nil {
 		t.Fatalf("parsing api/crm.yaml: %v", err)
 	}
 	if len(doc.Components.Schemas) == 0 {

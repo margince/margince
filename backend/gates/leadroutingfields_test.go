@@ -9,8 +9,6 @@ import (
 	"slices"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -30,7 +28,7 @@ func TestPublicLeadRoutingFieldsMatchTheExistingRouter(t *testing.T) {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(raw, &api); err != nil {
+	if err := unmarshalYAML(raw, &api); err != nil {
 		t.Fatal(err)
 	}
 	fields := api.Components.Schemas["LeadRoutingRule"].Properties["field"].Enum

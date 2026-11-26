@@ -39,8 +39,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -161,7 +159,7 @@ func contractWindowSets(t *testing.T) map[string][]int {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatal(err)
 	}
 	out := map[string][]int{}
