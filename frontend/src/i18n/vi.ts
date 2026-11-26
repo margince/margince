@@ -21664,6 +21664,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.owner.shared": "Cùng phụ trách: {names}",
   "worklist.owner.left":
     "{name} đã nghỉ. Việc này cần người chịu trách nhiệm mới.",
+  "deal.owner.choose": "Chọn thành viên chịu trách nhiệm mới",
   "worklist.owner.sharedCount_one": "{count} bên nhận phụ trách",
   "worklist.owner.sharedCount_other": "{count} bên nhận phụ trách",
   "worklist.owner.visibleLabel": "Đang xem",
