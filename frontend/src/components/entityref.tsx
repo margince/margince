@@ -273,8 +273,8 @@ function RecordRef({
   // Only a resolved name is a safe link target; a reference with no name —
   // still loading, refused, or a record that carries none — never becomes one.
   const resolved = supplied ?? usableName(query.data?.name);
-  // An archived company says so wherever it is named, a deal's company line
-  // first among them: the deal stays open on an account that is gone.
+  // An archived company says so wherever it is named. A deal's company line
+  // needs it most: the deal stays open on an account that is gone.
   const archived = kind === "company" && query.data?.archived === true && (
     <>
       {" "}

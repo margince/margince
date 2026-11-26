@@ -273,7 +273,7 @@ To have Margince read a customer company's website, open the company's page. Pre
 1. Open the company.
 2. With nothing on file, **Research this company** is at the top of **Overview**. If not, **Website research** sits on the **Profile** tab.
 3. Press **Start company research** or **Read website again**.
-4. Check the results in your approvals; nothing is written until you accept.
+4. Check the results in your approvals; nothing is written until you accept. A read that failed says why beside **Failed**.
 If you see "Website research is not configured on this server.", your Margince has no website reader.
 Also called: enrich a company, company lookup, scrape a website, read a company.
 
@@ -362,7 +362,7 @@ The **Technology** card shows "What this company publicly runs, read from its DN
 2. Find **Technology** under the website research card.
 3. Read its parts: **Mail**, **Website technology**, **Services** and **Hosting**.
 4. Open a value's evidence mark to see the public record behind it.
-The card has no button. To refresh it, press **Read website again** on the website research card.
+The card has no button. To refresh it, press **Read website again** on the website research card. A source that did not answer is named, and the card says the earlier result is unchanged only when there is one.
 Also called: tech stack, technographics, what software a company uses, mail provider, hosting provider.
 
 ## What a company publicly runs

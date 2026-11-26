@@ -131,3 +131,34 @@ test("offers no deal picker when the account has one open deal", async () => {
     }),
   ).toBeNull();
 });
+
+test("falls back to the newest deal's committee when the picked deal has closed", async () => {
+  const user = userEvent.setup();
+  const asked: string[] = [];
+  vi.stubGlobal("fetch", (input: RequestInfo | URL) => {
+    const named = new URL(new Request(input).url).searchParams.get("deal_id");
+    asked.push(named ?? "");
+    if (named === "d-retrofit") {
+      return Promise.resolve(
+        Response.json({ title: "Not found", status: 404 }, { status: 404 }),
+      );
+    }
+    return Promise.resolve(Response.json(committeeOf("d-fleet")));
+  });
+  renderBand();
+
+  await screen.findByText("Buying committee · Fleet 2027");
+  await pickOption(
+    user,
+    screen.getByRole("combobox", {
+      name: "Deal whose buying committee to show",
+    }),
+    "Retrofit 2026",
+  );
+
+  await waitFor(() => expect(asked).toContain("d-retrofit"));
+  expect(
+    await screen.findByText("Buying committee · Fleet 2027"),
+  ).not.toBeNull();
+  expect(screen.queryByText("Unavailable")).toBeNull();
+});

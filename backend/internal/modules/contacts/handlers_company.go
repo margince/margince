@@ -343,6 +343,14 @@ const maxRejectReason = 500
 // enumArg reads an optional generated enum query parameter as the plain string
 // the store filters on. A nil parameter stays nil: an omitted filter is not a
 // filter, never an empty-string match.
+func enumArg[T ~string](v *T) *string {
+	if v == nil {
+		return nil
+	}
+	s := string(*v)
+	return &s
+}
+
 // enumArgs is enumArg for a repeatable parameter: nil when none was sent.
 func enumArgs[T ~string](v *[]T) []string {
 	if v == nil {
@@ -353,14 +361,6 @@ func enumArgs[T ~string](v *[]T) []string {
 		out = append(out, string(value))
 	}
 	return out
-}
-
-func enumArg[T ~string](v *T) *string {
-	if v == nil {
-		return nil
-	}
-	s := string(*v)
-	return &s
 }
 
 // UpdateCompanyProfileField serves the profile-field correction. The

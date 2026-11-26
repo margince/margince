@@ -63,6 +63,11 @@ export function CoverageBand({
   const { locale } = useLocale();
   const [dealId, setDealId] = useState<string | null>(null);
   const query = useCompanyCoverage(companyId, dealId);
+  // A picked deal that has since closed is refused; the band falls back to the
+  // server's own choice rather than standing unavailable.
+  if (query.isError && dealId !== null) {
+    setDealId(null);
+  }
   // A band that could not load is absent, not an error banner: the list below
   // it still answers, and a reading nobody can act on is not worth a shout.
   // `summary` is required by the contract, so its absence means the response

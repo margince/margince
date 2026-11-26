@@ -7,9 +7,9 @@ import type { Company, Company360View } from "./companies";
 import { wholeCount } from "./companyrailshared";
 
 /**
- * The question before a company is archived, saying what happens to the
- * people and the pipeline left on it: the contacts lose it as their employer,
- * and the open deals stay open. The counts come from the page's own 360 read.
+ * The question before a company is archived. It says what happens to the people
+ * and the pipeline left on it. The contacts lose it as their employer, and the
+ * open deals stay open. The counts come from the page's own 360 read.
  * A count it could not take whole is not guessed, and the sentence then names
  * no number.
  */

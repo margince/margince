@@ -488,7 +488,14 @@ function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
       href={routeHash({ screen: "companies", id: companyId })}
       logo={company?.logo_url}
       position={facts.length > 0 ? facts.join(" · ") : undefined}
-      aside={stage && <Badge wrap>{stage}</Badge>}
+      aside={
+        // An open deal can outlive its account; the card says the account is gone.
+        company?.archived_at ? (
+          <Badge tone="warning">{t("record.archived")}</Badge>
+        ) : (
+          stage && <Badge wrap>{stage}</Badge>
+        )
+      }
     />
   );
 }
