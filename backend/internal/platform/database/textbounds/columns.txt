@@ -963,9 +963,6 @@ public.lead_privacy_notice.locale document
 public.lead_privacy_notice.state document
 public.lead_privacy_notice.template_key document
 public.lead_score_history.override_reason note
-public.lead_source.intent document
-public.lead_source.key document
-public.lead_source.label label
 public.legal_entity.address_city document
 public.legal_entity.address_line1 line
 public.legal_entity.address_line2 line

@@ -5807,16 +5807,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.project": "Dự án",
 
   "lead.source.manual": "Tạo thủ công",
-  "lead.source.inbound": "Khách tự liên hệ",
   "lead.source.webform": "Biểu mẫu web",
   "lead.source.webformNamed": "Biểu mẫu web “{name}”",
-  "lead.source.referral": "Giới thiệu",
   "lead.source.import": "Nhập dữ liệu",
-  "lead.source.crawl": "Tìm hiểu trên web",
   "lead.source.api": "Tích hợp",
   "lead.source.automation": "Tự động hóa",
   "lead.source.capture": "Ghi nhận từ một cuộc trao đổi",
-  "lead.source.siteread": "Từ trang web công ty",
   "lead.source.unknown": "Nguồn không rõ",
   "leadSources.removeOnlyTitle":
     "Vai trò hiện tại chỉ xóa được mục, không thêm hay thay đổi được mục nào",
@@ -5957,8 +5953,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Số lượng không thể lọc theo ngành, quốc gia hay quy mô công ty nên không hiển thị.",
   "lead.boardCountsNoOtherFilter":
     "Số lượng không thể áp dụng mọi bộ lọc của danh sách này nên không hiển thị.",
-  "lead.boardCountsNoConnectorSource":
-    "Số lượng không thể lọc theo mọi lead từ một trình kết nối nên không hiển thị.",
   "lead.boardCountsOwnerNotMeasurable":
     "Không hiển thị số lượng lead của người chịu trách nhiệm này. Chỉ quản trị viên cấp được quyền xem số liệu này.",
   "lead.boardTerminalRowsUnavailable":
@@ -14786,7 +14780,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.lead_disqualify_reason": "Lý do loại lead",
   "audit.kind.lead_origin": "Nguồn gốc lead",
   "audit.kind.lead_privacy_notice": "Thông báo quyền riêng tư cho lead",
-  "audit.kind.lead_source": "Nguồn lead",
   "audit.kind.legal_entity": "Pháp nhân",
   "audit.kind.legal_review": "Xem xét pháp lý",
   "audit.kind.license": "Cài đặt giấy phép",
@@ -18958,9 +18951,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.lead.sla_breached.label": "Quá hạn phản hồi đầu tiên",
   "webhooks.event.lead.sla_breached.when":
     "Lần kiểm tra phát hiện lead đã quá hạn phản hồi đầu tiên mà chưa có câu trả lời.",
-  "webhooks.event.lead_source.changed.label": "Đã đổi danh sách nguồn lead",
-  "webhooks.event.lead_source.changed.when":
-    "Nguồn lead được thêm, sửa hoặc gỡ trong Cài đặt.",
   "webhooks.event.lead_disqualify_reason.changed.label":
     "Đã đổi lý do loại lead",
   "webhooks.event.lead_disqualify_reason.changed.when":

@@ -18,7 +18,7 @@ const PREFIX_GROUPS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ["pipelines_stages", ["pipeline", "stage"]],
   ["contacts", ["contact", "conversation_claim", "relationship_nudge"]],
   ["companies", ["company"]],
-  ["leads", ["lead", "lead_source", "lead_disqualify_reason"]],
+  ["leads", ["lead", "lead_disqualify_reason"]],
   ["activities_email", ["activity", "engagement", "comms"]],
   ["files", ["attachment"]],
   ["projects", ["project"]],

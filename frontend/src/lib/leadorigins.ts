@@ -99,18 +99,13 @@ export function originFilterOptions(
   }));
 }
 
-// The shipped values a row's `source` takes: the channels a deal, offer or
-// project holds, and the older words a lead still may.
+// The channels a record's `source` holds.
 const WRITTEN_BY: Readonly<
   Record<string, Parameters<ReturnType<typeof useT>>[0]>
 > = {
   manual: "lead.source.manual",
-  inbound: "lead.source.inbound",
   webform: "lead.source.webform",
-  referral: "lead.source.referral",
   import: "lead.source.import",
-  crawl: "lead.source.crawl",
-  siteread: "lead.source.siteread",
   api: "lead.source.api",
   automation: "lead.source.automation",
   capture: "lead.source.capture",

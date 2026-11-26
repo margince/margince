@@ -64,13 +64,13 @@ var leadListFields = map[string]storekit.SortField{
 	// renamed so a cursor from the alphabetical order is refused.
 	leadStatusColumn: {Kind: fieldcatalog.TypeNumber, CursorField: "status_rung", Expr: orderByLeadStatusRung},
 	leadScoreColumn:  storekit.Column(fieldcatalog.TypeNumber),
+	leadSourceColumn: storekit.Column(fieldcatalog.TypeText),
 	ownerIDColumn:    storekit.OwnerNameSort(leadEntity),
 	// The three the list draws and does not store. Each reads the same
 	// expression the row is PRINTED from (lead_read.go), so a reader sees the
 	// value the page was arranged by.
 	lastActivityColumn: {Kind: storekit.KindTimestamp, Expr: orderByLeadLastActivity},
 	leadNextTaskField:  {Kind: storekit.KindTimestamp, Expr: orderByLeadNextTaskDue},
-	leadSourceColumn:   {Kind: fieldcatalog.TypeText, Expr: orderByLeadSourceLabel},
 	leadOriginColumn:   {Kind: fieldcatalog.TypeText, Expr: orderByLeadOriginLabel},
 }
 
@@ -116,15 +116,8 @@ func orderByLeadCompanyShown(ctx context.Context, arg func(any) int) (string, er
 	return "coalesce(" + linked + ", lead.company_name)", nil
 }
 
-// orderByLeadSourceLabel orders by the words the Source column prints rather
-// than the key behind them: a catalog whose labels and keys disagree would
-// otherwise arrange the list by an identifier no reader can see.
-func orderByLeadSourceLabel(context.Context, func(any) int) (string, error) {
-	return leadSourceLabelSQL, nil
-}
-
-// orderByLeadOriginLabel orders by the words the Origin column prints, for the
-// reason orderByLeadSourceLabel gives.
+// orderByLeadOriginLabel orders by the words the Origin column prints, not the
+// key behind them. A reader cannot see the key, so it is no order for them.
 func orderByLeadOriginLabel(context.Context, func(any) int) (string, error) {
 	return leadOriginLabelSQL, nil
 }
@@ -198,8 +191,7 @@ type ListLeadsInput struct {
 	// so a caller cutting answered rows off it would lose the unanswered leads
 	// behind them.
 	OwedAReply *bool
-	// Source narrows to how the row was written (import, crawl, manual,
-	// `connector:<name>`).
+	// Source narrows to the channel the lead arrived by.
 	Source *string
 	// Origin narrows to one origin key, or `unset` for the unclassified.
 	Origin *string
@@ -281,7 +273,7 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 		where = append(where, storekit.SQLf(leadScoreColumn+" >= $%d", arg(*in.MinScore)))
 	}
 	if in.Source != nil {
-		where = append(where, leadSourceClause(*in.Source, arg))
+		where = append(where, storekit.SQLf(leadSourceColumn+" = $%d", arg(*in.Source)))
 	}
 	if in.Origin != nil {
 		where = append(where, leadOriginClause(*in.Origin, arg))

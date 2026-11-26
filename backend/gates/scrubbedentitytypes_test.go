@@ -126,7 +126,6 @@ var scrubbedEntityTypes = map[string]bool{
 	"ai_model_rate":          true,
 	"lead_disqualify_reason": true,
 	"lead_origin":            true,
-	"lead_source":            true,
 	"partner_stage":          true,
 	"voice_corpus_source":    true,
 	"voice_profile":          true,

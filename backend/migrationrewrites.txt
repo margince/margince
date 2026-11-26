@@ -307,3 +307,5 @@
 1795672271_the_partner_text_limits_follow_its_columns.down.sql | * | re-creates partner's two text_bound triggers as they were; it changes no existing row
 1795657803_a_source_id_is_bounded.up.sql | * | replaces the two text-length guards on knowledge_document with ones that also name external_id; it creates triggers and reads or rewrites no row
 1795657803_a_source_id_is_bounded.down.sql | * | runs only on a rollback; restores the earlier guards without external_id and changes no row
+1795710028_a_lead_source_names_a_channel.up.sql | * | adds an unvalidated check and the trigger that maps a lead's source on later writes, and drops the lead_source list of a handful of rows; it changes no lead row
+1795710028_a_lead_source_names_a_channel.down.sql | * | runs only on a rollback; restores the lead_source list with its seven built-in rows and changes no lead row

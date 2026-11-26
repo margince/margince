@@ -28,6 +28,7 @@ var recordSourceHeld = map[string]string{
 	"company": "CreateCompanyRequest",
 	"contact": "CreateContactRequest",
 	"deal":    "CreateDealRequest",
+	"lead":    "CreateLeadRequest",
 	"offer":   "CreateOfferRequest",
 	"partner": "",
 	"project": "CreateProjectRequest",
@@ -39,7 +40,6 @@ var recordSourceHeld = map[string]string{
 var recordSourceFree = gatekit.Waive(map[string]string{
 	"CreateActivityRequest":     "an activity's source also names the code that wrote the row, and readers select on those words",
 	"CreateTaskRequest":         "a task is an activity and shares its source",
-	"CreateLeadRequest":         "a lead's source is matched against the administered lead source list",
 	"CreateRelationshipRequest": "a relationship's source cites the record or mail the edge was read from",
 	"CreateCustomFieldRequest":  "a custom field is configuration, not a record that arrives by a channel",
 	"CreateProductRequest":      "a product is catalog data, not a record that arrives by a channel",
@@ -210,10 +210,10 @@ func TestTheRecordSourceGateSeesEachWayTheListCanDrift(t *testing.T) {
 		"a trigger that is shorter":       func(_, triggers, _ map[string][]string) { triggers["offer"] = []string{"manual"} },
 		"a contract enum that is shorter": func(_, _, requests map[string][]string) { requests["CreateOfferRequest"] = []string{"manual"} },
 		"a held request with no enum":     func(_, _, requests map[string][]string) { requests["CreateProjectRequest"] = nil },
-		"a check on a table not held":     func(checks, _, _ map[string][]string) { checks["lead"] = vocabulary },
+		"a check on a table not held":     func(checks, _, _ map[string][]string) { checks["activity"] = vocabulary },
 		"a new request with a source":     func(_, _, requests map[string][]string) { requests["CreateTicketRequest"] = nil },
 		"a free request that gained an enum": func(_, _, requests map[string][]string) {
-			requests["CreateLeadRequest"] = vocabulary
+			requests["CreateActivityRequest"] = vocabulary
 		},
 		"a free request that lost its source": func(_, _, requests map[string][]string) { delete(requests, "CreateProductRequest") },
 	} {

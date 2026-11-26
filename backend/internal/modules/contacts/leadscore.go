@@ -114,7 +114,7 @@ var behavioralBasePoints = map[string]float64{
 // persist an explanation rather than a number. An unknown signal kind
 // contributes zero — column-readiness degradation, not an error. The
 // source's weight arrives resolved (SourceIntents.Of) because the weighting
-// is the installation's lead_source table, not a literal here.
+// is the installation's lead_origin table, not a literal here.
 func ScoreLeadDetail(title string, intent SourceIntent, signals []BehavioralSignal, now time.Time) LeadScoring {
 	var factors []ScoreFactor
 
