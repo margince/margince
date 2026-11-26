@@ -407,12 +407,23 @@ func ClockIsDaySQL(rowsSQL, clock string) string {
 }
 
 // LinkedClockRowsSQL is the rows a record's stored clock is folded from: the
-// activities linked to the record through activity_link.column. A held row
-// sets no precision anyone reads. column and
-// record are SQL the caller renders, never request text.
-func LinkedClockRowsSQL(column, record string) string {
+// activities linked to the record through activity_link.column that the
+// clock's own writer admits. admits is the writer's per-activity function,
+// called on clock_row, which is null for a row the clock does not count. A held
+// row sets no precision anyone reads. All three are SQL the caller renders.
+func LinkedClockRowsSQL(column, record, admits string) string {
 	return `FROM activity_link clock_link JOIN activity clock_row ON clock_row.id = clock_link.activity_id
-		WHERE clock_link.` + column + ` = ` + record + ` AND clock_row.restricted_at IS NULL`
+		WHERE clock_link.` + column + ` = ` + record + ` AND clock_row.restricted_at IS NULL AND ` + admits + ` IS NOT NULL`
+}
+
+// ActivityClockAdmitsSQL is the admission the contact and project clocks
+// share, last_activity_of_activity, called on clock_row.
+const ActivityClockAdmitsSQL = "last_activity_of_activity(clock_row.id)"
+
+// DealClockAdmitsSQL is the deal clock's admission of clock_row for the deal
+// whose id is the SQL deal, last_activity_of_deal_activity.
+func DealClockAdmitsSQL(deal string) string {
+	return "last_activity_of_deal_activity(clock_row.id, " + deal + ")"
 }
 
 // ClockPrecision is the wire precision of a stored clock: nil when it holds no

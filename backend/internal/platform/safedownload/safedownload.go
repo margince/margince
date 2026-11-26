@@ -16,6 +16,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -182,9 +183,7 @@ func (p Policy) Get(ctx context.Context, hc *http.Client, target string, header 
 	if err != nil {
 		return Response{}, ErrRefused
 	}
-	for k, v := range header {
-		req.Header[k] = v
-	}
+	maps.Copy(req.Header, header)
 	return Do(hc, req, limit)
 }
 

@@ -18700,7 +18700,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WhatsAppWebhookReceipt' }
-        '401':
+        '403':
           description: 'The body is signed by no connected number (`code: channel_event_rejected`). The answer is the same for each cause.'
           content:
             application/problem+json:
@@ -51850,6 +51850,10 @@ components:
             A message limited to its participants does NOT move this date, even for a reader who
             may read that message. The value is one number every reader sees, so it can only count
             what every reader may see.
+        last_activity_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
@@ -53210,6 +53214,10 @@ components:
           type: [string, 'null']
           format: date-time
           description: The account's stored last activity the rung is counted from. Null when it has none.
+        last_activity_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         silent_days:
           type: integer
           minimum: 0
@@ -53593,6 +53601,10 @@ components:
         key: { type: [string, 'null'], description: 'The subject-line handle, when the project has one.' }
         phase: { $ref: '#/components/schemas/Company360ProjectPhase' }
         last_activity_at: { type: [string, 'null'], format: date-time }
+        last_activity_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         target_end_date: { type: [string, 'null'], format: date }
         owner_id: { type: [string, 'null'], format: uuid }
         owner_name:
