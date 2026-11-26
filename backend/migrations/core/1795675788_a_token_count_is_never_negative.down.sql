@@ -10,4 +10,3 @@ ALTER TABLE ai_call DROP CONSTRAINT ai_call_tokens_out_not_negative;
 ALTER TABLE ai_call DROP CONSTRAINT ai_call_reasoning_tokens_not_negative;
 ALTER TABLE ai_call DROP CONSTRAINT ai_call_cached_tokens_not_negative;
 ALTER TABLE ai_call DROP CONSTRAINT ai_call_cache_write_tokens_not_negative;
-ALTER TABLE activity DROP CONSTRAINT activity_duration_seconds_not_negative;

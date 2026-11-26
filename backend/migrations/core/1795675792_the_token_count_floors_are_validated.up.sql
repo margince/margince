@@ -2,8 +2,9 @@
 -- a negative provider count lowered below zero is raised to zero first, the
 -- value the meter now stores for such a count.
 --
--- The ai_call and activity floors stay NOT VALID: their history is unbounded,
--- so a correction of it is a data task. backend/gates/unvalidatedconstraints_test.go
+-- The ai_call floors stay NOT VALID: the table's history is unbounded, so a
+-- correction of it is a data task. No writer updates an ai_call row, so an old
+-- negative row refuses nothing. backend/gates/unvalidatedconstraints_test.go
 -- carries the reason.
 SET LOCAL lock_timeout = '3s';
 

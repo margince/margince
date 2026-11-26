@@ -20,9 +20,3 @@ ALTER TABLE ai_call
 	ADD CONSTRAINT ai_call_cached_tokens_not_negative CHECK (cached_tokens >= 0) NOT VALID;
 ALTER TABLE ai_call
 	ADD CONSTRAINT ai_call_cache_write_tokens_not_negative CHECK (cache_write_tokens >= 0) NOT VALID;
-
--- A meeting or call lasts zero seconds or more. The API refuses a negative
--- duration, and an exact booking already requires one above zero.
-ALTER TABLE activity
-	ADD CONSTRAINT activity_duration_seconds_not_negative
-		CHECK (duration_seconds IS NULL OR duration_seconds >= 0) NOT VALID;

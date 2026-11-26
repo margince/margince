@@ -77,7 +77,6 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 	"ai_call.ai_call_reasoning_tokens_not_negative":           negativeHistory,
 	"ai_call.ai_call_cached_tokens_not_negative":              negativeHistory,
 	"ai_call.ai_call_cache_write_tokens_not_negative":         negativeHistory,
-	"activity.activity_duration_seconds_not_negative":         negativeHistory,
 	"activity_participant.activity_participant_address_is_canonical": "" +
 		"rows written before the check hold the address as typed, and the participant address data " +
 		"task lowercases them after the migrations ran. A VALIDATE would fail the upgrade of an " +
@@ -96,10 +95,10 @@ const unlistedRecordSource = "" +
 
 // negativeHistory is why a floor on a table with unbounded history stays `NOT VALID`.
 const negativeHistory = "" +
-	"rows written before the floor may hold a negative figure: a provider's misreported token count, " +
-	"or a duration an older API admitted. The table's history is unbounded, so correcting it is a " +
-	"data task, and a VALIDATE before that task ran would fail the upgrade of such an installation. " +
-	"The floor binds every row written since"
+	"rows written before the floor may hold a provider's misreported negative token count. The " +
+	"table's history is unbounded, so correcting it is a data task, and a VALIDATE before that task " +
+	"ran would fail the upgrade of such an installation. No writer updates an ai_call row, so an old " +
+	"row refuses nothing, and the floor binds every row written since"
 
 // unnamedCustomerLink is the cost shared by the two mirrored tables' link checks.
 const unnamedCustomerLink = "" +

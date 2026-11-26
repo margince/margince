@@ -15,8 +15,7 @@ import (
 )
 
 // TestACounterBelowZeroIsRefused writes a negative value into every token
-// counter and into an activity's duration, and expects the floor named for
-// that column to refuse it.
+// counter and expects the floor named for that column to refuse it.
 func TestACounterBelowZeroIsRefused(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
@@ -38,11 +37,6 @@ func TestACounterBelowZeroIsRefused(t *testing.T) {
 			constraint: "ai_call_" + column + "_not_negative",
 		})
 	}
-	floors = append(floors, floor{
-		name:       "activity.duration_seconds",
-		sql:        `INSERT INTO activity (kind, source, captured_by, duration_seconds) VALUES ('call', 'manual', 'human:test', -1)`,
-		constraint: "activity_duration_seconds_not_negative",
-	})
 
 	for _, f := range floors {
 		t.Run(f.name, func(t *testing.T) {
