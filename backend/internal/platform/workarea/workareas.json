@@ -1652,6 +1652,7 @@
     "listRecordLinks": "search",
     "listRecordRoles": "members",
     "listRelationships": "contacts",
+    "listReplyableSharedMailboxes": "connectors",
     "listReportRuns": "reports",
     "listReportingEditions": "reports",
     "listReportingExecutions": "reports",

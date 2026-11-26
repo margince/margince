@@ -128,6 +128,7 @@ var (
 	_ connector.AccountLabeler      = (*Connector)(nil)
 	_ connector.CredentialRotator   = (*Connector)(nil)
 	_ connector.SharedMailboxReader = (*Connector)(nil)
+	_ connector.SharedMailboxSender = (*Connector)(nil)
 )
 
 // cursorState is the persisted incremental watermark: Graph's deltaLink, plus

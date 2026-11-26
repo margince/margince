@@ -22473,6 +22473,29 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /shared-mailboxes/replyable:
+    get:
+      tags: [Connectors]
+      operationId: listReplyableSharedMailboxes
+      summary: The shared mailboxes the signed-in member may reply as.
+      description: |
+        Each is a live shared mailbox with `reply_enabled` whose reader team has the caller as a
+        live member. A mailbox the caller may not reply as is absent, so the answer never shows
+        that it exists. The `id` is what a send names as `from_connection_id`.
+
+        Signed-in session only: an agent never names a shared mailbox.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The mailboxes the caller may reply as, ordered by address.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReplyableSharedMailboxList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
   /shared-mailboxes/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -47130,7 +47153,7 @@ components:
     SharedMailbox:
       type: object
       description: A mailbox no one owns. One team reads what it captures.
-      required: [id, provider, address, reader_team_id, mail_visibility, status, connected_at]
+      required: [id, provider, address, reader_team_id, mail_visibility, status, connected_at, reply_enabled]
       properties:
         id: { type: string, format: uuid, description: The connection id. It stays the same across a disconnect and a reconnect. }
         provider: { type: string, enum: [imap, graph, gmail, test_mailbox], x-extensible-enum: true }
@@ -47145,6 +47168,7 @@ components:
         connected_by: { type: [string, 'null'], format: uuid, description: The admin who last connected it. }
         connected_at: { type: string, format: date-time }
         backup_owner_id: { type: [string, 'null'], format: uuid, description: 'The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.' }
+        reply_enabled: { type: boolean, description: 'True when an admin let the reader team reply as this mailbox. A member then names the mailbox id as `from_connection_id` of a send. Always false for an `imap` mailbox, which only captures.' }
         unread_period:
           allOf: [{ $ref: '#/components/schemas/CaptureUnreadPeriod' }]
           description: >-
@@ -47159,6 +47183,21 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/SharedMailbox' }
+    ReplyableSharedMailbox:
+      type: object
+      description: A shared mailbox the signed-in member may reply as.
+      required: [id, provider, address]
+      properties:
+        id: { type: string, format: uuid, description: 'The mailbox id, sent as `from_connection_id`.' }
+        provider: { type: string, enum: [graph, gmail], x-extensible-enum: true }
+        address: { type: string, description: 'The mailbox address, which is the From address of a reply.' }
+    ReplyableSharedMailboxList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ReplyableSharedMailbox' }
     ConnectSharedMailboxRequest:
       type: object
       description: |
@@ -47196,6 +47235,7 @@ components:
         mail_visibility: { type: string, enum: [held, shared, classified], description: '`classified` is refused with `422`.' }
         apply_to_history: { type: boolean, description: 'Also narrow mail already captured when the visibility moves to `held`. Absent or false leaves it as it is.' }
         backup_owner_id: { type: [string, 'null'], format: uuid, description: 'The backup owner from now on. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Null removes it; absent leaves it as it is.' }
+        reply_enabled: { type: boolean, description: 'True lets every live member of the reader team send mail with this mailbox as its From address. The installation''s own grant must already allow it: an application permission to send for a Microsoft mailbox, a delegation that includes the send scope for a Google one. False ends it. An `imap` mailbox is refused with `422` `shared_mailbox_cannot_send`.' }
         confirm: { type: boolean, description: 'Must be true when the readers or the visibility change: such a change moves every message the mailbox captured to other readers.' }
     SharedMailboxHistoryImportRequest:
       type: object
@@ -64568,7 +64608,8 @@ components:
             `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
             conversation arrived in, and a new message from the sender's default mailbox. A mailbox
             that is not the sender's, or cannot send, is refused with 422
-            `mailbox_not_send_capable`.
+            `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+            its id, and only by a member of its reader team.
         subject: { type: string, description: The subject line. Blank or only white space is refused with 422 `required`. }
         body: { type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. }
         html_body:

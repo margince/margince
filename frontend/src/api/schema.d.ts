@@ -14757,6 +14757,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shared-mailboxes/replyable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The shared mailboxes the signed-in member may reply as.
+         * @description Each is a live shared mailbox with `reply_enabled` whose reader team has the caller as a
+         *     live member. A mailbox the caller may not reply as is absent, so the answer never shows
+         *     that it exists. The `id` is what a send names as `from_connection_id`.
+         *
+         *     Signed-in session only: an agent never names a shared mailbox.
+         */
+        get: operations["listReplyableSharedMailboxes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/shared-mailboxes/{id}": {
         parameters: {
             query?: never;
@@ -32491,12 +32515,29 @@ export interface components {
              * @description The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.
              */
             backup_owner_id?: string | null;
+            /** @description True when an admin let the reader team reply as this mailbox. A member then names the mailbox id as `from_connection_id` of a send. Always false for an `imap` mailbox, which only captures. */
+            reply_enabled: boolean;
             /** @description A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none. */
             unread_period?: components["schemas"]["CaptureUnreadPeriod"];
             history_narrowing?: components["schemas"]["MailHistoryNarrowing"];
         };
         SharedMailboxList: {
             items: components["schemas"]["SharedMailbox"][];
+        };
+        /** @description A shared mailbox the signed-in member may reply as. */
+        ReplyableSharedMailbox: {
+            /**
+             * Format: uuid
+             * @description The mailbox id, sent as `from_connection_id`.
+             */
+            id: string;
+            /** @enum {string} */
+            provider: "graph" | "gmail";
+            /** @description The mailbox address, which is the From address of a reply. */
+            address: string;
+        };
+        ReplyableSharedMailboxList: {
+            items: components["schemas"]["ReplyableSharedMailbox"][];
         };
         /**
          * @description The mailbox, its readers, and the provider's credentials. Each provider carries its own
@@ -32558,6 +32599,8 @@ export interface components {
              * @description The backup owner from now on. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Null removes it; absent leaves it as it is.
              */
             backup_owner_id?: string | null;
+            /** @description True lets every live member of the reader team send mail with this mailbox as its From address. The installation's own grant must already allow it: an application permission to send for a Microsoft mailbox, a delegation that includes the send scope for a Google one. False ends it. An `imap` mailbox is refused with `422` `shared_mailbox_cannot_send`. */
+            reply_enabled?: boolean;
             /** @description Must be true when the readers or the visibility change: such a change moves every message the mailbox captured to other readers. */
             confirm: boolean;
         };
@@ -46835,7 +46878,8 @@ export interface components {
              *     `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
              *     conversation arrived in, and a new message from the sender's default mailbox. A mailbox
              *     that is not the sender's, or cannot send, is refused with 422
-             *     `mailbox_not_send_capable`.
+             *     `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+             *     its id, and only by a member of its reader team.
              */
             from_connection_id?: string | null;
             /** @description The subject line. Blank or only white space is refused with 422 `required`. */
@@ -91165,6 +91209,28 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listReplyableSharedMailboxes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mailboxes the caller may reply as, ordered by address. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplyableSharedMailboxList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     updateSharedMailbox: {

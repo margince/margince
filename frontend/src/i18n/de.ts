@@ -8484,6 +8484,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.relatedToNone": "Nichts Bestimmtes",
   "compose.relatedDeal": "Deal: {name}",
   "compose.aboutDeal": "Deal, um den es geht",
+  "compose.from.shared": "Gemeinsames Postfach",
   "compose.from.label": "Von",
   "compose.from.automatic":
     "Postfach, in dem das Gespräch ankam, sonst dein Standard",
@@ -15606,6 +15607,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sharedMailboxes.changeConfirm": "Auf alle Mails anwenden",
   "sharedMailboxes.changeWarning":
     "Das gilt für alle Mails, die das Postfach schon erfasst hat, nicht nur für neue.",
+  "sharedMailboxes.replyEnabled":
+    "Mitglieder dürfen als dieses Postfach antworten",
+  "sharedMailboxes.replyGrantGraph":
+    "Braucht die Anwendungsberechtigung Mail.Send in der Microsoft-App. Ohne einen Exchange-Bereich darf die App damit als jedes Postfach des Mandanten senden.",
+  "sharedMailboxes.replyGrantGmail":
+    "Braucht den Scope gmail.send, dem Dienstkonto neben gmail.readonly übertragen.",
+  "sharedMailboxes.replyUnavailableImap":
+    "Nicht verfügbar. Ein IMAP-Postfach erfasst nur Mails. Verbinde es über Microsoft oder Google, um daraus zu antworten.",
   "sharedMailboxes.narrowHistory": "Auch schon erfasste Mails zurückhalten",
   "sharedMailboxes.importHistory": "Ältere Mails importieren",
   "sharedMailboxes.historyTitle": "Ältere Mails in {address} importieren",

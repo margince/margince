@@ -188,3 +188,46 @@ the old key under **Keys** once the reconnect succeeds. Google keeps both keys v
 To revoke, delete the key, or remove the client id from **Manage Domain Wide Delegation**. The second way stops the
 service account for every mailbox at once. The next sync is refused, and the mailbox shows as needing a reconnect.
 To stop capture from Margince, disconnect the mailbox, which also deletes the sealed key.
+
+## Let the reader team reply as the mailbox
+
+A shared mailbox only captures mail until an admin turns replies on. Then every live member of its reader team can
+send mail with the mailbox's address as the From address. IMAP mailboxes cannot: the switch answers
+`422 shared_mailbox_cannot_send`.
+
+Replies need a grant beyond reading, and the grant is the customer's to give on the provider's side:
+
+- Microsoft 365: add the **Application permission** `Mail.Send` to the app. Without the Exchange scope from above,
+  this lets the app send as any mailbox in the tenant. Give the Exchange role `Application Mail.Send` the same
+  management scope, and remove the tenant-wide `Mail.Send` grant from **API permissions**.
+- Google Workspace: add `https://www.googleapis.com/auth/gmail.send` to the service account's entry under **Manage
+  Domain Wide Delegation**, beside `gmail.readonly`. Reading never asks for the send scope, so a delegation without
+  it leaves capture working and parks every reply.
+
+Margince cannot check that grant before the first send. The admin's switch states that it is in place:
+
+```sh
+curl -sS -X PATCH "$API/v1/shared-mailboxes/<id>" -b "$COOKIE" -H 'Content-Type: application/json' \
+  -d '{"reply_enabled": true, "confirm": false}'
+```
+
+Send `reply_enabled: false` to end it. Replies already queued for the mailbox then park. A provider that refuses the
+send parks the reply with its reason, and the mailbox keeps capturing.
+
+The admin screen has the same switch in **Change** on the mailbox, named **Members may reply as this mailbox**. It
+names the grant the provider needs, and shows as unavailable for IMAP.
+
+A member replies by choosing the mailbox in the composer's **From** list, where it shows as its address marked shared.
+`GET /v1/shared-mailboxes/replyable` lists the mailboxes the member may choose, and the choice sends the mailbox's id as
+`from_connection_id`, the same field that picks one of their own mailboxes. The mailbox is never chosen for a send that names none, and a reply to mail the mailbox
+captured does not default to it. A member outside the reader team gets `422 mailbox_not_send_capable`, the answer
+for any mailbox that is not theirs.
+
+The send path is the one every message takes, so the consent gate, the approval rules and the review of a refused
+send apply as they do to a member's own mail. The member who pressed send stays the sender on the delivery, in
+`captured_by` and on the audit row of the message. The mailbox's own audit trail gets one `send_email` row for each
+reply, naming that member. The reader team is asked again when the reply is transmitted, and once more just before the provider call. A reply
+queued by a member who has left the team, or for a mailbox whose replies were turned off, parks instead of going out.
+A change committed in the instant between that last check and the provider's answer cannot stop that one reply. An agent's send tools take no mailbox argument, so an agent
+never replies as a shared mailbox.
+
