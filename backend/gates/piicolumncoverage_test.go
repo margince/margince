@@ -272,6 +272,9 @@ var erasureColumnBaseline = map[string][]string{
 		"thread_key",
 	},
 	"lead": {
+		// The lead_origin key it arrived with, or empty for none: a code of a
+		// closed list, which names no one, like origin below.
+		"arrival_origin",
 		"captured_by",
 		// A code of the closed industry list, which names no one.
 		"industry",

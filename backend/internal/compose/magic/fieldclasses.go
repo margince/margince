@@ -69,7 +69,7 @@ var internalColumns = map[string]map[string]bool{
 		"logo_source", "name_source",
 	),
 	typeLead: setOf(
-		"arrival_owner_id", "company_id", "disqualify_note", "disqualify_reason_id",
+		"arrival_origin", "arrival_owner_id", "company_id", "disqualify_note", "disqualify_reason_id",
 		"email_domain_folded", "first_response_at", "first_response_marked_by", "from_contact_id", "partner_accepted_at",
 		"partner_accepted_by", "promoted_at", "promoted_contact_id", "qualified_deal_id", "routed_at",
 		"score_computed", "sla_breached_at", "status_set_by",
