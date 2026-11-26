@@ -133,7 +133,7 @@ const (
 	// Raised by 259 production and 267 test lines for the seat-bound deal reads
 	// and the stored-object ledger wiring, and the cases that drive them.
 	composeRootProductionLines = 231_975
-	composeRootTestLines       = 362_774
+	composeRootTestLines       = 362_787
 )
 
 // A read under these floors stopped early or read the wrong place, and would
