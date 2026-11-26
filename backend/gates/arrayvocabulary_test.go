@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/workarea"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -69,7 +70,6 @@ var openTextArrays = gatekit.Waive(map[string]string{
 	"mail_draft.bcc_addresses":                            addressesAreOpen,
 	"mail_draft.cc_addresses":                             addressesAreOpen,
 	"mail_draft.to_addresses":                             addressesAreOpen,
-	"oauth_authorization_code.scopes":                     "passport scopes plus the offline_access marker, which parseOAuthScopes admits and the token exchange removes",
 	"oauth_client.redirect_uris":                          "URIs a client registers",
 	"onboarding_wizard_state.selected_fact_keys":          "keys of facts read from the company's own site",
 	"partner.served_segments":                             "free text a partner describes itself with",
@@ -89,12 +89,19 @@ var arrayVocabularySources = map[string]func(t *testing.T) []string{
 	"passport.work_areas":                 workAreaKeys,
 	"oauth_grant.work_areas":              workAreaKeys,
 	"oauth_authorization_code.work_areas": workAreaKeys,
+	"oauth_authorization_code.scopes":     authorizationCodeScopes,
 	"custom_field.activity_kinds":         typedSet("internal/contracts.ActivityKind"),
 	"deal.manager_request_reasons":        func(*testing.T) []string { return asSet(deals.ManagerRequestReasons) },
 }
 
 func principalScopes(t *testing.T) []string {
 	return typedSet("internal/shared/kernel/principal.Scope")(t)
+}
+
+// authorizationCodeScopes are the passport scopes plus the offline_access marker
+// a code carries until the token exchange turns it into refresh_allowed.
+func authorizationCodeScopes(t *testing.T) []string {
+	return asSet(append(principalScopes(t), identity.ScopeOfflineAccess))
 }
 
 func workAreaKeys(*testing.T) []string {

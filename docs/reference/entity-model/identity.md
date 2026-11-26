@@ -322,6 +322,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `oauth_authorization_code_code_hash_check`: `CHECK ((code_hash ~ '^[0-9a-f]{64}$'))`
 - `oauth_authorization_code_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `oauth_authorization_code_scopes_present`: `CHECK ((cardinality(scopes) > 0))`
+- `oauth_authorization_code_scopes_vocabulary`: `CHECK ((scopes <@ ARRAY['read', 'draft', 'write', 'send', 'enrich', 'offline_access']))`
 - `oauth_authorization_code_work_areas_vocabulary`: `CHECK ((work_areas <@ ARRAY['business', 'compliance', 'capture', 'workspace_settings', 'admin_settings', 'own_account', 'agent_governance', 'operator', 'public']))`
 - `oauth_code_unique`: `UNIQUE (code_hash)`
 
@@ -399,6 +401,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `oauth_grant_scopes_present`: `CHECK ((cardinality(scopes) > 0))`
 - `oauth_grant_scopes_vocabulary`: `CHECK ((scopes <@ ARRAY['read', 'draft', 'write', 'send', 'enrich']))`
 - `oauth_grant_work_areas_vocabulary`: `CHECK ((work_areas <@ ARRAY['business', 'compliance', 'capture', 'workspace_settings', 'admin_settings', 'own_account', 'agent_governance', 'operator', 'public']))`
 
@@ -534,6 +537,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `passport_app_caller_pair`: `CHECK (((app_issuer IS NULL) = (app_subject IS NULL)))`
 - `passport_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `passport_scopes_present`: `CHECK ((cardinality(scopes) > 0))`
 - `passport_scopes_vocabulary`: `CHECK ((scopes <@ ARRAY['read', 'draft', 'write', 'send', 'enrich']))`
 - `passport_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `passport_token_hash_key`: `UNIQUE (token_hash)`

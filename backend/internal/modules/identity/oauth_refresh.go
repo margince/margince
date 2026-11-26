@@ -310,7 +310,7 @@ func presentationVerdict(ctx context.Context, tx pgx.Tx, l lockedGrant, in refre
 func narrowedScopes(requested, granted []string) ([]string, error) {
 	narrowed := make([]string, 0, len(requested))
 	for _, sc := range requested {
-		if sc == scopeOfflineAccess {
+		if sc == ScopeOfflineAccess {
 			continue
 		}
 		if !slices.Contains(granted, sc) {
