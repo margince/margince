@@ -64,19 +64,29 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          base="$RUNNER_TEMP/base"
+          change="$(git rev-parse HEAD)"
+          # The base is checked out in place rather than beside the change: Go
+          # keys a compile on its source path, and the shared cache was built
+          # here, so a second directory compiled the whole backend again.
           # A base that cannot be read or reported says nothing, rather than a
           # list made against the wrong tree. The job still succeeds.
-          if ! git fetch -q --depth=1 origin "$BASE_SHA" || ! git worktree add -q "$base" "$BASE_SHA"; then
+          if ! git fetch -q --depth=1 origin "$BASE_SHA" || ! git checkout -q --detach "$BASE_SHA"; then
             echo "could not check out the base; saying nothing rather than guessing" >&2
             exit 0
           fi
-          if ! (cd "$base/backend" && go run ./internal/compose/aicert/reportcmd > "$RUNNER_TEMP/base-report.txt" 2>/dev/null); then
+          SECONDS=0
+          reported=0
+          (cd backend && go run ./internal/compose/aicert/reportcmd > "$RUNNER_TEMP/base-report.txt" 2>/dev/null) || reported=$?
+          echo "base built and reported in ${SECONDS}s"
+          git checkout -q --detach "$change"
+          if [ "$reported" -ne 0 ]; then
             echo "could not report on the base; saying nothing rather than guessing" >&2
             exit 0
           fi
+          SECONDS=0
           status=0
           list="$(cd backend && go run ./internal/compose/aicert/reportcmd -newly-stale "$RUNNER_TEMP/base-report.txt" 2>/dev/null)" || status=$?
+          echo "change built and reported in ${SECONDS}s"
           if [ "$status" -ne 0 ]; then
             echo "could not report on this change; saying nothing rather than guessing" >&2
             exit 0
