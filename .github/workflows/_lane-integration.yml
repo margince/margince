@@ -493,6 +493,23 @@ jobs:
         env:
           SHARDS_RESULT: ${{ needs.integration-shards.result }}
         run: '[ "$SHARDS_RESULT" = "success" ] || { echo "integration shards: $SHARDS_RESULT"; exit 1; }'
+      # Names the tree this run tested, so the merge queue can skip the lane on
+      # it (scripts/ci-integration-proven.sh). Not `integration-*`, which the
+      # download above reads as shard output.
+      - name: Name the tested tree
+        id: tree
+        working-directory: .
+        run: |
+          mkdir -p "$RUNNER_TEMP/proven"
+          git rev-parse 'HEAD^{tree}' | tee "$RUNNER_TEMP/proven/tree"
+          echo "sha=$(cat "$RUNNER_TEMP/proven/tree")" >> "$GITHUB_OUTPUT"
+      - name: Upload the proof for the merge queue
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: proven-integration-${{ steps.tree.outputs.sha }}
+          path: ${{ runner.temp }}/proven/tree
+          if-no-files-found: error
+          retention-days: 14
       # What this run measured, for cache-warm.yml to weigh the next splits by.
       # Only a run whose slices reconciled gets here. Neither step can fail the
       # lane: a lost file costs the next split some freshness, never a verdict.

@@ -58,6 +58,9 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       if (url.includes("/score")) {
         return jsonResponse({ score: 72, explained: false });
       }
+      if (url.includes("/custom-fields")) {
+        return jsonResponse({ data: [], page: { has_more: false } });
+      }
       return jsonResponse({
         ...lead,
         status: "disqualified",
@@ -499,6 +502,9 @@ describe("LeadScreen — an archived lead does not ask for what the server refus
             { status: 404, code: "not_found", title: "Not found" },
             404,
           );
+        }
+        if (url.includes("/custom-fields")) {
+          return jsonResponse({ data: [], page: { has_more: false } });
         }
         return jsonResponse({
           ...lead,

@@ -31,6 +31,7 @@ if ! diff -u go.work.sum "$tmp/go.work.sum" >"$tmp/diff"; then
   sed -n '3,$p' "$tmp/diff" | grep '^[+-]' | sed 's/^/  /'
   echo
   echo "Run: make install, then commit go.work.sum"
+  echo "On a Renovate Go update: docs/how-to/finish-a-renovate-go-update.md"
   exit 1
 fi
 

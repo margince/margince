@@ -85,6 +85,12 @@ const DEFAULTS: Routes = {
   "GET /link-suggestions": () => jsonResponse({ data: [] }),
   "GET /me": () => jsonResponse(meFixture({ allow: READS_RECORDS })),
   "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
+  // With no run yet Home draws its first-day panel, which reads the overnight
+  // answer and the setup steps this reader can act on.
+  "GET /me/agent-grants": () => jsonResponse({ data: [] }),
+  "GET /connectors": () => jsonResponse({ data: [], providers: [] }),
+  "GET /.well-known/oauth-protected-resource": () =>
+    jsonResponse({ title: "Not Found" }, 404),
   // The Brief's strip, sentence and Do next section are all drawn from this ONE
   // answer, so an unrouted read has to reply with the real shape. The generic
   // empty page carries no `readings` and no `counts`, and a screen reading a

@@ -142,13 +142,15 @@ export const ACTIVITY_LINE: Readonly<
     degraded: "agent.activity.accountScan.degraded",
     failed: "agent.activity.accountScan.failed",
   },
+  // An email, not a reply: the task drafts new mail as well as answers. A
+  // reply is the named case in SUBJECT_NAMED_LINE.
   draft_reply: {
-    queued: "agent.activity.draftReply.queued",
-    running: "agent.activity.draftReply.running",
-    stalled: "agent.activity.draftReply.stalled",
-    done: "agent.activity.draftReply.done",
-    degraded: "agent.activity.draftReply.degraded",
-    failed: "agent.activity.draftReply.failed",
+    queued: "agent.activity.draftEmail.queued",
+    running: "agent.activity.draftEmail.running",
+    stalled: "agent.activity.draftEmail.stalled",
+    done: "agent.activity.draftEmail.done",
+    degraded: "agent.activity.draftEmail.degraded",
+    failed: "agent.activity.draftEmail.failed",
   },
   offer_draft: {
     queued: "agent.activity.offerDraft.queued",
@@ -337,15 +339,15 @@ export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
     degraded: "agent.activity.siteReadNamed.degraded",
     failed: "agent.activity.siteReadNamed.failed",
   },
-  // The subject line of the message being answered, which is how the reader
-  // finds that thread in their inbox.
+  // The record a new email is about: the contact an introduction is asked
+  // for, or the lead it is written to. A reply is named in SUBJECT_NAMED_LINE.
   draft_reply: {
-    queued: "agent.activity.draftReplyNamed.queued",
-    running: "agent.activity.draftReplyNamed.running",
-    stalled: "agent.activity.draftReplyNamed.stalled",
-    done: "agent.activity.draftReplyNamed.done",
-    degraded: "agent.activity.draftReplyNamed.degraded",
-    failed: "agent.activity.draftReplyNamed.failed",
+    queued: "agent.activity.draftEmailNamed.queued",
+    running: "agent.activity.draftEmailNamed.running",
+    stalled: "agent.activity.draftEmailNamed.stalled",
+    done: "agent.activity.draftEmailNamed.done",
+    degraded: "agent.activity.draftEmailNamed.degraded",
+    failed: "agent.activity.draftEmailNamed.failed",
   },
   // The deal's name: an offer is drafted for one deal.
   offer_draft: {
@@ -355,5 +357,27 @@ export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
     done: "agent.activity.offerDraftNamed.done",
     degraded: "agent.activity.offerDraftNamed.degraded",
     failed: "agent.activity.offerDraftNamed.failed",
+  },
+};
+
+/**
+ * The named lines that depend on the subject's type, read ahead of
+ * `NAMED_LINE`. One task drafts both a reply to a message and a new email
+ * about a contact; only the subject's type tells the two apart.
+ */
+export const SUBJECT_NAMED_LINE: Readonly<
+  Partial<Record<ActivityKind, Readonly<Record<string, LineSet>>>>
+> = {
+  // The subject line of the message being answered, which is how the reader
+  // finds that thread in their inbox.
+  draft_reply: {
+    activity: {
+      queued: "agent.activity.draftReplyNamed.queued",
+      running: "agent.activity.draftReplyNamed.running",
+      stalled: "agent.activity.draftReplyNamed.stalled",
+      done: "agent.activity.draftReplyNamed.done",
+      degraded: "agent.activity.draftReplyNamed.degraded",
+      failed: "agent.activity.draftReplyNamed.failed",
+    },
   },
 };

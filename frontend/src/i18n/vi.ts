@@ -2038,6 +2038,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.queue.back": "Quay lại Danh sách công việc",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Xem Danh sách công việc",
+  "brief.queue.count_one": "{count} mục trong Danh sách công việc",
+  "brief.queue.count_other": "{count} mục trong Danh sách công việc",
   "brief.queue.hide": "Ẩn Danh sách công việc",
   "brief.team.planUnavailable":
     "Không có kế hoạch hiện tại nào của {name} mà bạn có quyền xem.",
@@ -3613,7 +3615,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "list.unowned": "Chưa giao",
   "list.created": "Ngày tạo",
   "list.lastActivity": "Hoạt động gần nhất",
-  "list.filterOwnerMe": "Bạn chịu trách nhiệm",
+  "list.filterOwnerMe": "Bạn",
   "list.filterOwnerAll": "Bất kỳ ai chịu trách nhiệm",
   "list.ownerDeactivated": "{name} (đã vô hiệu hóa)",
   "list.ownerSuspended": "{name} (đã tạm khóa)",
@@ -3625,6 +3627,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "views.save": "Lưu chế độ xem",
   "views.saveConfirm": "Lưu",
   "views.saveTitle": "Lưu chế độ xem này",
+  "views.update": "Cập nhật “{name}”",
+  "views.updated": "Đã cập nhật chế độ xem: “{name}”",
+  "views.nameTaken": "Đã có chế độ xem mang tên này. Hãy chọn tên khác.",
   "views.name": "Tên",
   "views.rail": "Chế độ xem đã lưu",
   "views.loadFailed": "Không thể tải các chế độ xem đã lưu.",
@@ -5695,7 +5700,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tags.filterAll": "Thẻ bất kỳ",
   "tags.moreUncounted": "thêm",
   "tags.moreUncountedTip": "Gồm {names}. Mở hồ sơ để xem đầy đủ.",
-  "tags.columnHeaderPartial": "Thẻ (danh sách chưa đầy đủ)",
+  "tags.filterLabel": "Thẻ",
+  "tags.filterLabelPartial": "Thẻ (danh sách chưa đầy đủ)",
   "tags.loading": "Đang tải thẻ…",
   "tags.panelTitle": "Thẻ",
   "tags.add": "Thêm thẻ",
@@ -5745,7 +5751,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không có thẻ nào tên như vậy. Quản trị viên hoặc thành viên Vận hành có thể thêm thẻ.",
   "tagResult.gone":
     "Thẻ này không còn tồn tại. Có thể thẻ đã được gộp vào thẻ khác.",
-  "tagResult.totalVisible": "{count} lượt gắn thẻ xem được",
+  "tagResult.tagged_one": "{count} hồ sơ có thẻ này",
+  "tagResult.tagged_other": "{count} hồ sơ có thẻ này",
   "tagResult.contacts": "Liên hệ",
   "tagResult.companies": "Công ty",
   "tagResult.deals": "Deal",
@@ -6348,7 +6355,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.timeline.empty": "Chưa có hoạt động nào trên deal này.",
   "legalEntities.title": "Pháp nhân",
   "legalEntities.sub":
-    "Các pháp nhân mà công ty bạn dùng để giao dịch. Đồng nghiệp chưa được gán sẽ làm việc cho pháp nhân mặc định, vốn lấy tên, địa chỉ và logo từ công ty ở trên.",
+    "Các pháp nhân mà công ty bạn dùng để giao dịch. Đồng nghiệp chưa được gán sẽ làm việc cho pháp nhân mặc định, vốn lấy tên, địa chỉ và logo từ hồ sơ công ty.",
   "legalEntities.loading": "Đang tải pháp nhân…",
   "legalEntities.addOpen": "Pháp nhân mới",
   "legalEntities.addTitle": "Pháp nhân mới",
@@ -6361,6 +6368,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa đặt: áp dụng khu vực pháp lý của hệ thống",
   "legalEntities.defaultBadge": "Mặc định",
   "legalEntities.defaultUnnamed": "Công ty của bạn",
+  "legalEntities.fromCompanyProfile": "Lấy từ hồ sơ công ty",
   "legalEntities.displayName": "Tên",
   "legalEntities.legalName": "Tên pháp lý",
   "legalEntities.country": "Quốc gia",
@@ -6730,6 +6738,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.selectPage": "Chọn mọi dòng trên trang này",
   "bulk.selectAll": "Chọn tất cả",
   "bulk.clearSelection": "Bỏ chọn",
+  "bulk.selecting_one": "Đang chọn {count}…",
+  "bulk.selecting_other": "Đang chọn {count}…",
+  "bulk.selectingOf_one": "Đang chọn {count} trên {total}…",
+  "bulk.selectingOf_other": "Đang chọn {count} trên {total}…",
   "bulk.selectionLimit_one":
     "Mỗi lần thay đổi tối đa {count} hồ sơ, nên lựa chọn dừng ở đó.",
   "bulk.selectionLimit_other":
@@ -6803,12 +6815,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.undoneCompanies_other": "Đã khôi phục {count} công ty.",
   "bulk.undoneDeals_one": "Đã khôi phục {count} deal.",
   "bulk.undoneDeals_other": "Đã khôi phục {count} deal.",
+  "bulk.doneTasks_one": "Đã tạo {count} việc.",
+  "bulk.doneTasks_other": "Đã tạo {count} việc.",
+  "bulk.undoneTasks_one": "Đã chuyển {count} việc vào kho lưu trữ.",
+  "bulk.undoneTasks_other": "Đã chuyển {count} việc vào kho lưu trữ.",
   "bulk.undoLeftBehind_one":
     "{count} liên kết, thẻ hoặc mục trong danh sách không thể khôi phục.",
   "bulk.undoLeftBehind_other":
     "{count} liên kết, thẻ hoặc mục trong danh sách không thể khôi phục.",
-  "bulk.reason.no_change_list": "Đã ở trong hoặc ngoài danh sách chọn tay",
-  "bulk.reason.no_change_tag": "Đã có hoặc chưa có thẻ này",
+  "bulk.reason.no_change_listed": "Đã ở trong danh sách chọn tay này",
+  "bulk.reason.no_change_unlisted": "Không ở trong danh sách chọn tay này",
+  "bulk.reason.no_change_tagged": "Đã có thẻ này",
+  "bulk.reason.no_change_untagged": "Không có thẻ này",
+  "bulk.reason.no_change_undo": "Không thuộc lần thay đổi đang hoàn tác",
   "bulk.tag": "Thẻ",
   "bulk.tagPick": "Chọn thẻ",
   "bulk.addTag": "Thêm thẻ",
@@ -6842,7 +6861,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.confirmComplete": "Đánh dấu xong",
   "bulk.stateDone": "Xong",
   "bulk.stateOpen": "Đang mở",
-  "bulk.reason.no_change_done": "Đã ở trạng thái đó",
+  "bulk.reason.no_change_done": "Đã xong",
   "bulk.titleMoveStage": "Chuyển {unit} đã chọn sang {stage}?",
   "bulk.confirmMoveStage": "Chuyển",
   "bulk.stateStageUnnamed": "Một giai đoạn",
@@ -6931,6 +6950,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.rejectConfirm": "Đánh dấu báo giá này là đã từ chối?",
   "offer.rejectReason": "Lý do (không bắt buộc)",
   "offer.regenerate": "Tạo lại phiên bản",
+  "offer.regeneratedPlain": "Đã sao chép mà không có thay đổi từ AI.",
   "offer.writeUnsure":
     "Margince không xác định được thao tác đã thành công hay chưa. Hãy kiểm tra các báo giá của deal trước khi thử lại.",
   "offer.aiDisclosureTitle": "Báo giá có AI hỗ trợ",
@@ -7057,6 +7077,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.week.quiet":
     "Chưa ghi nhận công việc hoàn tất hay biến động deal nào.",
 
+  "brief.first.shownOf": "Hiển thị {shown} trên {total}",
   "brief.feed.changedBadge_one": "1 đã thay đổi",
   "brief.feed.changedBadge_other": "{count} đã thay đổi",
   "brief.feed.loading": "Đang tải Bản tin sáng…",
@@ -7357,6 +7378,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.readings.leadsBasis": "Việc cần làm đã lên kế hoạch cho lead",
   "brief.readings.leadsDue": "Hạn tiếp theo {value}",
   "brief.rail": "Ngữ cảnh",
+  "brief.firstDay.title": "Ngày đầu tiên của bạn trên Trang chủ",
+  "brief.firstDay.what":
+    "Trang chủ cho thấy việc cần bạn hôm nay, những gì Margince đã làm cho bạn và các cuộc họp của bạn. Mỗi sáng, trang mở đầu bằng Bản tin sáng của bạn.",
+  "brief.firstDay.briefTonight":
+    "Bản tin sáng đầu tiên của bạn được chuẩn bị qua đêm và hiện trên Trang chủ vào sáng mai.",
+  "brief.firstDay.briefOff":
+    "Margince chỉ chuẩn bị Bản tin sáng qua đêm khi bạn cho phép.",
+  "brief.firstDay.turnOn": "Bật chuẩn bị qua đêm",
+  "brief.firstDay.briefLater":
+    "Bản tin sáng của bạn sẽ hiện trên Trang chủ khi đã được chuẩn bị.",
+  "brief.firstDay.setup": "Việc cần thiết lập tiếp theo",
   "brief.rail.numbers": "Số liệu",
   "extensionReports.withheld": "Đã ẩn: quá ít bản ghi để hiển thị",
   "extensionReports.unavailable": "Không tải được báo cáo này.",
@@ -9870,30 +9902,41 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.summarize.queued": "Đang chờ tóm tắt",
   "agent.activity.summarize.running": "Đang viết tóm tắt…",
   "agent.activity.summarize.done": "Tóm tắt đã sẵn sàng",
-  "agent.activity.summarize.degraded": "Quá trình tóm tắt bị gián đoạn",
+  "agent.activity.summarize.degraded":
+    "Tóm tắt được viết mà không có đầy đủ hỗ trợ từ AI",
   "agent.activity.summarize.failed": "Không thể tạo tóm tắt",
   "agent.activity.summarize.stalled": "Quá trình tóm tắt kéo dài bất thường",
   "agent.activity.summarizeNamed.queued": "Đang chờ tóm tắt {name}",
   "agent.activity.summarizeNamed.running": "Đang tóm tắt {name}…",
   "agent.activity.summarizeNamed.done": "Tóm tắt {name} đã sẵn sàng",
   "agent.activity.summarizeNamed.degraded":
-    "Quá trình tóm tắt {name} bị gián đoạn",
+    "Tóm tắt {name} được viết mà không có đầy đủ hỗ trợ từ AI",
   "agent.activity.summarizeNamed.failed": "Không thể tóm tắt {name}",
   "agent.activity.summarizeNamed.stalled":
     "Quá trình tóm tắt {name} kéo dài bất thường",
-  "agent.activity.draftReply.queued": "Đang chờ soạn bản nháp trả lời",
-  "agent.activity.draftReply.running": "Đang soạn thư trả lời…",
-  "agent.activity.draftReply.done": "Bản nháp trả lời đã sẵn sàng",
-  "agent.activity.draftReply.degraded":
-    "Quá trình soạn bản nháp trả lời bị gián đoạn",
-  "agent.activity.draftReply.failed": "Không thể soạn bản nháp trả lời",
-  "agent.activity.draftReply.stalled":
-    "Quá trình soạn bản nháp trả lời kéo dài bất thường",
+  "agent.activity.draftEmail.queued": "Đang chờ soạn bản nháp email",
+  "agent.activity.draftEmail.running": "Đang soạn email…",
+  "agent.activity.draftEmail.done": "Bản nháp email đã sẵn sàng",
+  "agent.activity.draftEmail.degraded":
+    "Bản nháp email được soạn mà không có đầy đủ hỗ trợ từ AI",
+  "agent.activity.draftEmail.failed": "Không thể soạn bản nháp email",
+  "agent.activity.draftEmail.stalled":
+    "Quá trình soạn bản nháp email kéo dài bất thường",
+  "agent.activity.draftEmailNamed.queued":
+    "Đang chờ soạn bản nháp email về {name}",
+  "agent.activity.draftEmailNamed.running": "Đang soạn email về {name}…",
+  "agent.activity.draftEmailNamed.done": "Bản nháp email về {name} đã sẵn sàng",
+  "agent.activity.draftEmailNamed.degraded":
+    "Bản nháp email về {name} được soạn mà không có đầy đủ hỗ trợ từ AI",
+  "agent.activity.draftEmailNamed.failed":
+    "Không thể soạn bản nháp email về {name}",
+  "agent.activity.draftEmailNamed.stalled":
+    "Quá trình soạn bản nháp email về {name} kéo dài bất thường",
   "agent.activity.offerDraft.queued": "Đang chờ soạn bản nháp báo giá",
   "agent.activity.offerDraft.running": "Đang soạn báo giá…",
   "agent.activity.offerDraft.done": "Bản nháp báo giá đã sẵn sàng",
   "agent.activity.offerDraft.degraded":
-    "Quá trình soạn bản nháp báo giá bị gián đoạn",
+    "Bản nháp báo giá được soạn mà không có đầy đủ hỗ trợ từ AI",
   "agent.activity.offerDraft.failed": "Không thể soạn bản nháp báo giá",
   "agent.activity.offerDraft.stalled":
     "Quá trình soạn bản nháp báo giá kéo dài bất thường",
@@ -9903,7 +9946,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.draftReplyNamed.done":
     "Bản nháp trả lời “{name}” đã sẵn sàng",
   "agent.activity.draftReplyNamed.degraded":
-    "Quá trình soạn bản nháp trả lời “{name}” bị gián đoạn",
+    "Bản nháp trả lời “{name}” được soạn mà không có đầy đủ hỗ trợ từ AI",
   "agent.activity.draftReplyNamed.failed":
     "Không thể soạn bản nháp trả lời “{name}”",
   "agent.activity.draftReplyNamed.stalled":
@@ -9914,7 +9957,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.offerDraftNamed.done":
     "Bản nháp báo giá cho {name} đã sẵn sàng",
   "agent.activity.offerDraftNamed.degraded":
-    "Quá trình soạn bản nháp báo giá cho {name} bị gián đoạn",
+    "Bản nháp báo giá cho {name} được soạn mà không có đầy đủ hỗ trợ từ AI",
   "agent.activity.offerDraftNamed.failed":
     "Không thể soạn bản nháp báo giá cho {name}",
   "agent.activity.offerDraftNamed.stalled":
@@ -14721,6 +14764,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã thêm “{label}” vào báo cáo. Ai đọc báo cáo cũng thấy tên và các lựa chọn của trường.",
   "cf.removedFromReports": "Đã gỡ “{label}” khỏi báo cáo",
   "cf.audit.title": "Thay đổi trường gần đây",
+  "cf.audit.renamed": "Đã đổi tên",
+  "cf.audit.translations": "Đã đổi bản dịch",
+  "cf.audit.choices": "Đã đổi lựa chọn",
+  "cf.audit.shownInCreate": "Đã hiện trong biểu mẫu tạo mới",
+  "cf.audit.hiddenFromCreate": "Đã ẩn khỏi biểu mẫu tạo mới",
+  "cf.audit.addedToReports": "Đã thêm vào báo cáo",
+  "cf.audit.removedFromReports": "Đã gỡ khỏi báo cáo",
+  "cf.audit.kinds": "Đã đổi loại hoạt động",
   "audit.kind.customField": "Trường tùy chỉnh",
   "audit.kind.activity_retention_evidence": "Bằng chứng lưu giữ",
   "audit.kind.activity_review_template": "Mẫu đánh giá hoạt động",
@@ -20615,6 +20666,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.editFilter": "S\u1eeda b\u1ed9 l\u1ecdc",
   "lists.filterCannotOpen": "Không thể mở bộ lọc của danh sách này tại đây.",
   "lists.savedTo": "Đã lưu vào “{name}”",
+  "lists.settingsSaved": "Đã lưu danh sách",
+  "lists.restored": "Đã khôi phục danh sách",
+  "lists.archivedDone": "Đã chuyển danh sách vào kho lưu trữ",
+  "lists.addedTo": "Đã thêm vào “{name}”",
+  "lists.addedToShortlist": "Đã thêm vào danh sách chọn tay",
   "lists.editingTitle": "\u0110ang s\u1eeda b\u1ed9 l\u1ecdc c\u1ee7a {name}",
   "lists.editingBody":
     "Lưu vào danh sách để thay đổi các hồ sơ trong danh sách. Để giữ một bản sao, lưu bộ lọc thành một chế độ xem mới.",
@@ -22610,6 +22666,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "employment.dateHint": "YYYY-MM hoặc YYYY-MM-DD. Để trống nếu chưa biết.",
   "employment.more": "Xem thêm vị trí công tác",
 
+  "magic.heading.firstBrief": "Trước bản tin sáng đầu tiên",
   "magic.heading.brief": "Kể từ bản tin sáng gần nhất",
   "magic.loading": "Đang đọc những gì hệ thống đã làm",
   "magic.lane.done": "Margince đã làm giúp bạn",

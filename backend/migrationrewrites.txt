@@ -309,3 +309,4 @@
 1795676086_a_record_keeps_a_status_line_from_its_latest_activity.up.sql | * | creates an empty table of derived status lines; the procedural marker is the two text-bound trigger definitions on it
 1795657803_a_source_id_is_bounded.up.sql | * | replaces the two text-length guards on knowledge_document with ones that also name external_id; it creates triggers and reads or rewrites no row
 1795657803_a_source_id_is_bounded.down.sql | * | runs only on a rollback; restores the earlier guards without external_id and changes no row
+1795675792_the_token_count_floors_are_validated.up.sql | ai_usage | ai_usage holds one row per day, task and tier a call was metered on, with no retention, so it grows by at most tasks times tiers rows a day; the correction scans it once, as the VALIDATE that follows must anyway, and changes only rows a negative count lowered below zero
