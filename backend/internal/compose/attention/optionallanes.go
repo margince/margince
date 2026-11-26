@@ -315,7 +315,7 @@ func (s *Service) operationalLanes(
 				// A week, not a day: a dead address needs fixing whenever the
 				// rep next sits down, and a bounce that ages out unseen is
 				// the invisible failure this lane exists to end.
-				undelivered, err := s.bounces.HardBounces(ctx, asOf.Add(-7*24*time.Hour), doneCap)
+				undelivered, err := s.bounces.HardBouncesFor(ctx, asOf.Add(-7*24*time.Hour), doneCap)
 				return renderEach(undelivered, bounceItem), err
 			},
 			into: &out.Bounces, count: &out.Counts.Bounces,

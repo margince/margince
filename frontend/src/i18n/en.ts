@@ -22480,6 +22480,11 @@ export const en = {
   "worklist.verb.retryRefusedEventGone":
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",
+  "worklist.verb.sendAgain": "Send again",
+  "worklist.verb.sendAgainAddress": "Corrected address",
+  "worklist.verb.sendAgainHint":
+    "The same message goes to this address as soon as you save. It replaces the address that refused the message on the contact.",
+  "worklist.verb.sentAgain": "Message sent again to the corrected address.",
   "worklist.verb.approvalRetried": "Approved change completed",
   "worklist.verb.approvalRetryFailed":
     "The approved change still did not run. Retry later, or acknowledge it.",

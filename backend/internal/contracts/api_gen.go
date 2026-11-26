@@ -3278,6 +3278,7 @@ const (
 	AttentionItemActionsReopen       AttentionItemActions = "reopen"
 	AttentionItemActionsReply        AttentionItemActions = "reply"
 	AttentionItemActionsRetry        AttentionItemActions = "retry"
+	AttentionItemActionsSendAgain    AttentionItemActions = "send_again"
 	AttentionItemActionsSetAside     AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze       AttentionItemActions = "snooze"
 	AttentionItemActionsTake         AttentionItemActions = "take"
@@ -3314,6 +3315,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsReply:
 		return true
 	case AttentionItemActionsRetry:
+		return true
+	case AttentionItemActionsSendAgain:
 		return true
 	case AttentionItemActionsSetAside:
 		return true
@@ -29234,6 +29237,7 @@ const (
 	WorklistItemActionsReopen       WorklistItemActions = "reopen"
 	WorklistItemActionsReply        WorklistItemActions = "reply"
 	WorklistItemActionsRetry        WorklistItemActions = "retry"
+	WorklistItemActionsSendAgain    WorklistItemActions = "send_again"
 	WorklistItemActionsSetAside     WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze       WorklistItemActions = "snooze"
 	WorklistItemActionsTake         WorklistItemActions = "take"
@@ -29270,6 +29274,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsReply:
 		return true
 	case WorklistItemActionsRetry:
+		return true
+	case WorklistItemActionsSendAgain:
 		return true
 	case WorklistItemActionsSetAside:
 		return true
@@ -38702,6 +38708,10 @@ type AttentionItem struct {
 	// domain. Reopening retries identification without settling identity. These verbs route
 	// to `/capture/domain-questions/{domain}/…`.
 	//
+	// `send_again` is offered on a bounced message that may be sent once more. The reader
+	// types a corrected address and the same message goes out to it, through
+	// `POST /attention/bounces/{id}/send-again`.
+	//
 	// `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
 	// to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
 	// to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
@@ -40163,6 +40173,12 @@ type BoughtField struct {
 	// yet; like the other automatic triggers it buys only the categories that cost
 	// nothing.
 	Trigger ProviderRunTrigger `json:"trigger"`
+}
+
+// BounceSendAgainRequest defines model for BounceSendAgainRequest.
+type BounceSendAgainRequest struct {
+	// Address The corrected address. It replaces the address that refused, and it must differ from it.
+	Address openapi_types.Email `json:"address"`
 }
 
 // BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
@@ -52081,6 +52097,11 @@ type EmailCalendarInvitationResponse string
 // the bot, or because the credential was rejected rendered exactly like one the provider
 // confirmed. The rep was told their message went.
 type EmailDelivery struct {
+	// CanSendAgain True when the reader may send this bounced message again to a corrected address,
+	// by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+	// message that bounced hard qualifies, once, and not one an agent wrote.
+	CanSendAgain *bool `json:"can_send_again,omitempty"`
+
 	// DeliveredAt When the provider accepted it. Null unless the state is `sent`.
 	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
 
@@ -87395,6 +87416,9 @@ type FileChatCaptureJSONRequestBody = FileChatCaptureRequest
 // UpdateAttachmentMetadataJSONRequestBody defines body for UpdateAttachmentMetadata for application/json ContentType.
 type UpdateAttachmentMetadataJSONRequestBody = UpdateAttachmentMetadataRequest
 
+// SendBouncedMessageAgainJSONRequestBody defines body for SendBouncedMessageAgain for application/json ContentType.
+type SendBouncedMessageAgainJSONRequestBody = BounceSendAgainRequest
+
 // ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
 type ChangePasswordJSONRequestBody ChangePasswordJSONBody
 
@@ -102979,6 +103003,9 @@ type ServerInterface interface {
 	// Everything waiting on the acting rep, in one read, tiered by whether it needs a decision.
 	// (GET /attention)
 	GetAttention(w http.ResponseWriter, r *http.Request)
+	// Send a bounced message again to a corrected address.
+	// (POST /attention/bounces/{id}/send-again)
+	SendBouncedMessageAgain(w http.ResponseWriter, r *http.Request, id Id)
 	// Read the human+agent-attributable audit log (Settings governance view).
 	// (GET /audit-log)
 	ListAuditLog(w http.ResponseWriter, r *http.Request, params ListAuditLogParams)
@@ -107083,6 +107110,12 @@ func (_ Unimplemented) RequestAttachmentAccess(w http.ResponseWriter, r *http.Re
 // Everything waiting on the acting rep, in one read, tiered by whether it needs a decision.
 // (GET /attention)
 func (_ Unimplemented) GetAttention(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Send a bounced message again to a corrected address.
+// (POST /attention/bounces/{id}/send-again)
+func (_ Unimplemented) SendBouncedMessageAgain(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -122379,6 +122412,38 @@ func (siw *ServerInterfaceWrapper) GetAttention(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAttention(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SendBouncedMessageAgain operation middleware
+func (siw *ServerInterfaceWrapper) SendBouncedMessageAgain(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendBouncedMessageAgain(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -164660,6 +164725,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/attention", wrapper.GetAttention)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/attention/bounces/{id}/send-again", wrapper.SendBouncedMessageAgain)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/audit-log", wrapper.ListAuditLog)

@@ -101,6 +101,7 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 		ThreadKey:       in.ThreadKey,
 		AnswersActivity: in.AnswersActivity,
 		ListUnsubscribe: in.ListUnsubscribe,
+		Repeat:          in.Repeat,
 	})
 	if err != nil {
 		return err
