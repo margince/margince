@@ -110,8 +110,10 @@ const (
 	// Raised by 76 production and 459 test lines for the row scope of an owned
 	// extension kind and its cases. They drive the unexported report runner,
 	// History query, boot owner check and filter preview handler.
-	composeRootProductionLines = 231_459
-	composeRootTestLines       = 362_265
+	// Raised by 23 production and 6 test lines for the date-only precision a
+	// company route and a quiet reason carry, and their cases.
+	composeRootProductionLines = 231_482
+	composeRootTestLines       = 362_271
 )
 
 // A read under these floors stopped early or read the wrong place, and would
