@@ -36,14 +36,14 @@ func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID i
 	err := database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(ctx context.Context) error {
 		// Each read carries the row scope and plans far longer than it runs.
 		return database.ReuseGenericPlans(ctx, func(ctx context.Context) (err error) {
-			out, err = s.latestInbound(ctx, entityType, entityID)
+			out, err = s.readLatestInbound(ctx, entityType, entityID)
 			return err
 		})
 	})
 	return out, err
 }
 
-func (s *Store) latestInbound(ctx context.Context, entityType string, entityID ids.UUID) (crmcontracts.LatestInboundList, error) {
+func (s *Store) readLatestInbound(ctx context.Context, entityType string, entityID ids.UUID) (crmcontracts.LatestInboundList, error) {
 	now := s.now()
 	since := now.Add(-JustInDays * 24 * time.Hour)
 	var out crmcontracts.LatestInboundList
