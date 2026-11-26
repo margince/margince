@@ -14,8 +14,6 @@ ALTER TABLE auth_token ADD COLUMN IF NOT EXISTS counterpart_user_id uuid
 
 ALTER TABLE auth_token ADD COLUMN IF NOT EXISTS merge_survivor boolean;
 
-CREATE INDEX IF NOT EXISTS idx_auth_token_counterpart ON auth_token (counterpart_user_id);
-
 ALTER TABLE auth_token DROP CONSTRAINT auth_token_purpose_check;
 
 ALTER TABLE auth_token ADD CONSTRAINT auth_token_purpose_check

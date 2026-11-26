@@ -6410,7 +6410,7 @@ public.idx_audit_log_batch CREATE INDEX idx_audit_log_batch ON public.audit_log 
 public.idx_audit_on_behalf_of CREATE INDEX idx_audit_on_behalf_of ON public.audit_log USING btree (on_behalf_of, occurred_at DESC) WHERE (on_behalf_of IS NOT NULL)
 public.idx_audit_scrub_boundary CREATE INDEX idx_audit_scrub_boundary ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC, id DESC) WHERE (action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))
 public.idx_audit_time CREATE INDEX idx_audit_time ON public.audit_log USING btree (occurred_at DESC)
-public.idx_auth_token_counterpart CREATE INDEX idx_auth_token_counterpart ON public.auth_token USING btree (counterpart_user_id)
+public.idx_auth_token_counterpart CREATE INDEX idx_auth_token_counterpart ON public.auth_token USING btree (counterpart_user_id) WHERE (counterpart_user_id IS NOT NULL)
 public.idx_auth_token_hash CREATE UNIQUE INDEX idx_auth_token_hash ON public.auth_token USING btree (token_hash)
 public.idx_auth_token_user CREATE INDEX idx_auth_token_user ON public.auth_token USING btree (user_id, purpose) WHERE (used_at IS NULL)
 public.idx_auth_token_user_cascade CREATE INDEX idx_auth_token_user_cascade ON public.auth_token USING btree (user_id)
