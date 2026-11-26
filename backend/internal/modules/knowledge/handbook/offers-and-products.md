@@ -124,7 +124,7 @@ A line with no price is marked "unpriced, excluded from total". It is not counte
 
 **Send** fixes the exchange rate and the tax rates on the offer. It also records who the buyer and the seller were in law at that time. It sends nothing to the buyer.
 
-**Accept** sets the deal's amount and currency to the offer's gross total, so the deal shows what the buyer agreed to. It needs permission to change both the offer and the deal.
+**Accept** sets the deal's amount and currency to the offer's net total, the figure without tax, because a deal's value never includes tax. A deal that lives on its lines keeps the value of its lines. It needs permission to change both the offer and the deal.
 
 **Reject** takes a reason you may leave empty. The reason is kept in the audit log, not on the offer.
 

@@ -146,7 +146,7 @@ func TestAnArchiveOfARowOutsideTheAgentsScopeStagesNothing(t *testing.T) {
 	hidden, err := native.Create(elsewhere, datasource.CreateInput{
 		EntityType: datasource.EntityContact,
 		Fields:     json.RawMessage(`{"linkedin_url":"` + integration.ContactProfile() + `","full_name":"Out Of Scope","owner_id":"` + e.Rep3.String() + `"}`),
-		Source:     "test",
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding the out-of-scope contact: %v", err)

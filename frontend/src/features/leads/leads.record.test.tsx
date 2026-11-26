@@ -79,7 +79,7 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     const user = userEvent.setup();
     const about = await editSection(user, "About");
     await user.type(
-      within(about).getByRole("textbox", { name: "Title" }),
+      within(about).getByRole("textbox", { name: "Job title" }),
       "VP Sales",
     );
     await user.click(within(about).getByRole("button", { name: "Save" }));
@@ -718,7 +718,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     render(<LeadScreen id="l-1" />);
 
     const owner = await screen.findByText("Unassigned");
-    const reason = translate("en", "record.actionRefused");
+    const reason = translate("en", "record.roleReadsOnly");
     await waitFor(() => expect(owner).toHaveAccessibleDescription(reason));
     expect(owner).toHaveAttribute("tabindex", "0");
   });

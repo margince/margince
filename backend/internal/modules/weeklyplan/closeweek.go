@@ -97,7 +97,7 @@ func (s *Store) CloseWeek(ctx context.Context, now time.Time) (Outcome, error) {
 		}
 		if _, err := tx.Exec(ctx, `
 			UPDATE weekly_plan_commitment
-			   SET state = $2, version = version + 1, updated_at = now()
+			   SET state = $2, version = version + 1
 			 WHERE plan_id = $1 AND state = $3`,
 			plan.ID, StateMissed, StateOpen); err != nil {
 			return fmt.Errorf("weeklyplan: settling the week: %w", err)

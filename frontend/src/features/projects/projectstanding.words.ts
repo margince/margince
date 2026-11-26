@@ -4,7 +4,7 @@ import type {
   TimelineEvent,
   TimelineGap,
 } from "../../design-system/standingtimeline";
-import { formatMoney } from "../../format/format";
+import { formatMoneyWhole } from "../../format/format";
 import { formatDayMonthNearYear } from "../../format/format.dates";
 import type { Translator, Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -297,7 +297,7 @@ function momentTitle(moment: ProjectMoment, ctx: Ctx): string {
     case "update":
       return moment.subject ?? ctx.t("project.standing.lastUpdate");
     default:
-      return ctx.t("project.standing.event.end");
+      return ctx.t("project.targetEnd");
   }
 }
 
@@ -317,7 +317,7 @@ function momentSub(moment: ProjectMoment, view: Project360, ctx: Ctx): string {
       return ctx.t("project.standing.event.lastUpdate", { date });
     case "won":
       return moment.amountMinor != null && moment.currency
-        ? `${date} · ${formatMoney(moment.amountMinor, moment.currency, ctx.locale)}`
+        ? `${date} · ${formatMoneyWhole(moment.amountMinor, moment.currency, ctx.locale)}`
         : date;
     case "due":
       return moment.kind === "late"

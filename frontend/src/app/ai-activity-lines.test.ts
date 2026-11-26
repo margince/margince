@@ -236,7 +236,7 @@ describe("speak", () => {
     [
       "an unknown kind",
       {
-        subject_type: "constellation",
+        subject_type: "orbital-body",
         subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
       },
     ],

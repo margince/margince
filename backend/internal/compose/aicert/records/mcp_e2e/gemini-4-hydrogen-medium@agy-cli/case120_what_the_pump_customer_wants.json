@@ -3,7 +3,7 @@
   "criteria": [
     1
   ],
-  "passed": 3,
+  "passed": 2,
   "runs": 3,
   "pass_at": 2,
   "driver": "gemini:cli",
@@ -13,25 +13,46 @@
   "self_judged": false,
   "stamp": {
     "scenario": "8b19d429855ee029",
-    "tools": "eae3e1aa2abcc74b",
-    "instructions": "c5c644eee9719be0",
+    "tools": "a5b3c4827df3eb5b",
+    "instructions": "4eab26d5fff0793f",
     "judge": "claude-haiku-5-5",
-    "harness": "024566e70b0c3db3",
-    "commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
-    "ran_at": "2026-11-21T22:52:34Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:32:05Z"
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T07:54:09Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T07:54:09Z"
   },
   "usage": {
-    "input_tokens": 115395,
-    "output_tokens": 17168,
+    "input_tokens": 126421,
+    "output_tokens": 17724,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 105871,
+    "cache_read_input_tokens": 113769,
     "runs_measured": 3,
     "runs_costed": 0,
     "cost_usd": null
   },
   "tools_by_run": [
+    {
+      "passed": false,
+      "tools": [
+        "at_risk_relationships",
+        "catch_me_up_on",
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "review_commitments",
+        "search_records",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    },
     {
       "passed": true,
       "tools": [
@@ -52,26 +73,10 @@
     {
       "passed": true,
       "tools": [
+        "at_risk_relationships",
         "catch_me_up_on",
         "find_records",
         "list_approvals",
-        "list_records",
-        "read_attention",
-        "read_context",
-        "read_record",
-        "review_commitments",
-        "search_records",
-        "whats_slipping_this_week",
-        "whoami"
-      ]
-    },
-    {
-      "passed": true,
-      "tools": [
-        "catch_me_up_on",
-        "find_records",
-        "list_approvals",
-        "list_records",
         "read_attention",
         "read_context",
         "read_record",
@@ -87,7 +92,7 @@
     "calls": {
       "median": 13,
       "min": 13,
-      "max": 15
+      "max": 16
     },
     "turns": {
       "median": 6,
@@ -100,14 +105,14 @@
       "max": 2
     },
     "prompt_tokens": {
-      "median": 76817,
-      "min": 60409,
-      "max": 84040
+      "median": 77635,
+      "min": 73208,
+      "max": 89347
     },
     "output_tokens": {
-      "median": 5599,
-      "min": 5247,
-      "max": 6322
+      "median": 6017,
+      "min": 5305,
+      "max": 6402
     }
   }
 }

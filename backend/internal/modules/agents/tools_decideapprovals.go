@@ -35,6 +35,10 @@ func (decideApprovals) routeTargets() map[string]string {
 	return map[string]string{"one": decideOne, "bundle": decideBundle}
 }
 
+func (decideApprovals) pickedBy() map[string]string {
+	return map[string]string{"one": "staged_action_id", "bundle": "bundle_id"}
+}
+
 var errDecideNamesOneID = &BadArgsError{Cause: errors.New("name exactly one of staged_action_id or bundle_id")}
 
 func (decideApprovals) chooseTarget(members map[string]json.RawMessage) (string, error) {

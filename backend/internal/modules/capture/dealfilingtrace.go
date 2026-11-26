@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -67,7 +68,7 @@ func filingOf(verdict DealVerdict, result string) *Filing {
 		return &Filing{Actor: changed.Unit, Hook: changed.Hook, Result: changedResult(*changed, verdict, result), Reason: changed.Reason}
 	case ignored != nil:
 		return &Filing{Actor: ignored.Unit, Hook: ignored.Hook, Result: string(HookIgnored), Reason: ignored.Reason}
-	case verdict.Outcome == DealLinked:
+	case verdict.Outcome == DealLinked, result != "":
 		return &Filing{Actor: FilingActorCore, Result: orElse(result, string(DealLinked)), Reason: string(verdict.Basis)}
 	}
 	return nil
@@ -93,12 +94,68 @@ func orElse(value, fallback string) string {
 // recordFiling stores the filing on the mail's trace rows. A mail with no trace
 // row, because the day's window passed, has nothing to update.
 func recordFiling(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, verdict DealVerdict, result string) error {
+	if err := logUnauditedHookAnswers(ctx, tx, mail, verdict, result); err != nil {
+		return err
+	}
 	filing := filingOf(verdict, result)
 	if filing == nil {
 		return nil
 	}
 	if _, err := tx.Exec(ctx, `UPDATE capture_trace SET filing = $2 WHERE activity_id = $1`, mail, filing); err != nil {
 		return fmt.Errorf("capture: recording who filed a mail on its deal: %w", err)
+	}
+	return nil
+}
+
+// actionExtensionMailHook is the system log action of a hook answer that no
+// audit row names. It is kept for good, unlike the swept capture trace.
+const actionExtensionMailHook = "extension_mail_hook"
+
+// undeclaredReason stands in for a reason the unit did not declare. That text
+// is the hook's own and may hold the mail, so the lasting row never keeps it.
+const undeclaredReason = "undeclared"
+
+// logUnauditedHookAnswers keeps a lasting record of each hook answer that no
+// audit row names. A written link or unlink names the changes that took effect
+// (withHookEvidence), so only a failed or ignored answer is logged then. When
+// nothing was written, as for a `none` answer, every answer is logged. result is
+// set only by a repair, and a repair sets it only after it wrote.
+func logUnauditedHookAnswers(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, verdict DealVerdict, result string) error {
+	written := result != "" || verdict.Outcome == DealLinked
+	for _, c := range verdict.Hooks {
+		if written && c.Result == HookChanged {
+			continue
+		}
+		reason := c.Reason
+		if !c.Declared && reason != "" {
+			reason = undeclaredReason
+		}
+		detail := map[string]any{
+			"activity_id": mail, "unit": c.Unit, "hook": c.Hook, fieldReason: reason,
+			"result": string(c.Result), fieldOutcome: string(verdict.Outcome),
+		}
+		if err := logHookAnswerOnce(ctx, tx, detail); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// logHookAnswerOnce writes the row unless this transaction already wrote it. A
+// repair decides one mail once per mailbox in one transaction. now() is the
+// transaction's start, which LogSystem stamps on its row.
+func logHookAnswerOnce(ctx context.Context, tx pgx.Tx, detail map[string]any) error {
+	var logged bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM system_log
+		WHERE action = $1 AND occurred_at = now() AND detail @> $2::jsonb)`,
+		actionExtensionMailHook, storekit.JSONArg(detail)).Scan(&logged); err != nil {
+		return fmt.Errorf("capture: reading the mail hook answers already recorded: %w", err)
+	}
+	if logged {
+		return nil
+	}
+	if _, err := storekit.LogSystem(ctx, tx, actionExtensionMailHook, detail); err != nil {
+		return fmt.Errorf("capture: recording a mail hook answer: %w", err)
 	}
 	return nil
 }

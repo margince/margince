@@ -48,7 +48,7 @@ function activityRefusal(
   }
   return (
     <span id={activity.sentenceId} className={hidden ? "sr-only" : undefined}>
-      {t(activity.refusalKey ?? "record.logActivityRefused")}
+      {activity.refusalKey && t(activity.refusalKey)}
     </span>
   );
 }

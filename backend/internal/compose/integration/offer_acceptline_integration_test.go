@@ -21,20 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// offerDeskPerms is the deal-desk grant this suite drives the offer
-// store under; row scope all keeps visibility out of the frame here.
-var offerDeskPerms = principal.Permissions{
-	RoleKeys: []string{"deal_desk"},
-	Objects: map[string]principal.ObjectGrant{
-		"deal":                  {Create: true, Read: true, Update: true},
-		"offer":                 {Create: true, Read: true, Update: true},
-		"installation_settings": {Read: true},
-	},
-	RowScope: principal.RowScopeAll,
-}
 
 // offerTotals reads the derived money triple off the contract shape.
 func offerTotals(t *testing.T, o crmcontracts.Offer) (net, tax, gross int64) {
@@ -62,7 +49,7 @@ func TestAcceptOfferLineItemFlipsStagedIntoTheTotals(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Staged-line deal", pipeline, open, &e.Rep1)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 
 	// One human-entered line: 1 × 100.00 @19% → net 10000, tax 1900.
 	description, price, taxRate := "Retainer", int64(10000), "19.00"

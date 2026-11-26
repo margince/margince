@@ -11588,6 +11588,53 @@
               "type": "string"
             }
           },
+          "blocking_records": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "blocker": {
+                  "type": "string"
+                },
+                "records": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "web_url": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name"
+                    ]
+                  }
+                },
+                "total": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "visible": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "blocker",
+                "records",
+                "total",
+                "visible"
+              ]
+            }
+          },
           "consequences": {
             "type": "array",
             "items": {
@@ -16137,6 +16184,24 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "cause": {
+                      "type": "object",
+                      "properties": {
+                        "deal_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "deal_name": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ]
+                    },
                     "changed_at": {
                       "type": "string",
                       "format": "date-time"

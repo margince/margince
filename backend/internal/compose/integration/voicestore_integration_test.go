@@ -479,8 +479,8 @@ func TestVoiceDraftRejectionIsIdempotentAndTerminalSafe(t *testing.T) {
 	if err := ownerDB.QueryRow(context.Background(), `
 		INSERT INTO voice_learning_signal
 		  (voice_profile_id, draft_ref_hash, outcome, generated_original,
-		   retention_until, source, captured_by)
-		VALUES ($1, $2, 'drafted', 'private generated text', $3, 'system', 'system')
+		   retention_until, captured_by)
+		VALUES ($1, $2, 'drafted', 'private generated text', $3, 'system')
 		RETURNING id`, profile.ID, draftHash[:], time.Now().Add(24*time.Hour)).Scan(&signalID); err != nil {
 		t.Fatal(err)
 	}
@@ -518,8 +518,8 @@ func TestVoiceDraftRejectionIsIdempotentAndTerminalSafe(t *testing.T) {
 	acceptedHash := sha256.Sum256([]byte(acceptedRef))
 	if _, err := ownerDB.Exec(context.Background(), `
 		INSERT INTO voice_learning_signal
-		  (voice_profile_id, draft_ref_hash, outcome, retention_until, source, captured_by)
-		VALUES ($1, $2, 'accepted', $3, 'system', 'system')`,
+		  (voice_profile_id, draft_ref_hash, outcome, retention_until, captured_by)
+		VALUES ($1, $2, 'accepted', $3, 'system')`,
 		profile.ID, acceptedHash[:], time.Now().Add(24*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
@@ -547,9 +547,9 @@ func TestVoiceClearCorpusScrubsQualifyingLearningSignal(t *testing.T) {
 	if _, err := ownerDB.Exec(context.Background(), `
 		INSERT INTO voice_learning_signal
 		  (voice_profile_id, draft_ref_hash, outcome, final_text,
-		   final_captured_by, qualifies_as_source, retention_until, source, captured_by)
+		   final_captured_by, qualifies_as_source, retention_until, captured_by)
 		VALUES ($1, $2, 'edited_sent', 'the human-authored final text',
-		        'human:ada', true, $3, 'system', 'system')`,
+		        'human:ada', true, $3, 'system')`,
 		profile.ID, qualHash[:], time.Now().Add(24*time.Hour)); err != nil {
 		t.Fatal(err)
 	}

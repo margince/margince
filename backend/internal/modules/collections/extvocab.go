@@ -5,13 +5,13 @@ package collections
 
 import (
 	"context"
+	"errors"
 	"sort"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
@@ -45,8 +45,8 @@ func extensionVocabulary(engine storekit.Query) []VocabularyField {
 // Its rows carry no owner, so the kind's read right (Object) is the whole row
 // scope. A kind the caller may not read answers as no kind at all.
 func extensionEngine(ctx context.Context, kind string) (storekit.Query, bool) {
-	declared, ok := recordkinds.Lookup(kind)
-	if !ok || !auth.Allows(ctx, kind, principal.ActionRead) {
+	declared, ok := auth.ReadableKind(ctx, kind)
+	if !ok {
 		return storekit.Query{}, false
 	}
 	fields := make(map[string]storekit.Field, len(declared.Fields))
@@ -69,4 +69,29 @@ func extensionEngine(ctx context.Context, kind string) (storekit.Query, bool) {
 		BaseWhere: whereArchivedNull,
 		Fields:    fields,
 	}, true
+}
+
+// errKindRemoved is a list over an extension kind no unit declares any more.
+// Its readers answer it as empty or unavailable, never as a fault, so the
+// lists over every other kind keep working.
+var errKindRemoved = errors.New("no installed extension declares the record kind of this list")
+
+// kindRemoved is true for an extension kind no unit declares any more. A kind
+// the caller may not read is not removed: its readers keep refusing it.
+func kindRemoved(kind string) bool {
+	if !recordkinds.IsExtensionName(kind) {
+		return false
+	}
+	_, declared := recordkinds.Lookup(kind)
+	return !declared
+}
+
+// kindUnavailable is true for an extension kind the caller cannot read, removed
+// or not. What a caller creates over a kind answers both alike.
+func kindUnavailable(ctx context.Context, kind string) bool {
+	if !recordkinds.IsExtensionName(kind) {
+		return false
+	}
+	_, ok := auth.ReadableKind(ctx, kind)
+	return !ok
 }

@@ -345,7 +345,7 @@ const sarSubjectQuery = `
 	SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
 	       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM contact_social ps WHERE ps.contact_id = p.id) AS social,
 	       p.address_line1, p.address_line2, p.address_city, p.address_region, p.address_postal_code, p.address_country,
-	       p.source, p.created_at
+	       p.source, p.source_system, p.created_at
 	FROM contact p WHERE p.id = $1`
 
 // appendSubjectCustomValues merges the subject's stored cf_ values into

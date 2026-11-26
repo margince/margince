@@ -16,6 +16,7 @@ import { unwrap } from "../../lib/problem";
 import { restoreLatestArchive } from "../../lib/recordrestore";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
+import { useArchiveRefusal } from "../../lib/writerefusal";
 
 // The contact header's merge and archive commands.
 
@@ -64,6 +65,7 @@ export function ContactRecordActions({
   beforeArchive?: ReactNode;
 }>) {
   const t = useT();
+  const archiveRefusal = useArchiveRefusal("contact");
   const id = contact.id;
   // MergeAction/ArchiveAction's own invalidate/recordKey props
   // only reach the LIST cache and this record's own `["contact", id]` read.
@@ -121,7 +123,7 @@ export function ContactRecordActions({
       <ArchiveAction
         requires={{ object: "contact", action: "delete" }}
         archivable={contact.archivable ?? false}
-        refusedReason={t("contact.archiveRefused")}
+        refusedReason={archiveRefusal}
         disabledReasonId={disabledReasonId}
         label={t("record.archive")}
         confirmText={t("record.archiveConfirm")}

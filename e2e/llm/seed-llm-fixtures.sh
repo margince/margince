@@ -1163,10 +1163,10 @@ fi
 
 # --- CASE 43: four fair leads, one of whose stage a human already chose -----
 #
-# All four are created by the admin's own session and none is sent a lifecycle,
+# All four are created by the admin's own session and none is sent a status,
 # so each starts at the column default 'unknown'. The fourth then gets 'target'
 # through a PATCH from the same session, so a human is the last writer of that
-# lifecycle. The agent's change over it applies at once and its answer names the
+# status. The agent's change over it applies at once and its answer names the
 # value it replaced, which is what case 43 asks the assistant to report.
 #
 # Owned by the caller, because these are the caller's own leads.
@@ -1181,10 +1181,10 @@ seed_fair_lead "Kieler Pumpenwerk GmbH" "Pumpentechnik" >/dev/null
 seed_fair_lead "Rhön Hydraulik AG" "Hydraulik" >/dev/null
 seed_fair_lead "Altmark Fördertechnik GmbH" "Fördertechnik" >/dev/null
 emsland="$(seed_fair_lead "Emsland Ventilbau GmbH" "Armaturen")"
-# A repeat still leaves a human as lifecycle's last writer, so a re-run converges.
-code="$(status_of PATCH "/companies/$emsland" '{"lifecycle":"target"}')"
+# A repeat still leaves a human as status's last writer, so a re-run converges.
+code="$(status_of PATCH "/companies/$emsland" '{"status":"target"}')"
 [[ "$code" = "200" ]] || {
-  echo "setting Emsland Ventilbau's lifecycle as a human answered HTTP $code" >&2; exit 1; }
+  echo "setting Emsland Ventilbau's status as a human answered HTTP $code" >&2; exit 1; }
 
 # --- CASES 44-49: the untried action tools ------------------------------------
 #

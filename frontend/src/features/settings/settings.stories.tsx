@@ -7,7 +7,7 @@ import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
 import type { Route } from "../../lib/router";
 import type { SettingsPageId } from "../../lib/settingscatalog";
-import { settingsHref } from "../../lib/settingsrouting";
+import { AGENT_RULES_SUBPAGE, settingsHref } from "../../lib/settingsrouting";
 import { readingsDay } from "../../testing/brief.fixtures";
 import {
   FIXTURE_TIMEZONE,
@@ -268,6 +268,21 @@ export const AiAccessAgentRules: Story = {
     openDevelopers(canvasElement, "Agent rules"),
 };
 
+// Agent rules' own address opens the section on that tab, scrolled into view.
+export const AiAccessAgentRulesAddress: Story = {
+  name: "AI access — agent rules address",
+  args: { route: settingsHref("agents", AGENT_RULES_SUBPAGE) },
+  render: tab("agents", aiAccessRoutes),
+};
+
+export const AiAccessAgentRulesAddressPhone: Story = {
+  name: "AI access — agent rules address, phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  args: { route: settingsHref("agents", AGENT_RULES_SUBPAGE) },
+  render: tab("agents", aiAccessRoutes),
+};
+
 // The connector switched off: the picker says so and what still works. It is
 // the state a default install is in.
 export const AiAccessConnectorOff: Story = {
@@ -295,10 +310,10 @@ export const PassportRevokeConfirm: Story = {
   },
 };
 
-// Minting: a name and five scope ticks in a confirm-width dialog, where the
-// token is then shown once.
+// Creating one: a name and five scope ticks in a confirm-width dialog, where
+// the token is then shown once.
 export const PassportMintDialog: Story = {
-  name: "Mint a passport",
+  name: "Create a passport",
   render: tab("agents", aiAccessRoutes),
   play: async ({ canvasElement }) => {
     await openDevelopers(canvasElement);
@@ -309,7 +324,7 @@ export const PassportMintDialog: Story = {
   },
 };
 
-// After the mint: the passport once, with its own copy control, and the ways to
+// After it is created: the passport once, with its own copy control, and the ways to
 // use it under it. The example keeps the variable, never the new value.
 const mintedRoutes = {
   ...aiAccessRoutes,
@@ -342,18 +357,20 @@ const mintPassport = async ({
     dialog.getByRole("textbox", { name: /Agent name/ }),
     "Claude Code on my laptop",
   );
-  await userEvent.click(dialog.getByRole("button", { name: "Mint passport" }));
+  await userEvent.click(
+    dialog.getByRole("button", { name: "Create passport" }),
+  );
   await dialog.findByText("Next, use it");
 };
 
 export const PassportMinted: Story = {
-  name: "Mint a passport — minted",
+  name: "Create a passport — created",
   render: tab("agents", mintedRoutes),
   play: mintPassport,
 };
 
 export const PassportMintedDark: Story = {
-  name: "Mint a passport — minted, dark",
+  name: "Create a passport — created, dark",
   globals: { theme: "dark" },
   render: tab("agents", mintedRoutes),
   play: mintPassport,
@@ -363,7 +380,7 @@ export const PassportMintedDark: Story = {
 // the recessed token plate are three surfaces whose separation is carried by
 // tokens that move between themes.
 export const PassportMintDialogDark: Story = {
-  name: "Mint a passport — dark",
+  name: "Create a passport — dark",
   globals: { theme: "dark" },
   render: tab("agents", aiAccessRoutes),
   play: async ({ canvasElement }) => {

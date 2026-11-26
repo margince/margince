@@ -171,12 +171,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	opts = append(opts, slices.Concat(modelOpts, settingOptions(cfg, logger))...)
 
-	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, logger)
+	doorOpts, stopDoorLanes, err := mcpDoorLanes(ctx, cfg, logger)
 	if err != nil {
 		return err
 	}
-	defer stopViewRefresh()
-	opts = append(opts, viewOpts...)
+	defer stopDoorLanes()
+	opts = append(opts, doorOpts...)
 
 	apiHandler := compose.New(pool, logger, opts...)
 	// Only now: the flush it listens with is captured while the options run.

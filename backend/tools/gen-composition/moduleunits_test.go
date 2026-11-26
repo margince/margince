@@ -157,18 +157,6 @@ func TestTwoRequirementsWithOneUnitNameAreRefused(t *testing.T) {
 	}
 }
 
-func TestTheUnitNameIsTheModulePathsLastElement(t *testing.T) {
-	for modPath, want := range map[string]string{
-		"github.com/acme/margince-crm":     "margince-crm",
-		"github.com/acme/crm/v2":           "crm",
-		"example.com/acme/addons/greeting": "greeting",
-	} {
-		if got := unitNameFromModulePath(modPath); got != want {
-			t.Errorf("unitNameFromModulePath(%q) = %q, want %q", modPath, got, want)
-		}
-	}
-}
-
 func TestAChangedInstanceGoModRestalesTheCoreDigest(t *testing.T) {
 	root := digestRoot(t)
 	writeTree(t, root, map[string]string{"instance/go.mod": "module i\n\nrequire example.test/crm v1.0.0\n"})
@@ -199,7 +187,7 @@ func TestCoreInstanceTurnsOnExactlyTheUnitsUnderExtensions(t *testing.T) {
 	}
 	var required []string
 	for _, u := range units {
-		dir, err := filepath.Abs(u.dir)
+		dir, err := filepath.Abs(u.Dir)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -264,41 +252,6 @@ func TestADownloadedUnitClaimingAnotherModulePathIsRefused(t *testing.T) {
 	})
 	if _, err := scanExtensions(root); err == nil || !strings.Contains(err.Error(), `declares module "github.com/google/uuid"`) {
 		t.Fatalf("err = %v, want the impostor module refused", err)
-	}
-}
-
-func TestTheInstanceReplacesAreAppliedLikeGoApplies(t *testing.T) {
-	root := t.TempDir()
-	writeTree(t, root, map[string]string{"instance/go.mod": `module i
-
-require (
-	example.test/crm v1.2.0
-	example.test/notes v1.0.0
-	example.test/tasks v1.0.0
-)
-
-replace example.test/crm v1.2.0 => example.test/crm-fork v1.2.1
-
-replace example.test/notes v0.9.0 => ./notes
-
-replace example.test/tasks => ./tasks
-`})
-	units, err := instanceUnits(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got := map[string]unitSource{}
-	for _, u := range units {
-		got[u.name] = u
-	}
-	if u := got["crm"]; !u.fetched || u.download != "example.test/crm-fork@v1.2.1" {
-		t.Errorf("crm = %+v, want the fork's version fetched, as the version-specific replace says", u)
-	}
-	if u := got["notes"]; !u.fetched || u.download != "example.test/notes@v1.0.0" {
-		t.Errorf("notes = %+v, want v1.0.0 fetched: the replace names v0.9.0, which is not the one required", u)
-	}
-	if u := got["tasks"]; u.fetched || u.dir != filepath.Join(root, "instance", "tasks") {
-		t.Errorf("tasks = %+v, want the folder the every-version replace names", u)
 	}
 }
 

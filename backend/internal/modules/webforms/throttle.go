@@ -5,7 +5,9 @@ package webforms
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"math"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
@@ -72,6 +74,18 @@ type ThrottleVerdict struct {
 	Unknown    bool
 	RetryAfter time.Duration
 	Level      ThrottleLevel
+}
+
+// Refusal is the verdict as the error AnswerRefusal states to the visitor.
+func (v ThrottleVerdict) Refusal() error {
+	return &throttledError{wait: int(math.Ceil(v.RetryAfter.Seconds()))}
+}
+
+// throttledError refuses a post the throttle turned away for wait seconds.
+type throttledError struct{ wait int }
+
+func (e *throttledError) Error() string {
+	return fmt.Sprintf("webforms: too many submissions, retry in %d seconds", e.wait)
 }
 
 type throttleStep struct {

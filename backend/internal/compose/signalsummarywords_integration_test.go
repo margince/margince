@@ -114,7 +114,7 @@ func TestAGhostedThreadReadsInTheReadersLanguage(t *testing.T) {
 	e := integration.Setup(t)
 	wrote := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Silent Co", nil)
-	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'opportunity' WHERE id = $1`, company)
 	contact := employedAt(t, e, company, "Sam Silent")
 	logMail(t, e, contact, "inbound", wrote.AddDate(0, 0, -5))
 	logMail(t, e, contact, "outbound", wrote)

@@ -80,21 +80,19 @@ func readerOrNobody(ctx context.Context) ids.UUID {
 // undone by that reply: the newer inbound is a different row and becomes the
 // thread's waiting candidate.
 //
-// Idempotent: saying it twice is the same statement, and the second records who
-// last said it. The row's presence IS the judgement — there is no false to
-// store — so clearing it is a delete rather than a flag.
+// Saying it twice is the same statement. The row's presence is the judgement,
+// so clearing it is a delete rather than a flag.
 func (s *Store) SetThreadNotSales(ctx context.Context, id ids.ActivityID) error {
-	return s.judgeMessage(ctx, id, func(ctx context.Context, tx pgx.Tx, capturedBy string) error {
+	return s.judgeMessage(ctx, id, func(ctx context.Context, tx pgx.Tx, _ string) error {
 		thread, err := threadOf(ctx, tx, id)
 		if err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_sales_state (thread_key, kind, channel_provider, set_by)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (thread_key, kind, channel_provider)
-			DO UPDATE SET set_by = EXCLUDED.set_by, set_at = now()`,
-			thread.key, thread.kind, thread.provider, capturedBy); err != nil {
+			INSERT INTO activity_sales_state (thread_key, kind, channel_provider)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (thread_key, kind, channel_provider) DO NOTHING`,
+			thread.key, thread.kind, thread.provider); err != nil {
 			return fmt.Errorf("activities: recording the thread as not sales: %w", err)
 		}
 		return s.recordDisposition(ctx, tx, id, stateNotSales, nil, "", nil)

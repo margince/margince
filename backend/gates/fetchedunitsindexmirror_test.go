@@ -15,13 +15,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/unitset"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-var (
-	goFetchedUnitsDir   = regexp.MustCompile(`fetchedUnitsDir\s*=\s*"([^"]+)"`)
-	goFetchedUnitsIndex = regexp.MustCompile(`fetchedUnitsIndex\s*=\s*fetchedUnitsDir\s*\+\s*"([^"]+)"`)
-)
+// goFetchedUnitsIndex reads the index's name below the fetched-units folder,
+// which unitset.FetchedDir owns.
+var goFetchedUnitsIndex = regexp.MustCompile(`fetchedUnitsIndex\s*=\s*fetchedUnitsDir\s*\+\s*"([^"]+)"`)
 
 func TestEveryReaderOfTheFetchedUnitsIndexNamesTheComposersPath(t *testing.T) {
 	t.Parallel()
@@ -29,11 +29,11 @@ func TestEveryReaderOfTheFetchedUnitsIndexNamesTheComposersPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the composer: %v", err)
 	}
-	dir, suffix := goFetchedUnitsDir.FindSubmatch(composer), goFetchedUnitsIndex.FindSubmatch(composer)
-	if dir == nil || suffix == nil {
-		t.Fatal("the composer no longer declares fetchedUnitsDir and fetchedUnitsIndex in the form this gate reads")
+	suffix := goFetchedUnitsIndex.FindSubmatch(composer)
+	if suffix == nil {
+		t.Fatal("the composer no longer declares fetchedUnitsIndex in the form this gate reads")
 	}
-	path := string(dir[1]) + string(suffix[1])
+	path := unitset.FetchedDir + string(suffix[1])
 	for _, reader := range []string{"../frontend/scripts/vite-licenses.ts", "../scripts/backend-notices.sh"} {
 		body, err := gatekit.ReadFile(reader)
 		if err != nil {

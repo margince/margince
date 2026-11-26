@@ -6,6 +6,7 @@ package capture
 import (
 	"context"
 	"encoding/json"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -50,6 +51,10 @@ func (s *Sink) landActivityTx(ctx context.Context, tx pgx.Tx, rec connector.Norm
 	}
 	if internalMailAdmitted(ctx) {
 		rec.Links = nil
+	} else if chosen := rec.Counterparty.ChosenSubject(); chosen != nil {
+		// The chosen subject is filed on like any link: probed under the acting
+		// member's scope in this transaction, and counted by the audience gates.
+		rec.Links = append(slices.Clone(rec.Links), *chosen)
 	}
 	landed.ref, landed.created, landed.decision, err = s.captureActivity(ctx, tx, rec, fields)
 	if err != nil {

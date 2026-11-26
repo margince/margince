@@ -86,6 +86,7 @@ func TestOneAPIAcrossManyTasksIsOneFinding(t *testing.T) {
 // cloud rung onto local_small, so their ladders have one rung and draw no finding.
 func TestTheShippedPresetsThatBindOneModelOnSeveralTiersAreNamed(t *testing.T) {
 	collapses := map[string]bool{
+		"anthropic_cloud.yaml":         true,
 		"consumer_class_brokered.yaml": true,
 		"gemini_cloud.yaml":            true,
 		"gemini_vertex_eu.yaml":        true,

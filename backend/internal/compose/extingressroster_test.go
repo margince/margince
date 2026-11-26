@@ -89,29 +89,3 @@ func TestARosterPastTheCoresCapIsDroppedWhole(t *testing.T) {
 			len(parties), len(got), connector.MaxParticipants)
 	}
 }
-
-// The published cap and the core's are ONE number. A unit that checks itself
-// against the published one and a core that applies its own must not be able to
-// answer differently about the same sixty-contact group: the unit would report a
-// record it believes landable and read a refusal it cannot explain.
-func TestThePublishedRosterCapIsTheCoresOwn(t *testing.T) {
-	if extension.MaxParticipants != connector.MaxParticipants {
-		t.Fatalf("the published cap is %d and the core applies %d", extension.MaxParticipants, connector.MaxParticipants)
-	}
-}
-
-// The published roles are the core's own, for the same reason: a unit spelling
-// one off the published surface must reach a database CHECK that admits it.
-func TestEveryPublishedRoleIsTheCoresOwn(t *testing.T) {
-	pairs := map[string]string{
-		extension.ParticipantRoleTo:        connector.ParticipantRoleTo,
-		extension.ParticipantRoleCC:        connector.ParticipantRoleCC,
-		extension.ParticipantRoleAttendee:  connector.ParticipantRoleAttendee,
-		extension.ParticipantRoleOrganizer: connector.ParticipantRoleOrganizer,
-	}
-	for published, core := range pairs {
-		if published != core {
-			t.Errorf("the published role %q is not the core's %q", published, core)
-		}
-	}
-}

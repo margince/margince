@@ -1,18 +1,13 @@
 <!-- prose:plain -->
 # Extension privacy and retention
 
-An extension keeps its own tables. This page tracks the five features that make the data in those tables
-follow the same privacy and retention rules as core data. It is for those who build or run Margince.
+An extension keeps its own tables. This page says how core makes the data in those tables follow the same privacy
+and retention rules as core data. It is for those who build or run Margince.
 
-## The features
-
-| Feature | What someone can do now | Page with the details | State |
-|---|---|---|---|
-| 1. Privacy declaration for extension data | Declare each table's personal data. Core clears, exports and guards it. | [Add an extension](../how-to/add-an-extension.md#declare-the-personal-data-in-your-tables) and [what core does](#what-core-does-with-extension-rows) | Done |
-| 2. Limit raw database access | Nothing yet. | None yet | Planned |
-| 3. Retention sweep and legal hold | Clear or delete extension rows with a retention policy. A legal hold on a linked record keeps them. | [Retention and legal hold](#retention-and-legal-hold) | Done |
-| 4. Set-up from files | Nothing yet. | None yet | Planned |
-| 5. Extension activation step | Nothing yet. | None yet | Planned |
+| Rule | What a unit does | Details |
+|---|---|---|
+| Privacy declaration | Declares each table's personal data. Core clears, exports and guards it. | [Add an extension](../how-to/add-an-extension.md#declare-the-personal-data-in-your-tables) and [what core does](#what-core-does-with-extension-rows) |
+| Retention sweep and legal hold | Nothing more: a retention policy clears or deletes extension rows, and a legal hold on a linked record keeps them. | [Retention and legal hold](#retention-and-legal-hold) |
 
 ## What core does with extension rows
 
@@ -94,7 +89,3 @@ with `ON DELETE CASCADE`, and so may a key that names a table such a delete reac
 `openchannel` counts a message's age from `updated_at`, when it was last decided about, as its own sweep does. Its
 own sweep deletes a decided message after 30 days, and never one that still waits to land. The core sweep reaches
 a waiting message too, but only once the policy's window and the floor of its retention class have passed.
-
-## How to read this page
-
-**Done** means the feature is in the code and its page is linked. **Planned** means it is not built.

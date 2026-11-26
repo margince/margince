@@ -124,7 +124,7 @@ button.record-card-open {
 .record-card-handles > .link-button {
   display: block;
   max-width: 100%;
-  text-align: left;
+  text-align: start;
   overflow: hidden;
   text-overflow: ellipsis;
 }

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { viewMenuName } from "../testing/listview.names";
@@ -60,9 +60,11 @@ const CHIPS: readonly ListChip[] = [
 function Surface({
   initialFilters = {},
   initialSort = "-created_at",
+  footer = <Button>Save view</Button>,
 }: Readonly<{
   initialFilters?: Record<string, string>;
   initialSort?: string;
+  footer?: ReactNode;
 }>) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState(initialSort);
@@ -107,7 +109,7 @@ function Surface({
           step: () => <p className="lt-fvalue-status">Sales</p>,
         },
       ]}
-      saveView={<Button>Save view</Button>}
+      saveView={footer}
     >
       <p>Rows</p>
     </ListSurface>
@@ -195,6 +197,29 @@ export const PanelOpen: Story = {
     await expect(
       within(panel).getByRole("button", { name: "Sort, Created, descending" }),
     ).toBeVisible();
+  },
+};
+
+// German labels too long to share one line: each button keeps its whole
+// label, and the second wraps below the first.
+export const LongFooterLabels: Story = {
+  render: () => (
+    <Surface
+      footer={
+        <>
+          <Button>Ansicht speichern</Button>
+          <Button>Ansichten verwalten</Button>
+        </>
+      }
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const panel = within(await playOpenView(canvasElement));
+    const save = panel.getByRole("button", { name: "Ansicht speichern" });
+    const manage = panel.getByRole("button", { name: "Ansichten verwalten" });
+    await expect(manage.getBoundingClientRect().top).toBeGreaterThan(
+      save.getBoundingClientRect().top,
+    );
   },
 };
 
