@@ -2013,17 +2013,22 @@ BEGIN
 END;
 
 public.auth_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.auth_token.auth_token_counterpart_check CHECK (((purpose = 'member_merge_confirm'::text) = (counterpart_user_id IS NOT NULL)))
+public.auth_token.auth_token_counterpart_fkey FOREIGN KEY (counterpart_user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.auth_token.auth_token_expires_after_creation CHECK ((expires_at > created_at))
+public.auth_token.auth_token_merge_survivor_check CHECK (((purpose = 'member_merge_confirm'::text) = (merge_survivor IS NOT NULL)))
 public.auth_token.auth_token_pkey PRIMARY KEY (id)
-public.auth_token.auth_token_purpose_check CHECK ((purpose = ANY (ARRAY['password_reset'::text, 'email_verify'::text, 'invite'::text])))
+public.auth_token.auth_token_purpose_check CHECK ((purpose = ANY (ARRAY['password_reset'::text, 'email_verify'::text, 'invite'::text, 'member_merge_confirm'::text])))
 public.auth_token.auth_token_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.auth_token.auth_token_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.auth_token.counterpart_user_id uuid gen=- def=-
 public.auth_token.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.auth_token.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.auth_token.id uuid NOT NULL gen=- def=uuidv7()
 public.auth_token.mail_failed_at timestamp with time zone gen=- def=-
 public.auth_token.mail_queued_at timestamp with time zone gen=- def=-
 public.auth_token.mail_sent_at timestamp with time zone gen=- def=-
+public.auth_token.merge_survivor boolean gen=- def=-
 public.auth_token.purpose text NOT NULL gen=- def=-
 public.auth_token.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.auth_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"purpose": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"purpose":20000,"token_hash":20000}')
 public.auth_token.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.auth_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"purpose": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"purpose":20000,"token_hash":20000}')
@@ -6407,6 +6412,7 @@ public.idx_audit_log_batch CREATE INDEX idx_audit_log_batch ON public.audit_log 
 public.idx_audit_on_behalf_of CREATE INDEX idx_audit_on_behalf_of ON public.audit_log USING btree (on_behalf_of, occurred_at DESC) WHERE (on_behalf_of IS NOT NULL)
 public.idx_audit_scrub_boundary CREATE INDEX idx_audit_scrub_boundary ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC, id DESC) WHERE (action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))
 public.idx_audit_time CREATE INDEX idx_audit_time ON public.audit_log USING btree (occurred_at DESC)
+public.idx_auth_token_counterpart CREATE INDEX idx_auth_token_counterpart ON public.auth_token USING btree (counterpart_user_id) WHERE (counterpart_user_id IS NOT NULL)
 public.idx_auth_token_hash CREATE UNIQUE INDEX idx_auth_token_hash ON public.auth_token USING btree (token_hash)
 public.idx_auth_token_user CREATE INDEX idx_auth_token_user ON public.auth_token USING btree (user_id, purpose) WHERE (used_at IS NULL)
 public.idx_auth_token_user_cascade CREATE INDEX idx_auth_token_user_cascade ON public.auth_token USING btree (user_id)

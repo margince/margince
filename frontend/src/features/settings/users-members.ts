@@ -62,6 +62,20 @@ export function offers(member: User, action: MemberAction): boolean {
   return member.allowed_actions?.includes(action) ?? false;
 }
 
+type MemberRefusal = NonNullable<User["unavailable_actions"]>[number];
+
+// Why the roster withholds a verb the caller holds the grant for. Empty when
+// the verb is offered or the roster did not say, so a missing list explains
+// nothing instead of guessing.
+export function refusalsOf(
+  member: User,
+  action: MemberRefusal["action"],
+): MemberRefusal["reason"][] {
+  return (member.unavailable_actions ?? [])
+    .filter((refusal) => refusal.action === action)
+    .map((refusal) => refusal.reason);
+}
+
 // One key per member, so the role cell and the verbs cell each see the other's
 // write in flight.
 export function memberMutationKey(memberId: string, verb: string) {

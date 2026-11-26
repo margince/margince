@@ -30,6 +30,8 @@ var publicRequests = map[string]map[string]bool{
 	"/v1/auth/logout":          {http.MethodPost: true},
 	"/v1/auth/forgot-password": {http.MethodPost: true},
 	"/v1/auth/reset-password":  {http.MethodPost: true},
+	// The merge confirmation link carries its own credential, as a reset does.
+	"/v1/auth/confirm-member-merge": {http.MethodPost: true},
 	// The second sign-in step, which cannot have a session yet: the signed
 	// challenge /v1/auth/login returned IS the credential, and the handler
 	// verifies it. Without this entry the 202 from the first step is a dead

@@ -19,6 +19,7 @@ import {
   LeadScreen,
   LeadsScreen,
   LegalReviewsRoute,
+  MergeConfirmScreen,
   OAuthConsent,
   OfferScreen,
   OnboardingScreen,
@@ -161,6 +162,9 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // token is single-use and shows the subject their own record, which is why
     // it is a different credential from the reusable preference link.
     confirm: ({ id }) => <ConfirmDetailsScreen token={id} />,
+    // #/confirm-merge?token=<token>: anonymous. The router has taken the token
+    // out of the address by the time this table is reached.
+    "confirm-merge": () => <MergeConfirmScreen />,
     // #/room?c=<credential>: the Deal Room's buyer, anonymous. The credential
     // is already out of the address by the time this table is reached. The
     // router takes it as it reads the hash (lib/router.tsx). A gate above this

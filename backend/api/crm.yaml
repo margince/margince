@@ -30452,6 +30452,88 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '409': { $ref: '#/components/responses/VersionConflict' }
 
+  /users/{id}/merge-requests:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: requestMemberMerge
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Ask the holders of two accounts to confirm merging them. Admin-only, human-only.
+      description: |
+        For a source account that has been used. Mails a single-use confirmation link to the
+        sign-in address of each side that is not deactivated and has not confirmed yet, and
+        supersedes any link still open for that side. The merge itself still goes through
+        `mergeMembers`, and refuses until every such side has confirmed. A link confirms and
+        signs nobody in. It dies when the account's address changes, its credentials end or it is
+        deactivated, and after three days.
+
+        Refused (409) unless the preview the token names has no blocker other than
+        `confirmation_missing`, and when this installation cannot send email. Answers the
+        preview as it stands after the request, with a token to merge from once every side has
+        confirmed. Shares the set-password link limits per actor and per target. Audited on each
+        side's account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MergeMembersRequest' }
+      responses:
+        '200':
+          description: The preview after the request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberRetirementPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Another change since the preview, a blocker still open, nothing left to confirm, or no way to send email.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: Rate-limited.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /auth/confirm-member-merge:
+    post:
+      tags: [Identity]
+      operationId: confirmMemberMerge
+      security: []
+      x-agent-access: human-only
+      summary: Confirm that this account may be merged into another, from the mailed link.
+      description: >
+        Spends the single-use token mailed by `requestMemberMerge`. It signs nobody in and
+        changes nothing about the account. An expired, used, unknown or withdrawn token, and one
+        whose account has since left, produce one neutral error. Audited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token]
+              properties:
+                token: { type: string, minLength: 1 }
+      responses:
+        '204': { description: Confirmed. }
+        '401':
+          description: Invalid, used, or expired token (one neutral error for all of them).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: Rate-limited.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /users/{id}/merge:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -30459,7 +30541,11 @@ paths:
       tags: [Identity]
       operationId: mergeMembers
       summary: Merge a duplicate into the selected surviving member.
-      description: The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+      description: >
+        An unused source merges at once. A used source merges only after the holder of each side
+        that is not deactivated has confirmed through `requestMemberMerge`; a deactivated side
+        needs no confirmation, so two deactivated accounts merge on an administrator's say alone.
+        The acting administrator can be neither side.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -69949,13 +70035,30 @@ components:
             `assignLegalEntityMember` needs: `legal_entity` update and `user_admin` update. An
             unknown or archived entity is refused as 422 `unknown_legal_entity`.
         expected_updated_at: { type: string, format: date-time }
+    MemberUnavailableAction:
+      type: object
+      required: [action, reason]
+      description: One member verb the caller holds the grant for and this member refuses, with why.
+      properties:
+        action:
+          type: string
+          enum: [merge]
+          x-extensible-enum: true
+        reason:
+          type: string
+          enum: [sole_admin, self, agent_seat]
+          x-extensible-enum: true
+          description: >
+            Why the verb is refused. `sole_admin` is the last active administrator, `self` is the
+            caller's own account and `agent_seat` is an agent. A used account is not refused: see
+            `merge_needs_confirmation`.
     MemberRetirementBlocker:
       type: string
-      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, source_used, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
+      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, confirmation_missing, suspended_side, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
       x-extensible-enum: true
     MemberRetirementConsequence:
       type: string
-      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive]
+      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive, sign_in_dropped]
       x-extensible-enum: true
     MemberRetirementPreview:
       type: object
@@ -69980,6 +70083,28 @@ components:
         source_email: { type: string, format: email }
         survivor_name: { type: string }
         survivor_email: { type: string, format: email }
+        confirmations:
+          type: array
+          items: { $ref: '#/components/schemas/MemberMergeConfirmation' }
+          description: >
+            Present for a merge whose source account has been used: one entry per side, saying
+            whether that side's holder has confirmed. `confirmation_missing` is in `blockers`
+            while any side is `requested` or `not_requested`.
+    MemberMergeConfirmation:
+      type: object
+      required: [user_id, side, display_name, state]
+      properties:
+        user_id: { type: string, format: uuid }
+        side: { type: string, enum: [source, survivor], x-extensible-enum: true }
+        display_name: { type: string }
+        state:
+          type: string
+          enum: [confirmed, requested, not_requested, not_needed]
+          x-extensible-enum: true
+          description: >
+            `confirmed` once the holder used the mailed link; `requested` while a link is out;
+            `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose
+            holder cannot confirm, and for a merge whose source was never used.
     MemberRetirementBlockingRecords:
       type: object
       description: |
@@ -70194,6 +70319,21 @@ components:
             offers nothing then. It is an offer, not a promise: every write re-checks under its
             lock, and `change_role` says a role change is possible at all — which roles, is
             `listAssignableRoles`'s answer.
+        merge_needs_confirmation:
+          type: boolean
+          description: >
+            True when `merge` is in `allowed_actions` and this account has been used (a password,
+            a sign-in or a linked provider), so merging it waits for the holder of each side that
+            can still sign in to confirm. Absent otherwise, and on the same views as
+            `allowed_actions`.
+        unavailable_actions:
+          type: array
+          items: { $ref: '#/components/schemas/MemberUnavailableAction' }
+          description: >
+            The member verbs the caller holds the `user_admin` grant for and this member refuses,
+            each with the reason, so a client explains the missing button instead of hiding it. An
+            action never appears here and in `allowed_actions`. Present wherever `allowed_actions`
+            is; empty when nothing is refused.
         last_active_at:
           type: [string, 'null']
           format: date-time
