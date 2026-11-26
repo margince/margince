@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer says the three activities moved onto Aachener Metallwerke in one batch, but it also says the single e-mail went to Dom Digital, which is not part of the criterion's three items on Vorort Systeme, so the claim about the three items is still stated and matches the criterion.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer says the three items that sat on Vorort Systeme now sit on Aachener Metallwerke, moved as one batch. Any noun for them counts (mails, calls, activities), and so does a line such as 3 moved, 0 failed. Answer no if it gives another number, or says only some moved.",
+  "answer": "The single e-mail went across to Dom Digital.\n\nAll three activities moved onto Aachener Metallwerke in one batch — the existing rows were re-pointed, so nothing new was written."
+}

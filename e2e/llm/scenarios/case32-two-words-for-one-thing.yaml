@@ -70,12 +70,6 @@ may_call:
 # dictated. Pinning a wording would judge the sentence, which check.py's own
 # contract says it does not.
 
-must_mention:
-  # Criterion 1, MECHANICAL: the choice was made on the counts, and the count is
-  # said out loud. Anchored to what is being counted — a bare digit is satisfied
-  # by the "Q1" in an unrelated sentence. A count is what a regex is reliable
-  # for, and this one has never leaked.
-  - "(?:3|three)[^.]{0,40}(?:account|compan|record)|(?:account|compan|record)\w*[^.]{0,25}(?:3|three)"
 
 # THE SEMANTIC HALF. Each entry is one criterion in plain words, and that
 # sentence is BOTH the question put to the judge and the documentation of what

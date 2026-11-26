@@ -56,6 +56,31 @@ class EfficiencyTest(unittest.TestCase):
         self.assertEqual((effort["calls"], effort["refused"], effort["turns"]), (4, 2, 4))
         self.assertEqual((effort["prompt_tokens"], effort["output_tokens"]), (15, 5))
 
+    def test_the_same_call_after_its_refusal_is_a_retry(self):
+        # A bare name the CLI turned away, then the same tool by its full name.
+        effort = check.read_effort(cli_run(1, 3, bare_retry=True))
+        self.assertEqual((effort["refused"], effort["retries"]), (1, 1))
+
+    def test_a_refused_call_never_made_again_is_no_retry(self):
+        effort = check.read_effort(cli_run(2, 4, refused=1))
+        self.assertEqual((effort["refused"], effort["retries"]), (1, 0))
+
+    def test_another_action_of_the_same_router_is_no_retry(self):
+        events = [
+            {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "a", "name": "mcp__s__change_state",
+                                                           "input": {"action": "qualify"}}]}},
+            _result("a", "invalid field", True),
+            {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "b", "name": "mcp__s__change_state",
+                                                           "input": {"action": "promote"}}]}},
+            _result("b", "done"),
+            _end(3),
+        ]
+        path = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        with open(path, "w", encoding="utf-8") as out:
+            out.write("".join(json.dumps(event) + "\n" for event in events))
+        effort = check.read_effort(path)
+        self.assertEqual((effort["refused"], effort["retries"]), (1, 0))
+
     def test_a_bare_name_refusal_without_is_error_still_counts(self):
         path = cli_run(1, 2)
         with open(path, "a", encoding="utf-8") as out:
@@ -143,13 +168,13 @@ class ToolsByRunTest(unittest.TestCase):
     def test_only_calls_that_worked_count_by_their_bare_name(self):
         path = self.run_calling("find_records", refused=["update_record"])
         self.assertEqual(check.tools_by_run([path, "/nonexistent.jsonl"], [path]),
-                         [{"passed": True, "tools": ["find_records"]}])
+                         [{"passed": True, "tools": ["find_records"], "refused": ["update_record"]}])
 
     def test_a_tool_used_only_in_a_failed_run_is_recorded_as_not_passing(self):
         held, failed = self.run_calling("find_records"), self.run_calling("find_records", "read_tags")
         self.assertEqual(check.tools_by_run([held, failed], [held]), [
-            {"passed": True, "tools": ["find_records"]},
-            {"passed": False, "tools": ["find_records", "read_tags"]},
+            {"passed": True, "tools": ["find_records"], "refused": []},
+            {"passed": False, "tools": ["find_records", "read_tags"], "refused": []},
         ])
 
     def test_record_marks_each_run_by_whether_it_passed(self):

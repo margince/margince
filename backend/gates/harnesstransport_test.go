@@ -16,7 +16,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"path"
 	"slices"
 	"strconv"
@@ -53,13 +52,12 @@ type harnessSourceFile struct {
 func parseProductGoFiles(t *testing.T) []harnessSourceFile {
 	t.Helper()
 	var files []harnessSourceFile
-	fset := gatekit.SourceFileSet()
 	for _, tree := range licensedTrees {
-		walkHandWrittenGoFiles(t, tree.root, func(filePath, text string) {
+		walkHandWrittenGoFiles(t, tree.root, func(filePath, _ string) {
 			if strings.HasSuffix(filePath, "_test.go") {
 				return
 			}
-			parsed, err := parser.ParseFile(fset, filePath, text, parser.SkipObjectResolution)
+			parsed, err := gatekit.ParseFile(filePath, 0)
 			if err != nil {
 				t.Fatalf("parsing %s: %v", filePath, err)
 			}
