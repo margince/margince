@@ -366,10 +366,10 @@ test-uncached: composition
 	# which fails a pull request for the lane's own size rather than for
 	# anything in the diff. The perf lanes below name theirs for the same
 	# reason.
-	# GOMEMLIMIT, because the gates binary reaches 9 GB with no limit and check
-	# runs beside other legs. The parse cache alone holds ~1.9 GB, so a limit
-	# near it spends the run collecting: 3GiB cost 1.4x the wall time of 4GiB
-	# for the same 4 GB peak. A CI job with a runner to itself passes 6GiB.
+	# GOMEMLIMIT, because the gates binary reaches about 8 GB with no limit and
+	# check runs beside other legs. Its live heap peaks between 3 and 4 GB, so a
+	# limit under 4GiB spends the run collecting. A CI job with a runner to
+	# itself passes 6GiB.
 	# CHECK_BASE_REF, because the citation gate diffs against it and reads no
 	# make variable: unset, it judges a develop branch against main.
 	CHECK_BASE_REF="$(CHECK_BASE_REF)" GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(TEST_SHUFFLE_FLAGS) $(UNCACHED_TEST_PKGS)

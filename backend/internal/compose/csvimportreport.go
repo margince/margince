@@ -151,6 +151,7 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 				p.warnings = append(p.warnings, writers.predictedWarnings...)
 			}
 			if !landed {
+				p.skipped = append(p.skipped, writers.predictedFaults...)
 				writers.links.markRefused(object, row.ExternalID)
 				continue
 			}

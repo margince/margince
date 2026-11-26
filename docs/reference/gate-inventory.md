@@ -495,6 +495,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `recordwritekeys_test.go` | H3 | A record write names the fields the record has, or a cf\_ key. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |
 | `relayentrypoints_test.go` | H2 | _(no doc comment)_ |
+| `releaselane_test.go` | H3 | The release scripts are tested by `make check-release`, not by `make check`. |
 | `remediationnotbuyeractivity_test.go` | H2 | Remediation work must never read as buyer engagement. |
 | `reportasof_test.go` | H2 | A report's answer is labelled with the instant it was computed at. |
 | `requestsite_test.go` | H2 | Every site a model request names is one api/ai-tasks.yaml declares. |

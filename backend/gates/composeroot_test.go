@@ -101,8 +101,8 @@ const (
 	// inventory handler, schedule book and catch-up schedule.
 	// Raised by 15 production and 14 test lines for the shared forecast's scope
 	// label. It runs through the unexported forecast-scope mapping its case drives.
-	composeRootProductionLines = 231_394
-	composeRootTestLines       = 361_892
+	composeRootProductionLines = 231_244
+	composeRootTestLines       = 361_880
 )
 
 // A read under these floors stopped early or read the wrong place, and would
