@@ -59,7 +59,8 @@ export function useRowSelection<Row>({
 /**
  * How far a walk has read, of the rows it will end with: the server's count,
  * or the limit when that is lower. Without a count the end is not known, and
- * the limit alone would name a target a short list never reaches.
+ * the limit alone would name a target a short list never reaches. A count the
+ * walk has already passed is stale, so it names no end either.
  */
 function walkProgress(
   walking: boolean,
@@ -70,7 +71,8 @@ function walkProgress(
   if (!walking) {
     return undefined;
   }
-  const of = total === undefined ? undefined : Math.min(limit, total);
+  const of =
+    total === undefined || held > total ? undefined : Math.min(limit, total);
   return { held: Math.min(held, of ?? limit), of };
 }
 

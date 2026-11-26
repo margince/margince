@@ -29,6 +29,7 @@ function PagedList({
   body,
   onRowClick,
   counted = false,
+  reported,
   inFlight,
 }: Readonly<{
   total: number;
@@ -39,6 +40,8 @@ function PagedList({
   onRowClick?: (row: Row) => void;
   /** The server says how many rows match, as a record list's first read does. */
   counted?: boolean;
+  /** A count the server reported that no longer matches the rows it holds. */
+  reported?: number;
   /** Holds each read until the test lets it land, as a network does. */
   inFlight?: (() => void)[];
 }>) {
@@ -55,7 +58,7 @@ function PagedList({
       rowKey={(row) => row.id}
       unit="rows"
       hasMore={held < total}
-      total={counted ? total : undefined}
+      total={reported ?? (counted ? total : undefined)}
       onLoadMore={() => (inFlight ? inFlight.push(land) : land())}
       body={body}
       onRowClick={onRowClick}
@@ -153,6 +156,31 @@ describe("selecting every row of a list", () => {
     await user.click(screen.getByRole("checkbox", { name: "Select Row 01" }));
     await user.click(screen.getByRole("button", { name: selectAll }));
     expect(screen.getByText(selectingOf(50, 130))).toBeInTheDocument();
+  });
+
+  // Rows added since the count was read leave the walk past it.
+  it("names no target once the walk holds more rows than the server counted", async () => {
+    const user = userEvent.setup();
+    const inFlight: (() => void)[] = [];
+    render(
+      <PagedList
+        total={130}
+        perRead={50}
+        limit={500}
+        reported={60}
+        inFlight={inFlight}
+      />,
+    );
+    await user.click(screen.getByRole("checkbox", { name: "Select Row 01" }));
+    await user.click(screen.getByRole("button", { name: selectAll }));
+    expect(screen.getByText(selectingOf(50, 60))).toBeInTheDocument();
+
+    act(() => inFlight.shift()?.());
+    expect(
+      await screen.findByText(
+        en["bulk.selecting_other"].replace("{count}", "100"),
+      ),
+    ).toBeInTheDocument();
   });
 
   // The limit alone is no target: a list of 130 never reaches 500.

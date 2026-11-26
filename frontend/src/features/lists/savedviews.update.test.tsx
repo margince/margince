@@ -417,15 +417,19 @@ describe("a saved view another writer changed after the reader opened it", () =>
             { status: 409 },
           );
         }
+        const body = (await request.json()) as { query: typeof VIP.query };
+        server.view = {
+          ...server.view,
+          query: { list: { ...server.view.query.list, ...body.query.list } },
+          version: server.view.version + 1,
+        };
         return Response.json(server.view);
       }),
     );
     return server;
   }
 
-  it("holds the update to the version opened, though a refetch brought a newer one", async () => {
-    const user = userEvent.setup();
-    const server = stubServer();
+  function mount() {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -440,6 +444,13 @@ describe("a saved view another writer changed after the reader opened it", () =>
         </LocaleProvider>
       </QueryClientProvider>,
     );
+    return client;
+  }
+
+  it("holds the update to the version opened, though a refetch brought a newer one", async () => {
+    const user = userEvent.setup();
+    const server = stubServer();
+    const client = mount();
 
     await user.click(await screen.findByRole("button", { name: VIP.name }));
     await toggleArchived(user);
@@ -457,5 +468,37 @@ describe("a saved view another writer changed after the reader opened it", () =>
     expect(await screen.findByText(en["common.versionSkew"])).toBeTruthy();
     expect(server.ifMatch).toEqual(["4"]);
     expect(screen.queryByText(/^View updated/)).toBeNull();
+  });
+
+  // The reader's own update is the version they now hold: once the list shows
+  // the view again, a second change and update is held to that version.
+  it("holds a second update to the version the reader's own update wrote", async () => {
+    const user = userEvent.setup();
+    const server = stubServer();
+    mount();
+
+    await user.click(await screen.findByRole("button", { name: VIP.name }));
+    await toggleArchived(user);
+    await user.click(
+      await within(await openView(user)).findByRole("button", {
+        name: /^Update/,
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: VIP.name })
+          .getAttribute("aria-pressed"),
+      ).toBe("true"),
+    );
+    await toggleArchived(user);
+    await user.click(
+      await within(await openView(user)).findByRole("button", {
+        name: /^Update/,
+      }),
+    );
+
+    await waitFor(() => expect(server.ifMatch).toEqual(["4", "5"]));
+    expect(screen.queryByText(en["common.versionSkew"])).toBeNull();
   });
 });
