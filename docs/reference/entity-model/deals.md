@@ -800,6 +800,11 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `to_currency` | `currency_code` | yes | The workspace base currency. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
+**Rules**
+
+- `fx_rate_pair_distinct`: `CHECK (((from_currency) <> (to_currency)))`
+- `fx_rate_rate_positive`: `CHECK ((rate > (0)::numeric))`
+
 **Indexes**
 
 - `fx_rate_current_pair_day`: `unique, btree (from_currency, to_currency, rate_date) WHERE (superseded_at IS NULL)`
