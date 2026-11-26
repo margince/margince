@@ -11,6 +11,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import type { TimelineEntry } from "../../design-system/timelineentry";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useProviderLabel } from "../../lib/channelproviders";
 import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import type { HistoryValueCtx } from "../../lib/historyvalues";
@@ -169,6 +170,7 @@ export function useRecordChronology({
 }>): RecordChronology {
   const t = useT();
   const viewerId = useViewerId();
+  const channelName = useProviderLabel();
   // Only the Changes cut reads the change feed. The kind, word and date dials
   // narrow the exchanges, so they never hide a change.
   const wantsChanges =
@@ -194,6 +196,7 @@ export function useRecordChronology({
         : undefined,
       t,
       locale: values.locale,
+      channelName,
     },
   ).map((entry) => {
     const activity = byId.get(entry.id);
