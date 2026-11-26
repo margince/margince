@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 
 import type { components } from "../../api/schema";
+import { en } from "../../i18n/en";
 import {
   installFetchStub,
   meRoute,
@@ -129,7 +130,9 @@ export const AudienceOpen: Story = {
     await userEvent.click(
       await screen.findByRole("button", { name: "Change visibility" }),
     );
-    await screen.findByRole("dialog", { name: "Who may read this message?" });
+    await screen.findByRole("dialog", {
+      name: en["activity.audience.callTitle"],
+    });
   },
 };
 

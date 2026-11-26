@@ -18,11 +18,6 @@ prompt: |
 must_call:
   - read_workspace
 
-must_call_with:
-  - read_workspace.topic=job_health|read_workspace.topic=system_health
-  - read_workspace.topic=ai_routing
-  - read_workspace.topic=audit_log
-
 must_not_call_with:
   - change_settings~.
   # The AI call traces ask for the user's yes first, and the routing question
@@ -32,6 +27,10 @@ must_not_call_with:
 may_call:
   - whoami
   - read_details
+
+# Several topics answer each question (job or system health, routing or AI status, the audit log), so the judge reads the three answers and not the topics.
+judge:
+  - "Criterion 1. The answer says whether any background job is failing, names the AI model or models the workspace routes its work to, and lists recent changes across the workspace with who made each. Answer no if any of the three is missing."
 
 runs: 3
 pass_at: 2

@@ -286,12 +286,11 @@ func consumerMailListsIn(t *testing.T, root string) []string {
 		if strings.Contains(filepath.ToSlash(path), consumerMailOwner) {
 			continue
 		}
-		raw, err := gatekit.ReadFile(path)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
-			t.Fatalf("read %s: %v", path, err)
+			t.Fatalf("parse %s: %v", path, err)
 		}
-		code := string(raw)
-		found = append(found, consumerMailListsInSource(t, path, code)...)
+		found = append(found, consumerMailListsInFile(path, file)...)
 	}
 	sort.Strings(found)
 	return found
@@ -301,11 +300,15 @@ func consumerMailListsIn(t *testing.T, root string) []string {
 // composite literal in one source file naming two or more DISTINCT providers.
 func consumerMailListsInSource(t *testing.T, name, code string) []string {
 	t.Helper()
-	fset := gatekit.SourceFileSet()
-	file, err := parser.ParseFile(fset, name, code, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), name, code, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", name, err)
 	}
+	return consumerMailListsInFile(name, file)
+}
+
+func consumerMailListsInFile(name string, file *ast.File) []string {
+	fset := gatekit.SourceFileSet()
 	// Constants declared in this file, so a list assembled from named ones is
 	// not invisible. `const gmail = "gmail.com"` beside
 	// `[]string{gmail, "outlook.com"}` is a two-provider list with one string

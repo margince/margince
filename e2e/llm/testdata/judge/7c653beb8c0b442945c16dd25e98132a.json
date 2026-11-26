@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer reports background job status and lists recent changes with who made each, but it never names any AI model or models the workspace routes its work to, so the criterion is not met.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says whether any background job is failing, names the AI model or models the workspace routes its work to, and lists recent changes across the workspace with who made each. Answer no if any of the three is missing.",
+  "answer": "No background job is failing: the last runs of every job finished.\n\nRecent changes:\n- Anna Weber moved Nordwind Logistik to Negotiation.\n- Jonas Keller added the contact Heike Brandt.\n- Lea Braun changed the deal amount on the Elbmarsch offer."
+}
