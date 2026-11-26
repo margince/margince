@@ -28,6 +28,8 @@ type SharedMailboxView struct {
 	ConnectedAt time.Time
 	// BackupOwner holds the work of mail whose sender no reader owns.
 	BackupOwner *ids.UUID
+	// ReplyEnabled says an admin let the reader team reply as the mailbox.
+	ReplyEnabled bool
 	// UnreadFrom..UnreadTo is a span no sync read, which a history import
 	// recovers. Both nil when there is none.
 	UnreadFrom, UnreadTo *time.Time
@@ -36,12 +38,12 @@ type SharedMailboxView struct {
 	narrowingHeld    *bool
 }
 
-const sharedMailboxColumns = `id, provider, account_label, reader_team_id, mail_posture, status, connected_by, connected_at, backup_owner_id, unread_from, unread_to, history_narrowing_held`
+const sharedMailboxColumns = `id, provider, account_label, reader_team_id, mail_posture, status, connected_by, connected_at, backup_owner_id, cardinality(coalesce(provider_scopes, '{}')) > 0, unread_from, unread_to, history_narrowing_held`
 
 func scanSharedMailbox(row pgx.Row) (SharedMailboxView, error) {
 	var v SharedMailboxView
 	err := row.Scan(&v.ID, &v.Provider, &v.Address, &v.ReaderTeam, &v.Posture, &v.Status, &v.ConnectedBy, &v.ConnectedAt, &v.BackupOwner,
-		&v.UnreadFrom, &v.UnreadTo, &v.narrowingHeld)
+		&v.ReplyEnabled, &v.UnreadFrom, &v.UnreadTo, &v.narrowingHeld)
 	return v, err
 }
 
@@ -117,6 +119,8 @@ type SharedChange struct {
 	// BackupOwner names the backup owner; ClearBackupOwner removes it.
 	BackupOwner      *ids.UUID
 	ClearBackupOwner bool
+	// ReplyEnabled lets the reader team reply as the mailbox, or ends that.
+	ReplyEnabled *bool
 	// ApplyToHistory narrows mail already captured to a stricter visibility.
 	ApplyToHistory bool
 	// Confirmed is the admin's yes: a change moves the whole captured history.
@@ -129,7 +133,7 @@ type SharedChangeError struct{ empty bool }
 
 func (e *SharedChangeError) Error() string {
 	if e.empty {
-		return "name the reader team, the mail visibility or the backup owner to change"
+		return "name the reader team, the mail visibility, the backup owner or the replies to change"
 	}
 	return "this moves every message the mailbox captured to other readers; send confirm: true to go ahead"
 }
@@ -148,7 +152,7 @@ func (r *Registry) ChangeSharedMailbox(ctx context.Context, id ids.UUID, in Shar
 	if _, err := RequireSharedMailboxAdmin(ctx); err != nil {
 		return SharedMailboxView{}, err
 	}
-	if in.ReaderTeam == nil && in.Posture == nil && in.BackupOwner == nil && !in.ClearBackupOwner {
+	if in.ReaderTeam == nil && in.Posture == nil && in.BackupOwner == nil && !in.ClearBackupOwner && in.ReplyEnabled == nil {
 		return SharedMailboxView{}, &SharedChangeError{empty: true}
 	}
 	// Only a move of the readers or the visibility moves captured history.
@@ -163,13 +167,13 @@ func (r *Registry) ChangeSharedMailbox(ctx context.Context, id ids.UUID, in Shar
 	var out SharedMailboxView
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = changeSharedMailboxTx(ctx, tx, id, in)
+		out, err = changeSharedMailboxTx(ctx, tx, id, in, r.sharedSendScope)
 		return err
 	})
 	return out, err
 }
 
-func changeSharedMailboxTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in SharedChange) (SharedMailboxView, error) {
+func changeSharedMailboxTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in SharedChange, sendScope func(provider string) (string, error)) (SharedMailboxView, error) {
 	prior, err := sharedMailboxTx(ctx, tx, id, "FOR UPDATE")
 	if err != nil {
 		return prior, err
@@ -187,6 +191,11 @@ func changeSharedMailboxTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in Share
 	}
 	if next, err = changeBackupOwnerTx(ctx, tx, next, in); err != nil {
 		return prior, err
+	}
+	if in.ReplyEnabled != nil && *in.ReplyEnabled != next.ReplyEnabled {
+		if next, err = changeSharedReplyTx(ctx, tx, next, *in.ReplyEnabled, sendScope); err != nil {
+			return prior, err
+		}
 	}
 	// Asked whether or not the visibility moved: an admin may narrow the
 	// history of a mailbox that is already held.

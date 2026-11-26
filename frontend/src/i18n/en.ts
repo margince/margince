@@ -8470,6 +8470,7 @@ export const en = {
   "compose.relatedToNone": "Nothing specific",
   "compose.relatedDeal": "Deal: {name}",
   "compose.aboutDeal": "Deal this follow-up is about",
+  "compose.from.shared": "Shared mailbox",
   "compose.from.label": "From",
   "compose.from.automatic":
     "Mailbox the conversation arrived in, or your default",
@@ -15486,6 +15487,13 @@ export const en = {
   "sharedMailboxes.changeConfirm": "Apply to all mail",
   "sharedMailboxes.changeWarning":
     "This applies to all mail the mailbox already captured, not only to new mail.",
+  "sharedMailboxes.replyEnabled": "Members may reply as this mailbox",
+  "sharedMailboxes.replyGrantGraph":
+    "Needs the Mail.Send application permission on the Microsoft app. Without an Exchange scope, that permission lets the app send as any mailbox in the tenant.",
+  "sharedMailboxes.replyGrantGmail":
+    "Needs the gmail.send scope delegated to the service account, beside gmail.readonly.",
+  "sharedMailboxes.replyUnavailableImap":
+    "Not available. An IMAP mailbox only captures mail. Connect it through Microsoft or Google to reply as it.",
   "sharedMailboxes.narrowHistory": "Also hold mail already captured",
   "sharedMailboxes.importHistory": "Import older mail",
   "sharedMailboxes.historyTitle": "Import older mail into {address}",

@@ -21769,6 +21769,24 @@ func (e ReopenCondition) Valid() bool {
 	}
 }
 
+// Defines values for ReplyableSharedMailboxProvider.
+const (
+	ReplyableSharedMailboxProviderGmail ReplyableSharedMailboxProvider = "gmail"
+	ReplyableSharedMailboxProviderGraph ReplyableSharedMailboxProvider = "graph"
+)
+
+// Valid indicates whether the value is a known member of the ReplyableSharedMailboxProvider enum.
+func (e ReplyableSharedMailboxProvider) Valid() bool {
+	switch e {
+	case ReplyableSharedMailboxProviderGmail:
+		return true
+	case ReplyableSharedMailboxProviderGraph:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportBlockKind.
 const (
 	ReportBlockKindBar            ReportBlockKind = "bar"
@@ -65188,6 +65206,24 @@ type ReplyRecipient struct {
 	ViewerOnConversation bool `json:"viewer_on_conversation"`
 }
 
+// ReplyableSharedMailbox A shared mailbox the signed-in member may reply as.
+type ReplyableSharedMailbox struct {
+	// Address The mailbox address, which is the From address of a reply.
+	Address string `json:"address"`
+
+	// Id The mailbox id, sent as `from_connection_id`.
+	Id       openapi_types.UUID             `json:"id"`
+	Provider ReplyableSharedMailboxProvider `json:"provider"`
+}
+
+// ReplyableSharedMailboxProvider defines model for ReplyableSharedMailbox.Provider.
+type ReplyableSharedMailboxProvider string
+
+// ReplyableSharedMailboxList defines model for ReplyableSharedMailboxList.
+type ReplyableSharedMailboxList struct {
+	Items []ReplyableSharedMailbox `json:"items"`
+}
+
 // ReportBlock One element of a report. What fields are legal is decided by `kind`.
 type ReportBlock struct {
 	// Cells The figures this block shows, in render order. Required for a block whose purpose is to display a number; refused on one that renders none, where the figure would be silently unshown.
@@ -69203,7 +69239,8 @@ type SendEmailRequest struct {
 	// `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
 	// conversation arrived in, and a new message from the sender's default mailbox. A mailbox
 	// that is not the sender's, or cannot send, is refused with 422
-	// `mailbox_not_send_capable`.
+	// `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+	// its id, and only by a member of its reader team.
 	FromConnectionId *openapi_types.UUID `json:"from_connection_id,omitempty"`
 
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
@@ -69929,7 +69966,10 @@ type SharedMailbox struct {
 	Provider       SharedMailboxProvider       `json:"provider"`
 
 	// ReaderTeamId The team that reads every message this mailbox captured.
-	ReaderTeamId openapi_types.UUID  `json:"reader_team_id"`
+	ReaderTeamId openapi_types.UUID `json:"reader_team_id"`
+
+	// ReplyEnabled True when an admin let the reader team reply as this mailbox. A member then names the mailbox id as `from_connection_id` of a send. Always false for an `imap` mailbox, which only captures.
+	ReplyEnabled bool                `json:"reply_enabled"`
 	Status       SharedMailboxStatus `json:"status"`
 
 	// UnreadPeriod A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none.
@@ -73286,6 +73326,9 @@ type UpdateSharedMailboxRequest struct {
 
 	// ReaderTeamId The team that reads the mailbox from now on, its whole history included.
 	ReaderTeamId *openapi_types.UUID `json:"reader_team_id,omitempty"`
+
+	// ReplyEnabled True lets every live member of the reader team send mail with this mailbox as its From address. The installation's own grant must already allow it: an application permission to send for a Microsoft mailbox, a delegation that includes the send scope for a Google one. False ends it. An `imap` mailbox is refused with `422` `shared_mailbox_cannot_send`.
+	ReplyEnabled *bool `json:"reply_enabled,omitempty"`
 }
 
 // UpdateSharedMailboxRequestMailVisibility `classified` is refused with `422`.
@@ -105411,6 +105454,9 @@ type ServerInterface interface {
 	// Connect a shared mailbox, or reconnect the one stored for this address.
 	// (POST /shared-mailboxes)
 	ConnectSharedMailbox(w http.ResponseWriter, r *http.Request)
+	// The shared mailboxes the signed-in member may reply as.
+	// (GET /shared-mailboxes/replyable)
+	ListReplyableSharedMailboxes(w http.ResponseWriter, r *http.Request)
 	// Change who reads a shared mailbox, or its mail visibility.
 	// (PATCH /shared-mailboxes/{id})
 	UpdateSharedMailbox(w http.ResponseWriter, r *http.Request, id Id)
@@ -111987,6 +112033,12 @@ func (_ Unimplemented) ListSharedMailboxes(w http.ResponseWriter, r *http.Reques
 // Connect a shared mailbox, or reconnect the one stored for this address.
 // (POST /shared-mailboxes)
 func (_ Unimplemented) ConnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The shared mailboxes the signed-in member may reply as.
+// (GET /shared-mailboxes/replyable)
+func (_ Unimplemented) ListReplyableSharedMailboxes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -157714,6 +157766,26 @@ func (siw *ServerInterfaceWrapper) ConnectSharedMailbox(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ListReplyableSharedMailboxes operation middleware
+func (siw *ServerInterfaceWrapper) ListReplyableSharedMailboxes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReplyableSharedMailboxes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UpdateSharedMailbox operation middleware
 func (siw *ServerInterfaceWrapper) UpdateSharedMailbox(w http.ResponseWriter, r *http.Request) {
 
@@ -167063,6 +167135,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/shared-mailboxes", wrapper.ConnectSharedMailbox)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/shared-mailboxes/replyable", wrapper.ListReplyableSharedMailboxes)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/shared-mailboxes/{id}", wrapper.UpdateSharedMailbox)

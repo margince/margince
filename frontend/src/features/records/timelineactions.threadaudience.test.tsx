@@ -45,7 +45,7 @@ const chat: Activity = {
 async function openMenu(
   activity: Activity,
   posts: unknown[] = [],
-  grants: string[] = ["read", "update"],
+  grants: readonly ("read" | "update")[] = ["read", "update"],
 ) {
   stubWithSession(
     {

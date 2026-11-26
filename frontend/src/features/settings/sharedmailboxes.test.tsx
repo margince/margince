@@ -38,6 +38,7 @@ const SALES: SharedMailbox = {
   status: "connected",
   connected_by: null,
   connected_at: "2026-11-12T09:00:00Z",
+  reply_enabled: false,
 };
 
 type Sent = { method: string; path: string; body: unknown };
@@ -215,6 +216,53 @@ describe("the Shared mailboxes card", () => {
       path: `/v1/shared-mailboxes/${SALES.id}`,
       body: { confirm: true, mail_visibility: "held", apply_to_history: true },
     });
+  });
+});
+
+describe("replying as a shared mailbox", () => {
+  const MICROSOFT: SharedMailbox = {
+    ...SALES,
+    id: "01a05500-0000-7000-8000-0000000000f2",
+    provider: "graph",
+    address: "desk@demo.test",
+  };
+
+  it("turns replies on, names the grant the provider needs, and sends only that change", async () => {
+    const sent = backend(() => json({ items: [MICROSOFT] }));
+    const user = userEvent.setup();
+    draw();
+
+    await user.click(await screen.findByRole("button", { name: "Change" }));
+    expect(
+      screen.getByText(/Needs the Mail\.Send application permission/),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "Members may reply as this mailbox",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Apply to all mail" }));
+
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({
+      method: "PATCH",
+      path: `/v1/shared-mailboxes/${MICROSOFT.id}`,
+      body: { confirm: true, reply_enabled: true },
+    });
+  });
+
+  it("shows the switch as unavailable for an IMAP mailbox and says why", async () => {
+    backend(() => json({ items: [SALES] }));
+    const user = userEvent.setup();
+    draw();
+
+    await user.click(await screen.findByRole("button", { name: "Change" }));
+    expect(
+      screen.getByRole("checkbox", {
+        name: "Members may reply as this mailbox",
+      }),
+    ).toBeDisabled();
+    expect(screen.getByText(/An IMAP mailbox only captures mail/)).toBeTruthy();
   });
 });
 
