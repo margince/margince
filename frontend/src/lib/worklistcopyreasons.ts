@@ -320,6 +320,7 @@ export function whenText(
 // today, and the date and time otherwise. When the agreed zone is not the
 // reader's, the agreed clock and its zone follow the reader's time. A task due
 // by its day has no hour to print. Due today, the "due today" reason says it.
+// A late task also says how many days late it is.
 function taskWhen(
   item: WorklistItem,
   dueAt: string,
@@ -330,49 +331,45 @@ function taskWhen(
   record: string,
   now: Date,
 ): string | null {
-  const late = lateTaskText(item, dueAt, locale, record, now);
-  if (late !== null) return late;
   if (item.due_has_time === true) {
     const intent = item.due_intent;
     const when = momentText(dueAt, "instant", locale, viewer, now);
-    return t(key, {
+    const sentence = t(key, {
       when:
         intent && intent.timezone !== viewer
           ? `${when} (${formatAgreedClock(dueAt, intent, locale, viewer)})`
           : when,
     });
+    const late = daysLate(item, dueAt, viewer, now);
+    return late > 0 ? `${sentence} · ${lateCount(locale, late)}` : sentence;
   }
   const day = taskDueOnDay(dueAt, false, item.due_intent, record);
+  const late = daysLate(item, day, record, now);
+  if (late > 0) {
+    return `${formatDayMonthNearYear(day, locale, record, now)} · ${lateCount(locale, late)}`;
+  }
   return sameCalendarDay(new Date(day), now, record)
     ? null
     : t(key, { when: formatDate(day, locale, record) });
 }
 
-// A late task says its due day and how many days late it is, the two facts a
-// reader acts on, on the record's clock. Home's card and the Worklist row both
-// read it here, so one task never reads two ways.
-function lateTaskText(
+// Late days are counted in the zone the due moment is printed in, so the count
+// agrees with the date beside it. Home's card and the Worklist row both read
+// it here, so one task never reads two ways.
+function daysLate(
   item: WorklistItem,
-  dueAt: string,
-  locale: Locale,
-  record: string,
+  due: string,
+  zone: string,
   now: Date,
-): string | null {
-  if (item.overdue !== true) return null;
-  const dueDay = taskDueOnDay(
-    dueAt,
-    item.due_has_time,
-    item.due_intent,
-    record,
-  );
-  const late = calendarDaysBetween(new Date(dueDay), now, record);
-  if (late <= 0) return null;
-  return [
-    formatDayMonthNearYear(dueDay, locale, record, now),
-    translatePlural(locale, "co.next.daysLate", late, {
-      days: formatNumber(late, locale),
-    }),
-  ].join(" · ");
+): number {
+  if (item.overdue !== true) return 0;
+  return calendarDaysBetween(new Date(due), now, zone);
+}
+
+function lateCount(locale: Locale, late: number): string {
+  return translatePlural(locale, "co.next.daysLate", late, {
+    days: formatNumber(late, locale),
+  });
 }
 
 // Which sentence the moment goes in, or null for a row whose `due_at` is not a
