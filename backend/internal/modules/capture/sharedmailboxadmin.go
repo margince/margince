@@ -207,7 +207,7 @@ func changeSharedMailboxTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in Share
 }
 
 // narrowSharedHistoryTx asks for the earlier mail to be narrowed when the change
-// says so, whether or not the visibility moved: an admin may narrow the history
+// says so, whether or not the visibility moved. An admin may narrow the history
 // of a mailbox that is already held. It answers the mailbox as stored after.
 func narrowSharedHistoryTx(ctx context.Context, tx pgx.Tx, next SharedMailboxView, in SharedChange) (SharedMailboxView, error) {
 	if !in.ApplyToHistory || in.Posture == nil {
