@@ -123,7 +123,38 @@ type telegramMessage struct {
 	EditDate int64  `json:"edit_date"`
 	Text     string `json:"text"`
 	Caption  string `json:"caption"`
+	// ForwardOrigin is set when the sender forwarded a message written elsewhere.
+	ForwardOrigin *telegramForwardOrigin `json:"forward_origin"`
 	telegramMedia
+}
+
+// telegramForwardOrigin is where a forwarded message came from. Only a `user`
+// origin names the author by account. A `hidden_user` origin, a channel and a
+// chat carry no user id this connector could file the message under.
+type telegramForwardOrigin struct {
+	Type       string       `json:"type"`
+	Date       int64        `json:"date"`
+	SenderUser telegramUser `json:"sender_user"`
+}
+
+// chatForward is what Telegram said about the forward, or nil for a message
+// written by its sender.
+func chatForward(origin *telegramForwardOrigin) *connector.ChatForward {
+	if origin == nil {
+		return nil
+	}
+	forward := &connector.ChatForward{}
+	if origin.Date > 0 {
+		forward.OriginalAt = time.Unix(origin.Date, 0).UTC()
+	}
+	if origin.Type == "user" && origin.SenderUser.ID > 0 {
+		forward.Author = &connector.ChatParty{
+			UserID:      fmt.Sprintf("%d", origin.SenderUser.ID),
+			DisplayName: telegramDisplayName(origin.SenderUser),
+			Username:    origin.SenderUser.Username,
+		}
+	}
+	return forward
 }
 
 // telegramUpdate is Telegram's own update envelope. Message is a pointer
@@ -293,6 +324,7 @@ func chatMessageOf(msg *telegramMessage, updateID int64, link *BusinessLink) (co
 		},
 		Body:       messageBody(msg),
 		OccurredAt: time.Unix(msg.Date, 0).UTC(),
+		Forward:    chatForward(msg.ForwardOrigin),
 	}
 	if link != nil {
 		// Through a business link the other end of the private chat is the chat
@@ -301,6 +333,7 @@ func chatMessageOf(msg *telegramMessage, updateID int64, link *BusinessLink) (co
 		chat.Counterparty.UserID = chat.ConversationID
 		if fmt.Sprintf("%d", msg.From.ID) == link.AccountID {
 			chat.Direction = connector.DirectionOutbound
+			chat.Forward = nil
 			chat.Counterparty.DisplayName = chatDisplayName(msg.Chat)
 			chat.Counterparty.Username = msg.Chat.Username
 		}

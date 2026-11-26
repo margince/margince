@@ -3155,6 +3155,18 @@ func (stubs) SaveMyBriefDelivery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyBriefDelivery")
 }
 
+func (stubs) ListMyChatIdentities(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListMyChatIdentities")
+}
+
+func (stubs) RemoveMyChatIdentity(w nethttp.ResponseWriter, r *nethttp.Request, network string) {
+	httperr.NotImplemented(w, r, "RemoveMyChatIdentity")
+}
+
+func (stubs) StartMyChatVerification(w nethttp.ResponseWriter, r *nethttp.Request, network string) {
+	httperr.NotImplemented(w, r, "StartMyChatVerification")
+}
+
 func (stubs) SaveMyDisplayName(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyDisplayName")
 }

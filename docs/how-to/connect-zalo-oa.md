@@ -125,3 +125,9 @@ These need a live OA and a Zalo app before you trust them:
 - What Zalo sends for an OA Admin reply typed in the Zalo app, compared with one sent through the API.
 - The renewal of tokens against the live OAuth service, and its limits.
 - Media download from Zalo, and the real size and host of each file.
+
+## Members who forward messages
+
+A member confirms one Zalo account, and that account is tied to one OA: Zalo user ids are per OA. A member who forwards
+customer messages through two OAs can have only the account for one of them recognised. A forward through the other is
+filed as the member's own message.

@@ -5482,6 +5482,27 @@ func (e ChannelVerbosity) Valid() bool {
 	}
 }
 
+// Defines values for ChatNetwork.
+const (
+	ChatNetworkTelegram ChatNetwork = "telegram"
+	ChatNetworkWhatsapp ChatNetwork = "whatsapp"
+	ChatNetworkZalo     ChatNetwork = "zalo"
+)
+
+// Valid indicates whether the value is a known member of the ChatNetwork enum.
+func (e ChatNetwork) Valid() bool {
+	switch e {
+	case ChatNetworkTelegram:
+		return true
+	case ChatNetworkWhatsapp:
+		return true
+	case ChatNetworkZalo:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ClaimEvidenceEntityType.
 const (
 	ClaimEvidenceEntityTypeCompany      ClaimEvidenceEntityType = "company"
@@ -41802,6 +41823,35 @@ type ChatEpisode struct {
 
 	// Url The first message in the chat.
 	Url string `json:"url"`
+}
+
+// ChatIdentity defines model for ChatIdentity.
+type ChatIdentity struct {
+	// AccountHint The confirmed account with all but its last digits hidden. Absent while only a code waits.
+	AccountHint *string `json:"account_hint,omitempty"`
+
+	// ExpiresAt When the waiting code stops working.
+	ExpiresAt *time.Time  `json:"expires_at,omitempty"`
+	Network   ChatNetwork `json:"network"`
+
+	// VerifiedAt When the account was confirmed.
+	VerifiedAt *time.Time `json:"verified_at,omitempty"`
+}
+
+// ChatIdentityList defines model for ChatIdentityList.
+type ChatIdentityList struct {
+	Data []ChatIdentity `json:"data"`
+}
+
+// ChatNetwork defines model for ChatNetwork.
+type ChatNetwork string
+
+// ChatVerificationStarted defines model for ChatVerificationStarted.
+type ChatVerificationStarted struct {
+	// Code Shown once. Send it as a message from your own account.
+	Code      string      `json:"code"`
+	ExpiresAt time.Time   `json:"expires_at"`
+	Network   ChatNetwork `json:"network"`
 }
 
 // CitedProvision The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
@@ -104605,6 +104655,15 @@ type ServerInterface interface {
 	// Choose what the product may send you.
 	// (PUT /me/brief-delivery)
 	SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request)
+	// Your own chat accounts that are confirmed, or waiting for their code.
+	// (GET /me/chat-identities)
+	ListMyChatIdentities(w http.ResponseWriter, r *http.Request)
+	// Forget your confirmed account and any waiting code on one network.
+	// (DELETE /me/chat-identities/{network})
+	RemoveMyChatIdentity(w http.ResponseWriter, r *http.Request, network string)
+	// Get a code that confirms your account on one chat network.
+	// (POST /me/chat-identities/{network})
+	StartMyChatVerification(w http.ResponseWriter, r *http.Request, network string)
 	// Change the name colleagues see you by.
 	// (PUT /me/display-name)
 	SaveMyDisplayName(w http.ResponseWriter, r *http.Request)
@@ -110452,6 +110511,24 @@ func (_ Unimplemented) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request
 // Choose what the product may send you.
 // (PUT /me/brief-delivery)
 func (_ Unimplemented) SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Your own chat accounts that are confirmed, or waiting for their code.
+// (GET /me/chat-identities)
+func (_ Unimplemented) ListMyChatIdentities(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Forget your confirmed account and any waiting code on one network.
+// (DELETE /me/chat-identities/{network})
+func (_ Unimplemented) RemoveMyChatIdentity(w http.ResponseWriter, r *http.Request, network string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a code that confirms your account on one chat network.
+// (POST /me/chat-identities/{network})
+func (_ Unimplemented) StartMyChatVerification(w http.ResponseWriter, r *http.Request, network string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -147293,6 +147370,90 @@ func (siw *ServerInterfaceWrapper) SaveMyBriefDelivery(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// ListMyChatIdentities operation middleware
+func (siw *ServerInterfaceWrapper) ListMyChatIdentities(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyChatIdentities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveMyChatIdentity operation middleware
+func (siw *ServerInterfaceWrapper) RemoveMyChatIdentity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "network" -------------
+	var network string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "network", chi.URLParam(r, "network"), &network, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "network", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveMyChatIdentity(w, r, network)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartMyChatVerification operation middleware
+func (siw *ServerInterfaceWrapper) StartMyChatVerification(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "network" -------------
+	var network string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "network", chi.URLParam(r, "network"), &network, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "network", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartMyChatVerification(w, r, network)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SaveMyDisplayName operation middleware
 func (siw *ServerInterfaceWrapper) SaveMyDisplayName(w http.ResponseWriter, r *http.Request) {
 
@@ -166146,6 +166307,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/brief-delivery", wrapper.SaveMyBriefDelivery)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/chat-identities", wrapper.ListMyChatIdentities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/chat-identities/{network}", wrapper.RemoveMyChatIdentity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/chat-identities/{network}", wrapper.StartMyChatVerification)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/display-name", wrapper.SaveMyDisplayName)

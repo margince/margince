@@ -1334,6 +1334,13 @@ public.app_user.app_user_agent_is_full CHECK (((NOT is_agent) OR (seat_type = 'f
 public.app_user.app_user_agent_never_forced CHECK ((NOT (is_agent AND must_change_password)))
 public.app_user.app_user_avatar_names_its_origin CHECK (((avatar_object_key IS NULL) = (avatar_origin IS NULL)))
 public.app_user.app_user_avatar_origin_check CHECK ((avatar_origin = ANY (ARRAY['upload'::text, 'google'::text])))
+public.app_user.app_user_chat_codes_expire CHECK ((((chat_whatsapp_code_hash IS NULL) = (chat_whatsapp_code_expires_at IS NULL)) AND ((chat_telegram_code_hash IS NULL) = (chat_telegram_code_expires_at IS NULL)) AND ((chat_zalo_code_hash IS NULL) = (chat_zalo_code_expires_at IS NULL))))
+public.app_user.app_user_chat_telegram_is_an_id CHECK (((chat_telegram_user_id IS NULL) OR (chat_telegram_user_id ~ '^[0-9]{1,20}$'::text)))
+public.app_user.app_user_chat_telegram_is_verified CHECK (((chat_telegram_user_id IS NULL) = (chat_telegram_verified_at IS NULL)))
+public.app_user.app_user_chat_whatsapp_is_digits CHECK (((chat_whatsapp_phone IS NULL) OR (chat_whatsapp_phone ~ '^[0-9]{5,20}$'::text)))
+public.app_user.app_user_chat_whatsapp_is_verified CHECK (((chat_whatsapp_phone IS NULL) = (chat_whatsapp_verified_at IS NULL)))
+public.app_user.app_user_chat_zalo_is_bounded CHECK (((chat_zalo_user_id IS NULL) OR ((char_length(chat_zalo_user_id) <= 64) AND (char_length(chat_zalo_oa_id) <= 64))))
+public.app_user.app_user_chat_zalo_is_verified CHECK ((((chat_zalo_user_id IS NULL) = (chat_zalo_verified_at IS NULL)) AND ((chat_zalo_user_id IS NULL) = (chat_zalo_oa_id IS NULL))))
 public.app_user.app_user_delivery_hour_check CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))
 public.app_user.app_user_does_not_merge_into_itself CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))
 public.app_user.app_user_email_is_canonical CHECK ((email = lower(btrim(email))))
@@ -1364,6 +1371,19 @@ public.app_user.archived_at timestamp with time zone gen=- def=-
 public.app_user.avatar_object_key text gen=- def=-
 public.app_user.avatar_origin text gen=- def=-
 public.app_user.avatar_removed_at timestamp with time zone gen=- def=-
+public.app_user.chat_telegram_code_expires_at timestamp with time zone gen=- def=-
+public.app_user.chat_telegram_code_hash text gen=- def=-
+public.app_user.chat_telegram_user_id text gen=- def=-
+public.app_user.chat_telegram_verified_at timestamp with time zone gen=- def=-
+public.app_user.chat_whatsapp_code_expires_at timestamp with time zone gen=- def=-
+public.app_user.chat_whatsapp_code_hash text gen=- def=-
+public.app_user.chat_whatsapp_phone text gen=- def=-
+public.app_user.chat_whatsapp_verified_at timestamp with time zone gen=- def=-
+public.app_user.chat_zalo_code_expires_at timestamp with time zone gen=- def=-
+public.app_user.chat_zalo_code_hash text gen=- def=-
+public.app_user.chat_zalo_oa_id text gen=- def=-
+public.app_user.chat_zalo_user_id text gen=- def=-
+public.app_user.chat_zalo_verified_at timestamp with time zone gen=- def=-
 public.app_user.combine_routine_email boolean gen=- def=-
 public.app_user.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.delivery_hour_local integer gen=- def=-
@@ -1393,8 +1413,8 @@ public.app_user.routine_mail_team_id uuid gen=- def=-
 public.app_user.seat_type text NOT NULL gen=- def='full'::text
 public.app_user.service_extension text gen=- def=-
 public.app_user.status text NOT NULL gen=- def='active'::text
-public.app_user.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.app_user FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"email": 20000, "locale": 20000, "status": 20000, "timezone": 20000, "seat_type": 20000, "avatar_origin": 20000, "greeting_name": 120, "password_hash": 20000, "timezone_set_by": 20000, "weekly_delivery": 20000, "avatar_object_key": 20000, "service_extension": 20000, "routine_mail_scope": 20000, "email_domain_folded": 20000, "routine_delivery_time": 20000, "morning_brief_delivery": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"avatar_object_key":20000,"avatar_origin":20000,"email":20000,"email_domain_folded":20000,"greeting_name":120,"locale":20000,"morning_brief_delivery":20000,"password_hash":20000,"routine_delivery_time":20000,"routine_mail_scope":20000,"seat_type":20000,"service_extension":20000,"status":20000,"timezone":20000,"timezone_set_by":20000,"weekly_delivery":20000}')
-public.app_user.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.app_user FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "locale": 20000, "status": 20000, "timezone": 20000, "seat_type": 20000, "avatar_origin": 20000, "greeting_name": 120, "password_hash": 20000, "timezone_set_by": 20000, "weekly_delivery": 20000, "avatar_object_key": 20000, "service_extension": 20000, "routine_mail_scope": 20000, "email_domain_folded": 20000, "routine_delivery_time": 20000, "morning_brief_delivery": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"avatar_object_key":20000,"avatar_origin":20000,"email":20000,"email_domain_folded":20000,"greeting_name":120,"locale":20000,"morning_brief_delivery":20000,"password_hash":20000,"routine_delivery_time":20000,"routine_mail_scope":20000,"seat_type":20000,"service_extension":20000,"status":20000,"timezone":20000,"timezone_set_by":20000,"weekly_delivery":20000}')
+public.app_user.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.app_user FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"email": 20000, "locale": 20000, "status": 20000, "timezone": 20000, "seat_type": 20000, "avatar_origin": 20000, "greeting_name": 120, "password_hash": 20000, "chat_zalo_oa_id": 20000, "timezone_set_by": 20000, "weekly_delivery": 20000, "avatar_object_key": 20000, "chat_zalo_user_id": 20000, "service_extension": 20000, "routine_mail_scope": 20000, "chat_whatsapp_phone": 20000, "chat_zalo_code_hash": 20000, "email_domain_folded": 20000, "chat_telegram_user_id": 20000, "routine_delivery_time": 20000, "morning_brief_delivery": 20000, "chat_telegram_code_hash": 20000, "chat_whatsapp_code_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"avatar_object_key":20000,"avatar_origin":20000,"chat_telegram_code_hash":20000,"chat_telegram_user_id":20000,"chat_whatsapp_code_hash":20000,"chat_whatsapp_phone":20000,"chat_zalo_code_hash":20000,"chat_zalo_oa_id":20000,"chat_zalo_user_id":20000,"email":20000,"email_domain_folded":20000,"greeting_name":120,"locale":20000,"morning_brief_delivery":20000,"password_hash":20000,"routine_delivery_time":20000,"routine_mail_scope":20000,"seat_type":20000,"service_extension":20000,"status":20000,"timezone":20000,"timezone_set_by":20000,"weekly_delivery":20000}')
+public.app_user.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.app_user FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "locale": 20000, "status": 20000, "timezone": 20000, "seat_type": 20000, "avatar_origin": 20000, "greeting_name": 120, "password_hash": 20000, "chat_zalo_oa_id": 20000, "timezone_set_by": 20000, "weekly_delivery": 20000, "avatar_object_key": 20000, "chat_zalo_user_id": 20000, "service_extension": 20000, "routine_mail_scope": 20000, "chat_whatsapp_phone": 20000, "chat_zalo_code_hash": 20000, "email_domain_folded": 20000, "chat_telegram_user_id": 20000, "routine_delivery_time": 20000, "morning_brief_delivery": 20000, "chat_telegram_code_hash": 20000, "chat_whatsapp_code_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"avatar_object_key":20000,"avatar_origin":20000,"chat_telegram_code_hash":20000,"chat_telegram_user_id":20000,"chat_whatsapp_code_hash":20000,"chat_whatsapp_phone":20000,"chat_zalo_code_hash":20000,"chat_zalo_oa_id":20000,"chat_zalo_user_id":20000,"email":20000,"email_domain_folded":20000,"greeting_name":120,"locale":20000,"morning_brief_delivery":20000,"password_hash":20000,"routine_delivery_time":20000,"routine_mail_scope":20000,"seat_type":20000,"service_extension":20000,"status":20000,"timezone":20000,"timezone_set_by":20000,"weekly_delivery":20000}')
 public.app_user.timezone text gen=- def=-
 public.app_user.timezone_chosen boolean NOT NULL gen=- def=false
 public.app_user.timezone_set_by text gen=- def=-
@@ -11383,6 +11403,12 @@ public.uq_activity_retention_evidence CREATE UNIQUE INDEX uq_activity_retention_
 public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activity USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_agent_standing_grant_user_spec CREATE UNIQUE INDEX uq_agent_standing_grant_user_spec ON public.agent_standing_grant USING btree (user_id, agent_spec)
 public.uq_analytics_share_token CREATE UNIQUE INDEX uq_analytics_share_token ON public.analytics_share USING btree (token_hash)
+public.uq_app_user_chat_telegram CREATE UNIQUE INDEX uq_app_user_chat_telegram ON public.app_user USING btree (chat_telegram_user_id) WHERE (chat_telegram_user_id IS NOT NULL)
+public.uq_app_user_chat_telegram_code CREATE UNIQUE INDEX uq_app_user_chat_telegram_code ON public.app_user USING btree (chat_telegram_code_hash) WHERE (chat_telegram_code_hash IS NOT NULL)
+public.uq_app_user_chat_whatsapp CREATE UNIQUE INDEX uq_app_user_chat_whatsapp ON public.app_user USING btree (chat_whatsapp_phone) WHERE (chat_whatsapp_phone IS NOT NULL)
+public.uq_app_user_chat_whatsapp_code CREATE UNIQUE INDEX uq_app_user_chat_whatsapp_code ON public.app_user USING btree (chat_whatsapp_code_hash) WHERE (chat_whatsapp_code_hash IS NOT NULL)
+public.uq_app_user_chat_zalo CREATE UNIQUE INDEX uq_app_user_chat_zalo ON public.app_user USING btree (chat_zalo_oa_id, chat_zalo_user_id) WHERE (chat_zalo_user_id IS NOT NULL)
+public.uq_app_user_chat_zalo_code CREATE UNIQUE INDEX uq_app_user_chat_zalo_code ON public.app_user USING btree (chat_zalo_code_hash) WHERE (chat_zalo_code_hash IS NOT NULL)
 public.uq_app_user_email CREATE UNIQUE INDEX uq_app_user_email ON public.app_user USING btree (lower(email))
 public.uq_approval_autonomy_policy_user_kind CREATE UNIQUE INDEX uq_approval_autonomy_policy_user_kind ON public.approval_autonomy_policy USING btree (user_id, kind)
 public.uq_assurance_exception_logical_key CREATE UNIQUE INDEX uq_assurance_exception_logical_key ON public.assurance_exception USING btree (logical_key)

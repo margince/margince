@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/capturetimeline"
+	"github.com/margince/margince/backend/internal/compose/chatmembers"
 	"github.com/margince/margince/backend/internal/compose/duequestion"
 	"github.com/margince/margince/backend/internal/compose/mailhooks"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -293,6 +294,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// rules a mailbox deletion does.
 		WithChatEditor(activities.ApplyProviderEditTx).
 		WithChatPurger(purgeRemovedChat).
+		WithMemberIdentities(chatmembers.New(pool)).WithChatCodeRedeemer(chatmembers.New(pool)).
 		// The files a captured message carried, written by the module that owns
 		// the attachment table. Built here, from the store, so every role that
 		// composes a sink gets the same one — the worker runs mail capture and
