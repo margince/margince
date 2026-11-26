@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ChevronDown } from "lucide-react";
+import { Bell, ChevronDown } from "lucide-react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { Button, Modal, OverflowMenu } from "./atoms";
 import { Heading } from "./heading";
@@ -92,6 +92,28 @@ export const ButtonFace: Story = {
       await within(canvasElement).findByRole("button", { name: "Setup" }),
     );
     await screen.findByRole("button", { name: "Metric definitions" });
+  },
+};
+
+// A `chip` face: a menu in a line of facts, drawn as one of its chips.
+export const ChipFace: Story = {
+  render: () => (
+    <OverflowMenu
+      label="Remind me"
+      text="Remind me"
+      face="chip"
+      icon={<Bell size={12} aria-hidden="true" />}
+    >
+      <Button>In 1 hour</Button>
+      <Button>Tomorrow morning</Button>
+      <Button>Pick a time…</Button>
+    </OverflowMenu>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Remind me" }),
+    );
+    await screen.findByRole("button", { name: "Tomorrow morning" });
   },
 };
 

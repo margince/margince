@@ -64,7 +64,15 @@ var documentParentTypes = []string{
 const (
 	argEntityType    = "entity_type"
 	argContentBase64 = "content_base64"
+	argContentText   = "content_text"
 	codeRequired     = "required"
+)
+
+// A file arrives as base64 or, for text, as it is. A model with no shell
+// drops and changes letters when it writes base64 by hand.
+const (
+	contentBase64Schema = `{"type":"string","description":"The whole file, standard base64 with = padding; send this or content_text"}`
+	contentTextSchema   = `{"type":"string","description":"A text file's whole contents, as they are; send this instead of content_base64 for text, which then needs no encoding"}`
 )
 
 // RegisterDocumentTools joins both tools to the surface; a nil seam registers
@@ -112,11 +120,12 @@ func (t attachDocument) Spec() mcp.ToolSpec {
 		OpenAPIOp:    "uploadAttachment",
 		MaxArgsBytes: MaxMCPRequestBytes,
 		InputSchema: schema(`{"type":"object",
-			"required":["entity_type","entity_id","filename","content_type","content_base64"],
+			"required":["entity_type","entity_id","filename","content_type"],
 			"properties":{` + documentParentSchema() + `,
 			"filename":{"type":"string","description":"The file's name, with its extension"},
 			"content_type":{"type":"string","description":"The file's media type, e.g. application/pdf"},
-			"content_base64":{"type":"string","description":"The whole file, standard base64 with = padding"},
+			"content_base64":` + contentBase64Schema + `,
+			"content_text":` + contentTextSchema + `,
 			"contract_id":{"type":"string","format":"uuid","description":"The agreement this file is paper for, when it is one"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[AttachedDocument](),
@@ -129,6 +138,7 @@ type attachArgs struct {
 	Filename      string    `json:"filename"`
 	ContentType   string    `json:"content_type"`
 	ContentBase64 string    `json:"content_base64"`
+	ContentText   string    `json:"content_text"`
 	ContractID    *ids.UUID `json:"contract_id"`
 }
 
@@ -149,7 +159,7 @@ func (t attachDocument) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if err := requireMediaType(args.ContentType); err != nil {
 		return nil, err
 	}
-	content, err := decodeFile(args.ContentBase64, t.maxBytes(ctx))
+	content, err := fileContent(args.ContentBase64, args.ContentText, t.maxBytes(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -209,6 +219,23 @@ func requireMediaType(declared string) error {
 	}
 }
 
+// fileContent is the file a call carries: a text file's contents as they are, or
+// any file's bytes in base64. A call that sends both is refused, never merged.
+func fileContent(encoded, text string, maxBytes int64) ([]byte, error) {
+	switch {
+	case text != "" && encoded != "":
+		return nil, &BadArgsError{
+			Field: argContentText,
+			Cause: errors.New("the file came twice; send content_text or content_base64, not both"),
+		}
+	case text == "":
+		return decodeFile(encoded, maxBytes)
+	case int64(len(text)) > maxBytes:
+		return nil, TooLargeToAttach(argContentText, int64(len(text)), maxBytes)
+	}
+	return []byte(text), nil
+}
+
 // decodeFile measures the encoded text against the cap before decoding it, so
 // an oversize file is refused without a second copy of it in memory.
 func decodeFile(encoded string, maxBytes int64) ([]byte, error) {
@@ -228,7 +255,7 @@ func decodeFile(encoded string, maxBytes int64) ([]byte, error) {
 	if len(content) == 0 {
 		return nil, &BadArgsError{
 			Field: argContentBase64, Code: codeRequired,
-			Cause: errors.New("`content_base64` decodes to an empty file; send the file's bytes"),
+			Cause: errors.New("`content_base64` decodes to an empty file; send the file's bytes, or a text file's contents as content_text"),
 		}
 	}
 	if int64(len(content)) > maxBytes {
@@ -262,7 +289,7 @@ func (listDocuments) Spec() mcp.ToolSpec {
 		Description: listDocumentsCopy.render(),
 		Instead:     listDocumentsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"id":{"description":"A document's id from this list; naming it answers that file's contents as content_base64"},
+			"id":{"description":"A document's id from this list; naming it answers that file's contents as content_base64, and a text file's also as content_text"},
 			"entity_type":{"description":"Needed to list, with entity_id; left out when id is named"},
 			"entity_id":{"description":"Needed to list, with entity_type; left out when id is named"}}}`),
 	}

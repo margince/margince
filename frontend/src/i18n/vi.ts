@@ -7047,7 +7047,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
   "brief.updating": "Đang cập nhật…",
-  "brief.briefedAt": "Margince tóm tắt lúc {time}",
+  "brief.briefedAt": "Margince chuẩn bị lúc {time}",
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",
   "brief.first.title": "Cần bạn xử lý",
@@ -8664,6 +8664,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.movedTo": "Đã chuyển sang {when}",
   "tasks.moveUndoFailed": "Không thể chuyển việc cần làm về hạn cũ. Thử lại.",
   "tasks.remind.menu": "Nhắc tôi",
+  "tasks.remind.chipName": "Nhắc tôi (đã đặt lúc {when})",
   "tasks.remind.inAnHour": "Sau 1 giờ",
   "tasks.remind.tomorrowMorning": "Sáng mai",
   "tasks.remind.beforeDue": "1 giờ trước hạn",
@@ -8680,6 +8681,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.remind.needsTime": "Hãy nhập ngày và giờ.",
   "tasks.remind.past": "Hãy chọn một thời điểm chưa qua.",
   "tasks.log.action": "Ghi lại kết quả",
+  "tasks.more": "Thêm",
+  "tasks.context": "Ngữ cảnh",
   "tasks.log.record": "Hoạt động này thuộc bản ghi nào?",
   "tasks.log.chooseRecord": "Chọn bản ghi khác",
   "tasks.log.noRecord": "Ghi lại không gắn bản ghi",
