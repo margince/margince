@@ -62,15 +62,20 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	// two-year-old signature as today — the merged copy would then outrank the
 	// contact's own later mail, and a dropped buffer leaves a replaced value
 	// nobody can put back.
-	if _, err = tx.Exec(ctx, `INSERT INTO contact_profile_field
- (contact_id, `+mergeProfileColumns+`)
- SELECT @target, `+mergeProfileColumns+` FROM contact_profile_field WHERE contact_id = @source
- ON CONFLICT (contact_id, field, value_key) DO NOTHING`, pgx.StrictNamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID}); err != nil {
+	if err = moveLegacyEvidence(ctx, tx, entityContact, sourceID.UUID, targetID.UUID); err != nil {
+		return counts, err
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO field_provenance
+ (object_type, object_id, `+mergeEvidenceColumns+`)
+ SELECT 'contact', @target, `+mergeEvidenceColumns+` FROM field_provenance
+  WHERE object_type = 'contact' AND object_id = @source AND value IS NOT NULL
+ ON CONFLICT (object_type, object_id, field_name, value_key) WHERE value IS NOT NULL DO NOTHING`,
+		pgx.StrictNamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID}); err != nil {
 		return counts, fmt.Errorf("relink enrichment fields: %w", err)
 	}
 
-	if _, err = tx.Exec(ctx,
-		`DELETE FROM contact_profile_field WHERE contact_id = $1`, sourceID.UUID); err != nil {
+	if _, err = tx.Exec(ctx, `DELETE FROM field_provenance
+		 WHERE object_type = 'contact' AND object_id = $1 AND value IS NOT NULL`, sourceID.UUID); err != nil {
 		return counts, fmt.Errorf("retire the merged-away enrichment fields: %w", err)
 	}
 	if err = relinkProviderPurchases(ctx, tx, sourceID, targetID); err != nil {

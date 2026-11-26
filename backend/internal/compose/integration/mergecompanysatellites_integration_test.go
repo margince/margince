@@ -47,17 +47,17 @@ func TestMergeCompany_enrichmentFollowsTheSurvivor(t *testing.T) {
 	// survivor's own answer must win, and the source's copy must not survive
 	// as a second row.
 	e.WsExec(t, `
-		INSERT INTO company_fact (company_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
-		VALUES ($1, 'offering', 'service', 'CRM rollout', 'crm rollout', '', '', 1, 'human', $2)`, src, by)
+		INSERT INTO field_provenance (object_type, object_id, field_name, value, value_key, evidence_snippet, evidence_ref, confidence, source, captured_by)
+		VALUES ('company', $1, 'service', 'CRM rollout', 'crm rollout', '', '', 1, 'human', $2)`, src, by)
 	e.WsExec(t, `
-		INSERT INTO company_fact (company_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
-		VALUES ($1, 'offering', 'service', 'Loser wording', 'shared key', '', '', 1, 'human', $2)`, src, by)
+		INSERT INTO field_provenance (object_type, object_id, field_name, value, value_key, evidence_snippet, evidence_ref, confidence, source, captured_by)
+		VALUES ('company', $1, 'service', 'Loser wording', 'shared key', '', '', 1, 'human', $2)`, src, by)
 	e.WsExec(t, `
-		INSERT INTO company_fact (company_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
-		VALUES ($1, 'offering', 'service', 'Survivor wording', 'shared key', '', '', 1, 'human', $2)`, tgt, by)
+		INSERT INTO field_provenance (object_type, object_id, field_name, value, value_key, evidence_snippet, evidence_ref, confidence, source, captured_by)
+		VALUES ('company', $1, 'service', 'Survivor wording', 'shared key', '', '', 1, 'human', $2)`, tgt, by)
 	e.WsExec(t, `
-		INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url, confidence, source, captured_by)
-		VALUES ($1, 'icp', 'Mid-market manufacturers', '', '', 1, 'human', $2)`, src, by)
+		INSERT INTO field_provenance (object_type, object_id, field_name, value, evidence_snippet, evidence_ref, confidence, source, captured_by)
+		VALUES ('company', $1, 'icp', 'Mid-market manufacturers', '', '', 1, 'human', $2)`, src, by)
 
 	if _, err := e.Contacts.MergeCompany(admin, src, tgt, nil); err != nil {
 		t.Fatalf("merge: %v", err)
