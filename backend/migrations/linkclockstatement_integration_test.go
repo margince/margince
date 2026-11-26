@@ -22,6 +22,7 @@ import (
 // visible to its participants only, so it moves the deal clock and no other.
 type linkClockFixture struct {
 	contactA, contactB, contactE, company, deal string
+	projectP, projectQ                          string
 	early, late, private                        string
 }
 
@@ -43,6 +44,9 @@ WITH co AS (
 ), d AS (
   INSERT INTO deal (pipeline_id, stage_id, company_id, name, source, captured_by)
   SELECT s.pipeline_id, s.id, co.id, 'Clock deal', 'manual', 'test' FROM s, co RETURNING id
+), pr AS (
+  INSERT INTO project (name, source, captured_by) VALUES ('Clock P', 'manual', 'test'), ('Clock Q', 'manual', 'test')
+  RETURNING id, name
 ), m AS (
   INSERT INTO activity (kind, subject, occurred_at, audience, source, captured_by)
   VALUES ('note', 'early', $1, 'workspace', 'manual', 'test'),
@@ -52,9 +56,10 @@ WITH co AS (
 )
 SELECT (SELECT id::text FROM ct WHERE full_name = 'Clock A'), (SELECT id::text FROM ct WHERE full_name = 'Clock B'),
        (SELECT id::text FROM ct WHERE full_name = 'Clock E'), (SELECT id::text FROM co), (SELECT id::text FROM d),
+       (SELECT id::text FROM pr WHERE name = 'Clock P'), (SELECT id::text FROM pr WHERE name = 'Clock Q'),
        (SELECT id::text FROM m WHERE subject = 'early'), (SELECT id::text FROM m WHERE subject = 'late'),
        (SELECT id::text FROM m WHERE subject = 'private')`, early, late, private).
-		Scan(&f.contactA, &f.contactB, &f.contactE, &f.company, &f.deal, &f.early, &f.late, &f.private)
+		Scan(&f.contactA, &f.contactB, &f.contactE, &f.company, &f.deal, &f.projectP, &f.projectQ, &f.early, &f.late, &f.private)
 	if err != nil {
 		t.Fatalf("seeding the clock fixture: %v", err)
 	}
@@ -113,18 +118,23 @@ func TestLinkStatementsMoveEveryClockTheirRowsReach(t *testing.T) {
 	e := func(want *time.Time) clockWant { return clockWant{"contact", "contact E", f.contactE, want} }
 	deal := func(want *time.Time) clockWant { return clockWant{"deal", "deal", f.deal, want} }
 	company := func(want *time.Time) clockWant { return clockWant{"company", "company", f.company, want} }
+	projectP := func(want *time.Time) clockWant { return clockWant{"project", "project P", f.projectP, want} }
+	projectQ := func(want *time.Time) clockWant { return clockWant{"project", "project Q", f.projectQ, want} }
 
 	run("one insert", `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
 		f.early, f.contactA)
 	assertLinkClocks(t, conn, "one insert", []clockWant{a(&early), b(nil), deal(nil), company(nil)})
 
 	// Contact A already holds the early message and B gets two rows; the latest
-	// wins. The private message reaches B and the deal, and moves only the deal.
-	run("several inserts", `INSERT INTO activity_link (activity_id, entity_type, contact_id, deal_id)
-		VALUES ($1, 'contact', $4, NULL), ($2, 'contact', $5, NULL), ($3, 'contact', $5, NULL),
-		       ($1, 'deal', NULL, $6), ($3, 'deal', NULL, $6)`,
-		f.late, f.early, f.private, f.contactA, f.contactB, f.deal)
-	assertLinkClocks(t, conn, "several inserts", []clockWant{a(&late), b(&early), deal(&private), company(&late)})
+	// wins. The private message reaches B, the deal and project P, and moves
+	// only the deal.
+	run("several inserts", `INSERT INTO activity_link (activity_id, entity_type, contact_id, deal_id, project_id)
+		VALUES ($1, 'contact', $4, NULL, NULL), ($2, 'contact', $5, NULL, NULL), ($3, 'contact', $5, NULL, NULL),
+		       ($1, 'deal', NULL, $6, NULL), ($3, 'deal', NULL, $6, NULL),
+		       ($2, 'project', NULL, NULL, $7), ($1, 'project', NULL, NULL, $7), ($3, 'project', NULL, NULL, $7)`,
+		f.late, f.early, f.private, f.contactA, f.contactB, f.deal, f.projectP)
+	assertLinkClocks(t, conn, "several inserts",
+		[]clockWant{a(&late), b(&early), deal(&private), company(&late), projectP(&late), projectQ(nil)})
 
 	// The update refolds the record the row left and the one it reached.
 	run("one update", `UPDATE activity_link SET contact_id = $3 WHERE activity_id = $1 AND contact_id = $2`,
@@ -134,15 +144,19 @@ func TestLinkStatementsMoveEveryClockTheirRowsReach(t *testing.T) {
 	run("several updates", `UPDATE activity_link SET contact_id = $2 WHERE contact_id = $1`, f.contactB, f.contactE)
 	assertLinkClocks(t, conn, "several updates", []clockWant{a(&early), b(nil), e(&late)})
 
+	run("one project update", `UPDATE activity_link SET project_id = $3 WHERE activity_id = $1 AND project_id = $2`,
+		f.late, f.projectP, f.projectQ)
+	assertLinkClocks(t, conn, "one project update", []clockWant{projectP(&early), projectQ(&late)})
+
 	run("an update of no row", `UPDATE activity_link SET contact_id = $1 WHERE contact_id = $1`, f.contactB)
 	assertLinkClocks(t, conn, "an update of no row", []clockWant{b(nil), e(&late)})
 
 	run("one delete", `DELETE FROM activity_link WHERE activity_id = $1 AND deal_id = $2`, f.late, f.deal)
 	assertLinkClocks(t, conn, "one delete", []clockWant{deal(&private), company(nil)})
 
-	run("several deletes", `DELETE FROM activity_link WHERE contact_id = ANY ($1::uuid[])`,
-		[]string{f.contactA, f.contactE})
-	assertLinkClocks(t, conn, "several deletes", []clockWant{a(nil), e(nil), deal(&private)})
+	run("several deletes", `DELETE FROM activity_link WHERE contact_id = ANY ($1::uuid[]) OR project_id = ANY ($2::uuid[])`,
+		[]string{f.contactA, f.contactE}, []string{f.projectP, f.projectQ})
+	assertLinkClocks(t, conn, "several deletes", []clockWant{a(nil), e(nil), deal(&private), projectP(nil), projectQ(nil)})
 }
 
 // A clock move is not an edit of the record, whichever statement made it.

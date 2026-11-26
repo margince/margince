@@ -3,6 +3,33 @@
 
 SET LOCAL lock_timeout = '2s';
 
+DROP TRIGGER IF EXISTS activity_link_project_last_activity_added ON activity_link;
+DROP TRIGGER IF EXISTS activity_link_project_last_activity_moved ON activity_link;
+DROP TRIGGER IF EXISTS activity_link_project_last_activity_removed ON activity_link;
+DROP FUNCTION IF EXISTS trg_activity_link_project_last_activity_added();
+DROP FUNCTION IF EXISTS trg_activity_link_project_last_activity_moved();
+DROP FUNCTION IF EXISTS trg_activity_link_project_last_activity_removed();
+
+CREATE OR REPLACE FUNCTION trg_activity_link_project_last_activity() RETURNS trigger
+LANGUAGE plpgsql AS $$BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.project_id IS NOT NULL THEN
+      PERFORM advance_last_activity('project'::regclass, NEW.project_id, last_activity_of_activity(NEW.activity_id));
+    END IF;
+    RETURN NULL;
+  END IF;
+  PERFORM move_project_last_activity(OLD.project_id);
+  IF TG_OP = 'UPDATE' THEN
+    PERFORM move_project_last_activity(NEW.project_id);
+  END IF;
+  RETURN NULL;
+END;
+$$;
+CREATE TRIGGER activity_link_project_last_activity
+	AFTER INSERT OR DELETE OR UPDATE ON activity_link
+	FOR EACH ROW
+	EXECUTE FUNCTION trg_activity_link_project_last_activity();
+
 DROP TRIGGER IF EXISTS activity_link_last_activity_added ON activity_link;
 DROP TRIGGER IF EXISTS activity_link_last_activity_moved ON activity_link;
 DROP TRIGGER IF EXISTS activity_link_last_activity_removed ON activity_link;

@@ -429,7 +429,9 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_link_last_activity_moved`: `AFTER UPDATE REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_last_activity_moved()`
 - `activity_link_last_activity_removed`: `AFTER DELETE REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_last_activity_removed()`
 - `activity_link_no_company_meeting`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_link_refuses_a_company_meeting()`
-- `activity_link_project_last_activity`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_activity_link_project_last_activity()`
+- `activity_link_project_last_activity_added`: `AFTER INSERT REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_project_last_activity_added()`
+- `activity_link_project_last_activity_moved`: `AFTER UPDATE REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_project_last_activity_moved()`
+- `activity_link_project_last_activity_removed`: `AFTER DELETE REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_project_last_activity_removed()`
 - `activity_link_strength_dates_added`: `AFTER INSERT REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_strength_dates_added()`
 - `activity_link_strength_dates_moved`: `AFTER UPDATE REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_strength_dates_moved()`
 - `activity_link_strength_dates_removed`: `AFTER DELETE REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_strength_dates_removed()`

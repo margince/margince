@@ -317,7 +317,9 @@ public.activity_link.activity_link_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES
 public.activity_link.activity_link_no_company_meeting CREATE TRIGGER activity_link_no_company_meeting BEFORE INSERT OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION activity_link_refuses_a_company_meeting()
 public.activity_link.activity_link_pkey PRIMARY KEY (id)
 public.activity_link.activity_link_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
-public.activity_link.activity_link_project_last_activity CREATE TRIGGER activity_link_project_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION trg_activity_link_project_last_activity()
+public.activity_link.activity_link_project_last_activity_added CREATE TRIGGER activity_link_project_last_activity_added AFTER INSERT ON public.activity_link REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_project_last_activity_added()
+public.activity_link.activity_link_project_last_activity_moved CREATE TRIGGER activity_link_project_last_activity_moved AFTER UPDATE ON public.activity_link REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_project_last_activity_moved()
+public.activity_link.activity_link_project_last_activity_removed CREATE TRIGGER activity_link_project_last_activity_removed AFTER DELETE ON public.activity_link REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_project_last_activity_removed()
 public.activity_link.activity_link_relevance_source_check CHECK ((relevance_source = ANY (ARRAY['human'::text, 'classifier'::text])))
 public.activity_link.activity_link_shape CHECK ((((entity_type = 'contact'::text) AND (contact_id IS NOT NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'company'::text) AND (company_id IS NOT NULL) AND (contact_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'deal'::text) AND (deal_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'lead'::text) AND (lead_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'project'::text) AND (project_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL))))
 public.activity_link.activity_link_strength_dates_added CREATE TRIGGER activity_link_strength_dates_added AFTER INSERT ON public.activity_link REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_strength_dates_added()
@@ -11529,17 +11531,35 @@ public.trg_activity_link_last_activity_removed() secdef=false cfg=- acl=- BEGIN
   RETURN NULL;
 END;
 
-public.trg_activity_link_project_last_activity() secdef=false cfg=- acl=- BEGIN
-  IF TG_OP = 'INSERT' THEN
-    IF NEW.project_id IS NOT NULL THEN
-      PERFORM advance_last_activity('project'::regclass, NEW.project_id, last_activity_of_activity(NEW.activity_id));
-    END IF;
-    RETURN NULL;
-  END IF;
-  PERFORM move_project_last_activity(OLD.project_id);
-  IF TG_OP = 'UPDATE' THEN
-    PERFORM move_project_last_activity(NEW.project_id);
-  END IF;
+public.trg_activity_link_project_last_activity_added() secdef=false cfg=- acl=- 
+DECLARE
+  project_ids uuid[];
+  project_ats timestamptz[];
+BEGIN
+  SELECT array_agg(n.project_id), array_agg(last_activity_of_activity(n.activity_id))
+    INTO project_ids, project_ats
+    FROM added n WHERE n.project_id IS NOT NULL;
+  PERFORM advance_last_activities('project'::regclass, project_ids, project_ats);
+  RETURN NULL;
+END;
+
+public.trg_activity_link_project_last_activity_moved() secdef=false cfg=- acl=- 
+DECLARE
+  pid uuid;
+BEGIN
+  FOR pid IN SELECT project_id FROM moved_from UNION SELECT project_id FROM moved_to ORDER BY 1 LOOP
+    PERFORM move_project_last_activity(pid);
+  END LOOP;
+  RETURN NULL;
+END;
+
+public.trg_activity_link_project_last_activity_removed() secdef=false cfg=- acl=- 
+DECLARE
+  pid uuid;
+BEGIN
+  FOR pid IN SELECT DISTINCT project_id FROM removed ORDER BY 1 LOOP
+    PERFORM move_project_last_activity(pid);
+  END LOOP;
   RETURN NULL;
 END;
 

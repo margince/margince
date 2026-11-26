@@ -8,7 +8,9 @@ SET LOCAL lock_timeout = '2s';
 -- read the same tables a statement trigger reads. Advancing a clock to the
 -- latest of several values gives the value the row-by-row advances reached.
 -- The records are locked in (kind, id) order over the whole statement, the
--- order one row's firing already took.
+-- order one row's firing already took. The project triggers sort after the
+-- others, so a link still locks its project after its contact, as an activity
+-- update does.
 
 -- Moves each named record's clock to the latest of its values when that is
 -- later than the stored one. A NULL id or value moves nothing.
@@ -135,3 +137,54 @@ CREATE TRIGGER activity_link_last_activity_moved
 CREATE TRIGGER activity_link_last_activity_removed
 	AFTER DELETE ON activity_link REFERENCING OLD TABLE AS removed
 	FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_last_activity_removed();
+
+CREATE FUNCTION trg_activity_link_project_last_activity_added() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+  project_ids uuid[];
+  project_ats timestamptz[];
+BEGIN
+  SELECT array_agg(n.project_id), array_agg(last_activity_of_activity(n.activity_id))
+    INTO project_ids, project_ats
+    FROM added n WHERE n.project_id IS NOT NULL;
+  PERFORM advance_last_activities('project'::regclass, project_ids, project_ats);
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION trg_activity_link_project_last_activity_moved() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+  pid uuid;
+BEGIN
+  FOR pid IN SELECT project_id FROM moved_from UNION SELECT project_id FROM moved_to ORDER BY 1 LOOP
+    PERFORM move_project_last_activity(pid);
+  END LOOP;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION trg_activity_link_project_last_activity_removed() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+  pid uuid;
+BEGIN
+  FOR pid IN SELECT DISTINCT project_id FROM removed ORDER BY 1 LOOP
+    PERFORM move_project_last_activity(pid);
+  END LOOP;
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER activity_link_project_last_activity ON activity_link;
+DROP FUNCTION trg_activity_link_project_last_activity();
+
+CREATE TRIGGER activity_link_project_last_activity_added
+	AFTER INSERT ON activity_link REFERENCING NEW TABLE AS added
+	FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_project_last_activity_added();
+CREATE TRIGGER activity_link_project_last_activity_moved
+	AFTER UPDATE ON activity_link REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to
+	FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_project_last_activity_moved();
+CREATE TRIGGER activity_link_project_last_activity_removed
+	AFTER DELETE ON activity_link REFERENCING OLD TABLE AS removed
+	FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_link_project_last_activity_removed();
