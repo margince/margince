@@ -84,7 +84,7 @@ func groundedStagedLines() []deals.StagedOfferLineInput {
 
 func TestAddStagedOfferLinesInsertsEvidencedLinesExcludedFromTotals(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-add deal")
 
 	before, err := e.Deals.GetOffer(ctx, offerID, storekit.LiveOnly)
@@ -149,7 +149,7 @@ func TestAddStagedOfferLinesInsertsEvidencedLinesExcludedFromTotals(t *testing.T
 
 func TestAddStagedOfferLinesThenAcceptCountsInTotals(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-accept deal")
 
 	added, err := e.Deals.AddStagedOfferLines(agentOfferDraftCtx(e), offerID, groundedStagedLines())
@@ -188,7 +188,7 @@ func TestAddStagedOfferLinesThenAcceptCountsInTotals(t *testing.T) {
 
 func TestAddStagedOfferLinesUngroundedPriceIsTheHonestZeroSentinel(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Ungrounded-price deal")
 
 	// A price the drafting engine could not ground: zero sentinel, never
@@ -258,7 +258,7 @@ func TestAddStagedOfferLinesUngroundedPriceIsTheHonestZeroSentinel(t *testing.T)
 // false, true stays true.
 func TestOfferRegenerateCopiesPriceGroundedForwardUnchanged(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Regen-price-grounded deal")
 
 	staged := []deals.StagedOfferLineInput{
@@ -301,7 +301,7 @@ func TestOfferRegenerateCopiesPriceGroundedForwardUnchanged(t *testing.T) {
 
 func TestAddStagedOfferLinesDeniesWithoutOfferUpdateGrant(t *testing.T) {
 	e := Setup(t)
-	admin := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	admin := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(admin, t, e, "Staged-deny deal")
 
 	readOnly := principal.Permissions{
@@ -317,7 +317,7 @@ func TestAddStagedOfferLinesDeniesWithoutOfferUpdateGrant(t *testing.T) {
 
 func TestAddStagedOfferLinesRejectsANonDraftOffer(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-nondraft deal")
 
 	e.WsExec(t, `UPDATE offer SET status = 'sent' WHERE id = $1`, offerID.UUID)
@@ -329,7 +329,7 @@ func TestAddStagedOfferLinesRejectsANonDraftOffer(t *testing.T) {
 
 func TestAddStagedOfferLinesAuditCarriesTheAgentProvenance(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-provenance deal")
 
 	if _, err := e.Deals.AddStagedOfferLines(agentOfferDraftCtx(e), offerID, groundedStagedLines()); err != nil {

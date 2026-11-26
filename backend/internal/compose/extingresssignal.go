@@ -14,14 +14,25 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
 )
+
+// extensionSignalLandingsPerMinute is how many signals one unit may land in a minute,
+// across all its invocations. Every signal can raise a webhook event and fill a
+// reader's feed.
+const extensionSignalLandingsPerMinute = 600
+
+// extensionSignalLandings meters landings per unit. FailClosed: the bound exists to stop
+// a flood, and an outage of the shared counter must not lift it.
+var extensionSignalLandings = ratelimit.New("extension-signal", ratelimit.FailClosed, extensionSignalLandingsPerMinute, time.Minute)
 
 // landSignal files one signal for the member runCtx acts as.
 //
@@ -29,6 +40,9 @@ import (
 // lands only companies cannot raise a signal on a deal, whatever the member may
 // see. The kind is built from the unit's own name, never taken from the record.
 func (r *callRuntime) landSignal(runCtx context.Context, rec extension.Record, declared extension.IngressSource) (extension.Result, error) {
+	if !extensionSignalLandings.Allow(r.unit) {
+		return extension.Result{}, extension.ErrRateLimited
+	}
 	sig := rec.Signal
 	if !slices.Contains(declared.Lands, extension.RecordKind(sig.Subject.Type)) {
 		return extension.Result{}, fmt.Errorf("%w: %q does not land signals about %q records", extension.ErrIngressNotDeclared, rec.System, sig.Subject.Type)

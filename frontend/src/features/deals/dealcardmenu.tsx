@@ -21,6 +21,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { appHref } from "../../lib/recordaddress";
 import { routeHash } from "../../lib/router";
+import { useArchiveRefusal } from "../../lib/writerefusal";
 import type { Deal, Stage } from "./deals";
 import { dealCloseDate, dealCloseDateField } from "./deals.fields";
 import { archiveDeal, openDealEdit, saveDealEdit } from "./deals.write";
@@ -256,11 +257,12 @@ function CopyDealLink({
 // archive invalidates drops the card.
 function ArchiveDeal({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
+  const refusedReason = useArchiveRefusal("deal");
   return (
     <ArchiveAction
       requires={{ object: "deal", action: "delete" }}
       archivable={deal.archivable ?? false}
-      refusedReason={t("deal.archiveRefused")}
+      refusedReason={refusedReason}
       label={t("deal.archive")}
       confirmText={t("deal.archiveConfirm")}
       archivedMessage={t("record.archiveDone", { name: deal.name })}

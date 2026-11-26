@@ -124,7 +124,7 @@ function companyTabsFor(
   // Finance is absent exactly where its card is absent, on FIN-AC-3's own list
   // — an account nobody has ever invoiced has no money to report, and a tab
   // that opens onto nothing is worse than one that is not there.
-  if (!hasFinance(company.lifecycle) && tab !== "finance") {
+  if (!hasFinance(company.status) && tab !== "finance") {
     drop.add("finance");
   }
   // An archived account's refused tabs would open onto nothing too.

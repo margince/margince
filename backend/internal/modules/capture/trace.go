@@ -101,6 +101,9 @@ const (
 	// sender, or a colleague-only thread whose external party left. Unexported:
 	// no call site outside this module has occasion to state it.
 	traceReasonNoCounterparty = "no_counterparty"
+	// traceReasonChosenSubject is a message a member filed on a contact or lead
+	// they chose, so no counterparty was resolved from its identity.
+	traceReasonChosenSubject = "chosen_subject"
 	// TraceReasonRoleMailbox is mail from an address that names a FUNCTION an
 	// company answers — `support@`, `billing@`, a helpdesk vendor's ticket
 	// address. The message commits and stays visible, so the naive trace is

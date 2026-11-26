@@ -272,6 +272,25 @@ func (h Handlers) CorrectDealCloseDay(w http.ResponseWriter, r *http.Request, id
 	httperr.WriteJSON(w, http.StatusOK, deal)
 }
 
+// MergeDeal serves POST /deals/{id}/merge: it merges this deal (A, the path id)
+// into target_id (B, the survivor) and returns the survivor.
+func (h Handlers) MergeDeal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.MergeDealParams) {
+	var req crmcontracts.MergeDealJSONBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	survivor, err := h.store.MergeDeal(r.Context(), pathID[ids.DealKind](id), ids.From[ids.DealKind](ids.UUID(req.TargetId)), ifVersion)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, survivor)
+}
+
 // ArchiveDeal retires one deal and the edges hanging off it, honouring
 // If-Match where the caller named a version.
 func (h Handlers) ArchiveDeal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveDealParams) {

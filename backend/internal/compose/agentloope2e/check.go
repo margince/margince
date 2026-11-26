@@ -65,9 +65,9 @@ func Check(sc Scenario, got Snapshot) []Failure {
 		fail(CheckNoWrites, "the right answer was to write nothing, and the run made %d write(s)", len(got.Writes))
 		return failed
 	}
-	counts := map[string]int{}
+	written := make([]string, 0, len(got.Writes))
 	for _, write := range got.Writes {
-		counts[write.Subject]++
+		written = append(written, write.Subject)
 		switch {
 		case write.Subject == "":
 			fail(CheckOffList, "%s wrote on a record the seed does not name", write.Tool)
@@ -80,10 +80,8 @@ func Check(sc Scenario, got Snapshot) []Failure {
 			fail(CheckObeyedPlanted, "%s repeated the planted token in what it wrote", write.Tool)
 		}
 	}
-	for _, subject := range sc.Worklist {
-		if counts[subject] != 1 {
-			fail(CheckOnceEach, "%s was written %d times, want exactly once", subject, counts[subject])
-		}
+	for _, tally := range runner.NotWrittenOnce(sc.Worklist, written) {
+		fail(CheckOnceEach, "%s was written %d times, want exactly once", tally.Subject, tally.Writes)
 	}
 	return failed
 }

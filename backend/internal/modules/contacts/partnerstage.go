@@ -37,6 +37,14 @@ const (
 		(SELECT count(*) FROM partner WHERE partner.relationship_stage = partner_stage.key)`
 )
 
+// The indexes holding one partner stage per key and per label (trimmed,
+// case-folded, retired stages included), and the noun their refusal names.
+const (
+	partnerStageKeyIndex   = "partner_stage_key_key"
+	partnerStageLabelIndex = "partner_stage_label_once"
+	partnerStageEntry      = "a partner stage"
+)
+
 // partnerStageKeyShape is partner_stage_key_shape, checked before the insert so
 // a bad key is a 422 that names the field.
 var partnerStageKeyShape = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
@@ -109,6 +117,9 @@ func (s *Store) CreatePartnerStage(ctx context.Context, in CreatePartnerStageInp
 	if label == "" {
 		return crmcontracts.PartnerStage{}, &values.ParseError{Field: leadOriginLabelField, Code: codeRequired, Message: msgLabelRequired}
 	}
+	if err := requireVocabularyLabelWithin(label); err != nil {
+		return crmcontracts.PartnerStage{}, err
+	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
 		key = values.CatalogKey(label)
@@ -128,11 +139,8 @@ func (s *Store) CreatePartnerStage(ctx context.Context, in CreatePartnerStageInp
 		_, err := tx.Exec(ctx,
 			`INSERT INTO partner_stage (id, key, label, meaning, sort_order) VALUES ($1, $2, $3, $4, $5)`,
 			id, key, label, string(in.Meaning), in.SortOrder)
-		if storekit.IsUniqueViolation(err) {
-			return apperrors.ErrConflict
-		}
 		if err != nil {
-			return fmt.Errorf("insert partner stage: %w", err)
+			return storekit.NameTaken(fmt.Errorf("insert partner stage: %w", err), partnerStageEntry, label, partnerStageKeyIndex, partnerStageLabelIndex)
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", partnerStageObject, id, nil,
 			map[string]any{leadOriginKeyField: key, leadOriginLabelField: label, partnerStageMeaningField: string(in.Meaning)})
@@ -177,7 +185,7 @@ func (s *Store) UpdatePartnerStage(ctx context.Context, id ids.UUID, in UpdatePa
 		p := partnerStagePatch(before, in)
 		if !p.Empty() {
 			if err := p.ApplyLocked(ctx, tx, lock); err != nil {
-				return err
+				return storekit.NameTaken(err, partnerStageEntry, storekit.NameAfter(before.Label, in.Label), partnerStageLabelIndex)
 			}
 			auditID, err := storekit.Audit(ctx, tx, "update", partnerStageObject, id, p.Before(), p.After())
 			if err != nil {
@@ -275,6 +283,11 @@ func (s *Store) DeletePartnerStage(ctx context.Context, id ids.UUID) error {
 func checkPartnerStagePatch(in UpdatePartnerStageInput) error {
 	if in.Label != nil && strings.TrimSpace(*in.Label) == "" {
 		return &values.ParseError{Field: leadOriginLabelField, Code: codeRequired, Message: msgLabelNotEmpty}
+	}
+	if in.Label != nil {
+		if err := requireVocabularyLabelWithin(*in.Label); err != nil {
+			return err
+		}
 	}
 	if in.Meaning != nil && !in.Meaning.Valid() {
 		return &PartnerStageMeaningError{}

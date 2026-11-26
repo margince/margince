@@ -237,10 +237,10 @@ func mirrorCustomer(
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO finance_external_customer
 		       (id, connection_id, external_customer_id, display_name,
-		        source_updated_at, sync_hash, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		        sync_hash, source, captured_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		id, connectionID, customer.ExternalID, customer.DisplayName,
-		customer.UpdatedAt, hash, source, by); err != nil {
+		hash, source, by); err != nil {
 		return fmt.Errorf("mirror the source's customer: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "create", entityExternalCustomer, id, nil, after); err != nil {
@@ -263,9 +263,9 @@ func updateExternalCustomer(
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE finance_external_customer
-		   SET display_name = $2, source_updated_at = $3, sync_hash = $4
+		   SET display_name = $2, sync_hash = $3
 		 WHERE id = $1`,
-		id, customer.DisplayName, customer.UpdatedAt, hash); err != nil {
+		id, customer.DisplayName, hash); err != nil {
 		return fmt.Errorf("update the mirrored customer: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", entityExternalCustomer, id, before, after); err != nil {

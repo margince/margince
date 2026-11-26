@@ -156,10 +156,11 @@ own name matched. A result that came from a connected system is marked **From a
 connected system**.
 
 An email is found by its subject and by the words its sender wrote. An email quoted under a reply
-does not find it, and neither does an email it forwards. Two cases still find an email through
-quoted text:
+does not find it. Three cases still find an email through quoted text:
 
 - A reply written between the quoted lines is searched whole.
+- An email whose subject starts with `Fwd:`, `FW:` or `WG:` is found by the email it forwards. Older
+  mail quoted under that one does not find it.
 - An email stored before this rule keeps its earlier search words until Margince has gone through it.
 
 When nothing matches, the **Search results** page offers **Did you mean:** with up to five

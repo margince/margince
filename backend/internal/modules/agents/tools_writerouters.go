@@ -77,6 +77,10 @@ func (resolveDuplicates) routeTargets() map[string]string {
 	return map[string]string{"dismiss": settleFlaggedPair, "merge": mergeTwoRecords}
 }
 
+func (resolveDuplicates) pickedBy() map[string]string {
+	return map[string]string{"dismiss": "candidate_id", "merge": "source_id or contact_id"}
+}
+
 var errResolveNamesOneWay = &BadArgsError{Cause: errors.New(
 	"name candidate_id to settle a flagged pair, source_id and target_id to merge, " +
 		"or contact_id and member_ids to merge a contact case, one of them")}

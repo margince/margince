@@ -29,18 +29,18 @@ Authorizing creates the connection, listed under **Your connections**, so you ne
 Also called: connect Claude, let Claude access my CRM, connect ChatGPT, Copilot, Gemini, AI assistant, connector, MCP.
 
 ### What is an agent passport?
-An agent passport in Margince is your personal access token: whatever uses it, an AI tool or your own code, acts as you. It carries your own seat, permissions and record visibility, cut down to the **Agent permissions** you tick.
+An agent passport in Margince is what a script, an AI tool or your own code uses to act as you. It carries your own seat, permissions and record visibility, cut down to the **Agent permissions** you tick.
 Those are **Read records**, **Draft messages**, **Change records**, **Send messages** and **Use AI and buy data**. An agent can never do more than you can. You create and revoke passports yourself in **Settings → AI assistants**, under **For developers**.
 Also called: API key, token, agent credential, access token.
 
 ### How do I give an agent access to Margince?
-To give a script or your own code access to Margince, open **Settings → AI assistants**, then **For developers**. Choose **New passport** on the **API keys** tab.
+To give a script or your own code access to Margince, open **Settings → AI assistants**, then **For developers**. Choose **New passport** on the **Passports (API keys)** tab.
 1. Open the account menu, choose **Settings**, then **AI assistants**.
 2. Open **For developers**.
 3. Choose **New passport**.
 4. Fill **Agent name**.
 5. Under **Agent permissions**, tick at least one permission.
-6. Choose **Mint passport**.
+6. Choose **Create passport**.
 7. Choose **Copy passport** now: "Passport created. It is shown only once, so copy it now."
 8. Under **Next, use it**, choose **Download skill** for an AI tool, or **Copy example** for your own code.
 A passport lasts 30 days. To use Margince in Claude, ChatGPT, Copilot or Gemini, [connect the tool](#how-do-i-connect-my-ai-tool-to-margince) instead.
@@ -49,7 +49,7 @@ Also called: create an API key, script access, integrate an agent.
 ### How do I use a passport in my AI tool?
 To use a passport in an AI tool such as Claude Code, Codex or Antigravity, download the Margince skill. Then save your passport where the tool can find it.
 1. Open **Settings → AI assistants**, then **For developers**.
-2. On the **API keys** tab, under **In a script or another AI tool**, choose **Download skill**.
+2. On the **Passports (API keys)** tab, under **In a script or another AI tool**, choose **Download skill**.
 3. Open `margince-skill.zip`. It holds one folder, `margince`.
 4. For Claude Code, move the folder to `~/.claude/skills/margince`. For Claude Desktop, add the zip file as a skill in the app's settings.
 5. For Codex or Antigravity, follow the `README.md` in the folder. You move the folder, then add one line to your `AGENTS.md` or `GEMINI.md`.
@@ -59,7 +59,7 @@ Also called: Claude skill, add Margince to Claude Code, Codex, Antigravity, AI t
 
 ### How do I call Margince from my own code?
 To call Margince from your own code, send your passport with each call.
-On the **API keys** tab in **For developers**, under **In your own code**, choose **curl**, **Python** or **JavaScript**, then **Copy example**. It reads the passport from `MARGINCE_PASSPORT`, so set that first.
+On the **Passports (API keys)** tab in **For developers**, under **In your own code**, choose **curl**, **Python** or **JavaScript**, then **Copy example**. It reads the passport from `MARGINCE_PASSPORT`, so set that first.
 The `openapi.yaml` file in the skill lists every call a passport can make.
 Also called: REST API, API key, script, access token, integration.
 
@@ -296,8 +296,8 @@ enrichment and the confirm-first actions above.
 A **passport** is the credential that ties one agent to one colleague. You
 create it yourself in **Settings → AI assistants**, under **For developers**, and you
 can revoke it yourself. Revoking cuts off that one agent. The **Passports** card
-says: "A passport is your personal credential for scripts and your own code.
-Whatever uses it acts as you, with the permissions you tick, and never more."
+says: "A passport is for scripts and your own code. Whatever uses it acts as
+you, with the permissions you tick, and never more."
 
 A passport carries narrower permissions than the colleague has. Each one stands alone: ticking one never includes another. The app names them **Agent permissions**:
 

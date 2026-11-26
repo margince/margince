@@ -305,7 +305,7 @@ func TestARankedWalkWithEmployeesReturnsEachContactOnce(t *testing.T) {
 func TestACompanyHitCarriesItsLogo(t *testing.T) {
 	e := SetupSearch(t)
 	key := "logos/quedlinburg-werke.png"
-	branded := e.SeedID(t, `INSERT INTO company (id, display_name, logo_object_key, logo_origin, source, captured_by)
+	branded := e.SeedID(t, `INSERT INTO company (id, display_name, logo_object_key, logo_source, source, captured_by)
 		VALUES ($1, 'Quedlinburg Werke', $2, 'upload', 'manual', 'human:x')`, key)
 	plain := seedSearchCompany(t, e, "Quedlinburg Logistik")
 

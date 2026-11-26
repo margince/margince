@@ -72,8 +72,7 @@ func suggestionEvidenceCurrentTx(ctx context.Context, tx pgx.Tx, current Suggest
 	if err != nil {
 		return false, err
 	}
-	_, past := evidenceThrough(evidence, placed, floor)
-	return past, nil
+	return placedPastFloor(placed, floor), nil
 }
 
 func (s *Store) supersedeIfBuyerChanged(ctx context.Context, tx pgx.Tx, current Suggestion) (bool, error) {
@@ -85,32 +84,29 @@ func (s *Store) supersedeIfBuyerChanged(ctx context.Context, tx pgx.Tx, current 
 }
 
 // evidenceStandsTx says whether the draft's evidence still stands: each item
-// is at its source's time and placed past the company's floor. It answers the
-// newest item's time with it.
-func evidenceStandsTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (time.Time, bool, error) {
+// is at its source's time and placed past the company's floor.
+func evidenceStandsTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool, error) {
 	placed, current, err := suggestionSourceTimes(ctx, tx, d.Evidence)
 	if err != nil || !current {
-		return time.Time{}, false, err
+		return false, err
 	}
 	floor, err := suggestionFloorTx(ctx, tx, d.CompanyID)
 	if err != nil {
-		return time.Time{}, false, err
+		return false, err
 	}
-	through, past := evidenceThrough(d.Evidence, placed, floor)
-	return through, past, nil
+	return placedPastFloor(placed, floor), nil
 }
 
-// evidenceThrough is the newest item's time, and whether every item is placed
-// after floor. A nil floor admits every item.
-func evidenceThrough(evidence []SuggestionEvidence, placed []time.Time, floor *time.Time) (time.Time, bool) {
-	through := evidence[0].OccurredAt
-	for i, e := range evidence {
-		if floor != nil && !placed[i].After(*floor) {
-			return time.Time{}, false
-		}
-		if e.OccurredAt.After(through) {
-			through = e.OccurredAt
+// placedPastFloor says whether every item is placed after floor. A nil floor
+// admits every item.
+func placedPastFloor(placed []time.Time, floor *time.Time) bool {
+	if floor == nil {
+		return true
+	}
+	for _, at := range placed {
+		if !at.After(*floor) {
+			return false
 		}
 	}
-	return through, true
+	return true
 }

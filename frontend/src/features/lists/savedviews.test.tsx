@@ -34,7 +34,7 @@ const narrowed: ListQuery = {
   q: "",
   sort: "display_name",
   includeArchived: false,
-  filters: { lifecycle: "customer" },
+  filters: { status: "customer" },
   perPage: 25,
 };
 
@@ -107,7 +107,7 @@ describe("saved views", () => {
                   q: "",
                   sort: "display_name",
                   includeArchived: false,
-                  filters: { lifecycle: "customer" },
+                  filters: { status: "customer" },
                   perPage: 25,
                 },
               },
@@ -121,7 +121,7 @@ describe("saved views", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          'German customers||display_name|{"lifecycle":"customer"}|false|25',
+          'German customers||display_name|{"status":"customer"}|false|25',
         ),
       ).toBeTruthy(),
     );
@@ -251,7 +251,7 @@ describe("saved views", () => {
       resource: "companies",
       name: "Customers",
       query: {
-        list: { sort: "display_name", filters: { lifecycle: "customer" } },
+        list: { sort: "display_name", filters: { status: "customer" } },
       },
     });
   });

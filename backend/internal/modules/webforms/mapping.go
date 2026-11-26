@@ -5,6 +5,7 @@ package webforms
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -95,6 +96,12 @@ func uuidOf(id *openapi_types.UUID) *ids.UUID {
 func refusal(err error) error {
 	if bad, ok := errors.AsType[*BadInputError](err); ok {
 		return httperr.Validation(bad.Field, "invalid", bad.Reason)
+	}
+	if throttled, ok := errors.AsType[*throttledError](err); ok {
+		return &httperr.DetailedError{
+			Status: http.StatusTooManyRequests, Code: "rate_limited", RetryAfterSeconds: throttled.wait,
+			Detail: fmt.Sprintf("This form receives too many submissions right now. Wait %d seconds and send it again.", throttled.wait),
+		}
 	}
 	switch {
 	case errors.Is(err, errUnverified):

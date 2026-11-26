@@ -416,6 +416,7 @@ export function useTagChips(): readonly ListChip[] {
         ? t("tags.columnHeaderPartial")
         : t("tags.columnHeader"),
       allLabel: t("tags.filterAll"),
+      filterable: true,
       options: words.map((tag) => ({ value: tag.id, label: tag.name })),
     },
   ];

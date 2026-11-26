@@ -64,5 +64,18 @@
       "capability": "objects",
       "reason": "Keeps the summaries it writes."
     }
-  ]
+  ],
+  "mail_hooks": {
+    "parties": false,
+    "deal": true,
+    "reads": [
+      "subject",
+      "addresses",
+      "body"
+    ],
+    "body_characters": 8000,
+    "reasons": [
+      "kept_core_answer"
+    ]
+  }
 }

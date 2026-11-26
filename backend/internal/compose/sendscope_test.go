@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/imap"
-	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/comms"
 )
@@ -132,15 +131,13 @@ func TestTheChannelKindTheReplyPathAnswersIsTheOneCaptureFilesUnder(t *testing.T
 		t.Errorf("activities cannot send on %q, the provider capture files Telegram messages under; every Telegram reply would be refused as uncarriable",
 			capture.ProviderTelegram)
 	}
-	// The FOURTH spelling, and the one the narrowing created: capture's
-	// connector restates the message kind rather than importing it (a capture
-	// connector must not reach across to a sibling module), so the two literals
-	// are held against each other here. Drift files every captured message under
-	// a kind the reply path does not answer — and, since the kind FKs into
-	// activity_kind, would fail the write outright.
-	if telegram.KindMessage != activities.KindMessage {
+	// The fourth spelling: capture restates the message kind rather than
+	// importing it, so the two literals are held against each other here.
+	// Drift would file every captured message under a kind the reply path does
+	// not answer, and the kind's foreign key would fail the write.
+	if capture.ChatMessageKind != activities.KindMessage {
 		t.Errorf("capture files channel messages under kind %q and the reply path answers %q; every captured message would be unrepliable",
-			telegram.KindMessage, activities.KindMessage)
+			capture.ChatMessageKind, activities.KindMessage)
 	}
 	// And it is not a blanket yes: mail has its own send path, and admitting it
 	// here would route a mail reply through a transport with no address to send

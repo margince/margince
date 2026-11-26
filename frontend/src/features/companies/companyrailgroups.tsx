@@ -224,6 +224,10 @@ function CompanySource({ company }: Readonly<{ company: Company }>) {
       label={provenanceLabel(provenance, t, () => authorName.data ?? undefined)}
     >
       <p className="t-body">{company.source || t("trust.sourceUnknown")}</p>
+      {/* The connector or writer behind the channel. An import is named by the tag. */}
+      {company.source_system && company.imported_from == null ? (
+        <p className="t-body">{company.source_system}</p>
+      ) : null}
     </Popover>
   );
 }

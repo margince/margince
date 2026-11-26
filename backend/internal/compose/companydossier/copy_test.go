@@ -20,6 +20,7 @@ import (
 func TestEveryShippedLanguageLabelsTheDossier(t *testing.T) {
 	t.Parallel()
 	langcopytest.Census(t, dossierLabels)
+	langcopytest.GermanStyle(t, dossierLabels)
 }
 
 func TestAnUnshippedLanguageFallsBackToTheEnglishDossierLabels(t *testing.T) {

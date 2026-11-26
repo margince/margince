@@ -137,6 +137,7 @@ func writeJobLiterals(b *strings.Builder, decls []extension.JobDeclaration) {
 		fmt.Fprintf(b, "\t\t\tJob:               %q,\n", d.Job)
 		fmt.Fprintf(b, "\t\t\tQueue:             %q,\n", d.Queue)
 		fmt.Fprintf(b, "\t\t\tCadence:           mustDuration(%q),\n", d.Cadence.String())
+		fmt.Fprintf(b, "\t\t\tAt:                %s,\n", timeOfDayLiteral(d.At))
 		fmt.Fprintf(b, "\t\t\tDispatcherTimeout: mustDuration(%q),\n", d.DispatcherTimeout.String())
 		fmt.Fprintf(b, "\t\t\tTimeout:           mustDuration(%q),\n", d.Timeout.String())
 		fmt.Fprintf(b, "\t\t\tMaxAttempts:       %d,\n", d.MaxAttempts)
@@ -145,6 +146,20 @@ func writeJobLiterals(b *strings.Builder, decls []extension.JobDeclaration) {
 		b.WriteString("\t\t},\n")
 	}
 	b.WriteString("\t}\n}\n")
+}
+
+// timeOfDayLiteral spells a clock time as the minute and the weekday names, so
+// a reviewer reads `7*60 + 30` and `time.Monday` rather than 450 and 1.
+func timeOfDayLiteral(at *extension.TimeOfDay) string {
+	if at == nil {
+		return "nil"
+	}
+	days := make([]string, 0, len(at.Days))
+	for _, d := range at.Days {
+		days = append(days, "time."+d.String())
+	}
+	return fmt.Sprintf("&extension.TimeOfDay{Minute: %d*60 + %d, Days: []time.Weekday{%s}}",
+		at.Minute/60, at.Minute%60, strings.Join(days, ", "))
 }
 
 // anySchema reports whether the emitted literals will mention

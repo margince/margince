@@ -68,7 +68,7 @@ describe("the contact page on an archived row", () => {
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(control.getAttribute("aria-describedby")).toBe(reason.id);
     }
-    expect(screen.queryByText(en["record.logActivityRefused"])).toBeNull();
+    expect(screen.queryByText(en["record.roleReadsOnly"])).toBeNull();
     expect(screen.queryByText(en["contact.page.notOpened"])).toBeNull();
     expect(asked).toEqual([]);
   });

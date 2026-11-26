@@ -96,7 +96,7 @@ async function openCompaniesWithLongNames(page: Page, width: number) {
           display_name,
           archived_at:
             display_name === ARCHIVED_NAME ? "2026-06-20T09:00:00Z" : null,
-          lifecycle: "customer",
+          status: "customer",
           website_url: `https://www.brandt-${i}.example`,
         })),
       ),

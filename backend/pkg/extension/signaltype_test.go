@@ -4,6 +4,7 @@
 package extension
 
 import (
+	"math"
 	"slices"
 	"testing"
 )
@@ -62,6 +63,9 @@ func TestSignalTypeCheckFields(t *testing.T) {
 		"required gone":  {map[string]any{"reporter": "A"}, false},
 		"unknown member": {map[string]any{"amount": 1.0, "extra": "x"}, false},
 		"wrong type":     {map[string]any{"amount": "12"}, false},
+		"not a number":   {map[string]any{"amount": math.NaN()}, false},
+		"infinite":       {map[string]any{"amount": math.Inf(1)}, false},
+		"negative inf":   {map[string]any{"amount": float32(math.Inf(-1))}, false},
 	}
 	for name, c := range cases {
 		if err := d.CheckFields(c.fields); (err == nil) != c.ok {

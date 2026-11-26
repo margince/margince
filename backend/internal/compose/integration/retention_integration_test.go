@@ -172,17 +172,17 @@ func TestRetentionErasesOverAgeVoiceSignalPlaintext(t *testing.T) {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO voice_learning_signal
 			  (id, voice_profile_id, draft_ref_hash, outcome, generated_original,
-			   retention_until, source, captured_by)
+			   retention_until, captured_by)
 			VALUES ($1, $2, sha256('over-age'::bytea), 'drafted', 'over-age plaintext',
-			        now() - interval '1 day', 'draft', 'human:x')`, overAge, profileID); err != nil {
+			        now() - interval '1 day', 'human:x')`, overAge, profileID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO voice_learning_signal
 			  (id, voice_profile_id, draft_ref_hash, outcome, generated_original,
-			   retention_until, source, captured_by)
+			   retention_until, captured_by)
 			VALUES ($1, $2, sha256('in-window'::bytea), 'drafted', 'fresh plaintext',
-			        now() + interval '90 days', 'draft', 'human:x')`, inWindow, profileID)
+			        now() + interval '90 days', 'human:x')`, inWindow, profileID)
 		return err
 	})
 	if err != nil {

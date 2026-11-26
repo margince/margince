@@ -373,7 +373,7 @@ func anonymizeSubjectRows(
 	if _, err := tx.Exec(ctx, `DELETE FROM privacy_notice_case WHERE contact_id = $1`, contactID); err != nil {
 		return nil, fmt.Errorf("privacy: destroying the subject's notice cases: %w", err)
 	}
-	wiped, err := anonymizeLeadTwins(ctx, tx, contactID, emails)
+	wiped, err := wipeTwinsAndOriginals(ctx, tx, contactID, emails)
 	if err != nil {
 		return nil, err
 	}

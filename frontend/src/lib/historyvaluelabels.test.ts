@@ -102,7 +102,6 @@ describe("history value labels", () => {
   it("finds the closed-code fields of the contract", () => {
     const fields = closedFields();
     for (const expected of [
-      "lifecycle",
       "status",
       "trigger",
       "margin_tier",
@@ -112,7 +111,7 @@ describe("history value labels", () => {
     ]) {
       expect([...fields.keys()], expected).toContain(expected);
     }
-    expect(fields.get("lifecycle")).toContain("former_customer");
+    expect(fields.get("status")).toContain("former_customer");
     expect(fields.get("margin_tier")).toContain("tier2_20");
     expect(fields.get("trigger")).toContain("human_qualify");
   });
@@ -140,6 +139,9 @@ describe("history value labels", () => {
   it("never gives two record types the same code under one field", () => {
     // Company and contact visibility is one setting with one meaning.
     const sameMeaning = new Set(["visibility"]);
+    // A company and a lead both rule a record out as `disqualified`, and every
+    // language words the two alike.
+    const sameCode = new Set(["status=disqualified"]);
     const seen = new Map<string, string>();
     const clashes: string[] = [];
     for (const [recordType, fields] of closedFieldsByType()) {
@@ -148,6 +150,7 @@ describe("history value labels", () => {
         for (const code of codes) {
           const key = `${field}=${code}`;
           const first = seen.get(key);
+          if (sameCode.has(key)) continue;
           if (first !== undefined && first !== recordType) {
             clashes.push(`${key} on ${first} and ${recordType}`);
           }
@@ -168,6 +171,8 @@ describe("history value labels", () => {
       .filter(
         (field) => !["occurred_precision", "call_outcome"].includes(field),
       )
+      // A company's status, under the name its audit rows held before the rename.
+      .filter((field) => field !== "lifecycle")
       .sort(stable);
     expect(
       extra,

@@ -17,6 +17,19 @@ func (e *PastCloseDateError) FieldFault() (field, code, message string) {
 	return closeDateField, "close_date_past", e.Error()
 }
 
+// ClosedDealAmountError maps to 422 deal_closed_amount. A won or lost deal's
+// price is what the close froze, so only an open deal loses it.
+type ClosedDealAmountError struct{}
+
+func (e *ClosedDealAmountError) Error() string {
+	return "A won or lost deal keeps its price. Reopen it first to remove it."
+}
+
+// FieldFault refuses clearing the amount of a closed deal.
+func (e *ClosedDealAmountError) FieldFault() (field, code, message string) {
+	return amountField, "deal_closed_amount", e.Error()
+}
+
 // ProbabilityFixedWhenClosedError maps to 422 probability_fixed_when_closed: a
 // won or lost deal's probability is its stage's.
 type ProbabilityFixedWhenClosedError struct{}

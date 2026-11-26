@@ -163,7 +163,7 @@ describe("the tags panel", () => {
     act(() => link.focus());
 
     const tip = await screen.findByRole("tooltip");
-    expect(tip).toHaveTextContent(/Added by Lena Fischer/);
+    expect(tip).toHaveTextContent("Added by Lena Fischer · 3 Mar 2026");
     expect(link).toHaveAttribute("aria-describedby", tip.id);
   });
 

@@ -65,7 +65,7 @@ function MomentVerb({
   kind: MomentVerbKind;
   onAct: () => void;
 }>) {
-  const gate = useActivityGate();
+  const gate = useActivityGate("company");
   if (momentVerbWrites(kind) && gate.refusalKey !== undefined) {
     return null;
   }

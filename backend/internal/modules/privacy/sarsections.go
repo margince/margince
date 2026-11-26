@@ -403,7 +403,7 @@ func sarProvenanceSections(pkg *SARPackage, contactID ids.ContactID, external []
 		                 AND ` + rawEmailMatchSQL("rc.payload", "pe.email") + `)
  OR EXISTS (SELECT 1 FROM contact_channel_identity pci WHERE pci.contact_id = $1
  AND ` + rawChannelMatchSQL("rc.payload", "rc.source_system", "pci.provider", "pci.channel_user_id") + `)
- OR rc.id = ANY(` + externalIDs + `)`, rawArgs},
+ OR rc.id = ANY(` + externalIDs + `) OR rc.id IN (` + linkedOriginalsSQL("contact_id", "$1", false) + `)`, rawArgs},
 		{&pkg.FieldOrigins, `SELECT fp.field_name, fp.source, fp.captured_by, fp.captured_at, fp.confidence, fp.evidence_ref
 		   FROM field_provenance fp
 		   WHERE fp.object_type = 'contact' AND fp.object_id = $1`, nil},

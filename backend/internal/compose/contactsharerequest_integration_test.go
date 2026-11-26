@@ -222,7 +222,7 @@ func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
 		"agent": func(t *testing.T, e *integration.Env) error {
 			agent := e.AgentFor(t, e.Rep2, []ids.UUID{e.Team1}, integration.RepPerms)
 			_, err := NewProviderFor(e.DB()).Create(agent, datasource.CreateInput{
-				EntityType: datasource.EntityContact, Source: "agent",
+				EntityType: datasource.EntityContact, Source: "manual",
 				Fields: map[string]any{"full_name": "Pat Example", "emails": []map[string]any{
 					{"email": heldAddress, "email_type": "work", "is_primary": true},
 				}},

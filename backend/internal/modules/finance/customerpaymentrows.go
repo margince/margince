@@ -42,7 +42,7 @@ func customerPaymentRows(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) 
 	// The live link must still name this company; a remapped customer waits
 	// for its next sync rather than showing its old attribution.
 	rows, err := tx.Query(ctx, storekit.SQLf(`
-  SELECT c.id, c.display_name, c.lifecycle, l.created_at, i.id, i.number, i.currency,
+  SELECT c.id, c.display_name, c.status, l.created_at, i.id, i.number, i.currency,
          i.status, i.due_at, i.open_minor, i.disputed_at IS NOT NULL
     FROM company c
     JOIN finance_customer_link l ON l.company_id = c.id

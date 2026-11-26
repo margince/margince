@@ -265,8 +265,8 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 		}
 		// Not read back: the API answers from RuleTier, which new rows store too.
 		a, err = scanAutomation(tx.QueryRow(ctx, storekit.SQLf(`
-			INSERT INTO automation (key, name, origin, trigger, action, params, owner_id, enabled, tier, setter_passport_id)
-			VALUES ($1, $2, 'catalog', $3, $4, $5, $6, false, $7, $8)
+			INSERT INTO automation (key, name, trigger, action, params, owner_id, enabled, tier, setter_passport_id)
+			VALUES ($1, $2, $3, $4, $5, $6, false, $7, $8)
 			RETURNING %s`, automationColumns),
 			in.Key, in.Name, triggerJSON, actionJSON, paramsJSON, storekit.UUIDOrNil(actor.UserID), RuleTier(entry.Action), storekit.UUIDOrNil(setter)))
 		if err != nil {
@@ -426,8 +426,8 @@ func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 		}
 		// Not read back: the API answers from RuleTier, which new rows store too.
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO automation (key, name, origin, trigger, action, params, enabled, tier)
-			VALUES (@key, @name, 'catalog', @trigger, @action, @params, @enabled, @tier)`,
+			INSERT INTO automation (key, name, trigger, action, params, enabled, tier)
+			VALUES (@key, @name, @trigger, @action, @params, @enabled, @tier)`,
 			pgx.NamedArgs{
 				keyCatalogKey: entry.Key, keyName: entry.Name, "trigger": triggerJSON,
 				"action": actionJSON, keyParams: paramsJSON, "tier": RuleTier(entry.Action),

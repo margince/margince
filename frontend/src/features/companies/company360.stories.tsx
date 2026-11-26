@@ -41,7 +41,7 @@ const populated: View = {
   company: {
     id: "o-1",
     display_name: "Brandt Automotive GmbH",
-    lifecycle: "customer",
+    status: "customer",
     captured_by: "human:u1",
     source: "manual",
     created_at: "2026-06-01T08:00:00Z",
@@ -221,7 +221,7 @@ const populated: View = {
     pending_proposals: 0,
   },
   state_strip: {
-    account: { lifecycle: "customer", relationship_types: ["customer"] },
+    account: { status: "customer", relationship_types: ["customer"] },
     engagement: {
       state: "active",
       last_inbound_at: "2026-07-11T09:00:00Z",
