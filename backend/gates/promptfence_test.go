@@ -70,7 +70,7 @@ var claimWithoutFence = gatekit.Waive(map[string]string{})
 func sourceWithoutComments(t *testing.T, path string) string {
 	t.Helper()
 	fset := gatekit.SourceFileSet()
-	file, err := gatekit.ParseFile(path, 0)
+	file, err := gatekit.ParseFileWithoutComments(path)
 	if err != nil {
 		// A Go file the tree cannot parse is a real defect, not a file to skip.
 		t.Fatalf("parsing %s: %v", path, err)
@@ -219,7 +219,7 @@ func TestEveryBoundaryClaimWaiverIsStillReachable(t *testing.T) {
 func claimantsIn(t *testing.T, path string) (claiming int, unfenced []string) {
 	t.Helper()
 	fset := gatekit.SourceFileSet()
-	file, err := gatekit.ParseFile(path, 0)
+	file, err := gatekit.ParseFileWithoutComments(path)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
