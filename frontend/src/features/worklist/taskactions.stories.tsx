@@ -6,9 +6,9 @@ import { expect, userEvent, within } from "storybook/test";
 import {
   TaskCompleteCheck,
   TaskDueDatePick,
-  TaskQuickActions,
   useTaskUpdate,
 } from "../../components/taskactions";
+import { TaskQuickActions } from "../../components/taskquickactions";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
