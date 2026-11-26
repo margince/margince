@@ -51,17 +51,17 @@ type pendingChunk struct {
 // ask answers `retrieval_unavailable` there — a distinct outcome from a corpus
 // that simply does not cover the question.
 func (s *Store) EmbedDocument(ctx context.Context, documentID ids.UUID, e vectorkit.Embedder) (int, error) {
-	return s.embedDocument(ctx, documentID, nil, e)
+	return s.embedWithCarried(ctx, documentID, nil, e)
 }
 
 // EmbedIngest is EmbedDocument for the attempt src opened. A passage whose text
 // the document held before the attempt, under the live binding, gets that vector
 // back. It goes through the same CAS write and is not counted as a model call.
 func (s *Store) EmbedIngest(ctx context.Context, documentID ids.UUID, src IngestSource, e vectorkit.Embedder) (int, error) {
-	return s.embedDocument(ctx, documentID, src.carried, e)
+	return s.embedWithCarried(ctx, documentID, src.carried, e)
 }
 
-func (s *Store) embedDocument(ctx context.Context, documentID ids.UUID, carried carriedVectors, e vectorkit.Embedder) (int, error) {
+func (s *Store) embedWithCarried(ctx context.Context, documentID ids.UUID, carried carriedVectors, e vectorkit.Embedder) (int, error) {
 	identity, dims := e.EmbedIdentity()
 	if identity == "" {
 		return 0, nil

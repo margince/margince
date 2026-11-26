@@ -10,13 +10,14 @@ import (
 
 const liveBinding = "fake/embed@8"
 
-func heldVector(text, identity string, first float32) carriedVector {
-	return carriedVector{hash: Chunk{Text: text}.Hash(), identity: identity, vector: []float32{first, 0.5}}
+// heldVector is the vector a document held for the passage "Kept as it was.".
+func heldVector(identity string, first float32) carriedVector {
+	return carriedVector{hash: Chunk{Text: "Kept as it was."}.Hash(), identity: identity, vector: []float32{first, 0.5}}
 }
 
 func TestAPassageWhoseTextADocumentAlreadyHeldTakesThatVector(t *testing.T) {
 	carried := carriedVectors{}
-	carried.add("Kept as it was.", heldVector("Kept as it was.", liveBinding, 0.1))
+	carried.add("Kept as it was.", heldVector(liveBinding, 0.1))
 	pending := []pendingChunk{{text: "Kept as it was."}, {text: "Reworded since."}}
 
 	reused, vectors, owed := carried.take(pending, liveBinding)
@@ -30,7 +31,7 @@ func TestAPassageWhoseTextADocumentAlreadyHeldTakesThatVector(t *testing.T) {
 
 func TestAVectorFromAnotherBindingAnswersNoPassage(t *testing.T) {
 	carried := carriedVectors{}
-	carried.add("Kept as it was.", heldVector("Kept as it was.", "fake/older@8", 0.1))
+	carried.add("Kept as it was.", heldVector("fake/older@8", 0.1))
 
 	reused, _, owed := carried.take([]pendingChunk{{text: "Kept as it was."}}, liveBinding)
 	if len(reused) != 0 || len(owed) != 1 {
@@ -41,8 +42,8 @@ func TestAVectorFromAnotherBindingAnswersNoPassage(t *testing.T) {
 // Of two bindings a document held for one text, the live one is taken.
 func TestTheLiveBindingsVectorIsTakenOfSeveralForOneText(t *testing.T) {
 	carried := carriedVectors{}
-	carried.add("Kept as it was.", heldVector("Kept as it was.", "fake/older@8", 0.1))
-	carried.add("Kept as it was.", heldVector("Kept as it was.", liveBinding, 0.2))
+	carried.add("Kept as it was.", heldVector("fake/older@8", 0.1))
+	carried.add("Kept as it was.", heldVector(liveBinding, 0.2))
 
 	_, vectors, _ := carried.take([]pendingChunk{{text: "Kept as it was."}}, liveBinding)
 	if len(vectors) != 1 || vectors[0][0] != 0.2 {
@@ -54,7 +55,7 @@ func TestTheLiveBindingsVectorIsTakenOfSeveralForOneText(t *testing.T) {
 // it lost. That vector is never handed to a passage.
 func TestARowWhoseTextDisagreesWithItsHashCarriesNothing(t *testing.T) {
 	carried := carriedVectors{}
-	carried.add("Edited outside the writer.", heldVector("Kept as it was.", liveBinding, 0.1))
+	carried.add("Edited outside the writer.", heldVector(liveBinding, 0.1))
 
 	if reused, _, _ := carried.take([]pendingChunk{{text: "Kept as it was."}}, liveBinding); len(reused) != 0 {
 		t.Fatalf("a vector of lost prose was reused for %+v", reused)
