@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -61,6 +62,18 @@ func fxRefreshWith(e *integration.Env, reply string, bootstrap []string) fxRefre
 	}
 }
 
+// asRefreshingAdmin is the refresh acting for Rep1 under Rep1's live grants.
+// The harness seeds seats with no role, so Rep1 is given the shipped admin role.
+func asRefreshingAdmin(t *testing.T, e *integration.Env) context.Context {
+	t.Helper()
+	e.GrantRole(t, e.Rep1, "admin")
+	ctx, err := rateRefreshWorkerCtx(context.Background(), identity.NewService(e.Pool), e.WS, principal.HumanIDPrefix+e.Rep1.String())
+	if err != nil {
+		t.Fatalf("binding the refresh for Rep1: %v", err)
+	}
+	return ctx
+}
+
 // pair is a shorthand for one extracted, grounded, confident pair.
 func pair(from, to, rate string) string {
 	return `{"from_currency":"` + from + `","to_currency":"` + to + `","rate":"` + rate + `","evidence":"s0","confidence":"0.9"}`
@@ -92,7 +105,7 @@ func TestFxRefreshStagesChangedRates(t *testing.T) {
 	// The page states 1 EUR = 1.08 USD -> USD->EUR = 0.9259..., a change. JPY is
 	// also on the page but untracked, so it must not be proposed.
 	f := fxRefreshWith(e, fxReply(pair("EUR", "USD", "1.08"), pair("EUR", "JPY", "160.5")), nil)
-	wctx := rateRefreshWorkerCtx(context.Background(), e.WS, principal.HumanIDPrefix+e.Rep1.String())
+	wctx := asRefreshingAdmin(t, e)
 
 	if err := f.run(wctx); err != nil {
 		t.Fatalf("first run: %v", err)
@@ -139,7 +152,7 @@ func TestFxRefreshDiffsAgainstEffectiveTodayNotSheetHead(t *testing.T) {
 	// 1 EUR = 1.25 USD -> USD->EUR 0.8000000000 (matches today); 1 EUR = 2 CHF
 	// -> CHF->EUR 0.5 (differs from today's 2.0).
 	f := fxRefreshWith(e, fxReply(pair("EUR", "USD", "1.25"), pair("EUR", "CHF", "2")), nil)
-	if err := f.run(rateRefreshWorkerCtx(context.Background(), e.WS, principal.HumanIDPrefix+e.Rep1.String())); err != nil {
+	if err := f.run(asRefreshingAdmin(t, e)); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
@@ -162,7 +175,7 @@ func TestFxRefreshSupersedesStalePendingProposal(t *testing.T) {
 	store := deals.NewStore(e.DB(), DealsInstallation())
 	seedFx(adminCtx, t, store, "USD", "0.9", time.Time{})
 
-	wctx := rateRefreshWorkerCtx(context.Background(), e.WS, principal.HumanIDPrefix+e.Rep1.String())
+	wctx := asRefreshingAdmin(t, e)
 	for _, rate := range []string{
 		"1.25", // 1 EUR = 1.25 USD -> USD->EUR 0.8000000000
 		"1",    // 1 EUR = 1 USD    -> USD->EUR 1.0000000000
@@ -192,7 +205,7 @@ func TestFxRefreshBootstrapsEmptySheet(t *testing.T) {
 		pair("EUR", "CHF", "0.96"), pair("EUR", "JPY", "160.5"),
 	)
 	f := fxRefreshWith(e, reply, []string{"USD", "GBP", "CHF", "EUR"})
-	wctx := rateRefreshWorkerCtx(context.Background(), e.WS, principal.HumanIDPrefix+e.Rep1.String())
+	wctx := asRefreshingAdmin(t, e)
 
 	if err := f.run(wctx); err != nil {
 		t.Fatalf("bootstrap run: %v", err)
@@ -218,7 +231,7 @@ func TestFxRefreshSkipsCandidatesTheSourceOmits(t *testing.T) {
 	// prices it. The refresh must stage USD and skip USX gracefully — no error,
 	// no phantom proposal.
 	f := fxRefreshWith(e, fxReply(pair("EUR", "USD", "1.08")), []string{"USD", "USX"})
-	wctx := rateRefreshWorkerCtx(context.Background(), e.WS, principal.HumanIDPrefix+e.Rep1.String())
+	wctx := asRefreshingAdmin(t, e)
 
 	if err := f.run(wctx); err != nil {
 		t.Fatalf("run: %v", err)
@@ -234,7 +247,7 @@ func TestFxRefreshEmptySheetNoBootstrapSetIsNoOp(t *testing.T) {
 	// A page that would answer if extracted — proving the no-op is the empty
 	// sheet + empty candidate set, not a dead fetcher.
 	f := fxRefreshWith(e, fxReply(pair("EUR", "USD", "1.08")), nil)
-	wctx := rateRefreshWorkerCtx(context.Background(), e.WS, principal.HumanIDPrefix+e.Rep1.String())
+	wctx := asRefreshingAdmin(t, e)
 
 	if err := f.run(wctx); err != nil {
 		t.Fatalf("no-op run: %v", err)
@@ -256,7 +269,7 @@ func TestFxRefreshDropsLowConfidenceAndCrossPairs(t *testing.T) {
 		pair("USD", "GBP", "1.27"),
 	)
 	f := fxRefreshWith(e, reply, nil)
-	wctx := rateRefreshWorkerCtx(context.Background(), e.WS, principal.HumanIDPrefix+e.Rep1.String())
+	wctx := asRefreshingAdmin(t, e)
 	if err := f.run(wctx); err != nil {
 		t.Fatalf("run: %v", err)
 	}

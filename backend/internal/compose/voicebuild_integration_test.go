@@ -166,6 +166,9 @@ type voiceBuildEnv struct {
 func seedVoiceBuild(t *testing.T, quote string, sourceCount int) (*voiceBuildEnv, ai.VoiceBuild) {
 	t.Helper()
 	e := integration.Setup(t)
+	// The build works as an agent for Rep1 under Rep1's live grants, and the
+	// harness seeds seats with no role.
+	e.GrantRole(t, e.Rep1, "rep")
 	store := ai.NewVoiceStore(e.DB())
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, voiceBuildPerms)
 	profile, err := store.CreateProfile(owner, ai.CreateVoiceProfileInput{})
@@ -198,16 +201,34 @@ func seedVoiceBuild(t *testing.T, quote string, sourceCount int) (*voiceBuildEnv
 	return &voiceBuildEnv{e: e, store: store, owner: owner, profile: profile}, build
 }
 
+// workerCtx is the build's bookkeeping: the system keeping the row for Rep1.
 func (v *voiceBuildEnv) workerCtx(t *testing.T) context.Context {
 	t.Helper()
-	ctx, err := voiceBuildWorkerCtx(context.Background(), VoiceBuildArgs{
+	books, _ := v.principals(t)
+	return books
+}
+
+// workCtx is the build's work: the agent acting for Rep1 under Rep1's grants.
+func (v *voiceBuildEnv) workCtx(t *testing.T) context.Context {
+	t.Helper()
+	_, work := v.principals(t)
+	if work == nil {
+		t.Fatal("Rep1 cannot act, so the build has no work principal")
+	}
+	return work
+}
+
+func (v *voiceBuildEnv) principals(t *testing.T) (books, work context.Context) {
+	t.Helper()
+	worker := newVoiceBuildWorker(v.e.Pool, nil, slog.New(slog.DiscardHandler))
+	books, work, err := worker.voiceBuildWorkerCtx(context.Background(), VoiceBuildArgs{
 		Workspace: v.e.WS, ProfileID: v.profile.ID.String(),
 		BuildID: ids.NewV7().String(), RequestedBy: v.e.Rep1.String(),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ctx
+	return books, work
 }
 
 func TestVoiceBuildRunsToAnActiveVersion(t *testing.T) {
@@ -220,7 +241,7 @@ func TestVoiceBuildRunsToAnActiveVersion(t *testing.T) {
 	if err != nil || !claimed {
 		t.Fatalf("claim: %v claimed=%v", err, claimed)
 	}
-	if err := worker.run(ctx, build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, worker.pool))); err != nil {
+	if err := worker.run(ctx, env.workCtx(t), build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, worker.pool))); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
@@ -323,7 +344,7 @@ func TestVoiceBuildDefersOnBudgetAndTheSweepFindsItWhenDue(t *testing.T) {
 	if err != nil || !claimed {
 		t.Fatalf("claim: %v claimed=%v", err, claimed)
 	}
-	runErr := worker.run(ctx, build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, worker.pool)))
+	runErr := worker.run(ctx, env.workCtx(t), build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, worker.pool)))
 	if !errors.Is(runErr, ai.ErrBudgetDeferred) {
 		t.Fatalf("run under budget exhaustion = %v, want the sentinel", runErr)
 	}
@@ -358,7 +379,7 @@ func TestVoiceBuildDefersOnBudgetAndTheSweepFindsItWhenDue(t *testing.T) {
 	if err != nil || !claimed {
 		t.Fatalf("re-claim: %v claimed=%v", err, claimed)
 	}
-	if err := healthy.run(ctx, build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, healthy.pool))); err != nil {
+	if err := healthy.run(ctx, env.workCtx(t), build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, healthy.pool))); err != nil {
 		t.Fatalf("resumed run: %v", err)
 	}
 	finished, err := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
@@ -551,7 +572,7 @@ func TestVoiceDraftReadsAndLearningSignals(t *testing.T) {
 	if err != nil || !claimed {
 		t.Fatalf("claim: %v claimed=%v", err, claimed)
 	}
-	if err := worker.run(ctx, build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, worker.pool))); err != nil {
+	if err := worker.run(ctx, env.workCtx(t), build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, worker.pool))); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
@@ -850,7 +871,7 @@ func TestVoiceBuildOnAnUnconfiguredInstallationNamesTheSetting(t *testing.T) {
 	if err != nil || !claimed {
 		t.Fatalf("claim: %v claimed=%v", err, claimed)
 	}
-	runErr := worker.run(ctx, build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, worker.pool)))
+	runErr := worker.run(ctx, env.workCtx(t), build.ID, input, voiceCopyFor(identity.BaseLanguageForPrompt(ctx, worker.pool)))
 	if runErr == nil {
 		t.Fatal("the stand-in cannot produce a profile, so the run must fail")
 	}

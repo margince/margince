@@ -151,12 +151,17 @@ func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve
 		if s.effectIsStillOwed(a, approve, err) {
 			// The decision stands and its work never ran. Re-drive rather than
 			// refuse: see effectIsStillOwed for why this is the only answer
-			// that is not a dead end.
-			return a, s.runDecisionEffect(ctx, id, a, approve)
+			// that is not a dead end. The work is the approver's, whoever
+			// asked for it again.
+			if a.DecidedBy == nil {
+				return a, fmt.Errorf("approved, but the person who approved it has left, so its work does not run: %w",
+					apperrors.ErrPermissionDenied)
+			}
+			return a, s.runDecisionEffect(withReleasedBy(ctx, a.DecidedBy.UUID), id, a, approve)
 		}
 		return row{}, err
 	}
-	return a, s.runDecisionEffect(ctx, id, a, approve)
+	return a, s.runDecisionEffect(withReleasedBy(ctx, p.UserID), id, a, approve)
 }
 
 // Preflight refuses unsafe context before a verdict can strand an unapplied effect.

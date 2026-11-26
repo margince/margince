@@ -98,7 +98,7 @@ func TestTheHealthJobMarksAQuietProjectAtRiskAndTellsTheOwner(t *testing.T) {
 	if current.Note == nil || !strings.Contains(*current.Note, "30 days") {
 		t.Fatalf("the reading's reason = %v, want the quiet rule's sentence", current.Note)
 	}
-	if by := e.WsScalar(t, `SELECT captured_by FROM project_health_assessment WHERE id = $1`, current.Id); by != "agent:project-health" {
+	if by := e.WsScalar(t, `SELECT captured_by FROM project_health_assessment WHERE id = $1`, current.Id); by != "system:project-health" {
 		t.Fatalf("captured_by = %q, want the job's agent principal", by)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'project_health_assessment' AND entity_id = $1`, current.Id); n != 1 {

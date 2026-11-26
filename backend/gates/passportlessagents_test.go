@@ -42,7 +42,7 @@ import (
 // exception, so the census reads that package too.
 var passportlessAgentPrincipals = gatekit.Waive(map[string]string{
 	"internal/compose/extjobsrun.go:extensionJobPrincipal": "an extension job TICK, not a credential: it names the JOB and carries no user, no seat and no permissions — just the single scope the extension's manifest declared. There is no authority for a passport to attest and none for the gate to re-ask about: every object is denied to it (extjobprincipal_test.go), and the records a tick lands go through Runtime.Ingest, which resolves the member's own live grants and discards this principal entirely",
-	"internal/compose/agentfor.go:agentPrincipalFor":       "the product acting for one named colleague (the auto-apply actor, Margince's own deal writes), minted per action from that colleague's live authority (EffectiveAuthority, and again inside the write's transaction) and carrying write and nothing else. It exists for the length of one action; the colleague losing their seat or their grants stops it at the next admission or at the write, which is the whole of what revoking it would mean",
+	"internal/compose/agentfor.go:agentPrincipalFor":       "the product acting for one named colleague (the auto-apply actor, Margince's own deal writes, the AI jobs a colleague started), minted per action from that colleague's live authority (EffectiveAuthority, and again inside the write's transaction) and carrying write and nothing else. It exists for the length of one action; the colleague losing their seat or their grants stops it at the next admission or at the write, which is the whole of what revoking it would mean",
 })
 
 // TestEveryPassportlessAgentPrincipalIsRatified is the census.

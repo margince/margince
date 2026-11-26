@@ -26,6 +26,7 @@ func TestAnUncommittedEngagementChangePreventsEndingTheAccount(t *testing.T) {
 	for _, kind := range []string{"contract", "project", "new_contract", "new_project"} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
+			e.GrantRole(t, e.Rep1, "admin")
 			company := seedAccountAtStage(t, e, "customer")
 			signal := seedOpenContractEnded(t, e, company)
 			change := prepareContinuityChange(t, e, company, kind)

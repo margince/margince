@@ -144,8 +144,7 @@ sender unshared is a valid outcome and needs no action.
 
 Margince holds at most **500 open sender questions** per company, and at
 most **50 from any one sender domain**. When either limit is reached, the log
-records *which* one. So you can tell "the queue is full" from "one domain is
-filling it".
+records *which* one. So you can tell "the queue is full" from "one domain is filling it".
 
 ### Why was my email not linked to a deal?
 Margince puts a captured email on a deal by itself only when one deal, and no other, fits it:
@@ -190,8 +189,7 @@ If you use projects, a captured message is filed against one by three fixed rule
 
 **3. The key in the subject.** Every project gets a short key. A subject
 carrying `[ERP-27]` is filed under that project. The brackets are required. `ERP-27`
-alone does not count, so a project with the key `RE` does not match every
-reply in your mailbox.
+alone does not count, so a project with the key `RE` does not match every reply in your mailbox.
 
 A message may point two ways: two different keys in one subject, or two deals
 in two different projects. Then that rule files nothing, and the next one is tried.
@@ -230,8 +228,7 @@ choices:
 - **Move rest of thread**: "Every message in this thread that you can edit
   moves in one step."
 
-Relinking *to a project* asks for confirmation first, because of the retention
-rule above.
+Relinking *to a project* asks for confirmation first, because of the retention rule above.
 
 ### How do I see all emails with a contact?
 To see every email with a contact in Margince, open the contact and choose its **History** tab. There is no Mail tab of its own.

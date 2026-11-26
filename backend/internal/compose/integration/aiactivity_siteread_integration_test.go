@@ -70,7 +70,7 @@ func newWebsiteReadFixture(t *testing.T) *websiteReadFixture {
 	worker := principal.WithWorkspaceID(context.Background(), e.WS)
 	worker = principal.WithCorrelationID(worker, read.ID)
 	worker = principal.WithActor(worker, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "agent:deepread",
+		Type: principal.PrincipalSystem, ID: "system:deep_read",
 		UserID: e.Rep1, OnBehalfOf: e.Rep1,
 	})
 	return &websiteReadFixture{
