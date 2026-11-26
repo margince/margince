@@ -95,7 +95,7 @@ must_end_with:
 
 # The end state holds where every mail landed; the judge reads that the batch is reported as three, in any wording.
 judge:
-  - "Criterion 2. The answer reports the three Aachener Metallwerke mails moved together to Aachener Metallwerke. Answer no if it reports another number of mails, or a partial move."
+  - "Criterion 2. The answer says the three items that sat on Vorort Systeme now sit on Aachener Metallwerke, moved as one batch. Any noun for them counts (mails, calls, activities), and so does a line such as 3 moved, 0 failed. Answer no if it gives another number, or says only some moved."
 
 runs: 3
 pass_at: 2

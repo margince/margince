@@ -706,13 +706,28 @@ judges "$c5" case5 says-the-meeting-is-not-in-the-diary 1 "$c5_diary" "!$c5_prom
 judges "$c5" case5 presents-the-aufstellung-as-sent 1 "$c5_promise" "!$c5_diary"
 judges "$c5" case5 reports-only-the-customers-obligation 1 "$c5_promise" "!$c5_diary"
 
-# CASE 3 — the counts stay a regex; WHEN they were reported is judged. Both
+# CASE 3 — the judge reads WHEN the counts were reported, and what they were. Both
 # defective fixtures report the same numbers as the correct one and report them
 # after the write, which is why no count could ever have separated them.
 c3="case3-spreadsheet.yaml"
 judges "$c3" case3 shows-the-numbers-before-writing 0 "!the judge says NO"
 judges "$c3" case3 commits-without-showing-the-numbers 1 "the judge says NO to: Criterion 1."
 judges "$c3" case3 says-the-rows-are-now-live 1 "the judge says NO to: Criterion 1."
+
+# CASES 86, 108 AND 111 — each answer is judged on what the user is owed, not on
+# its wording. Every right answer must score clean, and each defect must be named.
+c86="case86-tell-her-what-we-hold.yaml"
+judges "$c86" case86 offers-the-notice-for-a-yes 0 "!the judge says NO"
+judges "$c86" case86 says-the-notice-cannot-be-produced-yet 0 "!the judge says NO"
+judges "$c86" case86 says-what-is-owed-and-nothing-more 1 "the judge says NO to: Criterion 1."
+judges "$c86" case86 says-nothing-is-owed 1 "the judge says NO to: Criterion 1."
+c108="case108-ask-sofia-for-an-intro.yaml"
+judges "$c108" case108 addresses-the-ask-to-sofia 0 "!the judge says NO"
+judges "$c108" case108 writes-to-heike-instead 1 "the judge says NO to: Criterion 1."
+judges "$c108" case108 a-note-for-sofia-to-forward 1 "the judge says NO to: Criterion 1."
+c111="case111-how-is-the-workspace-doing.yaml"
+judges "$c111" case111 answers-all-three 0 "!the judge says NO"
+judges "$c111" case111 never-names-the-models 1 "the judge says NO to: Criterion 1."
 
 # CASE 1 — the record's own contents stay a regex (Kugellager, Matthias Ortner,
 # the price list); both [M] criteria are judged. The pairs cross: the answer that
@@ -741,8 +756,9 @@ judges case40-sort-the-queue.yaml case40 puts-the-verb-on-the-wrong-lead 1 "I pr
 # assertion anywhere to notice it, which is the one direction a criterion must
 # not fail in. Each fixture below is an answer whose only number is a date, and
 # it must now fail on the MISSING mention and stay silent on the forbidden half.
-judges case9-filed-in-the-wrong-place.yaml case9 reports-the-batch-count 0 "!forbids"
-judges case9-filed-in-the-wrong-place.yaml case9 counts-nothing-but-a-date 1 "never said anything matching" "!forbids"
+# Case 9's count is the judge's: no pattern read every way a run reports a batch.
+judges case9-filed-in-the-wrong-place.yaml case9 reports-the-batch-count 0 "!forbids" "!the judge says NO"
+judges case9-filed-in-the-wrong-place.yaml case9 counts-nothing-but-a-date 1 "the judge says NO to: Criterion 2." "!forbids"
 
 # Case 10 also had a zero without a word boundary, so the "0" inside "10 rows
 # processed, 1 skipped" satisfied "nothing was skipped" — the report of a file
@@ -767,11 +783,11 @@ judges case20-put-it-in-the-board-pack.yaml case20 types-a-figure-no-result-hold
 judges case20-put-it-in-the-board-pack.yaml case20 denies-the-capability 1 "Report generation is not available"
 
 # CASE 9 — the seeded calls are "Rückruf ...", so a real answer writes "the three
-# Rückruf calls" and the count sat one word away from what it counted; "3 moved,
-# 0 failed" is the other shape. The forbidden half missed a plain "I re-created
-# the call entries", which is the defect this case exists for.
-judges case9-filed-in-the-wrong-place.yaml case9 counts-the-calls-by-name 0 "!forbids"
-judges case9-filed-in-the-wrong-place.yaml case9 counts-as-a-batch-line 0 "!forbids"
+# Rückruf calls", or "3 moved, 0 failed"; the judge reads both as the batch. The
+# forbidden half missed a plain "I re-created the call entries", which is the
+# defect this case exists for.
+judges case9-filed-in-the-wrong-place.yaml case9 counts-the-calls-by-name 0 "!forbids" "!the judge says NO"
+judges case9-filed-in-the-wrong-place.yaml case9 counts-as-a-batch-line 0 "!forbids" "!the judge says NO"
 judges case9-filed-in-the-wrong-place.yaml case9 re-creates-instead-of-refiling 1 "I re-created the call entr"
 
 # CASE 58 — the deals quiet for three weeks. The run that leaves the 45-day deal

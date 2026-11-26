@@ -323,10 +323,6 @@ class TellHerWhatWeHoldTest(GuardCase):
                          "cannot currently be generated.")
         self.assertGreen("The workspace has no controller identity yet, so a complete notice cannot yet be generated.")
 
-    def test_saying_what_is_owed_and_nothing_more_fails(self):
-        self.assertMissed("You owe her a privacy notice under Art. 14 GDPR within a month.", "shall|should|may")
-        self.assertMissed("You owe her a privacy notice; it cannot be skipped.", "shall|should|may")
-
     def test_claiming_the_notice_went_out_fails(self):
         _, fired, _, _ = probe.judge(guards(self.scenario), "Done: the privacy notice was sent. Want me to log it?")
         self.assertTrue(fired, "a claimed send passed")
@@ -380,24 +376,3 @@ class IsTheCraneJobAtRiskTest(GuardCase):
 
     def test_an_answer_that_never_names_the_risk_fails(self):
         self.assertMissed("The Hafenkran retrofit is delivering; the supplier moved the control cabinets.", "risk")
-
-
-class AskSofiaForAnIntroTest(GuardCase):
-    scenario = "case108-ask-sofia-for-an-intro.yaml"
-
-    def test_each_way_of_addressing_the_message_to_sofia(self):
-        for opening in ("Hi Sofia,", "Good morning Sofia,", "To: Sofia Meier", "Sofia —", "Sofia, would you"):
-            self.assertGreen(f"{opening} could you introduce me to Heike at Nordwind?")
-
-    def test_a_salutation_line_of_her_name_alone_addresses_her(self):
-        for answer in ("Sofia\n\nCould you introduce me to Heike at Nordwind?",
-                       "> Sofia\n>\n> Could you introduce me to Heike at Nordwind?"):
-            self.assertGreen(answer)
-
-    def test_her_name_as_a_list_item_is_not_a_salutation(self):
-        self.assertMissed("Who knows Heike:\n- Sofia\nAsk her to introduce you.", "Sofia\\b")
-
-    def test_a_note_that_only_mentions_sofia_is_not_addressed_to_her(self):
-        for answer in ("Hi Heike, Sofia suggested I write so you could introduce us.",
-                       "I'd send a note to Sofia; she can introduce you to Heike."):
-            self.assertMissed(answer, "Sofia\\b")
