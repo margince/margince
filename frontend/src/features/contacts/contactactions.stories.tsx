@@ -80,7 +80,8 @@ const ROUTES = {
     { contact: ["read", "update"], activity: ["create"] },
     { seat: "full" },
   ),
-  "GET /custom-fields": () => jsonResponse({ data: [] }),
+  "GET /custom-fields": () =>
+    jsonResponse({ page: { has_more: false }, data: [] }),
   // Which messaging providers exist is a deployment fact, so a channel has no
   // name until the directory supplies one.
   "GET /channel-providers": () => jsonResponse({ data: [] }),

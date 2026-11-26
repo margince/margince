@@ -16,9 +16,9 @@ import { ReadOnlyValue } from "../../design-system/readonlyvalue";
 import { taskDueOnDay } from "../../format/calendarday";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import type { useLocale, useT } from "../../i18n";
+import { leadIdentityName } from "../../lib/leadname";
 import { type LeadOrigin, originLabelFor } from "../../lib/leadorigins";
 import { LeadCompanyName } from "./leadcompany";
-import { leadIdentityName } from "./leadname";
 import { openTaskCountLabel } from "./leadopentasks";
 import { LeadPartnerName } from "./leadpartner";
 import {
