@@ -74,7 +74,13 @@ export function SearchHit({
     );
   }
   if (opensPanel) {
-    return <ActivityHit hit={hit} onOpen={() => onOpen(hit.id, "activity")} />;
+    return (
+      <ActivityHit
+        hit={hit}
+        marks={hitMarks(hit, t)}
+        onOpen={() => onOpen(hit.id, "activity")}
+      />
+    );
   }
   return (
     <li className="search-hit">
@@ -152,11 +158,20 @@ function RecordHit({
   );
 }
 
-// An activity with no message row: its title, and the passage that matched.
+// An activity with no message row: its title, the passage that matched, and
+// the marks that say where a connector row came from.
 function ActivityHit({
   hit,
+  marks,
   onOpen,
-}: Readonly<{ hit: SearchResult; onOpen: () => void }>) {
+}: Readonly<{ hit: SearchResult; marks: ReactNode[]; onOpen: () => void }>) {
+  const passage = hit.snippet ? `“${hit.snippet}”` : undefined;
+  const facts = (passage || marks.length > 0) && (
+    <span className="search-hit-marks">
+      {passage && <span>{passage}</span>}
+      {marks}
+    </span>
+  );
   return (
     <li className="search-hit">
       <RecordCard
@@ -165,7 +180,7 @@ function ActivityHit({
         name={hit.title ?? hit.id}
         identity={hit.id}
         onOpen={onOpen}
-        position={hit.snippet ? `“${hit.snippet}”` : undefined}
+        position={facts}
       />
     </li>
   );

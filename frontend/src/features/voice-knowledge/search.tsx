@@ -85,9 +85,10 @@ export function SearchRoute(
 ) {
   const [params] = useUrlParams();
   // A link from outside may carry the term as `?q=`, the way most sites spell
-  // a search address; the path segment wins when both are there.
+  // a search address; the path segment wins when both are there. Keyed on the
+  // term, so a new `?q=` starts a fresh field, as a new path segment does.
   const q = props.q || params.get(QUERY_PARAM) || "";
-  return <SearchScreen {...props} q={q} openAs={useRoute().id3} />;
+  return <SearchScreen key={q} {...props} q={q} openAs={useRoute().id3} />;
 }
 
 const QUERY_PARAM = "q";

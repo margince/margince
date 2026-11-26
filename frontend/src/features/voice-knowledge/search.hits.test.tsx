@@ -4,14 +4,17 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { echoedQuery, SearchRoute, SearchScreen } from "./search";
 
@@ -92,6 +95,31 @@ describe("deal and activity hits", () => {
     expect(open.getAttribute("aria-haspopup")).toBe("dialog");
     expect(screen.getByText("“Ask about the second site”")).toBeTruthy();
   });
+
+  // A connector's activity says where it came from, as any other hit does; an
+  // ordinary one carries no badge.
+  it.each([
+    ["external", "search.tier.mirrored"],
+    ["unverified", "search.tier.unverified"],
+  ] as const)("marks a %s activity with its tier", async (tier, key) => {
+    serve([{ ...task, trust_tier: tier }]);
+    render(<SearchScreen q="follow" />);
+    const open = await screen.findByRole("button", {
+      name: /Follow up with the new lead/,
+    });
+    const card = open.closest(".record-card");
+    if (!(card instanceof HTMLElement)) throw new Error("no record box");
+    expect(within(card).getByText(en[key])).toBeTruthy();
+  });
+
+  it("gives an ordinary activity no tier badge", async () => {
+    serve([{ ...task, trust_tier: "authoritative" }]);
+    render(<SearchScreen q="follow" />);
+    const open = await screen.findByRole("button", {
+      name: /Follow up with the new lead/,
+    });
+    expect(open.closest(".record-card")?.querySelector(".badge")).toBeNull();
+  });
 });
 
 describe("the search address", () => {
@@ -101,6 +129,22 @@ describe("the search address", () => {
     render(<SearchRoute q="" />);
     expect(await screen.findByText("No matches for “alice”.")).toBeTruthy();
     expect(asked.some((url) => url.includes("q=alice"))).toBe(true);
+  });
+
+  // A link that changes only `?q=` is a new search, so the box shows the new
+  // term instead of the one the reader arrived with.
+  it("shows the new term in the box when only ?q= changes", async () => {
+    serve([]);
+    window.location.hash = "#/search?q=alice";
+    render(<SearchRoute q="" />);
+    const box = await screen.findByRole("searchbox");
+    expect(box).toHaveProperty("value", "alice");
+    act(() => {
+      window.location.hash = "#/search?q=bob";
+    });
+    await waitFor(() =>
+      expect(screen.getByRole("searchbox")).toHaveProperty("value", "bob"),
+    );
   });
 
   it("repeats a long term cut short, so the sentence stays a sentence", async () => {
