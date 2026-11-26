@@ -17,8 +17,8 @@ The last count answers the question of parity with the web app, so it leads this
 
 | Of the operations the web app calls | Count |
 |---|---:|
-| Open, and the agent does not ask first | 678 |
-| Open, and the agent asks first | 109 |
+| Open, and the agent does not ask first | 677 |
+| Open, and the agent asks first | 110 |
 | Pending | 0 |
 | Covered by another tool | 25 |
 | Closed for security | 167 |
@@ -46,7 +46,7 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 
 | Group | Passport area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| [Business operations](#business-operations) | Sales work | 622 | 560 | 43 | 0 | 35 | 27 | 532 | 90.7% | 90.0% |
+| [Business operations](#business-operations) | Sales work | 622 | 560 | 44 | 0 | 35 | 27 | 532 | 90.7% | 90.0% |
 | [Compliance and privacy](#compliance-and-privacy) | Compliance and privacy | 73 | 49 | 20 | 0 | 24 | 0 | 63 | 65.0% | 67.1% |
 | [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 79 | 47 | 12 | 0 | 31 | 1 | 67 | 67.1% | 59.4% |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 90 | 70 | 5 | 0 | 13 | 7 | 76 | 82.8% | 77.7% |
@@ -72,7 +72,7 @@ Passport area: Sales work.
 | Deal rooms | 24 | 23 | 11 | 0 | 1 | 0 | 21 | 95.2% | 95.8% |
 | Legal reviews | 6 | 6 | 0 | 0 | 0 | 0 | 6 | 100.0% | 100.0% |
 | Leads | 20 | 18 | 0 | 0 | 0 | 2 | 19 | 89.4% | 90.0% |
-| Activities, mail and tasks | 50 | 46 | 2 | 0 | 2 | 2 | 47 | 91.4% | 92.0% |
+| Activities, mail and tasks | 50 | 46 | 3 | 0 | 2 | 2 | 47 | 91.4% | 92.0% |
 | Scheduling and bookings | 21 | 15 | 2 | 0 | 5 | 1 | 19 | 78.9% | 71.4% |
 | Offers | 15 | 15 | 2 | 0 | 0 | 0 | 15 | 100.0% | 100.0% |
 | Contracts | 8 | 8 | 2 | 0 | 0 | 0 | 7 | 100.0% | 100.0% |

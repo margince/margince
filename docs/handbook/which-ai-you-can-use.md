@@ -52,6 +52,6 @@ Yes. An AI assistant that is not in the table can still connect to Margince. It 
 Also called: untested assistant, another AI tool, my own agent.
 
 ### What did you test, and what not?
-For Margince AI we ran 346 test cases. Each one is an example with a known right answer, in one of the 62 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
+For Margince AI we ran 347 test cases. Each one is an example with a known right answer, in one of the 62 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
 Also called: how is the AI tested, test coverage, certification.
 
