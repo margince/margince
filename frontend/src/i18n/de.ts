@@ -2868,6 +2868,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "autonomy.confirm": "Zuerst bestätigen",
 
   "nav.brief": "Home",
+  "nav.worklist": "Worklist",
   "nav.contacts": "Kontakte",
   "nav.companies": "Unternehmen",
   "nav.leads": "Leads",
@@ -14635,7 +14636,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "room.docs.group.delivery_operations": "Umsetzung und Betrieb",
   "buyer.docs.title": "Dokumente",
   "buyer.docs.empty": "Noch keine Dokumente.",
-  "buyer.threads.hiddenOwn": "Eine Unterhaltung über eine Datei, die nicht mehr geteilt wird.",
+  "buyer.threads.hiddenOwn":
+    "Eine Unterhaltung über eine Datei, die nicht mehr geteilt wird.",
   "buyer.docs.download": "{title} herunterladen",
   "buyer.docs.downloadFailed":
     "Der Download konnte nicht gestartet werden. Bitte versuchen Sie es erneut oder fragen Sie Ihre Ansprechperson.",
@@ -14694,7 +14696,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "threads.unanswered_other": "{count} unbeantwortet",
   "threads.cancel": "Abbrechen",
   "threads.empty": "Noch keine Nachrichten.",
-  "threads.hiddenFromBuyer": "Die Käuferseite kann diese Unterhaltung nicht mehr sehen",
+  "threads.hiddenFromBuyer":
+    "Die Käuferseite kann diese Unterhaltung nicht mehr sehen",
   "threads.requiredChange": "Änderung erforderlich",
   "threads.resolved": "Erledigt",
   "threads.sideBuyer": "Käuferseite",

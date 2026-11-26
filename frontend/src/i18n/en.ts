@@ -2758,6 +2758,7 @@ export const en = {
   "autonomy.confirm": "Approval first",
 
   "nav.brief": "Home",
+  "nav.worklist": "Worklist",
   "nav.contacts": "Contacts",
   "nav.companies": "Companies",
   "nav.leads": "Leads",
@@ -14575,7 +14576,8 @@ export const en = {
   "room.docs.group.delivery_operations": "Delivery and operations",
   "buyer.docs.title": "Documents",
   "buyer.docs.empty": "No documents yet.",
-  "buyer.threads.hiddenOwn": "A conversation about a file that is no longer shared.",
+  "buyer.threads.hiddenOwn":
+    "A conversation about a file that is no longer shared.",
   "buyer.docs.download": "Download {title}",
   "buyer.docs.downloadFailed":
     "The download did not start. Retry, or ask your contact.",
