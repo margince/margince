@@ -66,7 +66,7 @@ func (s *Sink) MarkHeldForward(ctx context.Context, original, member, connection
 			return fmt.Errorf("capture: marking a held forward: %w", err)
 		}
 		if tag.RowsAffected() == 0 {
-			return fmt.Errorf("capture: the stored original of a held forward is gone: %w", apperrors.ErrNotFound)
+			return fmt.Errorf("the stored original of a held forward is gone: %w", apperrors.ErrNotFound)
 		}
 		return nil
 	})

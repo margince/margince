@@ -871,8 +871,8 @@ func (c *chatPackages) returnsSender(p typedPackage, fd *ast.FuncDecl) bool {
 		return false
 	}
 	results := obj.Type().(*types.Signature).Results()
-	for i := 0; i < results.Len(); i++ {
-		if c.isSenderType(results.At(i).Type()) {
+	for result := range results.Variables() {
+		if c.isSenderType(result.Type()) {
 			return true
 		}
 	}
