@@ -44,7 +44,7 @@ func ReadableKind(ctx context.Context, kind string) (recordkinds.Declared, bool)
 func ExtensionScopeClause(ctx context.Context, kind, alias string, arg func(any) int) (string, error) {
 	declared, ok := recordkinds.Lookup(kind)
 	if !ok {
-		return "", fmt.Errorf("No installed extension declares the record kind %q: %w", kind, apperrors.ErrNotFound)
+		return "", fmt.Errorf("%q is not a record kind any installed extension declares: %w", kind, apperrors.ErrNotFound)
 	}
 	if declared.OwnerColumn == "" {
 		return "", nil
