@@ -265,26 +265,37 @@ func (s *Sink) calendarMayMove(ctx context.Context, tx pgx.Tx, id ids.ActivityID
 }
 
 // matchedRowMayMove says whether this seat's calendar may retime a row another
-// door filed and it matched onto. A colleague's calendar row is that calendar's
-// to move while the colleague's calendar is live; after that, any calendar
-// holding the row moves it. An import's row moves only for the seat that filed
-// or authored it, or the meeting's organizer. A guest's calendar joins it but
-// may carry a stale time, so it never retimes it.
+// door filed and it matched onto. A colleague's live calendar moves its own row.
+// Once it is not live, any calendar holding the row moves it. An import moves
+// only for its importer, its author or the organizer; a guest's time may be stale.
+// The importer comes from the create audit: a matching calendar took captured_by over.
 func matchedRowMayMove(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool, error) {
 	seat := actorUserID(ctx)
 	filer := auth.ConnectorSeatSQL("a")
-	var calendar, filed, filerLive bool
-	if err := tx.QueryRow(ctx, `
+	var calendar, filed, filerLive, imported bool
+	err := tx.QueryRow(ctx, `
 		SELECT coalesce(a.source_system = ANY(@`+calendarProvidersArg+`), false),
-		       a.captured_by LIKE @stamp OR a.source_author_id IS NOT DISTINCT FROM @`+rosterSeatArg+`::uuid,
-		       coalesce(`+filer+` <> @`+rosterSeatArg+`::text AND `+calendarLiveSQL("("+filer+")::uuid", "@"+calendarProvidersArg)+`, false)
-		  FROM activity a WHERE a.id = @`+capturedActivityObject, pgx.StrictNamedArgs{
-		capturedActivityObject: id, rosterSeatArg: seat, calendarProvidersArg: calendarProviderNames(), "stamp": "%:" + seat.String(),
-	}).Scan(&calendar, &filed, &filerLive); err != nil {
+		       a.captured_by LIKE @stamp,
+		       coalesce(`+filer+` <> @`+rosterSeatArg+`::text AND `+calendarLiveSQL("("+filer+")::uuid", "@"+calendarProvidersArg)+`, false),
+		       a.source_author_id IS NOT DISTINCT FROM @`+rosterSeatArg+`::uuid OR EXISTS (
+		         SELECT 1 FROM `+storekit.TableAudit+` created
+		          WHERE created.entity_type = 'activity' AND created.entity_id = a.id
+		            AND created.action = 'create' AND created.actor_id = @importer)
+		  FROM activity a WHERE a.id = @`+capturedActivityObject+` AND a.restricted_at IS NULL`, pgx.StrictNamedArgs{
+		capturedActivityObject: id, rosterSeatArg: seat, calendarProvidersArg: calendarProviderNames(),
+		"stamp": "%:" + seat.String(), "importer": "human:" + seat.String(),
+	}).Scan(&calendar, &filed, &filerLive, &imported)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
 		return false, fmt.Errorf("capture: reading which door filed a meeting: %w", err)
 	}
-	if calendar || filed {
+	if calendar {
 		return filed || !filerLive, nil
+	}
+	if imported {
+		return true, nil
 	}
 	return SeatOrganizesMeetingTx(ctx, tx, id, seat)
 }
