@@ -34,6 +34,7 @@ package gates
 import (
 	"go/ast"
 	"go/build"
+	"go/parser"
 	"go/token"
 	"path/filepath"
 	"slices"
@@ -144,6 +145,32 @@ func TestEveryGateRunsInParallelWithTheOthers(t *testing.T) {
 	}
 }
 
+func TestAnExemptGateRunsInParallelOnlyBehindItsUpdateFlag(t *testing.T) {
+	t.Parallel()
+	accepted := map[string]bool{"Guarded": true, "NeverParallel": true}
+	source := `package p
+func Guarded(t *testing.T) { if !*update { t.Parallel() }; x() }
+func NeverParallel(t *testing.T) { t.Setenv("A", "b") }
+func DroppedGuard(t *testing.T) { x(); t.Parallel() }
+func OtherCondition(t *testing.T) { if ready { t.Parallel() } }
+func GuardWithElse(t *testing.T) { if !*update { t.Parallel() } else { x() } }
+func SecondCall(t *testing.T) { if !*update { t.Parallel() }; t.Parallel() }
+func GuardNotFirst(t *testing.T) { x(); if !*update { t.Parallel() } }`
+	file, err := parser.ParseFile(token.NewFileSet(), "planted_test.go", source, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+		if got := parallelCalls(fn) == 0 || guardedParallelFirst(fn); got != accepted[fn.Name.Name] {
+			t.Errorf("%s: the census accepts it as exempt = %v, want %v", fn.Name.Name, got, accepted[fn.Name.Name])
+		}
+	}
+}
+
 // activeGateSources is the gate files THIS BUILD compiles, not every file on
 // disk whose name ends in _test.go.
 //
@@ -206,7 +233,6 @@ func guardedParallelFirst(fn *ast.FuncDecl) bool {
 	return isFlag && isParallelCall(guard.Body.List[0], testingParamName(fn))
 }
 
-// parallelCalls counts the t.Parallel() statements anywhere in the function.
 func parallelCalls(fn *ast.FuncDecl) int {
 	calls := 0
 	if fn.Body == nil {
