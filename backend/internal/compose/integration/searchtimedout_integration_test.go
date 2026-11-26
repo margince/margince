@@ -224,7 +224,9 @@ func TestBothSearchDoorsNameATypeThatRanOutOfTime(t *testing.T) {
 	d := newTwoDoors(t, "search-timed-out-doors", "read")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Quillfeather Werke"})
 	createdRecord(t, d.e, "/v1/activities", AnyMap{"kind": "task", "subject": "Quillfeather follow-up"})
-	lockTable(t, d.e.Owner, "activity")
+	// The tool reads each company hit back, and a company read folds its
+	// activity clock from activity, so the lock stalls only the mail lane.
+	lockTable(t, d.e.Owner, "activity_participant")
 
 	var rest, tool json.RawMessage
 	var wg sync.WaitGroup
