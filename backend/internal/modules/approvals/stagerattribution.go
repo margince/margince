@@ -61,32 +61,15 @@ func payloadNamesItsOwner(p principal.Principal, in StageInput) error {
 	return nil
 }
 
-// attributableStager refuses an AGENT staging without its passport.
-//
-// A zero PassportID stores NULL, and a NULL passport_id is what a SERVER
-// proposal looks like — the case agentMayDecide deliberately admits, since a row
-// nobody's credential made has no self-approval to refuse. So an agent row
-// staged without one reads as proposed by nobody: the refusal compares the two
-// passports and never fires, and the credential can release the call it just
-// made. That loop is the whole of what the confirm-first tier exists to stop.
-//
-// Only an agent. A SYSTEM principal legitimately carries no passport — the
-// nightly sweeps and the site reads propose changes on nobody's credential —
-// and the server-proposed case has to stay reachable or this would break the
-// path it is protecting.
-//
-// Refused at the STAGING BOUNDARY rather than left to callers, so what a NULL
-// passport_id MEANS becomes a property of the row instead of a property of every
-// writer having been careful — which is a statement about today's callers, not
-// about the column. No agent SURFACE builds such a principal today, which is why
-// this is a guard rather than a repair: AgentIdentity.Principal always carries
-// the passport it authenticated. compose/autoapply.go does build one, and it
-// only ever decides — the sweep releases under the owner's own policy, which is
-// not a credential releasing its own proposal.
+// attributableStager refuses an agent with neither a passport nor a person it
+// acts for. Its row would name nobody and read as a server proposal, with no
+// self-approval for agentMayDecide to refuse. The product's own job acting for
+// a named person stages without a passport: its row names that person, and no
+// credential exists to release it.
 func attributableStager(p principal.Principal) error {
-	if p.Type != principal.PrincipalAgent || p.PassportID != ids.Nil {
+	if p.Type != principal.PrincipalAgent || p.PassportID != ids.Nil || p.OnBehalfOf != ids.Nil {
 		return nil
 	}
-	return errors.New("crmapprovals: an agent stages on its passport — a proposal carrying none is " +
-		"indistinguishable from one the server made, and the credential could then release it")
+	return errors.New("crmapprovals: an agent stages on its passport or for a named person — a proposal " +
+		"carrying neither is indistinguishable from one the server made, and the credential could then release it")
 }

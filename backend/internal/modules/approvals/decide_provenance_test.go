@@ -35,12 +35,12 @@ func TestServerProposedTurnsOnThePassport(t *testing.T) {
 
 // The other end of the same distinction: what makes a NULL passport_id TRUE.
 //
-// serverProposed reads the column and answers "the server made this". That is
-// only sound while nothing else can write NULL there — and an agent principal
-// with a zero PassportID does exactly that, laundering its own proposal into the
-// server-proposed case. The self-approval refusal compares the two passports, so
-// against a NULL it never fires and the credential releases the call it made.
-func TestAnAgentCannotStageWithoutItsPassport(t *testing.T) {
+// serverProposed reads the column and answers "the server made this". An agent
+// with no passport and no person it acts for would write NULL there too. Its
+// proposal would then read as the server's. The self-approval refusal compares
+// the two passports, so against a NULL it never fires. The credential would
+// release the call it made.
+func TestAnAgentStagesOnItsPassportOrForANamedPerson(t *testing.T) {
 	minted := ids.From[ids.PassportKind](ids.NewV7())
 	for name, tc := range map[string]struct {
 		actor   principal.Principal
@@ -51,11 +51,16 @@ func TestAnAgentCannotStageWithoutItsPassport(t *testing.T) {
 				Type: principal.PrincipalAgent, ID: "agent:x", OnBehalfOf: ids.NewV7(), PassportID: minted.UUID,
 			},
 		},
-		"an agent presenting none": {
-			actor: principal.Principal{
-				Type: principal.PrincipalAgent, ID: "agent:x", OnBehalfOf: ids.NewV7(),
-			},
+		"an agent presenting none, acting for no one": {
+			actor:   principal.Principal{Type: principal.PrincipalAgent, ID: "agent:x"},
 			refused: true,
+		},
+		// The product's own job acting for a named person: the row carries
+		// that person in on_behalf_of, and no credential exists to release it.
+		"an agent presenting none, acting for a named person": {
+			actor: principal.Principal{
+				Type: principal.PrincipalAgent, ID: "agent:x", UserID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
+			},
 		},
 		// The case the refusal must not reach. A nightly sweep and a site read
 		// propose on nobody's credential, and their NULL is the one this column
