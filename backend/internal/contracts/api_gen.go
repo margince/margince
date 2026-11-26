@@ -79303,7 +79303,7 @@ type ListCompaniesParams struct {
 	// RelationshipType Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both.
 	RelationshipType *ListCompaniesParamsRelationshipType `form:"relationship_type,omitempty" json:"relationship_type,omitempty"`
 
-	// ExtensionRelationshipType Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both.
+	// ExtensionRelationshipType Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. `listCompanyTypes` lists the values, and an agent reads them with the `read_workspace` action `company_types`.
 	ExtensionRelationshipType *string `form:"extension_relationship_type,omitempty" json:"extension_relationship_type,omitempty"`
 
 	// OwnerTeamId Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
@@ -81624,7 +81624,7 @@ type ListDealsParams struct {
 	// AcquisitionSource An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker.
 	AcquisitionSource *string `form:"acquisition_source,omitempty" json:"acquisition_source,omitempty"`
 
-	// LinkType A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter.
+	// LinkType A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. `listLinkTypes` lists the values, and an agent reads them with the `read_workspace` action `link_types`.
 	LinkType *string `form:"link_type,omitempty" json:"link_type,omitempty"`
 
 	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
@@ -82193,7 +82193,7 @@ type GetFieldHistoryParamsActorType string
 
 // GetFilterVocabularyParams defines parameters for GetFilterVocabulary.
 type GetFilterVocabularyParams struct {
-	// Resource The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared.
+	// Resource The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. `listRecordKinds` lists the kinds the caller may read, and an agent reads them with the `read_workspace` action `record_kinds`.
 	Resource FilterResource `form:"resource" json:"resource"`
 }
 
@@ -129513,6 +129513,8 @@ func (siw *ServerInterfaceWrapper) ListCompanyTypes(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -145356,6 +145358,8 @@ func (siw *ServerInterfaceWrapper) ListLinkTypes(w http.ResponseWriter, r *http.
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -153210,6 +153214,8 @@ func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *h
 func (siw *ServerInterfaceWrapper) ListRecordKinds(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

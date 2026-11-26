@@ -136,14 +136,14 @@ func buildReportWhere(
 // Two writers of one invariant either share a helper or say why they do not.
 // This is the helper.
 func specScopeClauses(ctx context.Context, spec reportSpec, arg func(any) int) ([]string, error) {
-	if spec.overExtensionTable() {
-		return nil, nil
-	}
 	var scope string
 	var err error
-	if spec.activityWalk {
+	switch {
+	case spec.extensionKind != "":
+		scope, err = auth.ExtensionScopeClause(ctx, spec.extensionKind, "t", arg)
+	case spec.activityWalk:
 		scope, err = auth.ActivityContentClause(ctx, "t", arg)
-	} else {
+	default:
 		scope, err = auth.ScopeClauseFor(ctx, string(spec.entity), "t", arg)
 	}
 	if err != nil {

@@ -14,25 +14,6 @@ import (
 	"github.com/margince/margince/backend/pkg/extension/crm"
 )
 
-// preflightSignalTypes refuses a signal type core could not carry, and a type
-// one unit declares twice. Two units never collide, because the unit's name is
-// part of the kind name.
-func preflightSignalTypes(exts []extension.Extension) error {
-	for _, e := range exts {
-		seen := make(map[string]bool, len(e.SignalTypes))
-		for _, t := range e.SignalTypes {
-			if err := t.Validate(); err != nil {
-				return fmt.Errorf("compose: extension %q: %w", e.Name, err)
-			}
-			if seen[t.Kind] {
-				return fmt.Errorf("compose: extension %q declares signal type %q twice", e.Name, t.Kind)
-			}
-			seen[t.Kind] = true
-		}
-	}
-	return nil
-}
-
 // registerSignalTypes fills the registry the signals store and the erasure path
 // read.
 func registerSignalTypes(exts []extension.Extension) {
@@ -70,7 +51,7 @@ func (s extensionSignals) Create(ctx context.Context, kind string, subject exten
 // preflightExtensionKinds refuses a set whose company types, record kinds,
 // reports or signal types are malformed, before anything is registered.
 func preflightExtensionKinds(exts []extension.Extension) error {
-	for _, preflight := range []func([]extension.Extension) error{preflightCompanyTypes, preflightRecordKinds, preflightReports, preflightSignalTypes} {
+	for _, preflight := range []func([]extension.Extension) error{preflightCompanyTypes, preflightKindsLinksSignals, preflightReports} {
 		if err := preflight(exts); err != nil {
 			return err
 		}
