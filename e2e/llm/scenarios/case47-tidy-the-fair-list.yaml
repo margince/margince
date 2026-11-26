@@ -15,9 +15,9 @@
 # asks to ADD.
 #
 # The list is twelve contacts because bulk_update_records' own description
-# sends anything over ten rows there. The prompt gives the go-ahead in advance,
-# so a run that hands the question back has refused authority it was given. No
-# tool is pinned: the end state reads the list and every owner.
+# sends anything over ten rows there. Its description says to show the preview
+# and execute once the user agrees, so a run that does it on the prompt's
+# go-ahead and one that asks for the yes both hold. No tool is pinned.
 name: case47_tidy_the_fair_list
 title: Tidy the fair list
 criteria: [1, 2, 3]
@@ -56,12 +56,11 @@ must_mention:
 judge:
   - "Criterion 1. The answer says who is on the Messe Hannover list, by name or by count, as it stood before the changes or after them. Answer no if it gives no account of who is on the list."
   - "Criterion 2. The answer says Mara Voigt's conversion was undone — she is a lead again — and that she is no longer on the list, and says Jens Falk was added. Answer no if it says she was deleted or disqualified, says she is still a contact, or does not report Jens as added."
-  - "Criterion 3. The answer reports the hand-over to Sofia Meier as covering everybody who stayed on the list plus Jens Falk, and not Mara Voigt. Answer no if it hands Mara to Sofia, hands over only some of the people, or says nothing about who was handed over."
+  - "Criterion 3. The answer either reports the hand-over to Sofia Meier as done, or shows what it would change and asks the user's yes first. Either way it covers everybody who stayed on the list plus Jens Falk, and not Mara Voigt. Answer no if it hands Mara to Sofia, covers only some of the people, or says nothing about who is handed over."
 
-# Mara is a lead again, and everyone else on the list, Jens included, is
-# Sofia's. Her contact row is gone once the conversion is undone, so no name
-# finds it: the count says she left. The seed puts twelve on the list, Mara
-# among them, and Jens takes her place.
+# Mara is a lead again. Her contact row is gone once the conversion is undone,
+# so no name finds it: the count says she left. The seed puts twelve on the
+# list, Mara among them, and Jens takes her place. Who owns them is criterion 3's.
 # The form execute puts up asks for the go-ahead the prompt already gave
 # ("just do it"), so the user answers yes. A host that cannot answer it, such as
 # `claude -p`, cancels it, and the hand-over never runs.
@@ -73,18 +72,6 @@ must_end_with:
   - list "Messe Hannover 2026" members=12
   - lead "Mara Voigt" records=1
   - contact "Mara Voigt" records=0
-  - contact "Ralf Thiel" owner=Sofia Meier
-  - contact "Sabine Ott" owner=Sofia Meier
-  - contact "Dirk Hallmann" owner=Sofia Meier
-  - contact "Inge Rohde" owner=Sofia Meier
-  - contact "Tobias Kruse" owner=Sofia Meier
-  - contact "Wiebke Lange" owner=Sofia Meier
-  - contact "Hartmut Seidel" owner=Sofia Meier
-  - contact "Ute Brandl" owner=Sofia Meier
-  - contact "Florian Eck" owner=Sofia Meier
-  - contact "Marlene Pohl" owner=Sofia Meier
-  - contact "Gernot Vahl" owner=Sofia Meier
-  - contact "Jens Falk" owner=Sofia Meier
 
 runs: 3
 pass_at: 2

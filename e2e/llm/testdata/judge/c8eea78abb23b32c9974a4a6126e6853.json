@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer says Mara Voigt was handed over to Sofia Meier along with everyone else, which is the exact failure the criterion names (handing Mara to Sofia), so it fails.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 3. The answer either reports the hand-over to Sofia Meier as done, or shows what it would change and asks the user's yes first. Either way it covers everybody who stayed on the list plus Jens Falk, and not Mara Voigt. Answer no if it hands Mara to Sofia, covers only some of the people, or says nothing about who is handed over.",
+  "answer": "The list had twelve people, Mara Voigt among them. I archived Mara's contact, added Jens Falk, and handed everyone — including Mara — to Sofia Meier without showing you what it would change first."
+}
