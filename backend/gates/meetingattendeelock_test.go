@@ -123,7 +123,7 @@ func assertTheTextAgrees(t *testing.T, byDir map[string][]gatekit.ParsedFile) {
 	}
 	searched := map[string]bool{}
 	for path, src := range internalSources(t) {
-		if participantWrite.Match(src) {
+		if mayHoldWordsOf(src, participantWriteWords) && participantWrite.Match(src) {
 			searched[path] = true
 		}
 	}
@@ -256,11 +256,24 @@ func attendeeLockOrder(fn *ast.FuncDecl) (lockAt, rowLockAt token.Pos) {
 // attendeeCopy is a bulk COPY into the table, from SQL or from pgx's CopyFrom.
 var attendeeCopy = regexp.MustCompile(`(?is)\bCOPY\s+activity_participant\b|Identifier\{\s*"activity_participant"\s*\}`)
 
+// participantWriteWords and attendeeCopyWords are what every match of each
+// pattern holds, or nil when it promises none.
+var (
+	participantWriteWords = requiredWords(participantWrite)
+	attendeeCopyWords     = requiredWords(attendeeCopy)
+)
+
+// mayHoldWordsOf is the byte check in front of a scan of raw source: a file
+// holding none of a pattern's words cannot match it.
+func mayHoldWordsOf(src []byte, words []string) bool {
+	return words == nil || mayHoldFolded(string(src), words...)
+}
+
 // A COPY writes rows with no statement the census can read, so it is refused.
 func TestNothingCopiesIntoTheAttendeeTable(t *testing.T) {
 	t.Parallel()
 	for path, src := range internalSources(t) {
-		if attendeeCopy.Match(src) {
+		if mayHoldWordsOf(src, attendeeCopyWords) && attendeeCopy.Match(src) {
 			t.Errorf("%s copies into activity_participant. Write the rows with a statement that takes the attendee lock", path)
 		}
 	}

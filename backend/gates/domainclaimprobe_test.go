@@ -67,7 +67,23 @@ var readsDomainClaimAny = regexp.MustCompile(`(?is)\bFROM\s+company_domain\b[^;]
 // owns and not who owns a domain.
 var readsDomainOfCompany = regexp.MustCompile(`(?is)\bcompany_id\s*=\s*\$`)
 
+// domainClaimWords holds, for each pattern asksWhoOwnsADomain tries, the words
+// one of which every match of it holds. A nil entry promises none.
+var domainClaimWords = [][]string{requiredWords(readsDomainClaim), requiredWords(readsDomainClaimAny)}
+
+func mayAskWhoOwnsADomain(src string) bool {
+	for _, words := range domainClaimWords {
+		if words == nil || mayHoldFolded(src, words...) {
+			return true
+		}
+	}
+	return false
+}
+
 func asksWhoOwnsADomain(statement string) bool {
+	if !mayAskWhoOwnsADomain(statement) {
+		return false
+	}
 	return readsDomainClaim.MatchString(statement) ||
 		readsDomainClaimAny.MatchString(statement) && !readsDomainOfCompany.MatchString(statement)
 }
@@ -132,11 +148,18 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 			if filepath.Base(path) == "domainclaimprobe_test.go" {
 				return nil
 			}
+			src, readErr := gatekit.ReadFile(path)
+			if readErr != nil {
+				return readErr
+			}
+			judged++
+			if !mayAskWhoOwnsADomain(string(src)) {
+				return nil
+			}
 			file, parseErr := gatekit.ParseFile(path, 0)
 			if parseErr != nil {
 				return parseErr
 			}
-			judged++
 			for _, statement := range gatekit.SQLStatementsOf(file) {
 				if !asksWhoOwnsADomain(statement) {
 					continue

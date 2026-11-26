@@ -35,7 +35,16 @@ var (
 		`(?i)^public\.\w+ CREATE UNIQUE INDEX (\w+) ON public\.(\w+) USING \w+ (\()`)
 	insertTarget   = regexp.MustCompile(`(?is)INSERT\s+INTO\s+(?:public\.)?(\w+)`)
 	conflictTarget = regexp.MustCompile(`(?is)ON\s+CONFLICT\s*\(([^)]*)\)\s*(?:WHERE\s+(.+?))?\s*DO\s+(?:NOTHING|UPDATE)`)
+	// conflictWords are what every match of conflictTarget holds, or nil when
+	// it promises none.
+	conflictWords = requiredWords(conflictTarget)
 )
+
+// mayInferOnConflict is the byte check in front of conflictTarget: a text
+// holding none of its words cannot match it.
+func mayInferOnConflict(text string) bool {
+	return conflictWords == nil || mayHoldFolded(text, conflictWords...)
+}
 
 // uniqueIndex is one index's shape, as the committed catalog states it.
 type uniqueIndex struct {
@@ -268,6 +277,9 @@ func TestAnUpsertOntoAPartialIndexRepeatsItsPredicate(t *testing.T) {
 	indexes := uniqueIndexesByTable(t)
 	var examined int
 	for _, statement := range everyUpsertInTheTree(t) {
+		if !mayInferOnConflict(statement.sql) {
+			continue
+		}
 		target := insertTarget.FindStringSubmatch(statement.sql)
 		conflict := conflictTarget.FindStringSubmatch(statement.sql)
 		if target == nil || conflict == nil {
@@ -338,6 +350,13 @@ func everyUpsertInTheTree(t *testing.T) []upsertStatement {
 	var found []upsertStatement
 	for _, dir := range []string{filepath.Join(root, "internal"), filepath.Join(root, "cmd")} {
 		for _, path := range goSourceFiles(t, dir) {
+			src, err := gatekit.ReadFile(path)
+			if err != nil {
+				t.Fatalf("reading %s: %v", path, err)
+			}
+			if !mayInferOnConflict(string(src)) {
+				continue
+			}
 			// statementsIn rather than a per-literal reader: a statement written
 			// as `"INSERT … " + onConflictClause` is ONE statement to Postgres and
 			// several literals to the parser, and no literal on its own holds both

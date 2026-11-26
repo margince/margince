@@ -282,6 +282,10 @@ func TestAPredicatesCoalesceIsNotAKeysCoalesce(t *testing.T) {
 // follows in DO UPDATE is assignment, not inference.
 var onConflictClause = regexp.MustCompile(`(?is)ON CONFLICT\s*\(`)
 
+// onConflictWords are what every match of onConflictClause holds, or nil when
+// it promises none.
+var onConflictWords = requiredWords(onConflictClause)
+
 // goSourceFloor is what the tree held when this gate was written, for the reason
 // uniqueIndexFloor exists.
 const goSourceFloor = 2000
@@ -306,6 +310,11 @@ func TestNoUpsertInfersASentinelIndex(t *testing.T) {
 			t.Fatalf("reading %s: %v", path, err)
 		}
 		read++
+		// One literal holds the whole match, because joining literals puts a
+		// newline where the pattern wants a space.
+		if onConflictWords != nil && !mayHoldFolded(string(body), onConflictWords...) {
+			continue
+		}
 		// The string literals, not the file: a census over raw bytes reads prose
 		// about an inference as an inference, and go/parser is already the tool
 		// this package uses to see only real SQL.
