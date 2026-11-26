@@ -119,7 +119,7 @@ const owner: ListChip = {
   allLabel: "Any owner",
   filterable: true,
   options: [
-    { value: "owner_id:u-me", label: "Owned by you" },
+    { value: "owner_id:u-me", label: "You" },
     { value: "owner_id:u-1", label: "Anna Becker" },
     { value: "owner_id:u-2", label: "Jonas Petersen" },
     { value: "owner_id:u-3", label: "Mia Schulz" },
@@ -128,7 +128,7 @@ const owner: ListChip = {
 };
 
 // A list that is long but still in hand. Unlike the searched variant, every
-// option shows before anything is typed, so "Owned by you" is one press away.
+// option shows before anything is typed, so "You" is one press away.
 export const Filterable: Story = {
   render: () => <Values chip={owner} picked="owner_id:u-2" />,
 };

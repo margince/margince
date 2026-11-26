@@ -9,7 +9,11 @@ import { useSinglePress } from "../../design-system/presslatch";
 import { useFieldFaults } from "../../design-system/savepage";
 import { useLocale, useT } from "../../i18n";
 import { blankRequired, problemMessageOf } from "../../lib/problem";
-import { type SavedView, useSaveView } from "../../lib/savedviews.queries";
+import {
+  type SavedView,
+  useSaveView,
+  viewNameTaken,
+} from "../../lib/savedviews.queries";
 import "./savedviews.css";
 
 // Renaming and deleting the reader's own saved views. One dialog listing every
@@ -90,10 +94,11 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
               onSubmit={singlePress((event) => {
                 event.preventDefault();
                 const name = mode.name.trim();
-                const blank = blankRequired(locale, {
-                  name: [nameLabel, mode.name],
-                });
-                if (faults.show(blank)) {
+                // Another view's name is refused here, as Save view refuses it.
+                const refused = viewNameTaken(views, name, view.id)
+                  ? new Map([["name", t("views.nameTaken")]])
+                  : blankRequired(locale, { name: [nameLabel, mode.name] });
+                if (faults.show(refused)) {
                   return;
                 }
                 rename.mutate(
