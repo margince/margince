@@ -47,10 +47,12 @@ func setupExtRuntime(t *testing.T) *extRuntimeEnv {
 	return &extRuntimeEnv{Env: e, vault: vault, composed: boundForTest(e.Pool, vault)}
 }
 
-// compose gives the fixture's composition the units of another, before any
-// Runtime is minted from it.
+// compose gives the fixture's composition the units and jobs of another,
+// before any Runtime is minted from it.
 func (e *extRuntimeEnv) compose(units *Extensions) {
 	e.composed.units = units.Units()
+	e.composed.jobs = units.servedJobs()
+	e.composed.jobTable = units.declaredJobs()
 }
 
 // callCtx is what a governed tool call arrives with: a bound workspace, an

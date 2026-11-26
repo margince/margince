@@ -114,6 +114,7 @@ func (e *pairEnv) setClose(t *testing.T, deal ids.UUID, days int) {
 }
 
 func TestAPairSharingAMeetingRaisesOneFindingOnTheLaterDeal(t *testing.T) {
+	t.Parallel()
 	e := setupPair(t)
 	for range 2 {
 		e.run(t)
@@ -137,40 +138,41 @@ func TestAPairSharingAMeetingRaisesOneFindingOnTheLaterDeal(t *testing.T) {
 }
 
 func TestPairsThatAreNotOneMotionRaiseNothing(t *testing.T) {
-	for name, change := range map[string]func(*pairEnv, *pgx.Conn){
-		"61 days apart": func(e *pairEnv, _ *pgx.Conn) { e.setClose(t, e.later, 101) },
-		"another pipeline": func(e *pairEnv, owner *pgx.Conn) {
+	t.Parallel()
+	for name, change := range map[string]func(*testing.T, *pairEnv, *pgx.Conn){
+		"61 days apart": func(t *testing.T, e *pairEnv, _ *pgx.Conn) { e.setClose(t, e.later, 101) },
+		"another pipeline": func(t *testing.T, e *pairEnv, owner *pgx.Conn) {
 			other := integration.SeedIDRow(t, owner, `INSERT INTO pipeline (id, name) VALUES ($1, 'Other')`)
 			stage := integration.SeedIDRow(t, owner, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Open', 0)`, other)
 			execSeed(t, owner, `UPDATE deal SET pipeline_id = $2, stage_id = $3 WHERE id = $1`, e.later, other, stage)
 		},
-		"another account": func(e *pairEnv, owner *pgx.Conn) {
+		"another account": func(t *testing.T, e *pairEnv, owner *pgx.Conn) {
 			other := integration.SeedIDRow(t, owner, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Another', 'manual', 'test')`)
 			execSeed(t, owner, `UPDATE deal SET company_id = $2 WHERE id = $1`, e.later, other)
 		},
-		"no close date": func(e *pairEnv, owner *pgx.Conn) {
+		"no close date": func(t *testing.T, e *pairEnv, owner *pgx.Conn) {
 			execSeed(t, owner, `UPDATE deal SET expected_close_date = NULL WHERE id = $1`, e.later)
 		},
-		"one deal is archived": func(e *pairEnv, owner *pgx.Conn) {
+		"one deal is archived": func(t *testing.T, e *pairEnv, owner *pgx.Conn) {
 			execSeed(t, owner, `UPDATE deal SET archived_at = now() WHERE id = $1`, e.later)
 		},
-		"one deal is lost": func(e *pairEnv, owner *pgx.Conn) {
+		"one deal is lost": func(t *testing.T, e *pairEnv, owner *pgx.Conn) {
 			execSeed(t, owner, `UPDATE deal SET status = 'lost', lost_reason = 'gone', closed_at = now(),
 				fx_rate_to_base = 1 WHERE id = $1`, e.later)
 		},
-		"no shared evidence": func(e *pairEnv, owner *pgx.Conn) {
+		"no shared evidence": func(t *testing.T, e *pairEnv, owner *pgx.Conn) {
 			execSeed(t, owner, `DELETE FROM activity_link WHERE deal_id = $1`, e.later)
 		},
-		"a shared note, which is neither mail nor a meeting": func(e *pairEnv, owner *pgx.Conn) {
+		"a shared note, which is neither mail nor a meeting": func(t *testing.T, e *pairEnv, owner *pgx.Conn) {
 			execSeed(t, owner, `UPDATE activity SET kind = 'note'`)
 		},
-		"a shared meeting only its participants may read": func(e *pairEnv, owner *pgx.Conn) {
+		"a shared meeting only its participants may read": func(t *testing.T, e *pairEnv, owner *pgx.Conn) {
 			execSeed(t, owner, `UPDATE activity SET audience = 'participants'`)
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := setupPair(t)
-			change(e, integration.OwnerConn(t))
+			change(t, e, integration.OwnerConn(t))
 			e.run(t)
 			if n := e.pairFindingCount(t); n != 0 {
 				t.Fatalf("%d pair findings, want none", n)
@@ -187,6 +189,7 @@ func execSeed(t *testing.T, conn *pgx.Conn, sql string, args ...any) {
 }
 
 func TestASharedStakeholderAloneRaisesTheFinding(t *testing.T) {
+	t.Parallel()
 	e := setupPair(t)
 	owner := integration.OwnerConn(t)
 	execSeed(t, owner, `DELETE FROM activity_link WHERE deal_id = $1`, e.later)
@@ -204,6 +207,7 @@ func TestASharedStakeholderAloneRaisesTheFinding(t *testing.T) {
 // The finding closes when the pair stops matching, and an answer of "separate"
 // keeps it closed when the pair matches again.
 func TestSeparateKeepsAPairClosedAndAClearedPairReopens(t *testing.T) {
+	t.Parallel()
 	e := setupPair(t)
 	e.run(t)
 	e.setClose(t, e.later, 130)
@@ -233,6 +237,7 @@ func TestSeparateKeepsAPairClosedAndAClearedPairReopens(t *testing.T) {
 }
 
 func TestSeparateIsRefusedOnAnyOtherFinding(t *testing.T) {
+	t.Parallel()
 	e := setupPair(t)
 	e.seedDeal(t, integration.OwnerConn(t), "Past due", -10)
 	e.run(t)
@@ -255,6 +260,7 @@ func TestSeparateIsRefusedOnAnyOtherFinding(t *testing.T) {
 // Merging the later deal into the earlier one retires the later deal, so the
 // finding filed on it closes as departed.
 func TestMergingThePairClosesItsFinding(t *testing.T) {
+	t.Parallel()
 	e := setupPair(t)
 	e.run(t)
 	if _, err := e.Deals.MergeDeal(e.Admin(), ids.From[ids.DealKind](e.later), ids.From[ids.DealKind](e.earlier), nil); err != nil {
@@ -268,6 +274,7 @@ func TestMergingThePairClosesItsFinding(t *testing.T) {
 
 // A reader who may not see the second deal gets the finding and no id for it.
 func TestAReaderWithoutTheOtherDealIsNotNamedIt(t *testing.T) {
+	t.Parallel()
 	e := setupPair(t)
 	e.run(t)
 	read := func(reader context.Context) assurance.Exception {
@@ -321,6 +328,7 @@ func (e *pairEnv) rescan(t *testing.T, deal ids.UUID) {
 
 // A pass over one changed deal reconciles every pair that includes it.
 func TestAPassOverOneDealReconcilesItsPairs(t *testing.T) {
+	t.Parallel()
 	e := setupPair(t)
 	owner := integration.OwnerConn(t)
 	e.rescan(t, e.earlier)
@@ -349,6 +357,7 @@ func TestAPassOverOneDealReconcilesItsPairs(t *testing.T) {
 // A pass over one deal closes only the pair findings that include it, not
 // another pair filed on the same deal.
 func TestAPassOverOneDealLeavesAnotherPairFiledOnTheSameDealOpen(t *testing.T) {
+	t.Parallel()
 	e := setupPair(t)
 	owner := integration.OwnerConn(t)
 	third := e.seedDeal(t, owner, "Pair third", 55)
@@ -376,6 +385,7 @@ func TestAPassOverOneDealLeavesAnotherPairFiledOnTheSameDealOpen(t *testing.T) {
 // Every answer on a pair finding needs write authority over both deals, as the
 // list offers it. A reader who may not write the second deal is refused all.
 func TestEveryAnswerOnAPairNeedsBothDeals(t *testing.T) {
+	t.Parallel()
 	e := setupPair(t)
 	e.run(t)
 	execSeed(t, integration.OwnerConn(t), `UPDATE deal SET owner_id = $2 WHERE id = $1`, e.earlier, e.AdminUser)
@@ -412,6 +422,7 @@ func TestEveryAnswerOnAPairNeedsBothDeals(t *testing.T) {
 // Answering separate needs write authority over both deals. A reader who may
 // not write the second deal is neither offered the answer nor allowed it.
 func TestSeparateNeedsAuthorityOverBothDeals(t *testing.T) {
+	t.Parallel()
 	e := setupPair(t)
 	e.run(t)
 	execSeed(t, integration.OwnerConn(t), `UPDATE deal SET owner_id = $2 WHERE id = $1`, e.earlier, e.AdminUser)
@@ -451,9 +462,10 @@ func TestSeparateNeedsAuthorityOverBothDeals(t *testing.T) {
 // A pass over the deal the finding is filed on closes it when that deal stops
 // matching, whether its close date or its pipeline moved.
 func TestAPassOverTheFiledDealClosesItsPairWhenItStopsMatching(t *testing.T) {
-	for name, change := range map[string]func(*pairEnv){
-		"close date": func(e *pairEnv) { e.setClose(t, e.later, 200) },
-		"pipeline": func(e *pairEnv) {
+	t.Parallel()
+	for name, change := range map[string]func(*testing.T, *pairEnv){
+		"close date": func(t *testing.T, e *pairEnv) { e.setClose(t, e.later, 200) },
+		"pipeline": func(t *testing.T, e *pairEnv) {
 			owner := integration.OwnerConn(t)
 			other := integration.SeedIDRow(t, owner, `INSERT INTO pipeline (id, name) VALUES ($1, 'Other')`)
 			stage := integration.SeedIDRow(t, owner, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Open', 0)`, other)
@@ -463,7 +475,7 @@ func TestAPassOverTheFiledDealClosesItsPairWhenItStopsMatching(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			e := setupPair(t)
 			e.run(t)
-			change(e)
+			change(t, e)
 			e.rescan(t, e.later)
 			if _, status, _ := e.pairFinding(t); status != assurance.ExceptionConditionCleared {
 				t.Fatalf("status = %q, want condition_cleared", status)
@@ -475,6 +487,7 @@ func TestAPassOverTheFiledDealClosesItsPairWhenItStopsMatching(t *testing.T) {
 // A pair somebody deferred stays open through a pass over one deal, even when
 // the pair no longer matches. The reminder fires over a clean record later.
 func TestAPassOverOneDealKeepsADeferredPairOpen(t *testing.T) {
+	t.Parallel()
 	e := setupPair(t)
 	e.run(t)
 	id, _, _ := e.pairFinding(t)
