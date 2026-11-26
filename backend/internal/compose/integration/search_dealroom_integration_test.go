@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"math"
 	"slices"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -210,5 +212,61 @@ func TestAGroupedSearchAtThePerTypeCapAnswersWithinTheRankedPageLimit(t *testing
 	unbounded := math.MaxInt
 	if largest := storekit.ClampLimit(&unbounded); len(page.Hits) > largest {
 		t.Errorf("a grouped page holds %d hits, past the ranked page limit of %d", len(page.Hits), largest)
+	}
+}
+
+// A seat that reads rooms but not deals sees no room through any door.
+// A room is seen through its deal, so the deal grant comes first.
+func TestASeatWithoutDealReadFindsNoRoomAndListsNone(t *testing.T) {
+	e := SetupSearch(t)
+	seedRooms(t, e)
+	grants := roomSeats(true)
+	delete(grants, "deal")
+	ctx := e.asSeat(e.Rep1, e.Team1, principal.RowScopeAll, grants)
+
+	if got := roomHitIDs(t, e, ctx, "harbour"); len(got) != 0 {
+		t.Errorf("a seat without deal read found rooms %v", got)
+	}
+	perType := 5
+	grouped, err := e.Store.Search(ctx, search.Input{Query: "harbour", PerType: &perType})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasType(grouped.Hits, "deal_room") || slices.Contains(grouped.TypesWithMore, "deal_room") {
+		t.Errorf("a grouped page for a seat without deal read names rooms: hits %+v, more %v", grouped.Hits, grouped.TypesWithMore)
+	}
+	rooms, _, err := dealrooms.NewStore(e.DB()).ListRooms(ctx, dealrooms.ListRoomsInput{})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) || len(rooms) != 0 {
+		t.Errorf("the room list for a seat without deal read answered %d rooms and %v, want a refusal", len(rooms), err)
+	}
+}
+
+// The room of an archived deal and the room of a closed deal are both listed.
+// The deal scope asks who may see the deal, not what state it is in.
+// Search shows the same rooms the list does.
+func TestARoomOfAnArchivedOrClosedDealIsFoundWhenTheListShowsIt(t *testing.T) {
+	e := SetupSearch(t)
+	f := seedRooms(t, e)
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE deal SET archived_at = now() WHERE name = 'Harbour deal one'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE deal SET status = 'won', closed_at = now() WHERE name = 'Harbour deal two'`); err != nil {
+		t.Fatal(err)
+	}
+	ctx := e.asSeat(e.Rep1, e.Team1, principal.RowScopeTeam, roomSeats(true))
+
+	found := roomHitIDs(t, e, ctx, "harbour")
+	listed := searchEnvRoomList(t, e, ctx)
+	sortIDs(found)
+	sortIDs(listed)
+	if !slices.Equal(found, listed) {
+		t.Fatalf("search found %v but the room list shows %v", found, listed)
+	}
+	for _, room := range []ids.UUID{f.first, f.second} {
+		if !slices.Contains(found, room) {
+			t.Errorf("room %v of an archived or closed deal is missing from %v", room, found)
+		}
 	}
 }

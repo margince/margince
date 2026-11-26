@@ -352,6 +352,9 @@ func branchScope(ctx context.Context, branch searchBranch, alias string, arg fun
 	if !mayRead(ctx, branch.entity) {
 		return "", false, nil
 	}
+	if branch.dealChild && !mayRead(ctx, entityDeal) {
+		return "", false, nil
+	}
 	switch {
 	case branch.workspaceWide:
 		// No row predicate at all: every seat that may read the vocabulary

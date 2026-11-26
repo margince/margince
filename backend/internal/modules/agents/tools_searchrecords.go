@@ -144,7 +144,7 @@ const (
 var recordSearchTypes = []string{
 	string(datasource.EntityContact), string(datasource.EntityCompany), string(datasource.EntityDeal),
 	string(datasource.EntityLead), string(datasource.EntityProject), string(datasource.EntityProduct),
-	string(datasource.EntityOfferTemplate), string(datasource.EntityActivity),
+	string(datasource.EntityOfferTemplate), string(datasource.EntityDealRoom), string(datasource.EntityActivity),
 }
 
 // recordSearchDefaultTypes are searched when the caller names none. The

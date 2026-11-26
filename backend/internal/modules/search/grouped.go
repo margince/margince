@@ -107,6 +107,14 @@ func (g groupedShape) pageWith(hits []Hit, timedOut []string) Page {
 		}
 		page.Hits = append(page.Hits, hit)
 	}
+	// One row per type can still pass the page limit when more than that many
+	// types matched. The rows arrive type by type, so the cut falls on the last.
+	if limit := rankedPageLimit(); len(page.Hits) > limit {
+		for _, hit := range page.Hits[limit:] {
+			more[hit.Type] = true
+		}
+		page.Hits = page.Hits[:limit]
+	}
 	page.TypesWithMore = typesIn(more)
 	page.TypesTimedOut = typesIn(timedOutSet(timedOut))
 	return page
@@ -116,8 +124,7 @@ func (g groupedShape) pageWith(hits []Hit, timedOut []string) Page {
 // best rows together stay within the largest ranked page. Each type's rows arrive
 // best first, so lowering the share trims every type's worst rows alike.
 func (g groupedShape) fittingPerType(hits []Hit) int {
-	unbounded := math.MaxInt
-	largest := storekit.ClampLimit(&unbounded)
+	largest := rankedPageLimit()
 	for share := g.perType; share > 1; share-- {
 		seen := map[string]int{}
 		kept := 0
@@ -132,6 +139,12 @@ func (g groupedShape) fittingPerType(hits []Hit) int {
 		}
 	}
 	return 1
+}
+
+// rankedPageLimit is the largest page a ranked search answers.
+func rankedPageLimit() int {
+	unbounded := math.MaxInt
+	return storekit.ClampLimit(&unbounded)
 }
 
 func timedOutSet(types []string) map[string]bool {

@@ -5,6 +5,7 @@ package search
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"slices"
 	"testing"
@@ -89,6 +90,23 @@ func TestAGroupedPageFitsInTheLargestRankedPage(t *testing.T) {
 	}
 	if len(page.Hits) == 0 || len(page.TypesWithMore) != len(searchBranches) {
 		t.Errorf("page holds %d hits and says %v has more, want every type present and trimmed", len(page.Hits), page.TypesWithMore)
+	}
+}
+
+// More types matched than the page holds rows, one row each.
+// Lowering the share cannot help, so the cut falls on the types that arrive last.
+func TestAGroupedPageWithMoreTypesThanRowsStaysWithinTheRankedPageLimit(t *testing.T) {
+	limit := rankedPageLimit()
+	var hits []Hit
+	for i := range limit + 50 {
+		hits = append(hits, Hit{Type: fmt.Sprintf("ext:unit:kind%03d", i), ID: ids.NewV7()})
+	}
+	page := groupedShape{perType: maxPerType}.page(hits)
+	if len(page.Hits) != limit {
+		t.Fatalf("a grouped page of %d types holds %d hits, want the limit %d", len(hits), len(page.Hits), limit)
+	}
+	if page.Hits[limit-1].ID != hits[limit-1].ID {
+		t.Errorf("the page kept hits out of order: its last hit is not the %dth that arrived", limit)
 	}
 }
 
