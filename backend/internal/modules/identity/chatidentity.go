@@ -26,6 +26,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -102,6 +103,9 @@ func newChatCode() (string, error) {
 // StartChatVerification makes the caller's code for one network and returns it
 // once. A second start replaces the first, so one code is active per network.
 func (s *Service) StartChatVerification(ctx context.Context, network ChatNetwork) (string, time.Time, error) {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return "", time.Time{}, err
+	}
 	self, err := selfScoped(ctx)
 	if err != nil {
 		return "", time.Time{}, err
@@ -134,6 +138,9 @@ func (s *Service) StartChatVerification(ctx context.Context, network ChatNetwork
 
 // RemoveChatIdentity forgets the caller's verified account and any pending code on a network.
 func (s *Service) RemoveChatIdentity(ctx context.Context, network ChatNetwork) error {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return err
+	}
 	self, err := selfScoped(ctx)
 	if err != nil {
 		return err
@@ -165,6 +172,9 @@ func (s *Service) RemoveChatIdentity(ctx context.Context, network ChatNetwork) e
 // MyChatIdentities lists the networks where the caller has a verified account
 // or an unexpired code.
 func (s *Service) MyChatIdentities(ctx context.Context) ([]ChatIdentity, error) {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return nil, err
+	}
 	self, err := selfScoped(ctx)
 	if err != nil {
 		return nil, err
@@ -235,7 +245,7 @@ func ChatMemberTx(ctx context.Context, tx pgx.Tx, network ChatNetwork, scope, ac
 // text was a pending code, so the caller files nothing for one. A code that is
 // wrong or expired changes nothing and reports false. An account another member
 // already verified is refused.
-func (s *Service) RedeemChatCodeTx(ctx context.Context, tx pgx.Tx, network ChatNetwork, scope, account, text string) (ids.UUID, bool, error) {
+func RedeemChatCodeTx(ctx context.Context, tx pgx.Tx, now time.Time, network ChatNetwork, scope, account, text string) (ids.UUID, bool, error) {
 	cols, err := columnsOf(network)
 	if err != nil {
 		return ids.Nil, false, err
@@ -246,7 +256,7 @@ func (s *Service) RedeemChatCodeTx(ctx context.Context, tx pgx.Tx, network ChatN
 	}
 	var member ids.UUID
 	err = tx.QueryRow(ctx, `SELECT id FROM app_user WHERE `+cols.codeHash+` = $1 AND `+cols.codeExpires+` > $2
-		AND `+workforce.LiveMemberSQL("")+` AND NOT is_agent FOR UPDATE`, hashChatCode(code), s.now()).Scan(&member)
+		AND `+workforce.LiveMemberSQL("")+` AND NOT is_agent FOR UPDATE`, hashChatCode(code), now).Scan(&member)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, false, nil
 	}

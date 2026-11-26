@@ -9,6 +9,7 @@ package chatmembers
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -56,7 +57,7 @@ func (m Members) RedeemCodeTx(ctx context.Context, tx pgx.Tx, provider, scope, a
 	if !ok {
 		return false, nil
 	}
-	_, redeemed, err := m.Identity.RedeemChatCodeTx(ctx, tx, n, scope, account, text)
+	_, redeemed, err := identity.RedeemChatCodeTx(ctx, tx, time.Now(), n, scope, account, text)
 	if errors.Is(err, identity.ErrChatIdentityTaken) {
 		return true, nil
 	}

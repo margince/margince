@@ -16,8 +16,8 @@ Also called: link my WhatsApp, link my Telegram.
 
 ### What happens when I pass on a customer's message?
 That depends on what the network says about who wrote it.
-- **Telegram names the writer:** the message goes on that customer's contact. It carries the time the customer wrote it.
-- **Telegram hides the writer, or you use WhatsApp or Zalo:** these networks do not say who wrote it. Margince keeps the message for you alone and makes no contact. It is deleted after 7 days.
+- When Telegram names the writer, the message goes on that customer's contact. It carries the time the customer wrote it.
+- When Telegram hides the writer, or you use WhatsApp or Zalo, the network does not say who wrote it. Margince keeps the message for you alone and makes no contact. It is deleted after 7 days.
 
 If your account is not confirmed, the message is filed as yours, and you appear as a contact.
 
