@@ -8,7 +8,7 @@
  * on a surface whose subject is the message. */
 
 .richtext {
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-sm);
   background: var(--bgField);
   /* `clip`, not `hidden`: it keeps the rounded corners without making the frame
@@ -25,8 +25,8 @@
  * text lights the whole control — toolbar included — which is what a reader
  * expects when the two are one field. */
 .richtext:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 
 /* The line under the writing surface: what the control is on the left, what you
@@ -202,6 +202,9 @@
 .richtext.is-disabled .richtext-foot {
   background: var(--bgInset);
   cursor: not-allowed;
+}
+.richtext.is-disabled {
+  border-color: var(--borderStrong);
 }
 
 /* A growing surface: `rows` is its floor, and it takes whatever height its

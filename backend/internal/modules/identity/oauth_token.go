@@ -174,10 +174,10 @@ func (h Handlers) exchangeAuthCode(r *http.Request, clientID, code, verifier str
 		// validScopes has no entry for
 		// it, so a passport carrying it would be refused outright.
 		passportScopes := redeemed.Scopes
-		refreshAllowed := slices.Contains(redeemed.Scopes, scopeOfflineAccess)
+		refreshAllowed := slices.Contains(redeemed.Scopes, ScopeOfflineAccess)
 		if refreshAllowed {
 			passportScopes = slices.DeleteFunc(slices.Clone(redeemed.Scopes), func(sc string) bool {
-				return sc == scopeOfflineAccess
+				return sc == ScopeOfflineAccess
 			})
 		}
 
