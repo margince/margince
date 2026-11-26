@@ -390,3 +390,46 @@ func AheadAtSQL(at, precision, now string) string {
 // identity.Timezone, else that entry's default. A subquery, so a statement
 // judging many meetings reads the zone once and binds nothing.
 const InstallationZoneSQL = `COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')`
+
+// ClockPrecisionSQL is the precision of the activity a stored activity clock
+// names, null when no row matches. rowsSQL is a `FROM ... WHERE` over the
+// activity rows the clock was folded from, aliased clock_row. An instant at the
+// same stored instant as a day entry wins, as LatestPrecisionSQL rules.
+func ClockPrecisionSQL(rowsSQL, clock string) string {
+	return `(SELECT ` + LatestPrecisionSQL("clock_row", "") + ` ` + rowsSQL +
+		` AND clock_row.archived_at IS NULL AND clock_row.occurred_at = ` + clock + `)`
+}
+
+// ClockIsDaySQL says the activity a stored clock names is a day entry. It is
+// false for an instant, and for a clock that names nothing.
+func ClockIsDaySQL(rowsSQL, clock string) string {
+	return `coalesce(` + ClockPrecisionSQL(rowsSQL, clock) + ` = 'day', false)`
+}
+
+// LinkedClockRowsSQL is the rows a record's stored clock is folded from: the
+// activities linked to the record through activity_link.column. A held row
+// sets no precision anyone reads. column and
+// record are SQL the caller renders, never request text.
+func LinkedClockRowsSQL(column, record string) string {
+	return `FROM activity_link clock_link JOIN activity clock_row ON clock_row.id = clock_link.activity_id
+		WHERE clock_link.` + column + ` = ` + record + ` AND clock_row.restricted_at IS NULL`
+}
+
+// ClockPrecision is the wire precision of a stored clock: nil when it holds no
+// time, else day or instant as ClockIsDaySQL read it.
+func ClockPrecision[P ~string](at *time.Time, isDay bool) *P {
+	if at == nil {
+		return nil
+	}
+	precision := P("instant")
+	if isDay {
+		precision = P(day)
+	}
+	return &precision
+}
+
+// NamedDateSQL is the date a day entry stored at at names: its UTC date, the
+// same for every reader. at is SQL the caller renders.
+func NamedDateSQL(at string) string {
+	return `(` + at + ` AT TIME ZONE 'UTC')::date`
+}

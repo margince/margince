@@ -45,7 +45,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [projects](projects.md) | 3 | 44 | 11 | 3 | 0 |
 | [recordlinks](recordlinks.md) | 1 | 8 | 0 | 0 | 0 |
 | [reporting](reporting.md) | 14 | 121 | 0 | 12 | 0 |
-| [search](search.md) | 4 | 40 | 0 | 4 | 2 |
+| [search](search.md) | 4 | 42 | 0 | 4 | 2 |
 | [signals](signals.md) | 2 | 43 | 2 | 9 | 4 |
 | [webforms](webforms.md) | 2 | 27 | 0 | 4 | 0 |
 | [webhooks](webhooks.md) | 2 | 32 | 0 | 1 | 1 |
