@@ -159,7 +159,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [design-a-bench-case.md](how-to/design-a-bench-case.md): add a screen to the daily-use speed test
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
-- [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`. Also [update-a-messaging-policy-pack.md](how-to/update-a-messaging-policy-pack.md): change the mail rules in `extensions/eu` or `extensions/apac`.
+- [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`. Also [customize-a-deployment.md](how-to/customize-a-deployment.md): choose units, wording, a drawer app and settings. And [update-a-messaging-policy-pack.md](how-to/update-a-messaging-policy-pack.md): change the mail rules in `extensions/eu` or `extensions/apac`.
 - Extension text: [change core text](how-to/override-core-wording-from-an-extension.md). Extension use of core's AI models and files: [what it can use](reference/extension-capabilities.md), [why](explanation/extension-capability-grants.md). Extension apps: [why](explanation/extension-apps-in-the-drawer.md).
 - [install-extensions-as-go-modules.md](how-to/install-extensions-as-go-modules.md): turn
   extensions on from `instance/go.mod`, here or in a client's own repository.
