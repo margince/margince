@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { isImportWindow } from "../mail-history/window-picker";
@@ -174,6 +174,18 @@ export function useBackfillRun({
     refetchInterval: (query) =>
       isLiveRun(query.state.data?.state) ? POLL_MS : false,
   });
+
+  // A run that stops may have settled the mailbox's unread period, which only
+  // the connections roster carries.
+  const runState = status.data?.state;
+  const wasLive = useRef(isLiveRun(runState));
+  useEffect(() => {
+    const live = isLiveRun(runState);
+    if (wasLive.current && !live) {
+      void qc.invalidateQueries({ queryKey: ["connectors"] });
+    }
+    wasLive.current = live;
+  }, [runState, qc]);
 
   const preview = useMutation({
     mutationFn: (pick: ImportWindow) => previewRun(mailbox, pick),

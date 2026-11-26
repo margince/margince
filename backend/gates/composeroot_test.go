@@ -146,11 +146,13 @@ const (
 	// colleague in the member reference registry.
 	// Raised by 153 production and 829 test lines for the jobs that run as an agent
 	// for a named colleague, and their cases.
-	composeRootProductionLines = 232_066
+	// Raised by 1 production and 27 test lines for main's unread mail notice
+	// and its cases, met with develop's in the sync.
+	composeRootProductionLines = 232_067
 	// Raised by 18 test lines for the link suggestion tool cases.
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.
-	composeRootTestLines = 363_716
+	composeRootTestLines = 363_743
 )
 
 // A read under these floors stopped early or read the wrong place, and would
