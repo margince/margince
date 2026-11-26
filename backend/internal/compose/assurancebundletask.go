@@ -252,9 +252,9 @@ func adoptOpenTask(
 		// and their answer stands: the duplicate is left alone and the next
 		// cycle reads it afresh, which is the same judgement this function
 		// makes about a task that was already done when it looked. Skew is
-		// somebody having edited it; not-found is somebody having archived or
-		// erased it, and the settled duplicate this sweep wanted is exactly
-		// what that leaves behind.
+		// somebody having edited it; not-found is somebody having erased it, and
+		// a task somebody archived answers a second archive as a no-op. Either
+		// leaves the settled duplicate this sweep wanted.
 		//
 		// One condition rather than an arm of its own, so a lost race and an
 		// ordinary success leave this loop by the same path: the sweep settles

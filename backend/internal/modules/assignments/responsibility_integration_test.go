@@ -253,8 +253,8 @@ func TestAnArchivedAccountTakesNoNewResponsibility(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := e.store.CreateAssignment(ctx, staffing(company, e.seedColleague(t, "Dana"), e.accountManager(t)))
-	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("staffing an archived account: err=%v, want ErrNotFound", err)
+	if !errors.Is(err, apperrors.ErrArchived) {
+		t.Fatalf("staffing an archived account: err=%v, want ErrArchived", err)
 	}
 }
 

@@ -141,8 +141,8 @@ func (e *seamEnv) archiveThroughTheSeam(t *testing.T, ref datasource.EntityRef) 
 // has nothing left for a human to approve archiving.
 func (e *seamEnv) refusesASecondArchive(t *testing.T, ref datasource.EntityRef) {
 	t.Helper()
-	if err := e.provider.RefuseArchive(e.passport(), ref); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("the probe on an archived %s answered %v, want not found", ref.Type, err)
+	if err := e.provider.RefuseArchive(e.passport(), ref); !errors.Is(err, apperrors.ErrNotFound) && !errors.Is(err, apperrors.ErrArchived) {
+		t.Errorf("the probe on an archived %s answered %v, want it refused as gone or archived", ref.Type, err)
 	}
 }
 

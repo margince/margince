@@ -137,11 +137,10 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			// ErrNotFound and not ErrPermissionDenied: an archived record is
-			// gone as far as a write is concerned, and existence-hiding owes
-			// the same 404 a row-scope miss owes.
-			if err := tc.call(); !errors.Is(err, apperrors.ErrNotFound) {
-				t.Fatalf("got %v, want not found — see %s", err, tc.why)
+			// ErrArchived: the caller can see the record, and an archived record
+			// takes no write. A caller who cannot see it gets ErrNotFound.
+			if err := tc.call(); !errors.Is(err, apperrors.ErrArchived) {
+				t.Fatalf("got %v, want ErrArchived — see %s", err, tc.why)
 			}
 		})
 	}

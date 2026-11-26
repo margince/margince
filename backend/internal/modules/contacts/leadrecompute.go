@@ -282,7 +282,7 @@ func (w leadScoreRecompute) Apply(ctx context.Context, ev workflow.Event, eff wo
 	recomputed := 0
 	for _, leadID := range leads {
 		if err := w.store.RecomputeLeadScore(ctx, leadID, now); err != nil {
-			if errors.Is(err, apperrors.ErrNotFound) {
+			if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrArchived) {
 				continue
 			}
 			return workflow.RunResult{}, fmt.Errorf("recompute lead %s: %w", leadID, err)
