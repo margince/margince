@@ -361,9 +361,7 @@ If nothing is held, the screen says so, and it is good news: "No records held. E
 
 ## Consent
 
-Consent in Margince is recorded for each **purpose**. **Settings → Privacy and retention → Consent purposes** holds the list of purposes: the reasons this company uses the data of the humans in it. Each purpose has a key, a label, and a mark for whether it needs double opt-in. The list shows each key under its label.
-
-In **Add purpose**, the key follows the label until you type a key of your own. A key holds only lower-case letters, digits and underscores, such as `marketing_email`. Margince refuses a label that reads like the label or key of a purpose on the list, whatever its capitals, spaces and underscores. A contact’s consent and the pages a contact opens name a purpose by its label alone, so two that read alike could not be told apart there.
+Consent in Margince is recorded for each **purpose**. **Settings → Privacy and retention → Consent purposes** holds the list of purposes: the reasons this company uses the data of the humans in it. Each purpose has a key, a label, and a mark for whether it needs double opt-in, and the list shows each key under its label. In **Add purpose**, the key follows the label until you type your own. A key holds only `a`–`z`, `0`–`9` and `_`, such as `marketing_email`. Margince refuses a label that reads like the label or key of a purpose on the list, whatever its capitals.
 
 You can only add to the list: "A purpose cannot be renamed or removed once created; the catalog is append-only. Choose the key carefully." On a contact you can **Record consent** or **Withdraw** consent for a purpose.
 

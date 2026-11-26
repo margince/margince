@@ -31,10 +31,10 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 	key = normalizedPurposeKey(key)
 	label = strings.TrimSpace(label)
 	if key == "" || label == "" {
-		return Purpose{}, &ValidationError{Field: "key", Reason: "key and label are required"}
+		return Purpose{}, &ValidationError{Field: fieldKey, Reason: "key and label are required"}
 	}
 	if !commsauthz.PurposeKeyPattern.MatchString(key) {
-		return Purpose{}, &ValidationError{Field: "key", Reason: "use only lower-case letters, digits and underscores, such as marketing_email"}
+		return Purpose{}, &ValidationError{Field: fieldKey, Reason: "use only lower-case letters, digits and underscores, such as marketing_email"}
 	}
 	if frequency == "" {
 		frequency = string(crmcontracts.ConsentPurposeFrequencyMonthly)
