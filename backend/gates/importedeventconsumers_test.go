@@ -19,8 +19,6 @@ import (
 	"slices"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -88,7 +86,7 @@ func TestEveryStreamTheImportMarkerRidesIsOneThatConsumersAreDecidedFor(t *testi
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(raw, &contract); err != nil {
+	if err := unmarshalYAML(raw, &contract); err != nil {
 		t.Fatalf("parsing the public event contract: %v", err)
 	}
 	marked := 0

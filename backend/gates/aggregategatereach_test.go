@@ -75,7 +75,7 @@ func TestEveryAggregatedJobCanRunOnTheMergeQueue(t *testing.T) {
 		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
 	}
 	var wf aggregateJobs
-	if err := yaml.Unmarshal(raw, &wf); err != nil {
+	if err := unmarshalYAML(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", aggregateWorkflow, err)
 	}
 
@@ -188,7 +188,7 @@ func TestNoLaneWorkflowDecidesItsOwnScope(t *testing.T) {
 				If string `yaml:"if"`
 			} `yaml:"jobs"`
 		}
-		if err := yaml.Unmarshal(raw, &wf); err != nil {
+		if err := unmarshalYAML(raw, &wf); err != nil {
 			t.Fatalf("%s: %v", path, err)
 		}
 		name := filepath.Base(path)

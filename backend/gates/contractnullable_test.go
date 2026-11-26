@@ -49,7 +49,7 @@ func TestTheContractDeclaresOpenAPI31AndNullableIsInert(t *testing.T) {
 	}
 
 	var root yaml.Node
-	if err := yaml.Unmarshal(raw, &root); err != nil {
+	if err := unmarshalYAML(raw, &root); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	found := nullableKeys(&root)
@@ -91,7 +91,7 @@ func TestNoSchemaNarrowsANullableReference(t *testing.T) {
 		t.Fatalf("reading the contract: %v", err)
 	}
 	var root yaml.Node
-	if err := yaml.Unmarshal(raw, &root); err != nil {
+	if err := unmarshalYAML(raw, &root); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	if found := narrowingCompositions(&root); len(found) > 0 {
@@ -111,7 +111,7 @@ func TestTheNarrowingCensusReadsEverySpelling(t *testing.T) {
 		"first": "a: { allOf: [{ $ref: '#/x' }], type: ['null', object] }\n",
 	} {
 		var root yaml.Node
-		if err := yaml.Unmarshal([]byte(doc), &root); err != nil {
+		if err := unmarshalYAML([]byte(doc), &root); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
 		if got := narrowingCompositions(&root); len(got) != 1 {
@@ -119,7 +119,7 @@ func TestTheNarrowingCensusReadsEverySpelling(t *testing.T) {
 		}
 	}
 	var plain yaml.Node
-	if err := yaml.Unmarshal([]byte("a: { allOf: [{ $ref: '#/x' }], nullable: true }\n"), &plain); err != nil {
+	if err := unmarshalYAML([]byte("a: { allOf: [{ $ref: '#/x' }], nullable: true }\n"), &plain); err != nil {
 		t.Fatal(err)
 	}
 	if got := narrowingCompositions(&plain); len(got) != 0 {
