@@ -80,10 +80,16 @@ func liveContactsFor(t *testing.T, e *integration.SearchEnv, address string) int
 		WHERE pe.email = '`+address+`' AND p.archived_at IS NULL`)
 }
 
-func standingFor(t *testing.T, e *integration.SearchEnv, user ids.UUID, address string) int {
+func standingCount(t *testing.T, e *integration.SearchEnv, user ids.UUID) int {
 	t.Helper()
 	return countRows(t, e, `SELECT count(*) FROM capture_sender_override
-		WHERE user_id = '`+user.String()+`' AND address = '`+address+`' AND decision = 'personal'`)
+		WHERE user_id = '`+user.String()+`' AND address = '`+privateCorrespondent+`' AND decision = 'personal'`)
+}
+
+// vouched marks a message as one the receiving server vouched for: the
+// From domain passed DMARC, which is what lets a verdict about it last.
+func vouched(raw []byte) []byte {
+	return append([]byte("Authentication-Results: mx.google.com; dmarc=pass header.from=clinic-private.example\r\n"), raw...)
 }
 
 // mintedThenJudgedPersonal is the history this suite starts from. The seat
@@ -96,9 +102,20 @@ func mintedThenJudgedPersonal(t *testing.T) captureEnv {
 
 func mintedThenJudgedPersonalAt(t *testing.T, now time.Time) captureEnv {
 	t.Helper()
+	env := judgedPersonal(t, now, vouched)
+	if n := standingCount(t, env.e, env.e.Rep1); n != 1 {
+		t.Fatalf("%d standing decisions after a personal verdict on authenticated mail, want 1", n)
+	}
+	return env
+}
+
+// judgedPersonal runs the history with the stranger's first mail passed
+// through first, so a test can make it authenticated or leave it forgeable.
+func judgedPersonal(t *testing.T, now time.Time, first func([]byte) []byte) captureEnv {
+	t.Helper()
 	env := newCaptureEnvAt(t, now)
 	env.syncSent(t, map[string]bool{"pv2@myco.example": true},
-		email(privateCorrespondent, "Dr Keller", captureOwner, "pv1@clinic-private.example", ""),
+		first(email(privateCorrespondent, "Dr Keller", captureOwner, "pv1@clinic-private.example", "")),
 		email(captureOwner, "", privateCorrespondent, "pv2@myco.example", "pv1@clinic-private.example"),
 	)
 	if n := liveContactsFor(t, env.e, privateCorrespondent); n != 1 {
@@ -107,9 +124,6 @@ func mintedThenJudgedPersonalAt(t *testing.T, now time.Time) captureEnv {
 	answerEverySenderAs(t, env.e, capturemod.KindPersonal)
 	if n := liveContactsFor(t, env.e, privateCorrespondent); n != 0 {
 		t.Fatalf("%d live contacts after a personal verdict, want it withdrawn", n)
-	}
-	if n := standingFor(t, env.e, env.e.Rep1, privateCorrespondent); n != 1 {
-		t.Fatalf("%d standing decisions after a personal verdict, want 1", n)
 	}
 	return env
 }
@@ -217,7 +231,7 @@ func TestAnotherSeatsMailboxStillMakesItsContact(t *testing.T) {
 	if n := liveContactsFor(t, env.e, privateCorrespondent); n != 1 {
 		t.Fatalf("%d contacts from the other seat's own correspondence, want 1", n)
 	}
-	if n := standingFor(t, env.e, env.e.Rep3, privateCorrespondent); n != 0 {
+	if n := standingCount(t, env.e, env.e.Rep3); n != 0 {
 		t.Fatalf("the other seat holds %d standing decisions, want none: the verdict was the first seat's", n)
 	}
 }
@@ -248,7 +262,7 @@ func TestAnAgentCannotLiftAPrivateSendersStanding(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an agent lifting a private sender got %v, want permission denied", err)
 	}
-	if n := standingFor(t, env.e, env.e.Rep1, privateCorrespondent); n != 1 {
+	if n := standingCount(t, env.e, env.e.Rep1); n != 1 {
 		t.Fatalf("%d standing decisions after the refused lift, want 1", n)
 	}
 }
@@ -314,7 +328,187 @@ func TestThePrivateStandingBackfillCoversVerdictsFromBeforeItWasRecorded(t *test
 			t.Fatalf("backfill pass %d wrote %d, want %d", pass, written, want)
 		}
 	}
-	if n := standingFor(t, e, e.Rep1, privateCorrespondent); n != 1 {
+	if n := standingCount(t, e, e.Rep1); n != 1 {
 		t.Fatalf("%d standing decisions after the backfill, want 1", n)
+	}
+}
+
+// Anyone can forge a From address, so a verdict about unauthenticated inbound
+// mail withdraws the contact and leaves no lasting decision behind.
+func TestAForgedPrivateVerdictLeavesNoStandingAndTheNextSendMakesTheContact(t *testing.T) {
+	env := judgedPersonal(t, captureNow, func(raw []byte) []byte { return raw })
+	if n := standingCount(t, env.e, env.e.Rep1); n != 0 {
+		t.Fatalf("%d standing decisions after a verdict on unauthenticated mail, want 0", n)
+	}
+
+	env.syncSent(t, map[string]bool{"pv3@myco.example": true},
+		afterTheRetraction(t, email(captureOwner, "", privateCorrespondent, "pv3@myco.example", "pv1@clinic-private.example")))
+
+	if n := liveContactsFor(t, env.e, privateCorrespondent); n != 1 {
+		t.Fatalf("%d contacts after the seat wrote to a sender whose verdict rested on a forgeable From, want 1", n)
+	}
+}
+
+// The seat writing to an address cannot be forged, so a verdict that the seat's
+// own mail triggered always leaves its decision.
+func TestAPrivateVerdictTriggeredByTheSeatsOwnMailLeavesAStanding(t *testing.T) {
+	env := newCaptureEnv(t)
+	env.syncSent(t, map[string]bool{"po1@myco.example": true},
+		email(captureOwner, "", privateCorrespondent, "po1@myco.example", ""))
+	if n := countRows(t, env.e, `SELECT count(*) FROM capture_pending_counterparty
+		WHERE email = '`+privateCorrespondent+`' AND status = 'pending'`); n != 1 {
+		t.Fatalf("%d open questions after one send, want 1: the case is not set up", n)
+	}
+
+	answerEverySenderAs(t, env.e, capturemod.KindPersonal)
+
+	if n := standingCount(t, env.e, env.e.Rep1); n != 1 {
+		t.Fatalf("%d standing decisions after a verdict the seat's own mail triggered, want 1", n)
+	}
+}
+
+func TestTheBackfillWritesOnlyForVerdictsThatMayStand(t *testing.T) {
+	env := judgedPersonal(t, captureNow, func(raw []byte) []byte { return raw })
+	e := env.e
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE activity SET inbound_sender_authenticated = true
+			WHERE counterparty_email = $1 AND direction = 'inbound'`, privateCorrespondent)
+		return err
+	}); err != nil {
+		t.Fatalf("authenticating the stored mail: %v", err)
+	}
+	backfill := func() int {
+		var written int
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			var err error
+			_, written, err = capturemod.BackfillPersonalStandingsTx(principal.SystemActing(e.Admin(), "private-standing-backfill"), tx, ids.Nil, 50)
+			return err
+		}); err != nil {
+			t.Fatalf("backfill: %v", err)
+		}
+		return written
+	}
+	if got := backfill(); got != 1 {
+		t.Fatalf("the backfill wrote %d standings for an authenticated verdict, want 1", got)
+	}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `DELETE FROM capture_sender_override WHERE address = $1`, privateCorrespondent); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `UPDATE activity SET inbound_sender_authenticated = false
+			WHERE counterparty_email = $1`, privateCorrespondent)
+		return err
+	}); err != nil {
+		t.Fatalf("making the verdict forgeable again: %v", err)
+	}
+	if got := backfill(); got != 0 {
+		t.Fatalf("the backfill wrote %d standings for a forgeable verdict, want 0", got)
+	}
+}
+
+// The classifier writes the row as an agent, so the stamp cannot tell an agent
+// from the user. Neither a PUT nor a DELETE by an agent may change it.
+func TestAnAgentCannotReplaceAPrivateSendersStandingWithBusiness(t *testing.T) {
+	env := mintedThenJudgedPersonal(t)
+	ctx := principal.WithActor(ownerDeskCtx(env.e), principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:counterparty-verdict", UserID: env.e.Rep1,
+		SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true, Update: true, Delete: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+
+	_, err := capturemod.NewSenderOverrideStore(env.e.DB()).Set(ctx, privateCorrespondent, capturemod.OverrideBusiness)
+
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("an agent PUT over a private sender got %v, want permission denied", err)
+	}
+	if n := standingCount(t, env.e, env.e.Rep1); n != 1 {
+		t.Fatalf("%d standing decisions after the refused PUT, want 1", n)
+	}
+}
+
+// Withdrawing the seat's own `business` answer hands the sender back to the
+// classifier, whose private verdict still stands.
+func TestWithdrawingABusinessAnswerRestoresThePrivateStanding(t *testing.T) {
+	env := mintedThenJudgedPersonal(t)
+	store := capturemod.NewSenderOverrideStore(env.e.DB())
+	if _, err := store.Set(ownerDeskCtx(env.e), privateCorrespondent, capturemod.OverrideBusiness); err != nil {
+		t.Fatalf("answering business: %v", err)
+	}
+	if n := standingCount(t, env.e, env.e.Rep1); n != 0 {
+		t.Fatalf("%d standing decisions under the business answer, want 0", n)
+	}
+
+	if err := store.Remove(ownerDeskCtx(env.e), privateCorrespondent); err != nil {
+		t.Fatalf("withdrawing the answer: %v", err)
+	}
+	env.syncSent(t, map[string]bool{"pv11@myco.example": true},
+		afterTheRetraction(t, email(captureOwner, "", privateCorrespondent, "pv11@myco.example", "pv1@clinic-private.example")))
+
+	if n := standingCount(t, env.e, env.e.Rep1); n != 1 {
+		t.Fatalf("%d standing decisions after the withdrawal, want the private one back", n)
+	}
+	if n := liveContactsFor(t, env.e, privateCorrespondent); n != 0 {
+		t.Fatalf("%d contacts after the seat wrote to a restored private sender, want 0", n)
+	}
+}
+
+// One sender, however it is spelled: the standing is read under the spelling
+// the contact identity layer folds to. A plus tag is another address there.
+func TestAStandingIsKeyedOnTheIdentityLayersSpelling(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return capturemod.RecordPersonalStandingTx(principal.SystemActing(e.Admin(), "private-standing"), tx, e.Rep1, "Person@Bücher.Example")
+	}); err != nil {
+		t.Fatalf("recording the standing: %v", err)
+	}
+	read := func(address string) bool {
+		var standing bool
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			var err error
+			standing, err = capturemod.PersonalStandingTx(context.Background(), tx, e.Rep1, address)
+			return err
+		}); err != nil {
+			t.Fatalf("reading the standing: %v", err)
+		}
+		return standing
+	}
+	for _, spelling := range []string{"person@xn--bcher-kva.example", "PERSON@Bücher.example", " person@bücher.example "} {
+		if !read(spelling) {
+			t.Errorf("no standing under the spelling %q of the same address", spelling)
+		}
+	}
+	if read("person+tag@xn--bcher-kva.example") {
+		t.Error("a plus-tagged address read as the standing's address, but the identity layer keeps it a different one")
+	}
+}
+
+// Lifting a standing makes the sender not private everywhere. The reconnect
+// lane reads the same decision, so the contact shows there again.
+func TestALiftedPrivateSenderReachesTheReconnectLane(t *testing.T) {
+	env := mintedThenJudgedPersonal(t)
+	e := env.e
+	if err := capturemod.NewSenderOverrideStore(e.DB()).Remove(ownerDeskCtx(e), privateCorrespondent); err != nil {
+		t.Fatalf("lifting the standing: %v", err)
+	}
+	env.syncSent(t, map[string]bool{"pv12@myco.example": true},
+		afterTheRetraction(t, email(captureOwner, "", privateCorrespondent, "pv12@myco.example", "pv1@clinic-private.example")))
+	if n := liveContactsFor(t, e, privateCorrespondent); n != 1 {
+		t.Fatalf("%d contacts after the lift, want 1: the case is not set up", n)
+	}
+
+	var shown int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT count(*) FROM contact_email e
+			WHERE e.email = $1 AND e.archived_at IS NULL AND `+capturemod.PrivateSenderClause("e", "$2"),
+			privateCorrespondent, e.Rep1).Scan(&shown)
+	}); err != nil {
+		t.Fatalf("asking the reconnect lane: %v", err)
+	}
+	if shown != 1 {
+		t.Fatalf("the reconnect lane shows %d rows for a lifted sender, want 1", shown)
 	}
 }

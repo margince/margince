@@ -16,13 +16,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// personalWithoutStandingSQL selects the seats' settled `personal` verdicts that
-// left no standing decision, from before the verdict recorded one. The scan and
-// the estimate share it so they count the same rows.
-var personalWithoutStandingSQL = `
+// settledPrivateVerdictSQL selects a seat's latest settled `personal` verdict
+// that a lasting decision may rest on (verdictMayStandSQL). Restoring a standing
+// after a withdrawn correction reads the same rows as the backfill.
+var settledPrivateVerdictSQL = `
 	FROM capture_pending_counterparty p
-	WHERE p.status = '` + PendingStatusNoise + `' AND p.kind = '` + KindPersonal + `'
-	  AND p.owner_id IS NOT NULL AND ` + latestResolvedSenderVerdict("p") + `
+	JOIN activity a ON a.id = p.activity_id
+	WHERE ` + verdictMayStandSQL("a", "p.email") + ` AND p.status = '` + PendingStatusNoise + `' AND p.kind = '` + KindPersonal + `'
+	  AND p.owner_id IS NOT NULL AND ` + latestResolvedSenderVerdict("p")
+
+// personalWithoutStandingSQL adds the seats with no decision of any kind.
+var personalWithoutStandingSQL = settledPrivateVerdictSQL + `
 	  AND NOT EXISTS (SELECT 1 FROM capture_sender_override o
 	                   WHERE o.user_id = p.owner_id AND o.address = p.email)`
 

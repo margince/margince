@@ -8,4 +8,4 @@ SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE capture_sender_override DROP CONSTRAINT IF EXISTS capture_sender_override_decision_check;
 ALTER TABLE capture_sender_override ADD CONSTRAINT capture_sender_override_decision_check
-    CHECK (decision IN ('business', 'keep_out', 'personal'));
+    CHECK (decision IN ('business', 'keep_out', 'personal')) NOT VALID;

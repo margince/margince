@@ -93,8 +93,10 @@ func (e *CounterpartyVerdictEngine) apply(
 			if err := e.retractSendersContacts(ctx, tx, row, retractOwnersOnly); err != nil {
 				return err
 			}
-			if err := capture.RecordPersonalStandingTx(ctx, tx, row.OwnerID, row.Email); err != nil {
-				return err
+			if row.MayStand {
+				if err := capture.RecordPersonalStandingTx(ctx, tx, row.OwnerID, row.Email); err != nil {
+					return err
+				}
 			}
 			return retractPersonalSenderLeadLinksTx(ctx, tx, row.Email, row.OwnerID)
 		}

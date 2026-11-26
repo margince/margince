@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -124,6 +125,9 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 		if err := lockSenderDecisionTx(ctx, tx, actor.UserID, folded); err != nil {
 			return err
 		}
+		if err := refuseAgentOverPrivateTx(ctx, tx, actor, folded); err != nil {
+			return err
+		}
 		if err := refuseAgentOverAUsersDecisionTx(ctx, tx, actor, folded); err != nil {
 			return err
 		}
@@ -181,30 +185,28 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 		if err := lockSenderDecisionTx(ctx, tx, actor.UserID, folded); err != nil {
 			return err
 		}
-		// Lifting a private standing can put a private sender back in the CRM.
-		// Only the user's own session does it, as for keep_out in Set.
-		if actor.Type == principal.PrincipalAgent {
-			standing, err := PersonalStandingTx(ctx, tx, actor.UserID, folded)
-			if err != nil {
-				return err
-			}
-			if standing {
-				return fmt.Errorf("lifting a private sender can put them back in the CRM, so the user decides it in the app: %w", apperrors.ErrPermissionDenied)
-			}
+		if err := refuseAgentOverPrivateTx(ctx, tx, actor, folded); err != nil {
+			return err
 		}
 		if err := refuseAgentOverAUsersDecisionTx(ctx, tx, actor, folded); err != nil {
 			return err
 		}
-		tag, err := tx.Exec(ctx, `
-			DELETE FROM capture_sender_override WHERE user_id = $1 AND address = $2`,
-			actor.UserID, folded)
+		restored, err := restorePrivateStandingTx(ctx, tx, actor.UserID, folded)
 		if err != nil {
-			return fmt.Errorf("capture: withdrawing a sender decision: %w", err)
+			return err
 		}
-		if tag.RowsAffected() == 0 {
-			// Not there and not yours are one answer, so an address probe
-			// learns nothing about whose decisions exist.
-			return apperrors.ErrNotFound
+		if !restored {
+			tag, err := tx.Exec(ctx, `
+				DELETE FROM capture_sender_override WHERE user_id = $1 AND address = $2`,
+				actor.UserID, folded)
+			if err != nil {
+				return fmt.Errorf("capture: withdrawing a sender decision: %w", err)
+			}
+			if tag.RowsAffected() == 0 {
+				// Not there and not yours are one answer, so an address probe
+				// learns nothing about whose decisions exist.
+				return apperrors.ErrNotFound
+			}
 		}
 		// Spelled as a literal for the audit gate; see Set.
 		_, err = storekit.AuditEvent(ctx, tx, "update", "capture_settings", storekit.MustWorkspace(ctx),
@@ -212,6 +214,51 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 		return err
 	})
 }
+
+// refuseAgentOverPrivateTx keeps a private sender's standing from an agent,
+// whatever stamp the row carries: the classifier writes it as an agent, and
+// changing it can put a private sender back in the CRM. Only the user's own
+// session does. The caller holds the sender's write lock.
+func refuseAgentOverPrivateTx(ctx context.Context, tx pgx.Tx, actor principal.Principal, folded string) error {
+	if actor.Type != principal.PrincipalAgent {
+		return nil
+	}
+	standing, err := PersonalStandingTx(ctx, tx, actor.UserID, folded)
+	if err != nil {
+		return err
+	}
+	if standing {
+		return fmt.Errorf("a private sender's decision is the user's, so the user changes it in the app: %w", apperrors.ErrPermissionDenied)
+	}
+	return nil
+}
+
+// restorePrivateStandingTx answers a withdrawn correction of a private sender
+// with the private standing again, when the settled verdict still stands for
+// it. Without this, withdrawing a `business` answer that overruled a standing
+// would leave the sender with no decision at all, and correspondence would
+// make the contact. It reports whether it restored one.
+func restorePrivateStandingTx(ctx context.Context, tx pgx.Tx, user ids.UUID, folded string) (bool, error) {
+	capturedBy, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return false, err
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE capture_sender_override o
+		   SET decision = $3, overruled_kind = NULL, captured_by = $4
+		 WHERE o.user_id = $1 AND o.address = $2 AND o.decision <> $3
+		   AND EXISTS (SELECT 1 `+settledPrivateVerdictSQL+` AND p.owner_id = o.user_id AND p.email = o.address)`,
+		user, folded, OverridePersonal, capturedBy)
+	if err != nil {
+		return false, fmt.Errorf("capture: restoring a private sender's decision: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
+// standingAddress is the spelling a standing decision is stored and read under:
+// the one the contact identity layer uses, so two spellings of one address are
+// one sender.
+func standingAddress(address string) string { return mailidentity.FoldAddress(address) }
 
 // refuseAgentOverAUsersDecisionTx keeps a decision the user made about a sender
 // from their agent. The caller holds the sender's write lock.
@@ -293,12 +340,22 @@ func OverrideForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address string
 	return decision, nil
 }
 
+// verdictMayStandSQL is the one rule for when a machine verdict about an address
+// may leave a lasting decision. The From of an inbound mail is forged by
+// anyone, so an inbound trigger must be authenticated. An outbound trigger
+// cannot be forged, since the seat wrote to the address. alias names the
+// triggering activity and email the ledger row's address.
+func verdictMayStandSQL(alias, email string) string {
+	return `(` + alias + `.counterparty_email = ` + email + ` AND (` + alias + `.inbound_sender_authenticated
+	          OR (` + alias + `.direction = 'outbound' AND ` + alias + `.counterparty_outbound_attested)))`
+}
+
 // PersonalStandingTx answers whether this seat holds a standing private
 // decision for the address. One plain read with no lock. The capture ladder
 // reads the same fact inside priorDispositionTx, and the two share
 // OverridePersonal.
 func PersonalStandingTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address string) (bool, error) {
-	folded := normalizeEmail(address)
+	folded := standingAddress(address)
 	if user == ids.Nil || folded == "" {
 		return false, nil
 	}
@@ -312,11 +369,18 @@ func PersonalStandingTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address s
 	return standing, nil
 }
 
+// PersonalStandingLockedTx is PersonalStandingTx under the sender-decision lock,
+// which the caller then holds until its transaction ends.
+func PersonalStandingLockedTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address string) (bool, error) {
+	decision, err := OverrideForTx(ctx, tx, user, standingAddress(address))
+	return decision == OverridePersonal, err
+}
+
 // RecordPersonalStandingTx makes a `personal` verdict a standing decision for
 // the seat's address, in the verdict's own transaction. A decision the user
 // typed wins: DO NOTHING leaves their business or keep_out in place.
 func RecordPersonalStandingTx(ctx context.Context, tx pgx.Tx, owner ids.UUID, address string) error {
-	folded := normalizeEmail(address)
+	folded := standingAddress(address)
 	if owner == ids.Nil || folded == "" {
 		return nil
 	}
