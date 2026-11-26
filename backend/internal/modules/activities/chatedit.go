@@ -124,8 +124,7 @@ func emitProviderEdit(ctx context.Context, tx pgx.Tx, t editTarget, revision tim
 }
 
 // writeProviderEdit stores the text and the revision under the row lock, and
-// clears what the old text produced. A chat message is not mail, so all of its
-// text is the sender's and body_own_end stays NULL (mailquote.OwnEnd). It reports whether a reply verdict was
+// clears what the old text produced. It reports whether a reply verdict was
 // cleared, which the verdict history must record.
 func writeProviderEdit(ctx context.Context, tx pgx.Tx, id ids.UUID, change connector.ChatChange, revision time.Time) (written, replyCleared bool, err error) {
 	err = tx.QueryRow(ctx, `
