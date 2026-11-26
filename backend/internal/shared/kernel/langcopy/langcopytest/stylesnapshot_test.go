@@ -32,6 +32,7 @@ const (
 
 // englishPatternLeads names the code right before each mirrored rule's regex
 // literal in the English catalog gate. Spaces in a lead stand for any spacing.
+// gatekit:fixture the code before each mirrored rule's regex literal in the English catalog gate
 var englishPatternLeads = map[string]string{
 	ruleEnContraction: "const contraction =",
 	ruleEnSpelling:    "const british =",
@@ -43,6 +44,7 @@ var englishPatternLeads = map[string]string{
 
 // vietnamesePatternLeads does the same for the Vietnamese census, where a
 // pattern is a regex literal or a call of its word().
+// gatekit:fixture the code before each mirrored rule's regex literal in the Vietnamese census
 var vietnamesePatternLeads = map[string]string{
 	ruleViToneOpen:        `"marks the tone of an open oa, oe and uy on the first vowel",`,
 	ruleViToneClosed:      `"marks the tone on the second vowel before a final consonant",`,
