@@ -137,10 +137,8 @@ var exempt = gatekit.Waive(map[string]string{
 	"backend/cmd/api/config.go":                                    "flag help for the Microsoft authority aliases",
 	"docs/reference/connectors-and-sign-in.md":                     "the Microsoft authority aliases",
 
-	"backend/internal/platform/licensecheck/host.go": "the licence payload's `company` key. The Go " +
-		"name is ours; the key belongs to whoever signs the licence, and renaming it would stop " +
-		"every licence already issued from decoding",
-	"backend/internal/platform/licensecheck/licensecheck_test.go": "the licence payload's `company` key",
+	"backend/internal/platform/licensecheck/host.go":              "the license module's `org` wire key; Company is the application's name",
+	"backend/internal/platform/licensecheck/licensecheck_test.go": "the license module's `org` wire key",
 
 	"backend/internal/modules/contacts/companynamegate.go": "the .org TLD, in the stopword list that " +
 		"stops a brand written as its own domain from reducing to its suffix",
