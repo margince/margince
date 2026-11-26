@@ -390,12 +390,12 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	out, err := t.Handle(ctx, args)
 	if err != nil {
 		return nil, 0, sealShown(err, func(answer json.RawMessage) (json.RawMessage, error) {
-			return sealEnvelope(spec, trace, recordLinkOrigin(ctx), facts, answer)
+			return sealEnvelope(spec, trace, RecordLinkOrigin(ctx), facts, answer)
 		})
 	}
 	noteCaptureWithheld(ctx, withheld)
 	r.noteCostShare(ctx)
-	sealed, err := sealEnvelope(spec, trace, recordLinkOrigin(ctx), facts, out)
+	sealed, err := sealEnvelope(spec, trace, RecordLinkOrigin(ctx), facts, out)
 	if err != nil {
 		return nil, 0, err
 	}

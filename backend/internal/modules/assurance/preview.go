@@ -100,6 +100,9 @@ func (s *Scanner) Preview(ctx context.Context, now time.Time, floor PreviewFloor
 		if err := s.askCalls(ctx, tx, now, &pass); err != nil {
 			return unreadablePreview(ctx, tx, &out, floor)
 		}
+		if err := s.askPairs(ctx, tx, now, nil, &pass); err != nil {
+			return unreadablePreview(ctx, tx, &out, floor)
+		}
 		out.EligibleDeals = pass.eligible
 		out.Counts = countByType(pass.findings())
 		out.Readiness = Readiness(out.Coverage, pass.findings(), s.cfg)

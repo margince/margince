@@ -166,6 +166,29 @@ func TestAValueSortCursorFromBeforeARateCorrectionIsRefused(t *testing.T) {
 	}
 }
 
+// Removing a currency a page was converted with changes the order too.
+func TestAValueSortCursorFromBeforeARateRemovalIsRefused(t *testing.T) {
+	e := Setup(t)
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
+	day := fxTestNow.Truncate(24 * time.Hour)
+	pipeline := seedValueSortDeals(t, e, day, valueSortRates(), valueSortDeals)
+
+	sort, limit := "-amount_minor", 2
+	_, page, err := e.Deals.ListDeals(e.Admin(), deals.ListDealsInput{PipelineID: &pipeline, Sort: &sort, Limit: &limit})
+	if err != nil || !page.HasMore {
+		t.Fatalf("first page: has more %t, err %v", page.HasMore, err)
+	}
+	if err := e.Deals.RemoveFxRate(e.Admin(), "JPY"); err != nil {
+		t.Fatalf("removing the JPY rate: %v", err)
+	}
+	_, _, err = e.Deals.ListDeals(e.Admin(), deals.ListDealsInput{
+		PipelineID: &pipeline, Sort: &sort, Limit: &limit, Cursor: &page.NextCursor,
+	})
+	if _, ok := errors.AsType[*storekit.CursorSortMismatchError](err); !ok {
+		t.Errorf("a cursor from before the removal → %v, want CursorSortMismatchError", err)
+	}
+}
+
 // A correction to a currency no open deal is held in changes no order, so a
 // cursor minted before it still continues the page.
 func TestAValueSortCursorSurvivesACorrectionToAnUnusedCurrency(t *testing.T) {

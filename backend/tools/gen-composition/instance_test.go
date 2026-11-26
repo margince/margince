@@ -112,7 +112,7 @@ func TestCoreModulesAreNeverExtensions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(units) != 1 || units[0].name != "notes" {
+	if len(units) != 1 || units[0].Name != "notes" {
 		t.Fatalf("units = %+v, want only notes: core's own modules required directly are not extensions", units)
 	}
 }

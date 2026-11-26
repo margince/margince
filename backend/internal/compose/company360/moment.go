@@ -89,7 +89,7 @@ func (a *assembly) readMoment() error {
 	if err != nil {
 		return err
 	}
-	momentaction.Withhold(a.ctx, string(said.Lang()), &moment)
+	momentaction.Withhold(a.ctx, string(said.Lang()), "company", &moment)
 	a.out.Moment = &moment
 	return nil
 }

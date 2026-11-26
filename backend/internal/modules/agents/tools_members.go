@@ -62,6 +62,7 @@ func (t memberTool) Spec() mcp.ToolSpec {
 		spec.Instead = "Use list_colleagues to find the members first."
 		spec.RequiredScope = principal.ScopeRead
 		spec.Tier = mcp.TierAutoExecute
+		spec.AskUserFirst = false
 		spec.WaitsEvenForItsUser = false
 		spec.OpenAPIOp = "previewMemberRetirement"
 		spec.ReplayGrant = nil

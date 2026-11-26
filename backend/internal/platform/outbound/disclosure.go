@@ -114,7 +114,7 @@ func Disclosures() []Disclosure {
 		},
 		{
 			Product: ExtensionProduct, Endpoint: "the provider an installed extension unit calls", Personal: true,
-			Category: "whatever that unit sends its provider, which can include the deals and colleagues' details its manifest lists under system_reads",
+			Category: "whatever that unit sends its provider, which can include the deals and colleagues' details its manifest lists under system_reads, and the captured mail its manifest lists under mail_hooks",
 			Control:  "removing the unit from the installation",
 		},
 		{

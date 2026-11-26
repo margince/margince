@@ -39,9 +39,8 @@ const (
 	suggestionProposed = "proposed"
 
 	maxSuggestionReason = 200
-	// suggestionQueueSize bounds one read of the queue. The query takes
-	// suggestionQueueScan rows so that suggestions the caller may not see do not
-	// leave a short page while visible ones wait behind them.
+	// suggestionQueueSize bounds one read of the queue. suggestionQueueScan is
+	// the page size the read walks the pending rows in.
 	suggestionQueueSize = 50
 	suggestionQueueScan = 200
 )
@@ -207,50 +206,149 @@ func scanSuggestion(row pgx.Row) (crmcontracts.LinkSuggestion, error) {
 	return out, nil
 }
 
-// ListLinkSuggestions answers the pending suggestions the caller may see,
-// oldest first. A suggestion whose message or target the caller cannot read is
-// left out.
+// ListLinkSuggestions answers, oldest first, the pending suggestions the caller
+// may decide (mayDecide), so the queue shows no row whose buttons the server
+// refuses. A caller who may decide none, a read-only seat among them, gets an
+// empty queue rather than a refusal.
 func (s *Store) ListLinkSuggestions(ctx context.Context) ([]crmcontracts.LinkSuggestion, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	out := []crmcontracts.LinkSuggestion{}
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		pending, err := pendingSuggestions(ctx, tx)
-		if err != nil {
-			return err
-		}
-		for _, suggestion := range pending {
-			if len(out) == suggestionQueueSize {
-				break
-			}
-			name, seen, err := visibleTargetName(ctx, tx, string(suggestion.EntityType), ids.UUID(suggestion.EntityId))
-			if err != nil {
-				return err
-			}
-			if seen {
-				suggestion.EntityName = &name
-				out = append(out, suggestion)
-			}
-		}
-		return nil
+	// The HTTP admission refuses a mutation only to a read seat, so only a read
+	// seat is told it may decide nothing.
+	if actor, ok := principal.Actor(ctx); !ok || actor.SeatType == principal.SeatRead {
+		return out, nil
+	}
+	// A "no" below is the answer for one row, not the call's refusal, so the
+	// checks run unrecorded.
+	quiet, err := auth.Unrecorded(ctx, "activity", principal.ActionUpdate)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		out, err = decidableSuggestions(ctx, quiet, tx)
+		return err
 	})
 	return out, err
 }
 
-func pendingSuggestions(ctx context.Context, tx pgx.Tx) ([]crmcontracts.LinkSuggestion, error) {
-	args := []any{suggestionPending, suggestionQueueScan}
-	scope, err := auth.ActivityContentClause(ctx, "a", func(v any) int { args = append(args, v); return len(args) })
+// decidableSuggestions pages through the pending suggestions the caller may
+// read, oldest first. It stops at a full queue of ones they may decide, or
+// when the rows run out. Read scope is wider than write authority. A fixed
+// scan could fill with rows the caller may only read and hide the rest.
+// quiet is the unrecorded context the per-row checks run under.
+func decidableSuggestions(ctx, quiet context.Context, tx pgx.Tx) ([]crmcontracts.LinkSuggestion, error) {
+	out := []crmcontracts.LinkSuggestion{}
+	var after *crmcontracts.LinkSuggestion
+	for {
+		page, err := pendingSuggestions(ctx, tx, after)
+		if err != nil {
+			return nil, err
+		}
+		writable, err := writableMessages(quiet, tx, page)
+		if err != nil {
+			return nil, err
+		}
+		for _, suggestion := range page {
+			if len(out) == suggestionQueueSize {
+				return out, nil
+			}
+			if !writable[ids.UUID(suggestion.ActivityId)] {
+				continue
+			}
+			named, ok, err := decidable(ctx, quiet, tx, suggestion)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				out = append(out, named)
+			}
+		}
+		if len(page) < suggestionQueueScan {
+			return out, nil
+		}
+		after = &page[len(page)-1]
+	}
+}
+
+// writableMessages narrows a page in one statement to the messages the caller
+// may change. A long run of rows they may only read then costs one query per
+// page. mayDecide still decides each row that is left.
+func writableMessages(ctx context.Context, tx pgx.Tx, page []crmcontracts.LinkSuggestion) (map[ids.UUID]bool, error) {
+	messages := make([]ids.UUID, len(page))
+	for i, suggestion := range page {
+		messages[i] = ids.UUID(suggestion.ActivityId)
+	}
+	return auth.ActivityWritableSubset(ctx, tx, messages)
+}
+
+// decidable answers the suggestion with its target's name when the caller may
+// decide it. It answers false when mayDecide refuses or the target is gone.
+func decidable(ctx, quiet context.Context, tx pgx.Tx, suggestion crmcontracts.LinkSuggestion) (crmcontracts.LinkSuggestion, bool, error) {
+	err := mayDecide(quiet, tx, suggestion)
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		return suggestion, false, nil
+	}
+	if err != nil {
+		return suggestion, false, err
+	}
+	name, seen, err := visibleTargetName(ctx, tx, string(suggestion.EntityType), ids.UUID(suggestion.EntityId))
+	if err != nil || !seen {
+		return suggestion, false, err
+	}
+	suggestion.EntityName = &name
+	return suggestion, true, nil
+}
+
+// mayDecide is the one bar for accepting or rejecting a suggestion, asked by
+// the decision and by the queue read. The caller updates messages, may change
+// this one, and may read the target the answer names. The write scope is the
+// relink's, so a reject cannot decide a message an accept would refuse. A
+// target they cannot read is not found.
+func mayDecide(ctx context.Context, tx pgx.Tx, suggestion crmcontracts.LinkSuggestion) error {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return err
+	}
+	if err := auth.EnsureActivityWritable(ctx, tx, ids.UUID(suggestion.ActivityId)); err != nil {
+		return err
+	}
+	seen, err := auth.VisibleTo(ctx, tx, string(suggestion.EntityType), ids.UUID(suggestion.EntityId))
+	if err != nil {
+		return err
+	}
+	if !seen {
+		return apperrors.ErrNotFound
+	}
+	return nil
+}
+
+// pendingSuggestions reads one page of the pending suggestions whose message
+// the caller may read, oldest first, after the given row when there is one.
+func pendingSuggestions(ctx context.Context, tx pgx.Tx, after *crmcontracts.LinkSuggestion) ([]crmcontracts.LinkSuggestion, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	scope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
 		return nil, err
 	}
 	if scope == "" {
 		scope = scopeUnbounded
 	}
-	rows, err := tx.Query(ctx, storekit.SQLf(`
+	keyset := scopeUnbounded
+	if after != nil {
+		keyset = fmt.Sprintf("(s.created_at, s.id) > ($%d, $%d)", arg(after.CreatedAt), arg(ids.UUID(after.Id)))
+	}
+	status, limit := arg(suggestionPending), arg(suggestionQueueScan)
+	query := storekit.SQLf(`
 		SELECT %s FROM activity_link_suggestion s JOIN activity a ON a.id = s.activity_id
-		 WHERE s.status = $1 AND a.archived_at IS NULL AND %s
-		 ORDER BY s.created_at, s.id LIMIT $2`, suggestionColumns, scope), args...)
+		 WHERE s.status = $%d AND a.archived_at IS NULL AND %s AND %s
+		 ORDER BY s.created_at, s.id LIMIT $%d`,
+		suggestionColumns, status, scope, keyset, limit)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the link suggestions: %w", err)
 	}
@@ -303,19 +401,8 @@ func (s *Store) decideLinkSuggestion(ctx context.Context, id ids.UUID, decision 
 			return err
 		}
 		activity := ids.From[ids.ActivityKind](ids.UUID(out.ActivityId))
-		// The same write scope the relink applies, so a reject cannot decide a
-		// message an accept would be refused for.
-		if err := auth.EnsureActivityWritable(ctx, tx, activity.UUID); err != nil {
+		if err := mayDecide(ctx, tx, out); err != nil {
 			return err
-		}
-		// The answer names the target, so a target the caller cannot read is a
-		// suggestion they cannot decide.
-		seen, err := auth.VisibleTo(ctx, tx, string(out.EntityType), ids.UUID(out.EntityId))
-		if err != nil {
-			return err
-		}
-		if !seen {
-			return apperrors.ErrNotFound
 		}
 		if string(out.Status) == decision {
 			return nil

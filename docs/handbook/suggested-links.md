@@ -21,7 +21,8 @@ Nothing is filed on its own.
 
 ## What decides what I see?
 
-- You need the right to change the message and to attach to the record. A suggestion for a record you cannot open does
-  not show.
+- A suggestion shows only when you may decide it: you may change the message, and you may open the record it names.
+  The same check runs when you press a button, so a row you see is one you can decide.
+- If you may not read messages at all, the panel says that you do not have access to suggested links.
 - The contact who wrote a message is never suggested for it.
 - The panel shows the oldest 50. Decide some and the next ones appear.

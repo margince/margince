@@ -198,6 +198,7 @@ export function ThreadBar({
             starts one; pressed then, it only closes the list. */}
         <Button
           variant="ghost"
+          align="start"
           className="compose-threadmenu-new"
           aria-pressed={!answering}
           disabled={disabled}
@@ -375,6 +376,7 @@ function ThreadRow({
         // A thread read without its summary still names itself: its subject,
         // who it was with and when, as one press target.
         <Button
+          align="start"
           className="compose-choice"
           aria-pressed={card.selected}
           onClick={() => onChoose(card.anchorId)}
@@ -466,7 +468,7 @@ function ThreadMessage({
           {/* Read without moving the draft onto it. */}
           <div className="compose-message-actions">
             <Popover label={t("compose.previewEmail")} onHover>
-              <EmailText body={message.body ?? ""} />
+              <EmailText body={message.body ?? ""} subject={message.subject} />
             </Popover>
           </div>
         </>

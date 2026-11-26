@@ -65,6 +65,8 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 		"precision data task fills in only the rows the noon repair's audit proves; the rest stay " +
 		"unknown on purpose, and the rule binds every row written since",
 	"finance_invoice.finance_invoice_names_its_customer_link": unnamedCustomerLink,
+	"company.company_source_check":                            unlistedRecordSource,
+	"contact.contact_source_check":                            unlistedRecordSource,
 	"deal.deal_source_check":                                  unlistedRecordSource,
 	"offer.offer_source_check":                                unlistedRecordSource,
 	"project.project_source_check":                            unlistedRecordSource,

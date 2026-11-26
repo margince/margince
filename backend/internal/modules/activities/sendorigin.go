@@ -22,7 +22,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -202,25 +201,11 @@ func (o SendOrigin) lockAnchorLive(ctx context.Context, tx pgx.Tx) error {
 }
 
 // probeLinkTargets refuses an account-started send whose named records the
-// caller cannot read, before any later guard can answer about anyone else.
+// caller cannot read, before any later guard can answer about anyone else. It
+// asks ProbeLinkWrites, the questions the staged send's link inserts ask, so
+// the preview answers about a link what the send does.
 func (s *Store) probeLinkTargets(ctx context.Context, links []ActivityLinkInput) error {
-	if len(links) > maxActivityLinks {
-		return &TooManyLinksError{Count: len(links)}
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		for _, link := range links {
-			if linkColumn(link.EntityType) == "" {
-				return &InvalidLinkTypeError{EntityType: link.EntityType}
-			}
-			// The same ATTACH question insertActivityLinks asks when the send
-			// is staged, asked here so the refusal arrives before the work
-			// rather than after it — two doors onto one act must not disagree.
-			if err := auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
-				return linkRefusal(true, err)
-			}
-		}
-		return nil
-	})
+	return linkRefusal(true, s.ProbeLinkWrites(ctx, links))
 }
 
 // threading derives the conversation chain this send carries, inside the

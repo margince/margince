@@ -6,7 +6,6 @@ package extension
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -97,8 +96,12 @@ type JobDeclaration struct {
 	// rides a pool the installation already declared rather than allocating
 	// one. See the composer's ownership rule.
 	Queue string
-	// Cadence is the dispatcher's tick interval, the contract's `every:`.
+	// Cadence is the dispatcher's tick interval, the contract's `cadence:`.
+	// Zero when At is set; a job has one of the two, never both.
 	Cadence time.Duration
+	// At is the local clock time the dispatcher ticks at instead, the
+	// contract's `at:` and `days:`.
+	At *TimeOfDay
 	// DispatcherTimeout and Timeout are the two kinds' wall clocks. Two
 	// numbers because they bound two different things — enumerating the fleet
 	// and running one tenant's tick — and River applies a timeout per kind.
@@ -145,11 +148,6 @@ func (d JobDeclaration) ChildKind() string {
 	return dispatcher + JobKindSuffix
 }
 
-// jobKindGrammar is gen-jobs' own kindNameRE, restated here because the two
-// sides validate the same strings and this package cannot import a build tool.
-// River persists these in river_job.kind, so they are lower snake_case forever.
-var jobKindGrammar = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
-
 // Validate enforces everything about a declared job that must hold wherever it
 // is read — the generator that derives it from the merged contract, and the
 // boot that registers it. Both run this, so gen-time acceptance cannot drift
@@ -171,15 +169,15 @@ func (d JobDeclaration) Validate() error {
 	// a derived string that River could not persist has to fail at its own
 	// declaration rather than at the first insert.
 	for _, kind := range []string{d.DispatcherKind(), d.ChildKind()} {
-		if !jobKindGrammar.MatchString(kind) {
+		if !shortNameGrammar.MatchString(kind) {
 			return fmt.Errorf("extension %q, job %q derives kind %q, which River cannot persist (lower snake_case)", d.Unit, d.Job, kind)
 		}
 	}
 	if strings.TrimSpace(d.Queue) == "" {
 		return fmt.Errorf("extension %q, job %q declares no queue — a kind on no queue gets no workers and never runs", d.Unit, d.Job)
 	}
-	if d.Cadence <= 0 {
-		return fmt.Errorf("extension %q, job %q declares cadence %s — a dispatcher with no positive tick either never fires or fires as fast as Postgres accepts an insert", d.Unit, d.Job, d.Cadence)
+	if err := d.validateSchedule(); err != nil {
+		return err
 	}
 	for _, clock := range []struct {
 		what string
@@ -197,6 +195,24 @@ func (d JobDeclaration) Validate() error {
 	}
 	if err := d.RequestedScope.Validate(); err != nil {
 		return fmt.Errorf("extension %q, job %q: %w", d.Unit, d.Job, err)
+	}
+	return nil
+}
+
+// validateSchedule holds a job to one schedule: a positive interval or a
+// clock time.
+func (d JobDeclaration) validateSchedule() error {
+	if d.At != nil {
+		if d.Cadence != 0 {
+			return fmt.Errorf("extension %q, job %q declares both a cadence and a time of day — two clocks would each decide when it runs", d.Unit, d.Job)
+		}
+		if err := d.At.Validate(); err != nil {
+			return fmt.Errorf("extension %q, job %q: %w", d.Unit, d.Job, err)
+		}
+		return nil
+	}
+	if d.Cadence <= 0 {
+		return fmt.Errorf("extension %q, job %q declares cadence %s — a dispatcher with no positive tick either never fires or fires as fast as Postgres accepts an insert", d.Unit, d.Job, d.Cadence)
 	}
 	return nil
 }

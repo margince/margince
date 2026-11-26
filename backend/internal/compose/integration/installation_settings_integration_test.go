@@ -512,7 +512,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 	}
 	// Repairable, so the reason names the repair. A message that only said "no"
 	// would leave an operator with a currency they cannot correct and no idea why.
-	if !strings.Contains(message, "clear the rate sheet") {
+	if !strings.Contains(message, "remove every currency from the rate sheet") {
 		t.Errorf("reason = %q, want it to name the repair", message)
 	}
 
@@ -554,15 +554,15 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 		INSERT INTO contract (id, company_id, title, value_minor, currency, status, fx_rate_to_base, fx_rate_date, source, captured_by)
 		VALUES ($1, $2, 'MSA', 4100000, 'EUR', 'active', 1.0850000000, current_date, 'seed', 'system:test')`, company)
 	connection := e.SeedID(t, `
-		INSERT INTO finance_connection (id, provider, credential_ref, source, captured_by)
-		VALUES ($1, 'lexoffice', 'ref', 'seed', 'system:test')`)
+		INSERT INTO finance_connection (id, provider, captured_by)
+		VALUES ($1, 'lexoffice', 'system:test')`)
 	e.SeedID(t, `
 		WITH directory AS (
 		    INSERT INTO finance_external_customer (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
 		    VALUES ($2::uuid, 'cust-census', 'Census GmbH', '', 'seed', 'system:test') RETURNING external_customer_id
 		), link AS (
-		    INSERT INTO finance_customer_link (connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
-		    SELECT $2::uuid, $3::uuid, external_customer_id, '', 'seed', 'system:test' FROM directory RETURNING id
+		    INSERT INTO finance_customer_link (connection_id, company_id, external_customer_id, captured_by)
+		    SELECT $2::uuid, $3::uuid, external_customer_id, 'system:test' FROM directory RETURNING id
 		)
 		INSERT INTO finance_invoice (id, connection_id, company_id, customer_link_id, external_id, issued_at, status, currency,
 		                             net_minor, gross_minor, fx_rate_to_base, fx_rate_date, sync_hash, source, captured_by)

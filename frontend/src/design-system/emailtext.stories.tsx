@@ -17,11 +17,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Paragraphs: Story = {
-  args: { body: "Hello Ada,\n\nCan we meet on Tuesday?\n\nBest regards\nSam" },
+  args: {
+    body: "Hello Ada,\n\nCan we meet on Tuesday?\n\nBest regards\nSam",
+    subject: "Meeting",
+  },
 };
 export const QuotedHistory: Story = {
   args: {
     body: "Tuesday works.\n\nOn Monday Ada wrote:\n> Can we meet on Tuesday?",
+    subject: "Re: Meeting",
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -34,13 +38,27 @@ export const QuotedHistory: Story = {
   },
 };
 
+// An Outlook forward has no forward line, so only its subject keeps the
+// forwarded mail in the message.
+export const OutlookForward: Story = {
+  args: {
+    body: "FYI\n\nFrom: Ada\nSent: Monday\nTo: Sam\n\nCan we meet on Tuesday?",
+    subject: "FW: Meeting",
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText(/Can we meet on Tuesday/)).toBeVisible();
+    await expect(canvas.queryByText("Show quoted history")).toBeNull();
+  },
+};
 export const NoText: Story = {
-  args: { body: "" },
+  args: { body: "", subject: null },
   render: () => (
     <EmailReading
       activityId="01a05500-0000-7000-8000-0000000000a1"
       language={null}
       body=""
+      subject={null}
     />
   ),
   play: async ({ canvasElement }) => {

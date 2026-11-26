@@ -120,3 +120,25 @@ func AgentWrittenFieldsSQL(objectType, idExpr string) string {
 	            AND edit.after ? origin.field_name)
 	  ORDER BY origin.field_name)`
 }
+
+// MoveFieldProvenance moves the provenance of the named fields from a
+// merged-away record to its survivor, and returns the rows it moved. A merge
+// calls it for the fields whose value the survivor took from the retired
+// record, so the origin travels with the value. Provenance of any other field
+// describes a value the merge did not keep, and stays.
+func MoveFieldProvenance(ctx context.Context, tx pgx.Tx, objectType string, from, to ids.UUID, fields []string) ([]ids.UUID, error) {
+	if len(fields) == 0 {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `UPDATE field_provenance SET object_id = $3
+		 WHERE object_type = $1 AND object_id = $2 AND field_name = ANY($4) RETURNING id`,
+		objectType, from, to, fields)
+	if err != nil {
+		return nil, fmt.Errorf("storekit: move field provenance: %w", err)
+	}
+	moved, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("storekit: move field provenance: %w", err)
+	}
+	return moved, nil
+}

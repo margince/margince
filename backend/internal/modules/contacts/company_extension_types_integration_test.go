@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -29,8 +30,7 @@ const (
 
 func declareAcmeTypes(t *testing.T) {
 	t.Helper()
-	companytypes.Reset()
-	t.Cleanup(companytypes.Reset)
+	extregistrytest.Reset(t)
 	companytypes.Register("acme-pack", []extension.CompanyType{
 		{Type: "reseller", Label: "Reseller"}, {Type: "distributor", Label: "Distributor"},
 	})

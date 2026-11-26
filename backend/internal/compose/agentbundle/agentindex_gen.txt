@@ -320,7 +320,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | --- | --- | --- | --- | --- |
 | `GET /companies/{id}/contracts` | listCompanyContracts | The agreements this company holds, newest first. | Read records | at once |
 | `POST /contracts` | createContract | Record an agreement. | Change records | at once |
-| `GET /contracts/{id}` | getContract | One contract. | Read records | at once |
+| `GET /contracts/{id}` | getContract | One agreement with a company, with its terms, value, dates and status. | Read records | at once |
 | `PATCH /contracts/{id}` | updateContract | Change an agreement's recorded terms. | Change records | at once |
 | `DELETE /contracts/{id}` | archiveContract | Archive an agreement. | Change records | at once |
 | `POST /contracts/{id}/status` | changeContractStatus | Assert a new contract status. | Change records | at once |
@@ -551,7 +551,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /analytics/reports/{id}/executions` | listReportingExecutions | List reporting executions | Read records | at once |
 | `GET /analytics/executions/{id}` | getReportingExecution | Get reporting execution | Read records | at once |
 | `POST /analytics/executions/{id}/retry` | retryReportingExecution | Retry reporting execution | Change records | at once |
-| `POST /reports/{report}` | runReport | Run a report (the `run_report` MCP verb) and return aggregate rows. `{report}` is one of activities-by-kind, deals-by-stage, forecast, leads-by-status, loss-events, meeting-conversion, open-deals-per-company, pipeline-current, project-commitments, projects-by-phase, projects-gone-quiet, stage-age, win-loss. | Read records | at once |
+| `POST /reports/{report}` | runReport | Run a report (the `run_report` MCP verb) and return aggregate rows. It keeps nothing; to keep figures others can reopen, ask runAnalyticsQuery with `save`. `{report}` is one of activities-by-kind, deals-by-stage, forecast, leads-by-status, loss-events, meeting-conversion, open-deals-per-company, pipeline-current, project-commitments, projects-by-phase, projects-gone-quiet, stage-age, win-loss. | Read records | at once |
 | `GET /reports/{report}/derivation` | explainReport | "Explain This Number" — resolve a derivation handle to its definition + source rows. | Read records | at once |
 | `GET /forecast` | getForecast | What a period is expected to close, and what the figure does not cover. | Read records | at once |
 | `GET /forecast/stage-chances` | getForecastStageChances | The chance the forecast uses for each open stage, and the evidence behind it. | Read records | at once |
@@ -576,7 +576,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /analytics/sdr-summary/meetings` | listSdrUpcomingMeetings | The meetings behind `SdrSummary.upcoming_meetings`, soonest first, one page at a time. | Read records | at once |
 | `GET /analytics/sdr-team` | getSdrTeamReview | How a team's handoffs ended and what still waits, for coaching. | Read records | at once |
 | `GET /analytics/schema` | getAnalyticsSchema | What questions this caller may ask, and in what words. | Read records | at once |
-| `POST /analytics/query` | runAnalyticsQuery | Answer a question nobody wrote a report for. | Read records | at once |
+| `POST /analytics/query` | runAnalyticsQuery | Answer a question nobody wrote a report for. With `save` the answer is kept as a saved question, which `GET /analytics/runs` lists and others reopen by its `run_id`. | Read records | at once |
 | `GET /analytics/runs` | listReportRuns | The caller's own saved questions, newest first. | Read records | at once |
 | `GET /analytics/runs/{run_id}` | getReportRun | The answer a report sentence points at. | Read records | at once |
 | `POST /analytics/runs/{run_id}/evidence-search` | searchReportEvidence | Which records behind a saved run carry the words, and which do not. | Read records | at once |
@@ -831,7 +831,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /worklist/hidden` | getHiddenBacklog | What the queue is not showing, and which rule is holding it back. | Read records | at once |
 | `GET /worklist/hidden/{rule}` | getHiddenBacklogRows | Which threads one hiding rule is keeping off the queue. `{rule}` is one of set_aside, not_sales, past_horizon, unlinked, colleagues, informs_us. | Read records | at once |
 | `GET /worklist/response` | getResponseMetrics | How fast the workspace answers, how much of the queue it puts down, and how often an at-risk deal gets a next step. | Read records | at once |
-| `GET /brief` | getMorningBrief | The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks). | Read records | at once |
+| `GET /brief` | getMorningBrief | Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one. | Read records | at once |
 | `POST /brief` | generateMorningBrief | Assemble the acting rep's brief for today if the overnight pass has not already. | Use AI and buy data | at once |
 | `GET /weekly-reviews` | listWeeklyReviews | The weeks the acting rep has a review for, newest first. | Read records | at once |
 | `GET /weekly-reviews/team` | getTeamWeeklyReview | A team's week, frozen — what each member's week came to, and the one thing to raise. | Read records | at once |
@@ -848,7 +848,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PUT /weekly-plans/current/contract` | setWeeklyPlanContract | Say what could go wrong this week, and what room there is for it. | Change records | at once |
 | `PUT /weekly-plans/commitments/{id}/response` | answerWeeklyPlanCommitment | Answer a teammate's request for help. | Change records | at once |
 | `POST /brief/items/{itemId}/dismiss` | markBriefItemDismissed | Dismiss a brief item — it does not reappear unless a new linked activity arrives after the mark. | Change records | at once |
-| `POST /brief/items/{itemId}/snooze` | snoozeBriefItem | Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable. | Change records | at once |
+| `POST /brief/items/{itemId}/snooze` | snoozeBriefItem | Snooze a brief item — hidden until `snoozed_until` passes, then it re-surfaces as actionable. | Change records | at once |
 | `POST /brief/items/{itemId}/unsnooze` | unsnoozeBriefItem | Take back a snooze — the item returns to the queue immediately. | Change records | at once |
 
 ## Capture
@@ -1033,7 +1033,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `DELETE /offers/{id}/line-items/{lineItemId}` | removeOfferLineItem | Remove a line item from a draft offer (totals recomputed). | Change records | at once |
 | `POST /offers/{id}/refresh-from-deal` | refreshOfferFromDeal | Replace a draft offer's lines with the deal's current lines; the header stays. | Change records | at once |
 | `POST /offers/{id}/send` | sendOffer | Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot). | Change records | at once |
-| `POST /offers/{id}/accept` | acceptOffer | Record the buyer's acceptance — syncs the deal's amount from the offer's gross. | Change records | at once |
+| `POST /offers/{id}/accept` | acceptOffer | Record the buyer's acceptance — syncs the deal's amount from the offer's net. | Change records | at once |
 | `POST /offers/{id}/reject` | rejectOffer | Record the buyer's decline (sent → rejected; emits offer.rejected). | Change records | at once |
 | `POST /offers/{id}/regenerate` | regenerateOffer | Mint the next revision as a fresh draft — mechanically, or AI-drafted from captured signal. | Use AI and buy data | at once |
 | `POST /offers/{id}/render` | renderOffer | Render the offer's branded PDF (sets pdf_asset_ref). | Change records | at once |

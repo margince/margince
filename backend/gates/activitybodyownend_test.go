@@ -13,13 +13,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// bodyWriterFloor is the number of body-writing clauses the tree held when this
+// bodyWriterFloor is the number of text-writing clauses the tree held when this
 // gate was written. A reader that stops seeing statements reports fewer.
 const bodyWriterFloor = 14
 
 // Search cuts a mail body at activity.body_own_end, which Go computes from the
-// text. A writer that changes the body and leaves the end cuts the new text at
-// the old place. The census reads the Go statements outside test files.
+// body and subject. A writer that changes either and leaves the end cuts the
+// text at the old place. The census reads the Go statements outside test files.
 func TestEveryWriterOfAnActivityBodySetsWhereTheSendersTextEnds(t *testing.T) {
 	t.Parallel()
 	writers := 0
@@ -33,17 +33,17 @@ func TestEveryWriterOfAnActivityBodySetsWhereTheSendersTextEnds(t *testing.T) {
 			t.Fatalf("reading %s: %v", where, err)
 		}
 		for _, statement := range gatekit.SQLStatementsIn(t, where, string(source)) {
-			found, unpaired := gatekit.ActivityBodyWrites(statement)
+			found, unpaired := gatekit.ActivityTextWrites(statement)
 			writers += found
 			if unpaired > 0 {
-				t.Errorf("%s writes activity.body and not body_own_end, so search cuts the new text where the old one ended. "+
+				t.Errorf("%s writes activity.body or subject and not body_own_end, so search cuts the text where the old one ended. "+
 					"Set it from mailquote.OwnEnd, or to NULL beside a cleared body:\n  %s",
 					where, gatekit.FirstLineOf(strings.TrimSpace(statement)))
 			}
 		}
 	}
 	if writers < bodyWriterFloor {
-		t.Fatalf("read %d writers of activity.body, under the %d the tree held: the census no longer sees them",
+		t.Fatalf("read %d writers of activity text, under the %d the tree held: the census no longer sees them",
 			writers, bodyWriterFloor)
 	}
 }

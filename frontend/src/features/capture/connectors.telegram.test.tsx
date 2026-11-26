@@ -97,7 +97,7 @@ describe("the Telegram connector panel", () => {
     id: "018f3a1b-0000-7000-8000-0000000000d2",
     channelId: "555000222",
     channelLabel: "acme_support_bot",
-    status: "pending",
+    status: "pending_approval",
   };
   const botManager = meFixture({
     allow: { channel_connection: ["read", "create", "update", "delete"] },

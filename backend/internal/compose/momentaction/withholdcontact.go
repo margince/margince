@@ -12,7 +12,7 @@ import (
 
 // WithholdContact adds the contact's attach rights to the shared action gate.
 func WithholdContact(ctx context.Context, language string, moment *crmcontracts.ContactMoment, attachable bool) {
-	Withhold(ctx, language, moment)
+	Withhold(ctx, language, "contact", moment)
 	if attachable {
 		return
 	}

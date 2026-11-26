@@ -63,7 +63,7 @@ func seedStagesWithADealEach(t *testing.T, e *forecastEnv, n int) {
 	if _, err := e.owner.Exec(context.Background(), `
 		WITH s AS (
 			INSERT INTO stage (pipeline_id, name, position, semantic, win_probability)
-			SELECT $1, 'Stage ' || i, p.top + i, 'open', 50
+			SELECT $1, 'Row limit stage ' || i, p.top + i, 'open', 50
 			  FROM generate_series(1, $2) AS i,
 			       (SELECT coalesce(max(position), 0) AS top FROM stage WHERE pipeline_id = $1) p
 			RETURNING id

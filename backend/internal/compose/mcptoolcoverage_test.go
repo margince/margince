@@ -56,6 +56,7 @@ const (
 	e2eLLMRecordDir    = "aicert/records/mcp_e2e"
 	e2eLLMRESTDir      = "aicert/records/mcp_e2e_rest"
 	mcpDocsDir         = "../../../docs/reference"
+	repoRoot           = "../../.."
 )
 
 type toolCoverageRow struct {
@@ -212,6 +213,8 @@ type caseModelRun struct {
 	Efficiency *mcpe2e.Efficiency `json:"efficiency,omitempty"`
 	Slow       bool               `json:"slow,omitempty"`
 	Regraded   bool               `json:"regraded,omitempty"`
+	// EarlierListing names what changed since the run, per `make e2e-llm-report`.
+	EarlierListing []string `json:"measured_on_an_earlier_listing,omitempty"`
 	// ToolsCalled are the tools a passing run used; the page counts them as
 	// driven where the case held.
 	ToolsCalled []string `json:"-"`
@@ -228,8 +231,10 @@ type modelCoverage struct {
 	CasesRecorded int    `json:"cases_with_a_committed_run"`
 	CasesHeld     int    `json:"cases_that_reached_their_bar"`
 	CasesBelowBar int    `json:"cases_below_their_bar"`
-	Runs          int    `json:"runs"`
-	Passed        int    `json:"passed"`
+	// CasesOnEarlierListing counts the cases whose run measured an earlier listing.
+	CasesOnEarlierListing int `json:"cases_measured_on_an_earlier_listing"`
+	Runs                  int `json:"runs"`
+	Passed                int `json:"passed"`
 	// Reliability is Passed/Runs over every committed run. It answers "how often
 	// did this model do the job", which a count of held cases cannot: a case
 	// scraping its bar two runs in three and one passing all three are both held.
@@ -403,9 +408,9 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 	}
 	sort.Slice(agentSurface, func(i, j int) bool { return agentSurface[i].Name < agentSurface[j].Name })
 
-	units, err := extensionTools(extensionsDir)
+	units, err := extensionTools(repoRoot)
 	if err != nil {
-		t.Fatalf("reading the unit manifests under %s: %v", extensionsDir, err)
+		t.Fatalf("reading the composed units' manifests: %v", err)
 	}
 
 	names := make([]string, 0, len(specs))
@@ -630,6 +635,10 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 	if err != nil {
 		return nil, err
 	}
+	earlier, err := earlierListings(recordDir)
+	if err != nil {
+		return nil, err
+	}
 	entries, err := os.ReadDir(scenarioDir)
 	if err != nil {
 		return nil, err
@@ -660,7 +669,7 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 			}
 		}
 		row.Requires, row.RequiresOneOf = requiredTools(text)
-		row.ByModel = runsFor(verdicts, row.Name)
+		row.ByModel = runsFor(verdicts, earlier, row.Name)
 		cases = append(cases, row)
 	}
 	sort.Slice(cases, func(i, j int) bool { return cases[i].File < cases[j].File })
@@ -868,6 +877,9 @@ func summariseModel(cases []caseRow, model string) modelCoverage {
 			summary.SelfJudged = summary.SelfJudged || run.SelfJudged
 			summary.Runs += run.Runs
 			summary.Passed += run.Passed
+			if len(run.EarlierListing) > 0 {
+				summary.CasesOnEarlierListing++
+			}
 			measured = append(measured, run.Efficiency)
 			if run.Slow {
 				summary.Slow = append(summary.Slow, c.Name)
@@ -968,8 +980,7 @@ func readE2ELLMVerdicts(dir string) (map[verdictKey]mcpe2e.Verdict, error) {
 }
 
 // runsFor collects each model's result on one scenario, ordered by model name.
-// Staleness is `make e2e-llm-report`'s: on this page it would fail every copy edit.
-func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, scenario string) []caseModelRun {
+func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, earlier map[verdictKey][]string, scenario string) []caseModelRun {
 	var out []caseModelRun
 	for key, v := range verdicts {
 		if key.scenario != scenario {
@@ -979,6 +990,7 @@ func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, scenario string) []caseMode
 			Model: v.Folder, Runs: v.Runs, Passed: v.Passed, PassAt: v.PassAt,
 			Held: v.PassAt > 0 && v.Passed >= v.PassAt, Driver: v.Driver, Search: v.Search, SelfJudged: v.SelfJudged,
 			Efficiency: v.Efficiency, Slow: v.Slow, Regraded: v.Stamp.Regraded(), ToolsCalled: v.PassingTools(),
+			EarlierListing: earlier[key],
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })

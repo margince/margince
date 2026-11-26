@@ -17,7 +17,7 @@ func markRefusedMoves(ctx context.Context, page *crmcontracts.Worklist) {
 	mark := func(items []crmcontracts.WorklistItem) {
 		for i := range items {
 			if move := items[i].Move; move != nil {
-				move.BlockedReason = momentaction.MoveRefusal(ctx, move.Action)
+				move.BlockedReason = momentaction.MoveRefusal(ctx, moveRecord(items[i]), move.Action)
 			}
 		}
 	}
@@ -28,4 +28,12 @@ func markRefusedMoves(ctx context.Context, page *crmcontracts.Worklist) {
 	if page.Focus != nil {
 		mark(page.Focus.Items)
 	}
+}
+
+// moveRecord is the RBAC object a row is about. Every subject type names one.
+func moveRecord(item crmcontracts.WorklistItem) string {
+	if item.Subject == nil {
+		return ""
+	}
+	return string(item.Subject.Type)
 }

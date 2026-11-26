@@ -67,14 +67,14 @@ var assuranceSubjectsSQL = `
 		                WHERE x.subject_kind = 'deal' AND x.subject_id = d.id
 		                  AND x.type = $4 AND x.status = 'open') AS open_review,
 		       %[4]s AS viability_fingerprint,
-		       (SELECT o.gross_minor
+		       (SELECT o.net_minor
 		          FROM offer o
 		         WHERE o.deal_id = d.id
 		           AND o.archived_at IS NULL
 		           AND o.status IN ('sent', 'accepted')
 		           AND o.currency = d.currency
 		         ORDER BY o.updated_at DESC
-		         LIMIT 1) AS offer_total_minor,
+		         LIMIT 1) AS offer_net_minor,
 		       (SELECT c.value_minor
 		          FROM contract c
 		         WHERE c.deal_id = d.id
@@ -268,7 +268,7 @@ func scanAssuranceSubject(
 		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
 		&evidence.LastCustomerRefusalAt,
 		&evidence.ConfirmedMeetingAt, &evidence.EarlierAnswerUntil, &evidence.OpenReview, &fingerprint,
-		&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
+		&out.OfferNetMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
 		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria, &mailboxes)
 	if err != nil {
 		return out, err
@@ -387,12 +387,7 @@ func onlyDealSQL(only []ids.UUID, arg func(any) int) string {
 	return fmt.Sprintf(" AND d.id = ANY($%d)", arg(only))
 }
 
-// visibleToAllSQL admits an activity every member may read. The check runs as
-// the system and its answer reaches every reader of the forecast, so a limited
-// or restricted message must not move it.
-func visibleToAllSQL(alias string) string {
-	return "(" + relstrength.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL)"
-}
+func visibleToAllSQL(alias string) string { return relstrength.VisibleToAllSQL(alias) }
 
 // customerWroteSQL is a message one of the deal's contacts wrote.
 func customerWroteSQL(alias string) string {

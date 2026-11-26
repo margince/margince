@@ -30,7 +30,7 @@ const company: Company = {
   writable: true,
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   captured_by: "human:u1",
   source: "manual",
   version: 1,

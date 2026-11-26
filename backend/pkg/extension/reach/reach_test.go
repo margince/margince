@@ -20,7 +20,7 @@ func TestADeclarationIsRefusedWhenTheCoreCannotActOnIt(t *testing.T) {
 		{"no link", Table{Name: "ext_a_note"}, "declares no link"},
 		{"no kind at all", Table{Name: "ext_a_note", Links: []Link{{Column: "record_id"}}}, "names no record kind"},
 		{"both kinds", Table{Name: "ext_a_note", Links: []Link{{Column: "record_id", Record: Contact, KindColumn: "record_type"}}}, "both"},
-		{"unknown kind", Table{Name: "ext_a_note", Links: []Link{{Column: "deal_id", Record: "deal"}}}, "not one the merge moves"},
+		{"unknown kind", Table{Name: "ext_a_note", Links: []Link{{Column: "project_id", Record: "project"}}}, "not one the merge moves"},
 		{"row id as link", Table{Name: "ext_a_note", Links: []Link{{Column: "id", Record: Company}}}, "not an identifier"},
 		{"erase without a contact link", Table{Name: "ext_a_note", Links: company, Erase: []Clear{{Column: "body", To: Null}}}, "no link can hold a contact"},
 		{"erase the row id", Table{Name: "ext_a_note", Links: []Link{{Column: "contact_id", Record: Contact}}, Erase: []Clear{{Column: "id", To: Null}}}, "may clear"},

@@ -55,6 +55,11 @@ func (r *unitReader) readApp(expr ast.Expr, file *ast.File) (*declaredApp, error
 	if err := decl.Validate(extension.Name(r.unit)); err != nil {
 		return nil, r.errPos(expr, "%v", err)
 	}
+	if app.Label == "" {
+		// Resolved here, so the manifest, the registry and the drawer carry the
+		// one key that checkAppLabels proves every locale ships.
+		app.Label = localeKeyPrefix(r.unit) + "title"
+	}
 	for _, v := range r.verbs {
 		if v.verb.RbacObject == app.Object {
 			return &app, nil
@@ -104,7 +109,8 @@ func checkAppFrontends(manifests []derivedManifest) error {
 }
 
 // checkAppLabels refuses an app whose label is missing from the unit's own
-// copy in any locale.
+// copy in any locale. An app with no label of its own is checked for the
+// unit's title, which readApp put in its place.
 func checkAppLabels(manifests []derivedManifest, merged map[string]map[string]string) error {
 	for _, m := range manifests {
 		if m.Manifest.App == nil {

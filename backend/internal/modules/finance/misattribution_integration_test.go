@@ -143,8 +143,8 @@ func TestTheDatabaseRefusesAMisattributedRow(t *testing.T) {
 		},
 		{
 			"a link to a customer the directory does not list", `INSERT INTO finance_customer_link
-			(connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
-			VALUES ($1, $2, 'NEVER-LISTED', '', 'manual', 'human:test')`,
+			(connection_id, company_id, external_customer_id, captured_by)
+			VALUES ($1, $2, 'NEVER-LISTED', 'human:test')`,
 			"finance_customer_link_directory_fk",
 			[]any{e.connection, other},
 		},
@@ -189,8 +189,8 @@ func (e *financeEnv) foreignInvoice(t *testing.T, company ids.UUID) ids.UUID {
 	e.ownerExec(t, `INSERT INTO finance_external_customer (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
 		VALUES ($1, $2, 'Other customer', '', 'system', 'system:test')`, e.connection, external)
 	link := ids.NewV7()
-	e.ownerExec(t, `INSERT INTO finance_customer_link (id, connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
-		VALUES ($1, $2, $3, $4, '', 'manual', 'human:test')`, link, e.connection, company, external)
+	e.ownerExec(t, `INSERT INTO finance_customer_link (id, connection_id, company_id, external_customer_id, captured_by)
+		VALUES ($1, $2, $3, $4, 'human:test')`, link, e.connection, company, external)
 	invoice := ids.NewV7()
 	e.ownerExec(t, `INSERT INTO finance_invoice (id, connection_id, company_id, customer_link_id, external_id, issued_at, status,
 		currency, net_minor, gross_minor, sync_hash, source, captured_by)

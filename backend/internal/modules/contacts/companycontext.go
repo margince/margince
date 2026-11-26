@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // CompanyContextScope is one bounded business-context view. The order below is
@@ -290,7 +291,8 @@ func normalizeCompanySource(source string) string {
 		return CompanySourceHuman
 	case CompanySourceAgent:
 		return CompanySourceAgent
-	case "coldstart", "deepread", companySourceSiteRead:
+	// Cold start is the one automation that writes a company name, from a site read.
+	case "coldstart", provenance.RecordSourceAutomation, "deepread", companySourceSiteRead:
 		return companySourceSiteRead
 	case "enrich", "connector":
 		return "connector"

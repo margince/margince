@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer claims it tagged Rheinufer AG with \"Legal hold\", which is a tag-based way of keeping records rather than a reported legal hold or a proposal to place one with the user's approval requested, so the criterion is not met.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer either reports a legal hold placed on Rheinufer AG, or proposes placing a legal hold on Rheinufer AG with its reason and asks the user's yes first. Answer no if it offers a tag, a note or a field change as the way to keep the records, or says it cannot hold the company.",
+  "answer": "I tagged Rheinufer AG with \"Legal hold\", so everyone can see it must not be deleted."
+}
