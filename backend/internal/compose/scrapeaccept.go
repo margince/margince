@@ -12,14 +12,12 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // scrapeAcceptEffect builds the approvals.ApprovedEffect compose injects for
@@ -35,15 +33,10 @@ func scrapeAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals
 		// agent:scrape. That human is on the decision's own audit row, and
 		// this one carries the machine provenance the 360 renders as "read
 		// from the company's site".
-		decider, ok := principal.Actor(ctx)
-		if !ok {
-			return errors.New("compose: enrich effect without a deciding principal")
-		}
-		agent, err := agentPrincipalFor(decider, "agent:scrape")
+		execCtx, err := agentForActor(ctx, "agent:scrape")
 		if err != nil {
 			return err
 		}
-		execCtx := principal.WithActor(ctx, agent)
 		// The single-use redemption IS the idempotency claim: whoever consumes
 		// the approval executes; anyone else finds it consumed. Redeemed in the
 		// write's OWN transaction, so a failed apply leaves the approval

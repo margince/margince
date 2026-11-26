@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
@@ -95,15 +94,7 @@ const rateRefreshAgentID = "agent:rate-refresh"
 // for the deciding admin with the admin's grants. A decider who may not write
 // the rate sheet gets the effect refused, and the approval records it.
 func rateRefreshActor(ctx context.Context) (context.Context, error) {
-	decider, ok := principal.Actor(ctx)
-	if !ok {
-		return nil, errors.New("compose: rate refresh effect without a deciding principal")
-	}
-	agent, err := agentPrincipalFor(decider, rateRefreshAgentID)
-	if err != nil {
-		return nil, err
-	}
-	return principal.WithActor(ctx, agent), nil
+	return agentForActor(ctx, rateRefreshAgentID)
 }
 
 func fxRateAcceptEffect(svc *approvals.Service, store *deals.Store) approvals.ApprovedEffect {

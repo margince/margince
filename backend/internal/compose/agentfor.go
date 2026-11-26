@@ -91,6 +91,21 @@ func agentPrincipalFor(colleague principal.Principal, actorID string) (principal
 	}, nil
 }
 
+// agentForActor binds actorID acting for the principal on ctx, with that
+// principal's grants. An approved effect or an accepted reading writes as the
+// product's agent, held to what the human who released it may do.
+func agentForActor(ctx context.Context, actorID string) (context.Context, error) {
+	human, ok := principal.Actor(ctx)
+	if !ok {
+		return nil, fmt.Errorf("compose: %s acts for nobody, as no principal is bound", actorID)
+	}
+	agent, err := agentPrincipalFor(human, actorID)
+	if err != nil {
+		return nil, err
+	}
+	return principal.WithActor(ctx, agent), nil
+}
+
 // colleagueJob names the two principals of a job the product runs for a named
 // colleague. work is the agent that does the job's real work under the
 // colleague's grants. books is the system that keeps the run's own row: claim,

@@ -347,7 +347,6 @@ var agentJobsStillSystemTyped = gatekit.Waive(map[string]string{
 	"internal/compose/chatcapturefile.go":             forAColleague,
 	"internal/compose/coldstartaccept.go":             forAColleague,
 	"internal/compose/companynamepromotion.go":        forAColleague,
-	"internal/compose/deepreadaccept.go":              forAColleague,
 	"internal/compose/deepreadprincipal.go":           forAColleague,
 	"internal/compose/extractionaccept.go":            forAColleague,
 	"internal/compose/jobs_documentextract.go":        forAColleague,

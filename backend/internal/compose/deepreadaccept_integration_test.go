@@ -331,6 +331,27 @@ func TestDeepReadRejectionLandsNothing(t *testing.T) {
 	}
 }
 
+// An approved legacy proposal is written by agent:deepread acting for the
+// decider, under the decider's grants.
+func TestAnApprovedDeepReadIsWrittenByTheAgentForTheDecider(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	_, svc := newDeepReadTestWorker(e, acmeServicesSite(), servicesDeepBrain())
+	read, _ := startDeepRead(t, e, company)
+	proposal := stageLegacyDeepReadProposal(t, e, svc, company, read.ID, nil, servicesOfferings())
+
+	if _, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), ids.From[ids.ApprovalKind](proposal), true, nil); err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM company_fact WHERE company_id = $1`, company); n == 0 {
+		t.Fatal("the approved proposal landed no company_fact row")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1
+		AND actor_type = 'agent' AND actor_id = 'agent:deepread' AND on_behalf_of = $2`, company, e.Rep2); n == 0 {
+		t.Fatal("no write by agent:deepread for the decider")
+	}
+}
+
 // fakeInserter stands in for the insert-only River client so handler
 // tests can count what start enqueues, and what opts it queued it under.
 type fakeInserter struct {
