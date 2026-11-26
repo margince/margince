@@ -217,7 +217,9 @@ deps:
     # knowledge itself: the module reads its own handbook subpackage, the same
     # self-reference agents carries for its own.
     mayDependOn: [knowledge, contracts, platform]
-    canUse: [pgx, oapi]
+    # xtext: an audience is compared without accents, so "Bếp" and "bep" name
+    # one audience.
+    canUse: [pgx, oapi, xtext]
   projects:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
