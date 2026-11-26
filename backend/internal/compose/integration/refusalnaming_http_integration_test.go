@@ -58,6 +58,9 @@ func TestEveryRefusalNamesTheFaultTheCallerMade(t *testing.T) {
 		{"a removal of no member", "POST", "/v1/lists/" + list + "/members/remove", AnyMap{"entity_type": "contact", "entity_id": contact}, http.StatusNotFound, "not_found", "", ""},
 		{"a reporting window without its start", "GET", "/v1/analytics/evaluate?end_at=2026-01-01T00:00:00Z", nil, unprocessable, validation, "start_at", "required"},
 		{"a pin naming no lane", "PUT", "/v1/worklist/pins", AnyMap{}, unprocessable, validation, "source", "required"},
+		{"Done naming no lane", "PUT", "/v1/worklist/done", AnyMap{"rows": []AnyMap{{"source": "made_up", "row_id": "x"}}}, unprocessable, validation, "rows[0].source", "invalid_enum"},
+		{"Done naming no row", "PUT", "/v1/worklist/done", AnyMap{"rows": []AnyMap{{"source": "deal_at_risk", "row_id": ""}}}, unprocessable, validation, "rows[0].row_id", "required"},
+		{"Done naming a malformed activity", "PUT", "/v1/worklist/done", AnyMap{"rows": []AnyMap{{"source": "awaiting_reply", "row_id": "not-an-id"}}}, unprocessable, validation, "rows[0].row_id", "invalid_uuid"},
 		{"a report scope of no kind", "POST", "/v1/reports/deals-by-stage", AnyMap{"scope": AnyMap{"kind": "galaxy"}}, unprocessable, validation, "scope.kind", "invalid"},
 	} {
 		t.Run(c.name, func(t *testing.T) {

@@ -21,9 +21,7 @@ func withoutSentinelWords(fault Fault) Fault {
 	return fault
 }
 
-// withoutSentinelText drops the sentinel words a `fmt.Errorf("…: %w")` wrap
-// leaves at the end of a sentence. The code already says them to a machine,
-// and a person reads "the contact is not on this list: not found" as noise.
+// The machine code carries the sentinel; its words add no guidance to a named refusal.
 func withoutSentinelText(detail string) string {
 	for {
 		trimmed := detail

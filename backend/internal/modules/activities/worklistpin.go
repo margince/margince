@@ -53,7 +53,7 @@ func (s *Store) PinWorklistRow(ctx context.Context, row WorklistRowRef) error {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return err
 	}
-	if err := validRowRef(row, ""); err != nil {
+	if err := row.Validate(""); err != nil {
 		return err
 	}
 	reader, err := pinReader(ctx)

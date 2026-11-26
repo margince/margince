@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -52,7 +51,7 @@ const (
 func (s *Store) MarkWorklistRowsDone(ctx context.Context, rows []WorklistRowRef) error {
 	return s.judgeRows(ctx, rows, func(ctx context.Context, tx pgx.Tx, reader ids.UUID, capturedBy string, row WorklistRowRef) error {
 		if shape, onActivity := doneOnActivity[crmcontracts.WorklistItemSource(row.Source)]; onActivity {
-			id, err := activityRow(row)
+			id, err := activityRow(row, "")
 			if err != nil {
 				return err
 			}
@@ -80,7 +79,7 @@ func (s *Store) MarkWorklistRowsDone(ctx context.Context, rows []WorklistRowRef)
 func (s *Store) ReopenWorklistRows(ctx context.Context, rows []WorklistRowRef) error {
 	return s.judgeRows(ctx, rows, func(ctx context.Context, tx pgx.Tx, reader ids.UUID, capturedBy string, row WorklistRowRef) error {
 		if _, onActivity := doneOnActivity[crmcontracts.WorklistItemSource(row.Source)]; onActivity {
-			id, err := activityRow(row)
+			id, err := activityRow(row, "")
 			if err != nil {
 				return err
 			}
@@ -240,7 +239,7 @@ func (s *Store) judgeRows(
 		return err
 	}
 	for i, row := range rows {
-		if err := validRowRef(row, fmt.Sprintf("rows[%d].", i)); err != nil {
+		if err := row.Validate(fmt.Sprintf("rows[%d].", i)); err != nil {
 			return err
 		}
 	}
@@ -286,14 +285,8 @@ func distinctRows(rows []WorklistRowRef) []WorklistRowRef {
 	return out
 }
 
-// validRowRef refuses a source the queue does not produce and an id no row
-// could carry, naming the field under at ("rows[2]." for a Done batch).
-//
-// The source is checked against the contract's own vocabulary. Without it the
-// table takes any string: junk that matches no row and sits forever, because
-// only its author can remove it. The id bound stops a caller storing a page of
-// text under a key nothing will ever match.
-func validRowRef(row WorklistRowRef, at string) error {
+// Validate names the malformed source or id before a read can turn it into a missing row.
+func (row WorklistRowRef) Validate(at string) error {
 	switch {
 	case row.Source == "":
 		return &values.ParseError{Field: at + "source", Code: codeRequired, Message: "name the lane the row came from in source"}
@@ -307,15 +300,21 @@ func validRowRef(row WorklistRowRef, at string) error {
 			Message: fmt.Sprintf("a row's id is at most %d characters", maxPinnedRowIDLen),
 		}
 	}
+	if _, onActivity := doneOnActivity[crmcontracts.WorklistItemSource(row.Source)]; onActivity {
+		_, err := activityRow(row, at)
+		return err
+	}
 	return nil
 }
 
 // activityRow reads the activity id a message or meeting row carries.
-func activityRow(row WorklistRowRef) (ids.ActivityID, error) {
+func activityRow(row WorklistRowRef, at string) (ids.ActivityID, error) {
 	parsed, err := ids.Parse(row.RowID)
 	if err != nil {
-		return ids.ActivityID{}, fmt.Errorf("a %s row is named by its activity id: %w",
-			row.Source, apperrors.ErrInvalidArgument)
+		return ids.ActivityID{}, &values.ParseError{
+			Field: at + "row_id", Code: "invalid_uuid",
+			Message: fmt.Sprintf("a %s row is named by its activity id", row.Source),
+		}
 	}
 	return ids.From[ids.ActivityKind](parsed), nil
 }

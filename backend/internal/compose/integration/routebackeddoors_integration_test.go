@@ -126,7 +126,7 @@ func TestNoRouteBackedActionStillRefusesAnActingAgent(t *testing.T) {
 			continue
 		}
 		compared++
-		if result.IsError && strings.Contains(result.Text, "permission denied") {
+		if result.IsError && strings.Contains(result.Text, "permission_denied") {
 			t.Errorf("%s (%s %s) admits the signed-in admin (%d) and refuses their agent: %s",
 				v.Verb, v.Method, v.Pattern, human, result.Text)
 		}

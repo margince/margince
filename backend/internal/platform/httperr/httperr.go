@@ -276,50 +276,12 @@ func (f Fault) CallersToFix() bool {
 	return f.Status < http.StatusInternalServerError
 }
 
-// Classify is the ONE decision tree behind the error taxonomy: what err means
-// to a caller, independent of the surface that caller reached us through. It
-// reports false only for an error outside the taxonomy — a genuine server
-// fault, whose text never crosses to a client.
-//
-// Every surface classifies HERE. The REST mapper and the MCP tool dispatcher
-// each used to carry their own copy of this judgement, and the copies
-// disagreed: a malformed argument was a 422 naming the offending field on
-// REST, and "the tool failed for an internal reason; retry" on MCP — advice
-// that could never succeed, for a mistake the caller could have fixed had we
-// named it. One tree and two renderers means the surfaces cannot drift apart
-// again.
+// Classify gives REST and MCP one error taxonomy. Unknown errors return false;
+// their text must never reach a client.
 func Classify(err error) (fault Fault, ok bool) {
 	defer func() { fault = withoutSentinelWords(fault) }()
-	// A REFUSAL THAT CARRIES A REFERENCE renders it as a field rather than
-	// leaving it in prose.
-	//
-	// BEFORE the sentinel table and after nothing, because the sentinel is
-	// still what decides the STATUS: this branch changes what a caller is
-	// handed, never what they are told happened. A surface reading `details`
-	// gets an id it can act on; one reading only the message gets exactly what
-	// it got before.
-	//
-	// It exists for the tool surface. An agent handed "consent not granted" in
-	// a sentence can do nothing with it; the same refusal naming the review it
-	// opened can hand the question to a human.
-	if referenced, ok := errors.AsType[apperrors.ReferencedFault](err); ok {
-		if fault, ok := Classify(referenced.Unreferenced()); ok {
-			fault.Details = referenced.FaultReference()
-			// AND THE MESSAGE KEEPS THE REFERENCE TOO. Classifying the
-			// unreferenced cause is what preserves the status, and it also
-			// answers the CAUSE's own text — which no longer names the review.
-			//
-			// A human reading the prose must not lose what a machine just
-			// gained. Both carry it: the sentence for whoever reads it, the
-			// field for whatever parses it.
-			if detail := referenced.Error(); detail != "" && !infrastructureCause(err) {
-				fault.Detail = detail
-			}
-			if waits, ok := referenced.(retryAfterFault); ok {
-				fault.RetryAfterSeconds = waits.RetryAfterSeconds()
-			}
-			return fault, true
-		}
+	if fault, ok := referencedFault(err); ok {
+		return fault, true
 	}
 
 	if fault, ok := unansweredFaultOf(err); ok {
@@ -382,6 +344,26 @@ func Classify(err error) (fault Fault, ok bool) {
 	}
 
 	return Fault{}, false
+}
+
+// A reference decorates the underlying refusal without changing its status.
+func referencedFault(err error) (Fault, bool) {
+	referenced, ok := errors.AsType[apperrors.ReferencedFault](err)
+	if !ok {
+		return Fault{}, false
+	}
+	fault, ok := Classify(referenced.Unreferenced())
+	if !ok {
+		return Fault{}, false
+	}
+	fault.Details = referenced.FaultReference()
+	if detail := referenced.Error(); detail != "" && !infrastructureCause(err) {
+		fault.Detail = detail
+	}
+	if waits, ok := referenced.(retryAfterFault); ok {
+		fault.RetryAfterSeconds = waits.RetryAfterSeconds()
+	}
+	return fault, true
 }
 
 // loggedPath is the request path as a log line may carry it: any capability
