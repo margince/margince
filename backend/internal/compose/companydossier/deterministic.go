@@ -101,6 +101,9 @@ func Deterministic(in Input, lang string) []Section {
 	if sentence, ok := columnIndustrySentence(in, lang); ok {
 		bySection[sectionMarkets] = append(bySection[sectionMarkets], sentence)
 	}
+	for kind, sentences := range standingSentences(in, textlang.Lang(lang)) {
+		bySection[kind] = append(sentences, bySection[kind]...)
+	}
 	return orderedSections(bySection)
 }
 

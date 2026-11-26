@@ -79,6 +79,31 @@ var dossierLabels = map[crmcontracts.CompanyProfileFieldField]phrase{
 	},
 }
 
+// standingLabels names what the floor states from the company record itself.
+var standingLabels = struct {
+	description, lifecycle, contacts, openDeals, employees phrase
+}{
+	description: phrase{En: "What they do", De: "Was sie tun", Vi: "Họ làm gì"},
+	lifecycle:   phrase{En: "Lifecycle", De: "Lebenszyklus", Vi: "Vòng đời"},
+	contacts:    phrase{En: "Contacts", De: "Kontakte", Vi: "Liên hệ"},
+	openDeals:   phrase{En: "Open deals", De: "Offene Deals", Vi: "Giao dịch đang mở"},
+	employees:   phrase{En: "Employees", De: "Mitarbeitende", Vi: "Nhân viên"},
+}
+
+// lifecycleWords names each stage a company can be at, in the words the
+// company page uses. Unknown is absent: it says nothing about the company.
+// Held by TestEveryLifecycleButUnknownIsWorded.
+var lifecycleWords = map[crmcontracts.CompanyStatus]phrase{
+	crmcontracts.CompanyStatusTarget:         {En: "Target", De: "Zielunternehmen", Vi: "Mục tiêu"},
+	crmcontracts.CompanyStatusProspect:       {En: "Prospect", De: "Interessent", Vi: "Tiềm năng"},
+	crmcontracts.CompanyStatusOpportunity:    {En: "Opportunity", De: "Chance", Vi: "Cơ hội"},
+	crmcontracts.CompanyStatusOnboarding:     {En: "Onboarding", De: "Onboarding", Vi: "Đang triển khai"},
+	crmcontracts.CompanyStatusLive:           {En: "Live", De: "Live", Vi: "Đang vận hành"},
+	crmcontracts.CompanyStatusCustomer:       {En: "Customer", De: "Kunde", Vi: "Khách hàng"},
+	crmcontracts.CompanyStatusFormerCustomer: {En: "Former customer", De: "Ehemaliger Kunde", Vi: "Khách hàng cũ"},
+	crmcontracts.CompanyStatusDisqualified:   {En: "Disqualified", De: "Disqualifiziert", Vi: "Đã loại"},
+}
+
 // labelFor answers one field's label in a language, falling back to English for
 // one this build does not speak.
 func labelFor(field crmcontracts.CompanyProfileFieldField, lang string) (string, bool) {

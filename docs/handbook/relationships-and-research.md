@@ -334,7 +334,7 @@ An address Margince cannot split stays whole under **Registered address** in the
 
 ### Other readings
 
-- **Dossier**: what this company *is*, written only from facts already on file, with every sentence naming one.
+- **Dossier**: what this company *is*, written only from facts already on file, with every sentence naming one. Without an AI model it lists the profile and the company's own fields: description, industry, size, lifecycle, contacts and open deals.
 - **Account scan**: a reading of one company *for you*, naming records and
   showing words. It is never shared, because it is made from what you can see.
 - **Growth fit**: what this company is worth to *you*, in bands. While facts are missing, it lists
@@ -350,7 +350,7 @@ An address Margince cannot split stays whole under **Registered address** in the
   **Weighted deal value today** is always the open deals as they stand now,
   whatever period you pick.
 
-The dossier, the scan and the growth fit are yours alone, because each is made from one reader's own view. An agent you connected reads yours, and no colleague's.
+The dossier, the scan and the growth fit are yours alone, because each is made from one reader's own view. The dossier and the growth fit are in your language. An agent you connected reads yours, and no colleague's.
 
 ### When it is not available
 

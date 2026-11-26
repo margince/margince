@@ -69,12 +69,11 @@ func (h Handlers) GetClaimEvidence(w http.ResponseWriter, r *http.Request,
 		httperr.Write(w, r, err)
 		return
 	}
-	// The receipt's labels follow the installation's base language, the same
-	// source the dossier itself is written from — a receipt opened off a German
-	// card must not answer in English.
+	// The receipt's labels follow the reader's language, which the dossier and
+	// the growth fit are written in: a receipt off a German card is German.
 	receipt, err := EvidenceFor(r.Context(), h.svc.facts,
 		ids.From[ids.CompanyKind](ids.UUID(id)), entityType, entityID,
-		identity.BaseLanguageForPrompt(r.Context(), h.svc.pool))
+		identity.ReaderLanguageForPrompt(r.Context(), h.svc.pool))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
