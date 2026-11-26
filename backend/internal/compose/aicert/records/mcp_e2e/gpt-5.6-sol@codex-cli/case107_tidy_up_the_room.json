@@ -13,20 +13,24 @@
   "self_judged": false,
   "stamp": {
     "scenario": "0cfb69b78546b245",
-    "tools": "88f5bc2960c9e9f2",
-    "instructions": "c5c644eee9719be0",
+    "tools": "0267515677193081",
+    "instructions": "d707a123fe53827f",
     "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
-    "ran_at": "2026-11-21T17:14:08Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:34:45Z"
+    "harness": "0fe690d35efcc703",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "ran_at": "2026-11-26T04:39:35Z",
+    "graded_commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "graded_at": "2026-11-26T04:39:35Z"
   },
   "usage": {
-    "input_tokens": 51257,
-    "output_tokens": 3635,
+    "input_tokens": 53102,
+    "output_tokens": 3216,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 513408,
+    "cache_read_input_tokens": 529152,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -35,18 +39,18 @@
     {
       "passed": false,
       "tools": [
-        "catch_me_up_on",
         "describe_router_actions",
         "find_records",
         "list_records",
-        "read_attention",
-        "read_context",
         "read_record",
         "read_workspace",
         "search_records",
         "send_outbound",
-        "update_deal_room",
-        "whats_slipping_this_week"
+        "update_deal_room"
+      ],
+      "refused": [
+        "find_records",
+        "send_outbound"
       ]
     },
     {
@@ -60,30 +64,44 @@
         "search_records",
         "send_outbound",
         "update_deal_room"
+      ],
+      "refused": [
+        "find_records",
+        "send_outbound"
       ]
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 12.5,
-      "min": 10,
-      "max": 15
+      "median": 10.5,
+      "min": 9,
+      "max": 12
     },
     "refused": {
-      "median": 1.5,
-      "min": 1,
+      "median": 2,
+      "min": 2,
       "max": 2
     },
+    "retries": {
+      "median": 2,
+      "min": 2,
+      "max": 2
+    },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
     "prompt_tokens": {
-      "median": 282332.5,
-      "min": 260213,
-      "max": 304452
+      "median": 291127,
+      "min": 270763,
+      "max": 311491
     },
     "output_tokens": {
-      "median": 1817.5,
-      "min": 1715,
-      "max": 1920
+      "median": 1608,
+      "min": 1535,
+      "max": 1681
     }
   }
 }

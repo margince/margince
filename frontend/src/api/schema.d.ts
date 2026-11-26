@@ -54803,7 +54803,7 @@ export interface components {
                 if_version?: boolean;
                 /** @description Whether the app asks its user to confirm it first. */
                 ask_user_first?: boolean;
-                /** @description Whether it takes filename, content_type and content_base64. */
+                /** @description Whether it takes filename, content_type and content_base64 or content_text. */
                 uploads_a_file?: boolean;
                 /** @description The JSON schema of its body argument. */
                 body?: {

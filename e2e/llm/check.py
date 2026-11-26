@@ -638,13 +638,14 @@ WorkedOut = collections.namedtuple("WorkedOut", "criterion answer problems")
 
 
 def tools_by_run(paths, passing):
-    """Each run's tools whose call worked, by bare name, and whether the run
-    passed. The coverage page counts only a passing run's tools as driven."""
+    """Each run's tools whose call worked and those it had refused, by bare name,
+    and whether the run passed. The coverage page counts only a passing run's
+    worked tools as driven."""
     runs = []
     for path in paths:
         if os.path.exists(path):
             tools = sorted({name.rsplit("__", 1)[-1] for name, _ in read_run(path).worked})
-            runs.append({"passed": path in passing, "tools": tools})
+            runs.append({"passed": path in passing, "tools": tools, "refused": refused_tools(path)})
     return runs
 
 
@@ -936,7 +937,10 @@ def read_effort(path):
     calls would read as the most direct run of all. A key the transcript does
     not carry is absent, never 0.
     """
-    calls, refused, result = 0, 0, None
+    calls, refused, retries, result = 0, 0, 0, None
+    # A retry is the same call made again after it was refused, so a model that
+    # learns from one refusal scores one retry, and one that keeps trying scores more.
+    asked, refused_calls = {}, set()
     with _open_checked(path) as handle:
         for line in handle:
             try:
@@ -952,11 +956,17 @@ def read_effort(path):
                     continue
                 if block.get("type") == "tool_use":
                     calls += 1
+                    call = _call_key(block)
+                    asked[block.get("id")] = call
+                    if call in refused_calls:
+                        retries += 1
+                        refused_calls.discard(call)
                 elif block.get("type") == "tool_result" and _refused_result(block):
                     refused += 1
+                    refused_calls.add(asked.get(block.get("tool_use_id")))
     if result is None:
         return None
-    effort = {"calls": calls, "refused": refused}
+    effort = {"calls": calls, "refused": refused, "retries": retries}
     server = server_calls(path)
     if server is not None:
         # Attempts the server never received: the client refused them itself.
@@ -974,13 +984,42 @@ def read_effort(path):
     return effort
 
 
+def _call_key(block):
+    """A call by its bare tool name and the action it picks, so a CLI-refused bare
+    name and its prefixed retry are one call, and two actions of a router are two."""
+    arguments = block.get("input") if isinstance(block.get("input"), dict) else {}
+    picked = next((arguments[key] for key in ("action", "as") if isinstance(arguments.get(key), str)), "")
+    return str(block.get("name") or "").rsplit("__", 1)[-1], picked
+
+
+def refused_tools(path):
+    """The bare names of the tools whose calls this run had refused, sorted."""
+    asked, names = {}, set()
+    with _open_checked(path) as handle:
+        for line in handle:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            for block in (event.get("message") or {}).get("content") or []:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "tool_use":
+                    asked[block.get("id")] = _call_key(block)[0]
+                elif block.get("type") == "tool_result" and _refused_result(block):
+                    names.add(asked.get(block.get("tool_use_id"), ""))
+    return sorted(name for name in names if name)
+
+
 def _refused_result(block):
     if block.get("is_error") and not staged(block.get("content")):
         return True
     return bool(_NO_SUCH_TOOL.search(_tool_result_text(block)))
 
 
-_EFFORT_METRICS = ("calls", "turns", "refused", "client_refused", "prompt_tokens", "output_tokens", "duration_ms")
+_EFFORT_METRICS = ("calls", "turns", "refused", "retries", "client_refused", "prompt_tokens", "output_tokens", "duration_ms")
 
 
 def _spread(values):
@@ -1014,7 +1053,7 @@ def efficiency_line(measured):
     if measured is None:
         return "  efficiency: no run finished, nothing measured"
     parts = [f"{measured['runs']} run(s) finished"]
-    for metric in ("calls", "turns", "refused", "client_refused"):
+    for metric in ("calls", "turns", "refused", "retries", "client_refused"):
         if metric in measured:
             spread = measured[metric]
             label = "refused by the client" if metric == "client_refused" else metric
