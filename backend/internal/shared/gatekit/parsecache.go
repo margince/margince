@@ -77,11 +77,24 @@ func fileSetFrom(base int) *token.FileSet {
 // Positions resolve against SourceFileSet, and a position's filename is path as
 // spelled here.
 //
-// SkipObjectResolution is honoured by sharing the resolved tree: it only leaves
-// fields unset, so a caller that asked for less reads the same syntax, and the
-// module is held once per comment mode rather than twice.
+// A whole-file tree always carries its comments and resolved objects, whatever
+// mode asked: both only fill fields, so the module is parsed and held once. A
+// caller that prints code without comments uses ParseFileWithoutComments.
 func ParseFile(path string, mode parser.Mode) (*ast.File, error) {
 	mode &^= parser.SkipObjectResolution
+	if mode&(parser.PackageClauseOnly|parser.ImportsOnly) == 0 {
+		mode |= parser.ParseComments
+	}
+	return parseShared(path, mode)
+}
+
+// ParseFileWithoutComments is ParseFile for a caller that prints code and must
+// not print its comments: go/printer writes every comment a tree holds.
+func ParseFileWithoutComments(path string) (*ast.File, error) {
+	return parseShared(path, 0)
+}
+
+func parseShared(path string, mode parser.Mode) (*ast.File, error) {
 	entry, err := parses.at(parseKey{spelled: path, mode: mode}, path, treeFixed.Load() && holdable(path))
 	if err != nil {
 		return nil, err
