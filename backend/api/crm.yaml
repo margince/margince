@@ -77650,8 +77650,17 @@ components:
       type: object
       required: [key, label]
       properties:
-        key: { type: string }
-        label: { type: string }
+        key:
+          type: string
+          description: |
+            Trimmed and lower-cased, then it may hold only lower-case letters, digits and underscores
+            (`marketing_email`). Anything else is a 422 on `key`. A key another purpose holds, archived
+            ones included, is a 409.
+        label:
+          type: string
+          description: |
+            What every consent screen names the purpose by. A label that reads as a listed purpose's
+            label or key, case, spacing and underscores aside, is a 422 on `label`.
         requires_double_opt_in: { type: boolean, default: false }
         frequency:
           allOf: [{ $ref: '#/components/schemas/ConsentPurposeFrequency' }]

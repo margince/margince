@@ -473,7 +473,9 @@ describe("fulfilling an erasure", () => {
     expect(
       within(drawer).getByText(en["privacy.answerRemoved"]),
     ).toBeInTheDocument();
-    expect(within(drawer).queryByText(en["privacy.erasureAnswer.erased"])).toBeNull();
+    expect(
+      within(drawer).queryByText(en["privacy.erasureAnswer.erased"]),
+    ).toBeNull();
     expect(screen.queryByText(new RegExp(placeholder))).toBeNull();
   });
 

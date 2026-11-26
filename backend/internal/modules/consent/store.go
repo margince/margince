@@ -5,18 +5,13 @@ package consent
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -154,55 +149,6 @@ func (s *Store) ListPurposes(ctx context.Context) ([]Purpose, error) {
 		return rows.Err()
 	})
 	return out, err
-}
-
-// CreatePurpose defines one purpose. Purposes are compliance configuration, and
-// consent_config is the object that says so — it replaced a borrowed
-// pipeline.create, which let anyone who could add a pipeline stage define the
-// vocabulary every outreach decision is judged against.
-func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDOI bool, frequency string) (Purpose, error) {
-	if err := auth.Require(ctx, "consent_config", principal.ActionCreate); err != nil {
-		return Purpose{}, err
-	}
-	key = normalizedPurposeKey(key)
-	if key == "" || strings.TrimSpace(label) == "" {
-		return Purpose{}, &ValidationError{Field: "key", Reason: "key and label are required"}
-	}
-	if frequency == "" {
-		frequency = string(crmcontracts.ConsentPurposeFrequencyMonthly)
-	}
-	if !crmcontracts.ConsentPurposeFrequency(frequency).Valid() {
-		return Purpose{}, &ValidationError{Field: "frequency", Reason: "pick weekly, monthly or quarterly"}
-	}
-	var p Purpose
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		err := tx.QueryRow(ctx, `
-			INSERT INTO consent_purpose (key, label, requires_double_opt_in, frequency)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT ON CONSTRAINT consent_purpose_key_unique DO NOTHING
-			RETURNING id, key, label, requires_double_opt_in, class, frequency, created_at`,
-			key, label, requiresDOI, frequency).
-			Scan(&p.ID, &p.Key, &p.Label, &p.RequiresDoubleOptIn, &p.Class, &p.Frequency, &p.CreatedAt)
-		if !errors.Is(err, pgx.ErrNoRows) {
-			return err
-		}
-		return purposeKeyTaken(ctx, tx, key)
-	})
-	return p, err
-}
-
-// purposeKeyTaken explains a refused key. An archived purpose keeps its key
-// because its consent history stays attached to it, so no second purpose takes it.
-func purposeKeyTaken(ctx context.Context, tx pgx.Tx, key string) error {
-	var archived bool
-	if err := tx.QueryRow(ctx,
-		`SELECT archived_at IS NOT NULL FROM consent_purpose WHERE key = $1`, key).Scan(&archived); err != nil {
-		return fmt.Errorf("consent: reading the purpose that holds key %q: %w", key, err)
-	}
-	if archived {
-		return fmt.Errorf("%w: the key %q belongs to an archived purpose and its consent history stays with it; restore that purpose instead of creating another", apperrors.ErrConflict, key)
-	}
-	return fmt.Errorf("%w: a purpose with the key %q already exists", apperrors.ErrConflict, key)
 }
 
 // ContactConsent reads one contact's per-purpose state plus the full

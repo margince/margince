@@ -15,6 +15,7 @@ import {
   TextInput,
 } from "../../design-system/atoms";
 import { CardBoundary } from "../../design-system/cardboundary";
+import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -44,6 +45,8 @@ type Frequency = NonNullable<ConsentPurpose["frequency"]>;
 
 type PurposeDraft = Readonly<{
   key: string;
+  // Until the admin types a key of their own, the key follows the label.
+  keyTyped: boolean;
   label: string;
   requiresDoi: boolean;
   frequency: Frequency;
@@ -51,6 +54,7 @@ type PurposeDraft = Readonly<{
 
 const EMPTY_DRAFT: PurposeDraft = {
   key: "",
+  keyTyped: false,
   label: "",
   requiresDoi: false,
   frequency: "monthly",
@@ -80,6 +84,27 @@ function isFrequency(value: string): value is Frequency {
 // The key as the server stores and compares it: trimmed, in lower case.
 function purposeKey(typed: string): string {
   return typed.trim().toLowerCase();
+}
+
+// What a key may hold once trimmed and lower-cased; the server's own rule,
+// which frontendlimits_test.go holds equal.
+const PURPOSE_KEY_PATTERN = /^[a-z0-9_]+$/;
+
+// The key a label suggests: accents dropped, every other run of characters a
+// key may not hold turned into one underscore.
+function keyFromLabel(label: string): string {
+  return label
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+// A label or key as a reader tells it apart: case, spacing and underscores
+// aside. The mirror of the server's purposeReading, which refuses the same.
+function purposeReading(text: string): string {
+  return text.toLowerCase().replaceAll("_", " ").trim().split(/\s+/).join(" ");
 }
 
 // Four inputs committed together. A stale create error must not outlive the
@@ -116,8 +141,16 @@ function PurposeCreateForm({
   });
 
   function edit(next: Partial<PurposeDraft>) {
-    setDraft((was) => ({ ...was, ...next }));
-    for (const field of Object.keys(next)) faults.edited(field);
+    setDraft((was) => {
+      const merged = { ...was, ...next };
+      return merged.keyTyped
+        ? merged
+        : { ...merged, key: keyFromLabel(merged.label) };
+    });
+    const fields = Object.keys(next).filter((field) => field !== "keyTyped");
+    // A label that still fills the key edits the key too.
+    if (next.label !== undefined && !draft.keyTyped) fields.push("key");
+    for (const field of fields) faults.edited(field);
     if (create.isError) {
       create.reset();
     }
@@ -130,6 +163,12 @@ function PurposeCreateForm({
   };
   const holder = purposes.find(
     (purpose) => purpose.key === purposeKey(draft.key),
+  );
+  const reading = purposeReading(draft.label);
+  const lookalike = purposes.find(
+    (purpose) =>
+      purposeReading(purpose.label) === reading ||
+      purposeReading(purpose.key) === reading,
   );
   const conflict = {
     field: "key",
@@ -146,9 +185,16 @@ function PurposeCreateForm({
       checks.set("key", fieldCheckSentence("required", locale, labels.key));
     } else if (holder) {
       checks.set("key", conflict.sentence);
+    } else if (!PURPOSE_KEY_PATTERN.test(purposeKey(draft.key))) {
+      checks.set("key", t("privacy.purposeKeyShape"));
     }
     if (draft.label.trim() === "") {
       checks.set("label", fieldCheckSentence("required", locale, labels.label));
+    } else if (lookalike) {
+      checks.set(
+        "label",
+        t("privacy.purposeLabelTaken", { label: lookalike.label }),
+      );
     }
     return checks;
   }
@@ -169,21 +215,27 @@ function PurposeCreateForm({
         }}
       >
         <p>{t("privacy.purposeAppendOnly")}</p>
-        <Field label={labels.key} error={faults.of("key")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={draft.key}
-              onChange={(event) => edit({ key: event.target.value })}
-            />
-          )}
-        </Field>
         <Field label={labels.label} error={faults.of("label")}>
           {(control) => (
             <TextInput
               {...control}
               value={draft.label}
               onChange={(event) => edit({ label: event.target.value })}
+            />
+          )}
+        </Field>
+        <Field
+          label={labels.key}
+          hint={t("privacy.purposeKeyHint")}
+          error={faults.of("key")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={draft.key}
+              onChange={(event) =>
+                edit({ key: event.target.value, keyTyped: true })
+              }
             />
           )}
         </Field>
@@ -295,20 +347,24 @@ export function ConsentPurposesCard() {
 
 function PurposeTable({ purposes }: Readonly<{ purposes: ConsentPurpose[] }>) {
   const t = useT();
-  // The key is the API's handle, read where the purposes are wired, not here.
+  // The key under the label tells apart two purposes whose labels read alike.
   const columns: DataTableColumn<ConsentPurpose>[] = [
     {
       key: "purpose",
       header: t("privacy.purpose"),
-      render: (purpose) =>
-        purpose.requires_double_opt_in ? (
-          <CellStrip>
+      render: (purpose) => (
+        <CellStack>
+          {purpose.requires_double_opt_in ? (
+            <CellStrip>
+              <span>{purpose.label}</span>
+              <Badge>{t("privacy.purposeDoiBadge")}</Badge>
+            </CellStrip>
+          ) : (
             <span>{purpose.label}</span>
-            <Badge>{t("privacy.purposeDoiBadge")}</Badge>
-          </CellStrip>
-        ) : (
-          purpose.label
-        ),
+          )}
+          <span className="t-caption">{purpose.key}</span>
+        </CellStack>
+      ),
     },
   ];
   return (

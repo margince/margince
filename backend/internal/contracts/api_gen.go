@@ -47857,10 +47857,17 @@ type CreateCompanyRequestSizeBand string
 // CreateConsentPurposeRequest defines model for CreateConsentPurposeRequest.
 type CreateConsentPurposeRequest struct {
 	// Frequency Absent means monthly.
-	Frequency           *ConsentPurposeFrequency `json:"frequency,omitempty"`
-	Key                 string                   `json:"key"`
-	Label               string                   `json:"label"`
-	RequiresDoubleOptIn *bool                    `json:"requires_double_opt_in,omitempty"`
+	Frequency *ConsentPurposeFrequency `json:"frequency,omitempty"`
+
+	// Key Trimmed and lower-cased, then it may hold only lower-case letters, digits and underscores
+	// (`marketing_email`). Anything else is a 422 on `key`. A key another purpose holds, archived
+	// ones included, is a 409.
+	Key string `json:"key"`
+
+	// Label What every consent screen names the purpose by. A label that reads as a listed purpose's
+	// label or key, case, spacing and underscores aside, is a 422 on `label`.
+	Label               string `json:"label"`
+	RequiresDoubleOptIn *bool  `json:"requires_double_opt_in,omitempty"`
 }
 
 // CreateContactEnrichmentRunRequest defines model for CreateContactEnrichmentRunRequest.

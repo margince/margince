@@ -66,7 +66,7 @@ function stub(answer: () => Response): unknown[] {
   return posted;
 }
 
-async function addPurpose(key: string, label: string) {
+async function openAdd() {
   rtlRender(
     <QueryClientProvider
       client={
@@ -87,6 +87,11 @@ async function addPurpose(key: string, label: string) {
   const keyBox = within(dialog).getByRole("textbox", {
     name: en["privacy.purposeKey"],
   });
+  return { user, dialog, keyBox };
+}
+
+async function addPurpose(key: string, label: string) {
+  const { user, dialog, keyBox } = await openAdd();
   if (key) await user.type(keyBox, key);
   if (label) {
     await user.type(
@@ -166,6 +171,54 @@ describe("Add purpose", () => {
     expect(screen.queryByText(/conflict/)).toBeNull();
   });
 
+  it("fills the key from the label until the admin types one", async () => {
+    const posted = stub(() => json(TRANSACTIONAL, 201));
+    const { user, dialog, keyBox } = await openAdd();
+    const labelBox = within(dialog).getByRole("textbox", {
+      name: en["privacy.purposeLabel"],
+    });
+
+    await user.type(labelBox, "Partner-News (Ü)");
+    expect(keyBox).toHaveValue("partner_news_u");
+
+    await user.clear(keyBox);
+    await user.type(keyBox, "digest");
+    await user.type(labelBox, " weekly");
+    expect(keyBox).toHaveValue("digest");
+    expect(posted).toHaveLength(0);
+  });
+
+  // Mutation: drop the shape check and the key with a space is sent.
+  it("refuses a key with a space before sending", async () => {
+    const posted = stub(refused({}, 500));
+    const { keyBox } = await addPurpose("marketing email", "Mail digest");
+
+    expect(
+      await screen.findByText(en["privacy.purposeKeyShape"]),
+    ).toBeVisible();
+    expect(keyBox).toHaveAttribute("aria-invalid", "true");
+    expect(posted).toHaveLength(0);
+  });
+
+  // The slip this guards: key and label swapped, so the label is a listed key.
+  it.each([
+    ["a listed key", "transactional"],
+    ["a listed label, case and spacing aside", " transactional  EMAIL"],
+  ])("refuses a label that reads as %s", async (_, label) => {
+    const posted = stub(refused({}, 500));
+    const { dialog } = await addPurpose("receipts", label);
+
+    expect(
+      await screen.findByText(
+        "Transactional email already reads this way. Choose a label that tells the two apart.",
+      ),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByRole("textbox", { name: en["privacy.purposeLabel"] }),
+    ).toHaveAttribute("aria-invalid", "true");
+    expect(posted).toHaveLength(0);
+  });
+
   it("puts a refused field on the field the refusal names, by its label", async () => {
     stub(
       refused(
@@ -243,6 +296,21 @@ function renderCard() {
     </QueryClientProvider>,
   );
 }
+
+describe("Registered purposes", () => {
+  it("shows each purpose's key under its label", async () => {
+    stubCounts({ contact: ["read"] });
+    renderCard();
+
+    const table = await screen.findByRole("table", {
+      name: en["privacy.purposesRegistry"],
+    });
+    const cell = within(table).getByText(TRANSACTIONAL.label).parentElement;
+    expect(cell).toHaveTextContent(
+      `${TRANSACTIONAL.label}${TRANSACTIONAL.key}`,
+    );
+  });
+});
 
 describe("Mail sent per purpose", () => {
   it("shows a compliance reader each purpose with its class and count", async () => {

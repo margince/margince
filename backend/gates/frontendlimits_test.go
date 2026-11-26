@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -50,6 +51,11 @@ func TestTheFrontendsCopiesOfServerLimitsMatchTheirOwners(t *testing.T) {
 			file: "../frontend/src/features/settings/rates.tsx", name: "RATE_DIGITS",
 			read:  regexp.MustCompile(`\bRATE_DIGITS\s*=\s*(\d+)`),
 			owner: fxRateDigits,
+		},
+		{
+			file: "../frontend/src/features/privacy/privacy.purposes.tsx", name: "PURPOSE_KEY_PATTERN",
+			read:  regexp.MustCompile(`\bPURPOSE_KEY_PATTERN\s*=\s*/(.+?)/;`),
+			owner: fixed(commsauthz.PurposeKeyPattern.String()),
 		},
 	}
 	sources := map[string]string{}
