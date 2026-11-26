@@ -81,8 +81,7 @@ func VerifySignature(appSecret string, body []byte, header string) error {
 func ReadBody(w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxWebhookBodyBytes))
 	if err != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
+		if _, tooLarge := errors.AsType[*http.MaxBytesError](err); tooLarge {
 			return nil, ErrBodyTooLarge
 		}
 		return nil, err

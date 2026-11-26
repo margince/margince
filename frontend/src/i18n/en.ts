@@ -4,7 +4,7 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
-  "systemJob.google_directory": "Reading a member's Google groups",
+  "systemJob.google_directory": "Reading a member’s Google groups",
   "systemJob.legal_review_desk": "Legal review desk",
   "systemJob.import_identity_links": "Attaching imported mail links",
   "systemJob.history_narrowing": "Narrowing earlier mail",
@@ -17401,7 +17401,7 @@ export const en = {
   "groupRoles.tooMany": "At most 64 groups can be mapped.",
   "googleDirectory.title": "Google group lookup",
   "googleDirectory.sub":
-    "Google's sign-in does not send a member's groups. This connection reads them from your Google Workspace directory when a member signs in with Google. Create a service account, give it domain-wide delegation for the read-only directory group scope, and store its key here with the address of a Workspace admin it acts for. Google names a group by its email address, so map groups above exactly as Google lists them, for example sales@example.com. Only groups a member belongs to directly count, not groups nested inside other groups.",
+    "Google’s sign-in does not send a member’s groups. This connection reads them from your Google directory when a member signs in with Google. Create a service account, give it domain-wide delegation for the read-only directory group scope, and store its key here with the address of a Google admin it acts for. Google names a group by its email address, so map groups above exactly as Google lists them, for example sales@example.com. Only groups a member belongs to directly count, not groups nested inside other groups.",
   "googleDirectory.state.none":
     "Not connected. Members who sign in with Google get no roles from the map.",
   "googleDirectory.state.unchecked": "Connected. No lookup has run yet.",
@@ -17413,9 +17413,9 @@ export const en = {
   "googleDirectory.reason.key_invalid":
     "The stored key file cannot be used to sign requests. Store the key again.",
   "googleDirectory.reason.delegation_refused":
-    "Google refused the delegation. Check that the service account's client ID has domain-wide delegation for the read-only directory group scope, and that the admin address is right.",
+    "Google refused the delegation. Check that the service account’s client ID has domain-wide delegation for the read-only directory group scope, and that the admin address is right.",
   "googleDirectory.reason.permission_denied":
-    "Google refused to list groups. The admin address must belong to a Workspace admin who can read groups.",
+    "Google refused to list groups. The admin address must belong to an admin of your Google domain who can read groups.",
   "googleDirectory.reason.member_not_found":
     "Google does not know the address of the member who signed in.",
   "googleDirectory.reason.timeout": "Google did not answer in time.",
@@ -17423,9 +17423,9 @@ export const en = {
     "Google could not be reached or is limiting requests.",
   "googleDirectory.reason.bad_answer":
     "Google answered in a form this server cannot read.",
-  "googleDirectory.admin": "Workspace admin the key acts for",
+  "googleDirectory.admin": "Google admin the key acts for",
   "googleDirectory.adminHint":
-    "The service account reads the directory as this admin. Use the address of a real Workspace admin.",
+    "The service account reads the directory as this admin. Use the address of a real Google admin.",
   "googleDirectory.needBoth": "Add the key file and the admin address.",
   "googleDirectory.save": "Check and store",
   "googleDirectory.remove": "Remove connection",

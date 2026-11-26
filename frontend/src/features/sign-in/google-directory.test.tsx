@@ -108,7 +108,7 @@ describe("the Google group lookup panel", () => {
 
     await user.click(screen.getByLabelText("Service-account key (JSON)"));
     await user.paste(KEY_FILE);
-    await user.click(screen.getByLabelText("Workspace admin the key acts for"));
+    await user.click(screen.getByLabelText("Google admin the key acts for"));
     await user.paste("admin@example.test");
     await user.click(screen.getByRole("button", { name: "Check and store" }));
 
@@ -139,7 +139,7 @@ describe("the Google group lookup panel", () => {
     await screen.findByText(/Not connected\./);
     await user.click(screen.getByLabelText("Service-account key (JSON)"));
     await user.paste(KEY_FILE);
-    await user.click(screen.getByLabelText("Workspace admin the key acts for"));
+    await user.click(screen.getByLabelText("Google admin the key acts for"));
     await user.paste("admin@example.test");
     await user.click(screen.getByRole("button", { name: "Check and store" }));
 

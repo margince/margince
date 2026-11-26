@@ -17079,7 +17079,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "groupRoles.tooMany": "Chỉ có thể ánh xạ tối đa 64 nhóm.",
   "googleDirectory.title": "Tra cứu nhóm Google",
   "googleDirectory.sub":
-    "Đăng nhập Google không gửi kèm các nhóm của thành viên. Kết nối này đọc chúng từ thư mục Google Workspace của bạn khi một thành viên đăng nhập bằng Google. Hãy tạo một tài khoản dịch vụ, cấp cho nó quyền ủy quyền toàn miền với phạm vi chỉ đọc nhóm trong thư mục, rồi lưu khóa của nó ở đây cùng địa chỉ của một quản trị viên Workspace mà nó hoạt động thay mặt. Google gọi một nhóm bằng địa chỉ email của nó, nên hãy ánh xạ nhóm ở trên đúng như Google liệt kê, ví dụ sales@example.com. Chỉ các nhóm mà thành viên là thành viên trực tiếp mới được tính, không tính nhóm lồng trong nhóm khác.",
+    "Đăng nhập Google không gửi kèm các nhóm của thành viên. Kết nối này đọc chúng từ thư mục Google của bạn khi một thành viên đăng nhập bằng Google. Hãy tạo một tài khoản dịch vụ, cấp cho nó quyền ủy quyền toàn miền với phạm vi chỉ đọc nhóm trong thư mục, rồi lưu khóa của nó ở đây cùng địa chỉ của một quản trị viên Google mà nó hoạt động thay mặt. Google gọi một nhóm bằng địa chỉ email của nó, nên hãy ánh xạ nhóm ở trên đúng như Google liệt kê, ví dụ sales@example.com. Chỉ các nhóm mà thành viên là thành viên trực tiếp mới được tính, không tính nhóm lồng trong nhóm khác.",
   "googleDirectory.state.none":
     "Chưa kết nối. Thành viên đăng nhập bằng Google không nhận vai trò nào từ ánh xạ.",
   "googleDirectory.state.unchecked": "Đã kết nối. Chưa có lần tra cứu nào.",
@@ -17094,7 +17094,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "googleDirectory.reason.delegation_refused":
     "Google đã từ chối ủy quyền. Hãy kiểm tra ID khách của tài khoản dịch vụ có ủy quyền toàn miền cho phạm vi chỉ đọc nhóm trong thư mục, và địa chỉ quản trị viên là đúng.",
   "googleDirectory.reason.permission_denied":
-    "Google từ chối liệt kê nhóm. Địa chỉ quản trị viên phải thuộc một quản trị viên Workspace có quyền đọc nhóm.",
+    "Google từ chối liệt kê nhóm. Địa chỉ quản trị viên phải thuộc một quản trị viên miền Google có quyền đọc nhóm.",
   "googleDirectory.reason.member_not_found":
     "Google không biết địa chỉ của thành viên vừa đăng nhập.",
   "googleDirectory.reason.timeout": "Google không trả lời kịp.",
@@ -17102,9 +17102,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không kết nối được tới Google hoặc Google đang giới hạn yêu cầu.",
   "googleDirectory.reason.bad_answer":
     "Google trả lời ở dạng mà máy chủ này không đọc được.",
-  "googleDirectory.admin": "Quản trị viên Workspace mà khóa hoạt động thay mặt",
+  "googleDirectory.admin": "Quản trị viên Google mà khóa hoạt động thay mặt",
   "googleDirectory.adminHint":
-    "Tài khoản dịch vụ đọc thư mục với tư cách quản trị viên này. Hãy dùng địa chỉ của một quản trị viên Workspace thật.",
+    "Tài khoản dịch vụ đọc thư mục với tư cách quản trị viên này. Hãy dùng địa chỉ của một quản trị viên Google thật.",
   "googleDirectory.needBoth": "Thêm tệp khóa và địa chỉ quản trị viên.",
   "googleDirectory.save": "Kiểm tra và lưu",
   "googleDirectory.remove": "Gỡ kết nối",

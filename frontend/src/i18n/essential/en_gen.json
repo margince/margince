@@ -1,6 +1,6 @@
 {
   "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
-  "systemJob.google_directory": "Reading a member's Google groups",
+  "systemJob.google_directory": "Reading a member’s Google groups",
   "systemJob.legal_review_desk": "Legal review desk",
   "systemJob.import_identity_links": "Attaching imported mail links",
   "systemJob.history_narrowing": "Narrowing earlier mail",
