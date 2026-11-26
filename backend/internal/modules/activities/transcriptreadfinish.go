@@ -129,10 +129,12 @@ const transcriptReadProposalsSQL = `ARRAY(SELECT p.approval_id FROM transcript_r
 	WHERE p.transcript_read_id = transcript_read.id ORDER BY p.position) AS proposal_ids`
 
 // storeTranscriptReadProposals records the approvals a reading staged, keeping
-// their order. A reading finishes once, under the row lock its UPDATE took.
+// their order; a repeated id keeps its first place. A reading finishes once,
+// under the row lock its UPDATE took.
 func storeTranscriptReadProposals(ctx context.Context, tx pgx.Tx, readID ids.UUID, proposals []ids.UUID) error {
 	if _, err := tx.Exec(ctx, `INSERT INTO transcript_read_proposal (transcript_read_id, approval_id, position)
-		SELECT $1, staged.approval_id, staged.n FROM unnest($2::uuid[]) WITH ORDINALITY AS staged(approval_id, n)`,
+		SELECT $1, staged.approval_id, min(staged.n) FROM unnest($2::uuid[]) WITH ORDINALITY AS staged(approval_id, n)
+		GROUP BY staged.approval_id`,
 		readID, proposals); err != nil {
 		return fmt.Errorf("store the transcript read's proposals: %w", err)
 	}

@@ -256,14 +256,15 @@ const siteReadProposalsSQL = `ARRAY(SELECT p.approval_id FROM site_read_proposal
 	WHERE p.site_read_id = site_read.id ORDER BY p.position) AS proposal_ids`
 
 // storeSiteReadProposals replaces the approvals a dossier lists with proposals,
-// keeping their order. The caller holds the site_read row lock, so two writers
+// keeping their order; a repeated id keeps its first place. The caller holds the site_read row lock, so two writers
 // never interleave their lists.
 func storeSiteReadProposals(ctx context.Context, tx pgx.Tx, readID ids.UUID, proposals []ids.UUID) error {
 	if _, err := tx.Exec(ctx, `DELETE FROM site_read_proposal WHERE site_read_id = $1`, readID); err != nil {
 		return fmt.Errorf("clear the site read's proposals: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `INSERT INTO site_read_proposal (site_read_id, approval_id, position)
-		SELECT $1, staged.approval_id, staged.n FROM unnest($2::uuid[]) WITH ORDINALITY AS staged(approval_id, n)`,
+		SELECT $1, staged.approval_id, min(staged.n) FROM unnest($2::uuid[]) WITH ORDINALITY AS staged(approval_id, n)
+		GROUP BY staged.approval_id`,
 		readID, proposals); err != nil {
 		return fmt.Errorf("store the site read's proposals: %w", err)
 	}
