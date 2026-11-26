@@ -282,7 +282,7 @@ func refuseUncommittableRun(run crmcontracts.ImportRun) error {
 		return nil
 	}
 	return &BadArgsError{Cause: fmt.Errorf(
-		"import run %s is %s, and a commit starts only from %s or resumes a failed commit — "+
+		"import run %s is %s, and a commit starts only from %s or resumes a failed commit: "+
 			"an import commits what a dry run reported, so there is always a report first",
 		run.Id, status, awaitingApproval)}
 }

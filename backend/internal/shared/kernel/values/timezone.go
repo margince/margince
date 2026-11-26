@@ -25,7 +25,7 @@ func ParseTimezone(name string) (Timezone, error) {
 	if trimmed == "" || trimmed == "Local" {
 		return Timezone{}, &ParseError{
 			Field: zoneField, Code: "timezone_malformed",
-			Message: "an IANA zone name is required (e.g. Europe/Berlin)",
+			Message: "an IANA zone name is required (for example Europe/Berlin)",
 		}
 	}
 	if _, err := time.LoadLocation(trimmed); err != nil {

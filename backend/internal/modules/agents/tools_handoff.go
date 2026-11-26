@@ -199,7 +199,7 @@ func assembleHandoff(facts HandoffFacts, commitments []CommitmentItem) PreparedH
 // what is missing from the answer as well as from the project.
 const handoffTruncatedMessage = "This project has more deals, contacts or open commitments than " +
 	"one briefing lists. Report the lists as partial, and do not report an absent " +
-	"won deal or an absent contact as a finding — those checks were withheld."
+	"won deal or an absent contact as a finding: those checks were withheld."
 
 // handoffGaps judges the assembled brief. It reads the ANSWER rather than the
 // facts it came from, so every gap is a statement about something the reader

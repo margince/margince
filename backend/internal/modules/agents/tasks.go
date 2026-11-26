@@ -258,15 +258,15 @@ const (
 	taskCreatedMessage = "A human must approve this before it takes effect. Nothing has changed yet. " +
 		"Poll tasks/get with this taskId; it completes when they decide."
 	taskRejectedMessage = "A contact declined this. Nothing was changed, and repeating the call will be " +
-		"declined the same way — tell the user rather than retrying."
+		"declined the same way. Tell the user rather than retrying."
 	taskExpiredMessage = "Nobody decided this before the approval window closed, so it will never take " +
 		"effect. Nothing was changed. Ask the user whether to propose it again."
-	taskCancelledMessage = "This task was cancelled and its pending approval withdrawn. Nothing was changed."
+	taskCancelledMessage = "This task was canceled and its pending approval withdrawn. Nothing was changed."
 	// taskCancelledLateMessage is the same cancellation over an approval a
 	// contact had ALREADY decided. Saying "withdrawn" there would claim a
 	// retraction that did not happen — the decision stands, and only the
 	// agent's handle to it is gone.
-	taskCancelledLateMessage = "This task was cancelled. A contact had already decided the approval behind it, " +
+	taskCancelledLateMessage = "This task was canceled. A contact had already decided the approval behind it, " +
 		"so that decision stands and was not withdrawn. Nothing was carried out through this task."
 	taskCompletedMessage = "A human approved this and it has now been carried out."
 	// taskWithheldMessage is what a completed task answers when the records its
@@ -284,7 +284,7 @@ const (
 	// approval through a direct call. Guessing either way would be a lie, and
 	// re-running would risk a second effect from one human yes.
 	taskInterruptedMessage = "The approval for this call was consumed by an attempt that recorded no result, " +
-		"so whether the effect was carried out is not known here. Do not repeat the call — read the record, " +
+		"so whether the effect was carried out is not known here. Do not repeat the call; read the record, " +
 		"or the workspace audit log, to see what committed."
 )
 

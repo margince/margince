@@ -12,23 +12,23 @@ var previewImportCopy = toolCopy{
 		"column is, and this checks every row against the workspace and reports what importing " +
 		"it would do.",
 	Limits: "Writes nothing. `object` is company, contact, lead, deal or activity. Use `contact` for a file " +
-		"the business already knows — a migration off another CRM, a corrected export coming back. " +
+		"the business already knows (a migration off another CRM, a corrected export coming back). " +
 		"Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a " +
 		"human promotes them. A row naming a record already here is counted in `duplicates`, and " +
-		"created unless on_duplicate is skip — except a contact whose email is already held, which " +
+		"created unless on_duplicate is skip. The exception is a contact whose email is already held, which " +
 		"is always refused, because an email is a real key. A company's Website or Domain column maps to " +
-		"`domain`, which is what identifies a company — import it and dedupe stops guessing from names. " +
+		"`domain`, which is what identifies a company: import it and dedupe stops guessing from names. " +
 		"To link contacts to their employers, map the company column to " +
-		"`company_name` — import the companies FIRST, because a name that matches nothing links " +
+		"`company_name`. Import the companies FIRST, because a name that matches nothing links " +
 		"nothing and says so. To CORRECT companies rather than add " +
-		"them, map a column to `id`, then give a row the id of the company it corrects — read them " +
+		"them, map a column to `id`, then give a row the id of the company it corrects. Read them " +
 		"out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. " +
 		"Files that link to each other go together in `files`, at most one per type, instead of " +
 		"`object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's " +
 		"`company_ref` names a company's ref. " +
 		"read_import with view format lists each file's columns.",
 	Instead: "create_record for one record you already know, and change_capture to import a vCard file.",
-	Retain: "Keep the run_id. The counts its report answers — created, duplicates, skipped — and the " +
+	Retain: "Keep the run_id. The counts its report answers (created, duplicates, skipped) and the " +
 		"mapping it settled on are what the user weighs, so report both: a column this placed by " +
 		"a name they did not write is a decision they did not make.",
 }

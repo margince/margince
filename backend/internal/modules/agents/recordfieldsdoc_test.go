@@ -247,7 +247,7 @@ func TestBothWritesSayWhatACompanyDescriptionIsFor(t *testing.T) {
 		notes := noteText(section)
 		// Keyed on the two stable claims: what the sentence is about, and the
 		// instruction that follows from it.
-		for _, claim := range []string{"company SELLS", "Omit it rather than summarising a meeting"} {
+		for _, claim := range []string{"company SELLS", "Omit it rather than summarizing a meeting"} {
 			if !strings.Contains(notes, claim) {
 				t.Errorf("%s's notes never say %q, so nothing tells a caller the header is not the meeting's "+
 					"summary:\n%s", name, claim, notes)
