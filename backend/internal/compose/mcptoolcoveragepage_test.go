@@ -98,11 +98,12 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 		"the same for every model, because what a case requires belongs to the scenario. " +
 		"What changes here is whether the driving succeeded.\n\n")
 	p.WriteString("| Model | Cases run | Reached their bar | Below it | Runs passed | Reliability | " +
-		"Calls per case (median) | Slow |\n|---|---:|---:|---:|---:|---:|---:|---:|\n")
+		"Calls per case (median) | Refused per case | Retries per case | Slow |\n" +
+		"|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, m := range r.Models {
-		fmt.Fprintf(p, "| `%s` | %d of %d | %d | %d | %d/%d | %.0f%% | %s | %d |\n",
+		fmt.Fprintf(p, "| `%s` | %d of %d | %d | %d | %d/%d | %.0f%% | %s | %s | %s | %d |\n",
 			m.Model, m.CasesRecorded, r.Totals.Cases, m.CasesHeld, m.CasesBelowBar,
-			m.Passed, m.Runs, 100*m.Reliability, m.CallsPerCase, len(m.Slow))
+			m.Passed, m.Runs, 100*m.Reliability, m.CallsPerCase, m.MedianRefused, m.MedianRetries, len(m.Slow))
 	}
 	p.WriteString("\n")
 	for _, m := range r.Models {
@@ -127,8 +128,8 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("One row per case per model that ran it. A case nobody has run appears once, " +
 		"marked `not run`, rather than being dropped: a case missing from this table would read " +
 		"as a case that does not exist.\n\n")
-	p.WriteString("| Case | Model | Result | Passed | Bar | Calls (median) | Turns (median) | Criteria | Requires |\n" +
-		"|---|---|---|---:|---:|---:|---:|---|---|\n")
+	p.WriteString("| Case | Model | Result | Passed | Bar | Calls (median) | Turns (median) | Refused | Retries | Criteria | Requires |\n" +
+		"|---|---|---|---:|---:|---:|---:|---:|---:|---|---|\n")
 	for _, c := range r.Cases {
 		criteria := criteriaNames(c.Name, c.Criteria, r.Criteria)
 		link := fmt.Sprintf("[%s](../../e2e/llm/scenarios/%s)", c.Name, c.File)
@@ -151,9 +152,10 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 			if len(run.EarlierListing) > 0 {
 				result += ", on an earlier listing (" + strings.Join(run.EarlierListing, ", ") + ")"
 			}
-			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s | %s | %s |\n",
+			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s | %s | %s | %s | %s |\n",
 				link, run.Model, result, run.Passed, run.Runs, run.PassAt,
-				run.Efficiency.CallsCell(), run.Efficiency.TurnsCell(), criteria, requiresColumn(c))
+				run.Efficiency.CallsCell(), run.Efficiency.TurnsCell(),
+				run.Efficiency.RefusedCell(), run.Efficiency.RetriesCell(), criteria, requiresColumn(c))
 		}
 	}
 	p.WriteString("\n")
