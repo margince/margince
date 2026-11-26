@@ -5222,6 +5222,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.threadShare": "Mit dem Unternehmen teilen",
   "compose.threadMakePrivate": "Auf privat setzen",
   "compose.threadScope": "Gilt für den gesamten Thread.",
+  "compose.threadAudience": "Sichtbarkeit",
+  "compose.threadAudienceTitle": "Wer darf dieses Gespräch lesen?",
+  "compose.threadAudienceLegend": "Sichtbarkeit des Gesprächs",
+  "compose.threadAudienceNote":
+    "Das ändert, wer das ganze Gespräch lesen darf, nicht nur eine Nachricht.",
   "compose.threadStillHeld_one":
     "{count} weiteres Nutzerkonto hat diesen Thread nicht geteilt",
   "compose.threadStillHeld_other":
