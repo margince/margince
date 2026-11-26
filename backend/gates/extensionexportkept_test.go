@@ -17,10 +17,6 @@ const publishedInV1 = "released in v1.0.0, so code outside this tree may call it
 // files a member's own chats calls it. No unit in this tree does yet.
 const memberChatIngest = "the member-owned chat ingest; no unit in this tree files a member's own chats yet"
 
-// managedCorpus is the reason for the managed knowledge corpus. A unit that
-// files outside documents into its own corpus calls it. No unit in this tree does yet.
-const managedCorpus = "the managed knowledge corpus; no unit in this tree files outside documents into one yet"
-
 // testKit is the reason for extensiontest, a unit test kit. Its callers are units' tests,
 // which this census does not read; extensions/finance-demo's test calls each.
 const testKit = "the unit test kit; its callers are units' test files, which the census does not read"
@@ -29,18 +25,22 @@ const testKit = "the unit test kit; its callers are units' test files, which the
 // tests, and this census reads no test file.
 const testKitUse = "the unit test kit; units call it from their tests, which this census does not read"
 
+// knowledgeFiling is the reason for the knowledge filing. A unit that syncs an
+// outside document source files into its own corpus. No unit in this tree does yet.
+const knowledgeFiling = "the managed-corpus filing; no unit in this tree files outside documents yet"
+
 // exportWaivers are the exported pkg/extension names with no caller in this
 // tree, each with why it stays.
 var exportWaivers = gatekit.Waive(map[string]string{
 	"extension/extensiontest.Check":                  testKit,
 	"extension/extensiontest.CheckLink":              testKit,
 	"extension/extensiontest.CheckSignal":            testKit,
-	"extension.Knowledge.UpsertDocument":             managedCorpus,
-	"extension.KnowledgeCreated":                     managedCorpus,
-	"extension.KnowledgeReplaced":                    managedCorpus,
-	"extension.KnowledgeUnchanged":                   managedCorpus,
-	"extension.Runtime.Knowledge":                    managedCorpus,
-	"extension/exttest.Runtime.Knowledge":            testKitUse,
+	"extension.Knowledge.UpsertDocument":             knowledgeFiling,
+	"extension.KnowledgeCreated":                     knowledgeFiling,
+	"extension.KnowledgeReplaced":                    knowledgeFiling,
+	"extension.KnowledgeUnchanged":                   knowledgeFiling,
+	"extension.Runtime.Knowledge":                    knowledgeFiling,
+	"extension/exttest.Runtime.Knowledge":            knowledgeFiling,
 	"extension.OccurredPrecision":                    memberChatIngest,
 	"extension.PostureClassified":                    memberChatIngest,
 	"extension.PostureHeld":                          memberChatIngest,
