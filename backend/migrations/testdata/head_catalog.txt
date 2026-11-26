@@ -1733,7 +1733,6 @@ public.attachment.bytes_withheld boolean NOT NULL gen=- def=false
 public.attachment.captured_by text NOT NULL gen=- def=-
 public.attachment.category text NOT NULL gen=- def='other'::text
 public.attachment.checksum text gen=- def=-
-public.attachment.company_id uuid gen=- def=-
 public.attachment.content_type text gen=- def=-
 public.attachment.contract_id uuid gen=- def=-
 public.attachment.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1757,7 +1756,6 @@ public.attachment.title text gen=- def=-
 public.attachment.trg_attachment_updated CREATE TRIGGER trg_attachment_updated BEFORE UPDATE ON public.attachment FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.attachment.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.attachment.url text gen=- def=-
-public.attachment_account_ix CREATE INDEX attachment_account_ix ON public.attachment USING btree (company_id, pinned DESC, created_at DESC) WHERE (archived_at IS NULL)
 public.attachment_activity_ix CREATE INDEX attachment_activity_ix ON public.attachment USING btree (activity_id) WHERE (activity_id IS NOT NULL)
 public.attachment_contract_ix CREATE INDEX attachment_contract_ix ON public.attachment USING btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL))
 public.attachment_external_part_key CREATE UNIQUE INDEX attachment_external_part_key ON public.attachment USING btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL)
@@ -5447,6 +5445,7 @@ public.deal_room_invitation.attempt_no integer NOT NULL gen=- def=1
 public.deal_room_invitation.captured_by text NOT NULL gen=- def=-
 public.deal_room_invitation.consumed_at timestamp with time zone gen=- def=-
 public.deal_room_invitation.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_room_invitation.deal_room_invitation_attempt_no_check CHECK ((attempt_no > 0))
 public.deal_room_invitation.deal_room_invitation_expires_after_creation CHECK ((expires_at > created_at))
 public.deal_room_invitation.deal_room_invitation_participant_fkey FOREIGN KEY (participant_id) REFERENCES deal_room_participant(id) ON DELETE CASCADE
 public.deal_room_invitation.deal_room_invitation_pkey PRIMARY KEY (id)
@@ -6314,7 +6313,9 @@ public.forecast_snapshot_pkey CREATE UNIQUE INDEX forecast_snapshot_pkey ON publ
 public.fx_rate acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.fx_rate.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.fx_rate.from_currency currency_code NOT NULL gen=- def=-
+public.fx_rate.fx_rate_pair_distinct CHECK (((from_currency)::bpchar <> (to_currency)::bpchar))
 public.fx_rate.fx_rate_pkey PRIMARY KEY (id)
+public.fx_rate.fx_rate_rate_positive CHECK ((rate > (0)::numeric))
 public.fx_rate.id uuid NOT NULL gen=- def=uuidv7()
 public.fx_rate.rate numeric(20,10) NOT NULL gen=- def=-
 public.fx_rate.rate_date date NOT NULL gen=- def=-
@@ -7163,8 +7164,8 @@ public.knowledge_document.knowledge_document_status_check CHECK ((ingest_status 
 public.knowledge_document.managed_source text gen=- def=-
 public.knowledge_document.meta jsonb gen=- def=-
 public.knowledge_document.storage_key text NOT NULL gen=- def=-
-public.knowledge_document.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.knowledge_document FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"checksum": 20000, "filename": 20000, "captured_by": 20000, "storage_key": 20000, "content_type": 20000, "ingest_detail": 20000, "ingest_status": 20000, "managed_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"checksum":20000,"content_type":20000,"filename":20000,"ingest_detail":20000,"ingest_status":20000,"managed_source":20000,"storage_key":20000}')
-public.knowledge_document.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.knowledge_document FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"checksum": 20000, "filename": 20000, "captured_by": 20000, "storage_key": 20000, "content_type": 20000, "ingest_detail": 20000, "ingest_status": 20000, "managed_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"checksum":20000,"content_type":20000,"filename":20000,"ingest_detail":20000,"ingest_status":20000,"managed_source":20000,"storage_key":20000}')
+public.knowledge_document.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.knowledge_document FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"checksum": 20000, "filename": 20000, "captured_by": 20000, "external_id": 20000, "storage_key": 20000, "content_type": 20000, "ingest_detail": 20000, "ingest_status": 20000, "managed_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"checksum":20000,"content_type":20000,"external_id":20000,"filename":20000,"ingest_detail":20000,"ingest_status":20000,"managed_source":20000,"storage_key":20000}')
+public.knowledge_document.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.knowledge_document FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"checksum": 20000, "filename": 20000, "captured_by": 20000, "external_id": 20000, "storage_key": 20000, "content_type": 20000, "ingest_detail": 20000, "ingest_status": 20000, "managed_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"checksum":20000,"content_type":20000,"external_id":20000,"filename":20000,"ingest_detail":20000,"ingest_status":20000,"managed_source":20000,"storage_key":20000}')
 public.knowledge_document_by_corpus CREATE INDEX knowledge_document_by_corpus ON public.knowledge_document USING btree (corpus_id, archived_at)
 public.knowledge_document_one_per_content CREATE UNIQUE INDEX knowledge_document_one_per_content ON public.knowledge_document USING btree (corpus_id, checksum) WHERE (archived_at IS NULL)
 public.knowledge_document_one_per_external_id CREATE UNIQUE INDEX knowledge_document_one_per_external_id ON public.knowledge_document USING btree (corpus_id, external_id) WHERE ((external_id IS NOT NULL) AND (archived_at IS NULL))
@@ -8248,6 +8249,8 @@ public.oauth_authorization_code.lent_passport_id uuid gen=- def=-
 public.oauth_authorization_code.oauth_authorization_code_code_hash_check CHECK ((code_hash ~ '^[0-9a-f]{64}$'::text))
 public.oauth_authorization_code.oauth_authorization_code_expires_after_creation CHECK ((expires_at > created_at))
 public.oauth_authorization_code.oauth_authorization_code_pkey PRIMARY KEY (id)
+public.oauth_authorization_code.oauth_authorization_code_scopes_present CHECK ((cardinality(scopes) > 0))
+public.oauth_authorization_code.oauth_authorization_code_scopes_vocabulary CHECK ((scopes <@ ARRAY['read'::text, 'draft'::text, 'write'::text, 'send'::text, 'enrich'::text, 'offline_access'::text]))
 public.oauth_authorization_code.oauth_authorization_code_work_areas_vocabulary CHECK ((work_areas <@ ARRAY['business'::text, 'compliance'::text, 'capture'::text, 'workspace_settings'::text, 'admin_settings'::text, 'own_account'::text, 'agent_governance'::text, 'operator'::text, 'public'::text]))
 public.oauth_authorization_code.oauth_code_lent_passport_fkey FOREIGN KEY (lent_passport_id) REFERENCES passport(id) ON DELETE SET NULL (lent_passport_id)
 public.oauth_authorization_code.oauth_code_unique UNIQUE (code_hash)
@@ -8290,6 +8293,7 @@ public.oauth_grant.lent_passport_id uuid gen=- def=-
 public.oauth_grant.oauth_grant_client_fkey FOREIGN KEY (client_id) REFERENCES oauth_client(client_id) ON DELETE RESTRICT
 public.oauth_grant.oauth_grant_lent_passport_fkey FOREIGN KEY (lent_passport_id) REFERENCES passport(id) ON DELETE SET NULL (lent_passport_id)
 public.oauth_grant.oauth_grant_pkey PRIMARY KEY (id)
+public.oauth_grant.oauth_grant_scopes_present CHECK ((cardinality(scopes) > 0))
 public.oauth_grant.oauth_grant_scopes_vocabulary CHECK ((scopes <@ ARRAY['read'::text, 'draft'::text, 'write'::text, 'send'::text, 'enrich'::text]))
 public.oauth_grant.oauth_grant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.oauth_grant.oauth_grant_work_areas_vocabulary CHECK ((work_areas <@ ARRAY['business'::text, 'compliance'::text, 'capture'::text, 'workspace_settings'::text, 'admin_settings'::text, 'own_account'::text, 'agent_governance'::text, 'operator'::text, 'public'::text]))
@@ -8496,7 +8500,6 @@ public.partner.certified_staff smallint NOT NULL gen=- def=0
 public.partner.company_id uuid NOT NULL gen=- def=-
 public.partner.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.partner.id uuid NOT NULL gen=- def=uuidv7()
-public.partner.joined_at date gen=- def=-
 public.partner.margin_tier text gen=- def=-
 public.partner.next_step text gen=- def=-
 public.partner.next_step_due_at date gen=- def=-
@@ -8506,14 +8509,8 @@ public.partner.partner_cert_status_check CHECK ((cert_status = ANY (ARRAY['appli
 public.partner.partner_certified_staff_check CHECK ((certified_staff >= 0))
 public.partner.partner_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.partner.partner_company_id_key UNIQUE (company_id)
-public.partner.partner_fit_override_reason text gen=- def=-
-public.partner.partner_fit_score smallint gen=- def=-
-public.partner.partner_fit_score_computed smallint gen=- def=-
 public.partner.partner_kinds text[] NOT NULL gen=- def='{}'::text[]
 public.partner.partner_margin_tier_check CHECK (((margin_tier IS NULL) OR (margin_tier = ANY (ARRAY['tier1_15'::text, 'tier2_20'::text, 'tier3_25'::text]))))
-public.partner.partner_partner_fit_override_reason_check CHECK (((partner_fit_override_reason IS NULL) OR (length(btrim(partner_fit_override_reason)) > 0)))
-public.partner.partner_partner_fit_score_check CHECK (((partner_fit_score IS NULL) OR ((partner_fit_score >= 0) AND (partner_fit_score <= 100))))
-public.partner.partner_partner_fit_score_computed_check CHECK (((partner_fit_score_computed IS NULL) OR ((partner_fit_score_computed >= 0) AND (partner_fit_score_computed <= 100))))
 public.partner.partner_partner_kinds_check CHECK ((partner_kinds <@ ARRAY['hosting'::text, 'consulting'::text, 'strategic'::text, 'referral'::text]))
 public.partner.partner_pkey PRIMARY KEY (id)
 public.partner.partner_relationship_stage_fkey FOREIGN KEY (relationship_stage) REFERENCES partner_stage(key) ON UPDATE RESTRICT ON DELETE RESTRICT
@@ -8521,12 +8518,11 @@ public.partner.partner_retention_rate_check CHECK (((retention_rate IS NULL) OR 
 public.partner.partner_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text])))
 public.partner.partner_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.partner.relationship_stage text NOT NULL gen=- def=-
-public.partner.renews_at date gen=- def=-
 public.partner.retention_rate smallint gen=- def=-
 public.partner.served_segments text[] gen=- def=-
 public.partner.source text NOT NULL gen=- def=-
-public.partner.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000, "partner_fit_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_fit_override_reason":2000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
-public.partner.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000, "partner_fit_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_fit_override_reason":2000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
+public.partner.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
+public.partner.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
 public.partner.trg_partner_updated CREATE TRIGGER trg_partner_updated BEFORE UPDATE ON public.partner FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.partner.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.partner.version bigint NOT NULL gen=- def=1
@@ -8598,6 +8594,7 @@ public.passport.passport_grant_fkey FOREIGN KEY (oauth_grant_id) REFERENCES oaut
 public.passport.passport_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.passport.passport_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE CASCADE
 public.passport.passport_pkey PRIMARY KEY (id)
+public.passport.passport_scopes_present CHECK ((cardinality(scopes) > 0))
 public.passport.passport_scopes_vocabulary CHECK ((scopes <@ ARRAY['read'::text, 'draft'::text, 'write'::text, 'send'::text, 'enrich'::text]))
 public.passport.passport_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.passport.passport_token_hash_key UNIQUE (token_hash)

@@ -910,6 +910,7 @@ public.knowledge_corpus.topic_statement document
 public.knowledge_document.captured_by document
 public.knowledge_document.checksum document
 public.knowledge_document.content_type document
+public.knowledge_document.external_id document
 public.knowledge_document.filename document
 public.knowledge_document.ingest_detail document checked: fixed sentences and numbers
 public.knowledge_document.ingest_status document
@@ -1101,7 +1102,6 @@ public.partner.captured_by document
 public.partner.cert_status document
 public.partner.margin_tier document
 public.partner.next_step document
-public.partner.partner_fit_override_reason note
 public.partner.partner_kinds document
 public.partner.relationship_stage document
 public.partner.served_segments document

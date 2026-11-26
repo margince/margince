@@ -7191,7 +7191,7 @@ export const en = {
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
   "brief.updating": "Updating…",
-  "brief.briefedAt": "Briefed by Margince at {time}",
+  "brief.briefedAt": "Prepared by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
   "brief.first.title": "Needs you",
@@ -8862,6 +8862,7 @@ export const en = {
   "tasks.movedTo": "Moved to {when}",
   "tasks.moveUndoFailed": "Task was not moved back. Retry.",
   "tasks.remind.menu": "Remind me",
+  "tasks.remind.chipName": "Remind me (reminder set for {when})",
   "tasks.remind.inAnHour": "In 1 hour",
   "tasks.remind.tomorrowMorning": "Tomorrow morning",
   "tasks.remind.beforeDue": "1 hour before it is due",
@@ -8878,6 +8879,8 @@ export const en = {
   "tasks.remind.needsTime": "Enter a day and a time.",
   "tasks.remind.past": "Pick a time that is still ahead.",
   "tasks.log.action": "Log what happened",
+  "tasks.more": "More",
+  "tasks.context": "Context",
   "tasks.log.record": "Which record is this activity for?",
   "tasks.log.chooseRecord": "Choose another record",
   "tasks.log.noRecord": "Log without a record",
