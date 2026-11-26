@@ -51000,10 +51000,8 @@ type DealRoomThread struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty" minimum:"1"`
-
-	// VisibleToBuyer False when the buyer's own list withholds this thread because its file is no longer shared. Always true on the buyer's side. Room state is not part of it.
-	VisibleToBuyer bool `json:"visible_to_buyer"`
+	Version        *RowVersion `json:"version,omitempty" minimum:"1"`
+	VisibleToBuyer bool        `json:"visible_to_buyer"`
 }
 
 // DealRoomThreadListResponse defines model for DealRoomThreadListResponse.

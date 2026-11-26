@@ -6,9 +6,9 @@
 package integration
 
 // A buyer's conversation about a file that stops being shared is withheld from
-// their list, and both sides are told: the buyer learns that one of THEIR
-// conversations is withheld (no count, no file), and the seller's list marks the
-// thread as no longer visible to the buyer.
+// their list, and both sides are told. The buyer learns that one of THEIR
+// conversations is withheld, with no count and no file. The seller's list marks
+// the thread as no longer visible to the buyer.
 
 import (
 	"net/http"

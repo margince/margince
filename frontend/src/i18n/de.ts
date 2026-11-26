@@ -14621,7 +14621,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "threads.unanswered_other": "{count} unbeantwortet",
   "threads.cancel": "Abbrechen",
   "threads.empty": "Noch keine Nachrichten.",
-  "threads.hiddenFromBuyer": "Der Käufer kann diese Unterhaltung nicht mehr sehen",
+  "threads.hiddenFromBuyer": "Die Käuferseite kann diese Unterhaltung nicht mehr sehen",
   "threads.requiredChange": "Änderung erforderlich",
   "threads.resolved": "Erledigt",
   "threads.sideBuyer": "Käuferseite",

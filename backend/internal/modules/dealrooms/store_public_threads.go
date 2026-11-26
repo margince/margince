@@ -22,10 +22,9 @@ import (
 )
 
 // BuyerThreadList is the buyer's conversation plus one fact about what it
-// leaves out: HiddenOwn is true when a thread this buyer's seat wrote in is
+// leaves out. HiddenOwn is true when a thread this buyer's seat wrote in is
 // withheld because its file is no longer shared. It carries no count and no
-// file, and stays false for a thread only the seller wrote in, so it tells the
-// buyer nothing they did not write about.
+// file. It stays false for a thread only the seller wrote in.
 type BuyerThreadList struct {
 	Threads   []crmcontracts.DealRoomThread
 	HiddenOwn bool
@@ -33,11 +32,11 @@ type BuyerThreadList struct {
 
 // BuyerThreads lists the conversation. Empty while the room serves no content.
 //
-// A thread on a document is shown only while that document is in view: a
-// thread the seller opened on a file they have not yet published would
-// otherwise hand the buyer the file's existence and the seller's words about
-// it. Room-level threads are always shown. The filtering is announced, not
-// silent: HiddenOwn tells the buyer about their own withheld conversations.
+// A thread on a document is shown only while that document is in view. A
+// thread the seller opened on an unshared file would hand the buyer the file's
+// existence and the seller's words about it. Room-level threads always show.
+// The filtering is announced: HiddenOwn tells the buyer about their own
+// withheld conversations.
 func (s *Store) BuyerThreads(ctx context.Context, sess Session, documentID *ids.UUID) (BuyerThreadList, error) {
 	if sess.ID == ids.Nil {
 		return BuyerThreadList{}, apperrors.ErrPermissionDenied
@@ -47,8 +46,8 @@ func (s *Store) BuyerThreads(ctx context.Context, sess Session, documentID *ids.
 		// Asked of the ROOM, not inferred from an empty document list: a live
 		// room with nothing in it yet serves its conversation, and reading
 		// "no documents" as "serves nothing" would take that away. A paused or
-		// finished room answers with no threads at all, and the buyer is
-		// already told the room's state.
+		// finished room answers with no threads, and the buyer is already
+		// told the room's state.
 		st, err := readStanding(ctx, tx, sess.RoomID)
 		if err != nil {
 			return err
@@ -209,13 +208,10 @@ func (s *Store) ReplyAsBuyer(ctx context.Context, sess Session, threadID ids.UUI
 
 // ensureThreadStillVisible refuses a thread the buyer's own list would not show
 // them: one about a document that has left the room, or whose file has left the
-// deal's Files area. A thread about the room as a whole is always theirs. The
-// list announces such a withdrawal; a held id still answers 404, because a
-// direct fetch is no place to explain.
+// deal's Files area. A thread about the room as a whole is always theirs.
 //
-// ErrNotFound, not a permission error: the buyer is entitled to be here, and
-// telling them a specific thread exists but is closed to them says more about
-// the seller's material than the refusal needs to.
+// ErrNotFound, not a permission error: the list announces a withdrawal, and a
+// direct fetch is no place to explain one.
 func ensureThreadStillVisible(ctx context.Context, tx pgx.Tx, sess Session, threadID ids.UUID) error {
 	var documentID *ids.UUID
 	err := tx.QueryRow(ctx,

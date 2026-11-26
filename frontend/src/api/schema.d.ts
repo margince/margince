@@ -60636,7 +60636,6 @@ export interface components {
             id: string;
             /** Format: uuid */
             room_id: string;
-            /** @description False when the buyer's own list withholds this thread because its file is no longer shared. Always true on the buyer's side. Room state is not part of it. */
             visible_to_buyer: boolean;
             /**
              * Format: uuid
