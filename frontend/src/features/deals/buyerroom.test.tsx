@@ -308,6 +308,19 @@ describe("BuyerRoomScreen", () => {
     ).toBeNull();
   });
 
+  it("words the engagement notice without a company when the installation has no name", async () => {
+    stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({ ...LIVE, engagement_notice: { company: "" } }),
+    });
+    render(<BuyerRoomScreen />);
+
+    await screen.findByText(
+      "The company that invited you can see when you sign in and which documents you download.",
+    );
+    expect(screen.queryByText(/^ can see/)).toBeNull();
+  });
+
   it("shows no engagement notice when the server sends none", async () => {
     stubRoom();
     render(<BuyerRoomScreen />);

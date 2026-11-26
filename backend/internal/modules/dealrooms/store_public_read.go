@@ -100,7 +100,7 @@ func servesContent(access string) bool {
 //
 // companyName is read only when the engagement notice is due, so an ordinary
 // bootstrap pays nothing for it.
-func (s *Store) BuyerView(ctx context.Context, sess Session, companyName func(context.Context) (string, error)) (crmcontracts.BuyerRoomView, error) {
+func (s *Store) BuyerView(ctx context.Context, sess Session, companyName func(context.Context, pgx.Tx) (string, error)) (crmcontracts.BuyerRoomView, error) {
 	if sess.ID == ids.Nil {
 		return crmcontracts.BuyerRoomView{}, apperrors.ErrPermissionDenied
 	}
@@ -137,23 +137,25 @@ func (s *Store) BuyerView(ctx context.Context, sess Session, companyName func(co
 }
 
 // engagementNotice is the one line telling a buyer what the room records. A
-// seat sees it on its first sign-in. That sign-in has already written its own
-// `signed_in` row when the room is read, so one row means first. A seller
-// preview always sees it and writes no row.
-func engagementNotice(ctx context.Context, tx pgx.Tx, sess Session, companyName func(context.Context) (string, error)) (*crmcontracts.BuyerEngagementNotice, error) {
+// seat sees it in the earliest session it ever opened, so a second invitation
+// exchanged in another tab before either room loads cannot hide it from both.
+// Session ids are time-ordered, and a signed-out session stays as a revoked
+// row, so a later sign-in never counts as the first. A seller preview always
+// sees it.
+func engagementNotice(ctx context.Context, tx pgx.Tx, sess Session, companyName func(context.Context, pgx.Tx) (string, error)) (*crmcontracts.BuyerEngagementNotice, error) {
 	if !sess.Preview {
-		var signIns int
+		var earlier bool
 		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FROM deal_room_engagement
-			  WHERE room_id = $1 AND participant_id = $2 AND kind = $3`,
-			sess.RoomID, sess.ParticipantID, engagementSignedIn).Scan(&signIns); err != nil {
-			return nil, fmt.Errorf("count deal room sign-ins: %w", err)
+			`SELECT EXISTS (SELECT 1 FROM deal_room_session
+			                 WHERE participant_id = $1 AND room_id = $2 AND id < $3)`,
+			sess.ParticipantID, sess.RoomID, sess.ID).Scan(&earlier); err != nil {
+			return nil, fmt.Errorf("find earlier deal room sessions: %w", err)
 		}
-		if signIns > 1 {
+		if earlier {
 			return nil, nil //nolint:nilnil // no notice is the answer for a returning seat
 		}
 	}
-	company, err := companyName(ctx)
+	company, err := companyName(ctx, tx)
 	if err != nil {
 		return nil, fmt.Errorf("read the company named in the room notice: %w", err)
 	}

@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
@@ -89,8 +91,12 @@ func (h Handlers) sendInvite(ctx context.Context, issued IssuedInvitation) error
 			slog.WarnContext(ctx, "invitation attribution unavailable; sending the access link", "cause", err)
 		}
 	}
-	if h.companyName != nil {
-		if company, err = h.companyName(ctx); err != nil {
+	if h.companyName != nil && h.store != nil {
+		err = h.store.tx(ctx, func(tx pgx.Tx) (err error) {
+			company, err = h.companyName(ctx, tx)
+			return err
+		})
+		if err != nil {
 			slog.WarnContext(ctx, "invitation attribution unavailable; sending the access link", "cause", err)
 		}
 	}
@@ -222,7 +228,7 @@ func (h Handlers) WithMailLanguage(reader func(context.Context) string) Handlers
 }
 
 // WithCompanyName supplies the company the buyer's engagement notice names.
-func (h Handlers) WithCompanyName(reader func(context.Context) (string, error)) Handlers {
+func (h Handlers) WithCompanyName(reader func(context.Context, pgx.Tx) (string, error)) Handlers {
 	h.companyName = reader
 	return h
 }

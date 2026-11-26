@@ -209,7 +209,9 @@ export function BuyerHero({
       {welcome ? <p className="buyer-welcome">{welcome}</p> : null}
       {notice ? (
         <p className="t-caption buyer-notice">
-          {t("buyer.engagementNotice", { company: notice.company })}
+          {notice.company
+            ? t("buyer.engagementNotice", { company: notice.company })
+            : t("buyer.engagementNoticeUnnamed")}
         </p>
       ) : null}
     </header>

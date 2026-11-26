@@ -8,11 +8,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
@@ -32,17 +30,6 @@ func recipientLanguage(ctx context.Context, pool *pgxpool.Pool) string {
 		return identity.BaseLanguageForPrompt(ctx, pool)
 	}
 	return profile.Locale
-}
-
-// installationCompanyName is the company the invitation mail and the room notice name.
-func installationCompanyName(pool *pgxpool.Pool) func(context.Context) (string, error) {
-	return func(ctx context.Context) (company string, err error) {
-		err = InstallationDB(pool).Tx(ctx, func(tx pgx.Tx) (err error) {
-			company, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
-			return err
-		})
-		return company, err
-	}
 }
 
 func recipientDeadline(ctx context.Context, pool *pgxpool.Pool, at time.Time) time.Time {
