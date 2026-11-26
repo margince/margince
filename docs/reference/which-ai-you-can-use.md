@@ -22,7 +22,7 @@ Also called: which model should I use, best model, recommended model, which LLM,
 |---|---|---:|---:|---:|---:|
 | Google Gemini | global cloud | 28 | 10 | 0 | 0 |
 | Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 28 | 10 | 0 | 0 |
-| Anthropic Claude | global cloud | 33 | 4 | 1 | 0 |
+| Anthropic Claude | global cloud | 33 | 5 | 0 | 0 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 8 | 6 |
 | Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 0 | 4 | 33 |
@@ -43,7 +43,7 @@ Also called: grade, rating, certified, how reliable is the AI.
 |---|---|
 | Google Gemini | none |
 | Google Gemini in the EU, through Vertex AI | none |
-| Anthropic Claude | Natural-language search |
+| Anthropic Claude | none |
 | OpenAI GPT-6, through OpenRouter | Thread confidentiality check<br>First-time sender check<br>Meeting follow-up extraction |
 | Open models from OpenAI and Mistral, through OpenRouter | Message classification<br>First-time sender check<br>Buying-role reading<br>Website research<br>Stage evidence extraction<br>Record summary<br>Tag suggestions<br>Meeting follow-up extraction |
 | Gemma 4 you could run yourself, through OpenRouter | First-time sender check<br>Signature enrichment<br>Unanswered-message triage<br>Checking whether the reply answered the request |
