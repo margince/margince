@@ -120,7 +120,7 @@
         "cases_with_a_committed_run": 20,
         "cases_that_reached_their_bar": 19,
         "cases_below_their_bar": 1,
-        "cases_measured_on_an_earlier_listing": 17,
+        "cases_measured_on_an_earlier_listing": 20,
         "runs": 42,
         "passed": 38,
         "reliability": 0.9047619047619048,
@@ -231,7 +231,10 @@
                 "min": 0,
                 "max": 0
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "server instructions and resources"
+            ]
           }
         ]
       },
@@ -945,7 +948,10 @@
                 "min": 0,
                 "max": 0
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "server instructions and resources"
+            ]
           }
         ]
       },
@@ -1040,7 +1046,10 @@
                 "min": 0,
                 "max": 0
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "server instructions and resources"
+            ]
           }
         ]
       },
