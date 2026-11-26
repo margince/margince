@@ -194,7 +194,7 @@ func mintSystemReminder(t *testing.T, e *apptest.AppEnv, contactID string, n int
 		)
 		INSERT INTO activity_link (activity_id, entity_type, contact_id)
 		SELECT t.id, 'contact', $3::uuid FROM t`,
-		fmt.Sprintf("Check in — no activity since last month (%d)", n), n+1, contactID); err != nil {
+		fmt.Sprintf("Check in: no activity since last month (%d)", n), n+1, contactID); err != nil {
 		t.Fatalf("mint a system reminder: %v", err)
 	}
 }

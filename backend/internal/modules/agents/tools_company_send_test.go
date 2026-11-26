@@ -100,7 +100,7 @@ func TestTheAccountStartedSendSummaryNamesEveryArgumentItReleases(t *testing.T) 
 		To: []string{"buyer@example.test"}, Cc: []string{"rival@example.test"}, Subject: "Q3 pricing",
 	}, []RecordLink{{EntityType: "company", EntityID: ids.NewV7()}})
 
-	for _, want := range []string{"buyer@example.test", "rival@example.test", `“Q3 pricing”`, "1 record(s)"} {
+	for _, want := range []string{"buyer@example.test", "rival@example.test", `“Q3 pricing”`, "records it is filed under: 1"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("summary %q does not name %q", got, want)
 		}
@@ -284,7 +284,7 @@ func TestAnAccountStartedSendIsBoundedAndDeduplicatedBeforeItReadsAnything(t *te
 		if len(p.read) != 1 {
 			t.Errorf("read %d records for one repeated link, want 1", len(p.read))
 		}
-		if !strings.Contains(info.Summary, "1 record(s)") {
+		if !strings.Contains(info.Summary, "records it is filed under: 1") {
 			t.Errorf("summary %q counts the repeats; a human would read a reach the send does not have", info.Summary)
 		}
 	})

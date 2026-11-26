@@ -28,7 +28,7 @@ const followUp: Approval = {
   created_at: "2026-11-09T10:06:30Z",
   expires_at: "2099-11-12T10:06:30Z",
   summary:
-    'Draft a follow-up on "Acme Rollout" — the email on 9 Nov 2026 left no next step planned',
+    'Draft a follow-up on "Acme Rollout": the email on 9 Nov 2026 left no next step planned',
   target_entity_type: "deal",
   target_entity_id: "01a08f74-3be3-7523-9d23-7d53f4110e2e",
   target_label: "Acme Rollout",

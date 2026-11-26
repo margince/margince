@@ -137,7 +137,7 @@ func weeklyMovementLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyAndMore },
 		"… and %d more, on Home",
 		"… weitere auf Home: %d",
-		"… và %d mục nữa, trên Home")
+		"… và %d mục nữa, trên Trang chủ")
 }
 
 // weeklyClosingLines is what the retrospective asks for once it has reported.
