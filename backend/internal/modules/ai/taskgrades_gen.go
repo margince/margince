@@ -118,9 +118,9 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/capture_classify/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "capture_classify", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "supported_degraded", State: "stale"},
 	// records/capture_confidentiality_verdict/anthropic_claude-haiku-5-5_cloud_frontier.json
-	{Task: "capture_confidentiality_verdict", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
+	{Task: "capture_confidentiality_verdict", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/capture_confidentiality_verdict/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "capture_confidentiality_verdict", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
+	{Task: "capture_confidentiality_verdict", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/capture_confidentiality_verdict/gemini_gemini-3.5-flash-lite_cloud_frontier.json
 	{Task: "capture_confidentiality_verdict", Provider: "gemini", Model: "gemini-3.5-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/capture_confidentiality_verdict/openai_compatible_google_gemma-4-26b-a4b-it_cloud_frontier.json

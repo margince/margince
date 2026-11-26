@@ -43,6 +43,9 @@ const (
 	// same identifiers.
 	entityProduct       = "product"
 	entityOfferTemplate = "offer_template"
+	// Keyword-searchable and not yet embedded: no context-graph event stream
+	// carries a room's changes, so an embedText entry would never be filled.
+	entityDealRoom = "deal_room"
 	// Not embeddable — a word has no prose to embed — but named here with the
 	// rest because branches.go keys its table off the same identifiers, and one
 	// vocabulary is what stops a branch and its index describing two tables.

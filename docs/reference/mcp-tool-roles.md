@@ -1181,23 +1181,23 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Deals | `read_details.win_evidence` | `get_deal_win_evidence` | `deal.read` |
 | Deals | `read_relationships.deal_id` | `company_coverage` | `contact.read` `deal.read` `relationship.read` |
 | Deals | `run_research.propose_deal_roles` | `propose_deal_roles` | `contact.read` `deal.read` `deal.update` `relationship.create` `relationship.read` |
-| Deal rooms | `change_offers.archive_room` | `archive_deal_room` | `deal_room.delete` |
-| Deal rooms | `change_offers.close_room` | `close_deal_room` | `deal_room.update` |
-| Deal rooms | `change_offers.pause_room` | `pause_deal_room` | `deal_room.update` |
-| Deal rooms | `change_offers.resolve_room_thread` | `resolve_deal_room_thread` | `deal_room.update` |
-| Deal rooms | `change_offers.revoke_room_participant` | `revoke_deal_room_participant` | `deal_room.update` |
-| Deal rooms | `change_offers.update_room_participant` | `update_deal_room_participant` | `deal_room.update` |
-| Deal rooms | `read_details.deal_room_brief` | `get_deal_room_brief` | `deal_room.read` |
-| Deal rooms | `send_outbound.add_room_document` | `add_deal_room_document` | `deal_room.create` |
-| Deal rooms | `send_outbound.deal_room_invite` | `invite_deal_room_participant` | `deal_room.update` |
-| Deal rooms | `send_outbound.deal_room_resend` | `resend_deal_room_invitation` | `deal_room.update` |
-| Deal rooms | `send_outbound.open_room_thread` | `open_deal_room_thread` | `deal_room.update` |
-| Deal rooms | `send_outbound.remove_room_document` | `remove_deal_room_document` | `deal_room.delete` |
-| Deal rooms | `send_outbound.reply_room_thread` | `reply_deal_room_thread` | `deal_room.update` |
-| Deal rooms | `send_outbound.resume_room` | `resume_deal_room` | `deal_room.update` |
-| Deal rooms | `send_outbound.set_room_expiry` | `set_deal_room_expiry` | `deal_room.update` |
-| Deal rooms | `send_outbound.update_room` | `update_deal_room` | `deal_room.update` |
-| Deal rooms | `send_outbound.update_room_document` | `update_deal_room_document` | `deal_room.update` |
+| Deal rooms | `change_offers.archive_room` | `archive_deal_room` | `deal.read` `deal_room.delete` |
+| Deal rooms | `change_offers.close_room` | `close_deal_room` | `deal.read` `deal_room.update` |
+| Deal rooms | `change_offers.pause_room` | `pause_deal_room` | `deal.read` `deal_room.update` |
+| Deal rooms | `change_offers.resolve_room_thread` | `resolve_deal_room_thread` | `deal.read` `deal_room.update` |
+| Deal rooms | `change_offers.revoke_room_participant` | `revoke_deal_room_participant` | `deal.read` `deal_room.update` |
+| Deal rooms | `change_offers.update_room_participant` | `update_deal_room_participant` | `deal.read` `deal_room.update` |
+| Deal rooms | `read_details.deal_room_brief` | `get_deal_room_brief` | `deal.read` `deal_room.read` |
+| Deal rooms | `send_outbound.add_room_document` | `add_deal_room_document` | `deal.read` `deal_room.create` |
+| Deal rooms | `send_outbound.deal_room_invite` | `invite_deal_room_participant` | `deal.read` `deal_room.update` |
+| Deal rooms | `send_outbound.deal_room_resend` | `resend_deal_room_invitation` | `deal.read` `deal_room.update` |
+| Deal rooms | `send_outbound.open_room_thread` | `open_deal_room_thread` | `deal.read` `deal_room.update` |
+| Deal rooms | `send_outbound.remove_room_document` | `remove_deal_room_document` | `deal.read` `deal_room.delete` |
+| Deal rooms | `send_outbound.reply_room_thread` | `reply_deal_room_thread` | `deal.read` `deal_room.update` |
+| Deal rooms | `send_outbound.resume_room` | `resume_deal_room` | `deal.read` `deal_room.update` |
+| Deal rooms | `send_outbound.set_room_expiry` | `set_deal_room_expiry` | `deal.read` `deal_room.update` |
+| Deal rooms | `send_outbound.update_room` | `update_deal_room` | `deal.read` `deal_room.update` |
+| Deal rooms | `send_outbound.update_room_document` | `update_deal_room_document` | `deal.read` `deal_room.update` |
 | Legal reviews | `change_state.decide_legal_review` | `decide_legal_review` | `legal_review.read` `legal_review.update` |
 | Legal reviews | `change_state.request_legal_review` | `request_legal_review` | `activity.read` `company.read` `contact.read` `contract.read` `deal.read` `deal.update` `installation_settings.read` `offer.read` `project.read` |
 | Legal reviews | `change_state.withdraw_legal_review` | `withdraw_legal_review` | `deal.update` |
@@ -1367,7 +1367,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Tags | `read_tags.list` | `list_tags` | `tag.read` |
 | Tags | `read_tags.record` | `get_record_tags` | `company.read,contact.read,deal.read,lead.read` |
 | Search and record context | `find_records.identify` | `resolve_entities` | `company.read` |
-| Search and record context | `find_records.meaning` | `search_context` | `activity.read` `company.read` `relationship.read` |
+| Search and record context | `find_records.meaning` | `search_context` | `activity.read` `company.read` `deal.read` `relationship.read` |
 | Search and record context | `find_records.query` | `query_workspace` | `company.read` `deal.read` `project.read` |
 | Search and record context | `find_records.search` | `search_records` | `company.read` `contact.read` `relationship.read` |
 | Search and record context | `read_analytics.ask` | `ask_search_data` | `activity.read,deal.read,lead.read,project.read` `deal.read,contact.read,company.read,lead.read,project.read,report_definition.read` `forecast.read` `installation_settings.read` `report_definition.read` |
@@ -1821,9 +1821,9 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 |  | `decide_approvals.bundle` | `decide_approval_bundle` | `company.read` `company.update` |
 |  | `decide_approvals.one` | `decide_approval` | `company.read` `company.update` |
 |  | `enrich` | `enrich` | `company.read` `company.update` |
-|  | `find_records.list` | `list_records` | `commission.read,company.read,deal_room.read,lead.read,offer_template.read,product.read,project.read` `commission.read,company.read,deal_room.read,lead.read,offer_template.read,product.read,relationship.read` `commission.read,company.read,deal_room.update,lead.read,offer_template.read,product.read,project.read` `commission.read,company.read,deal_room.update,lead.read,offer_template.read,product.read,relationship.read` `commission.read,contact.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read` `commission.read,contact.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read` `commission.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read` `commission.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read` `company.read,deal.read,deal_room.read,lead.read,offer_template.read,product.read,project.read` `company.read,deal.read,deal_room.read,lead.read,offer_template.read,product.read,relationship.read` `company.read,deal.read,deal_room.update,lead.read,offer_template.read,product.read,project.read` `company.read,deal.read,deal_room.update,lead.read,offer_template.read,product.read,relationship.read` `contact.read,deal.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read` `contact.read,deal.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read` `deal.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,relationship.read` `deal.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,relationship.read` |
+|  | `find_records.list` | `list_records` | `commission.read,company.read,deal_room.read,lead.read,offer_template.read,product.read,project.read` `commission.read,company.read,deal_room.read,lead.read,offer_template.read,product.read,relationship.read` `commission.read,company.read,deal_room.update,lead.read,offer_template.read,product.read,project.read` `commission.read,company.read,deal_room.update,lead.read,offer_template.read,product.read,relationship.read` `commission.read,contact.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read` `commission.read,contact.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read` `commission.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read` `commission.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read` `company.read,deal.read,lead.read,offer_template.read,product.read,project.read` `company.read,deal.read,lead.read,offer_template.read,product.read,relationship.read` `contact.read,deal.read,lead.read,offer_template.read,partner.read,product.read,project.read` `deal.read,lead.read,offer_template.read,partner.read,product.read,relationship.read` |
 |  | `read_lists` | `read_lists` | `company.read` `list.read` |
-|  | `read_record` | `read_record` | `activity.read,company.read,deal_room.read,lead.read,product.read,project.read` `activity.read,company.read,deal_room.update,lead.read,product.read,project.read` `activity.read,contact.read,deal_room.read,lead.read,offer.read,product.read,project.read` `activity.read,contact.read,deal_room.update,lead.read,offer.read,product.read,project.read` `company.read,deal_room.read,lead.read,product.read,relationship.read` `company.read,deal_room.update,lead.read,product.read,relationship.read` `deal.read,deal_room.read,lead.read,offer.read,product.read,relationship.read` `deal.read,deal_room.update,lead.read,offer.read,product.read,relationship.read` `deal_room.read,lead.read,offer.read,product.read,project.read,relationship.read` `deal_room.update,lead.read,offer.read,product.read,project.read,relationship.read` |
+|  | `read_record` | `read_record` | `activity.read,company.read,deal.read,lead.read,product.read,project.read` `activity.read,company.read,deal_room.read,lead.read,product.read,project.read` `activity.read,company.read,deal_room.update,lead.read,product.read,project.read` `activity.read,contact.read,deal.read,lead.read,offer.read,product.read,project.read` `activity.read,contact.read,deal_room.read,lead.read,offer.read,product.read,project.read` `activity.read,contact.read,deal_room.update,lead.read,offer.read,product.read,project.read` `company.read,deal.read,lead.read,product.read,relationship.read` `company.read,deal_room.read,lead.read,product.read,relationship.read` `company.read,deal_room.update,lead.read,product.read,relationship.read` `deal.read,lead.read,offer.read,product.read,relationship.read` `deal_room.read,lead.read,offer.read,product.read,project.read,relationship.read` `deal_room.update,lead.read,offer.read,product.read,project.read,relationship.read` |
 |  | `read_reports.standard` | `read_reporting` | `report_definition.read` |
 |  | `read_view` | `read_view` | `custom_field.read` `deal.read` |
 |  | `resolve_duplicates.dismiss` | `decide_duplicate` | `company.read` `company.update` |

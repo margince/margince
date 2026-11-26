@@ -61,7 +61,8 @@ func (s *Store) ListDealOffers(ctx context.Context, dealID ids.DealID, in ListDe
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		// The deal is the offer's visibility anchor. Out of the caller's row
 		// scope, the whole listing answers 404, never an empty page that
-		// discloses the deal exists. An archived deal still lists its offers,
+		// discloses the deal exists. The scope is auth.DealChildScopeClause's, as a
+		// probe that leaves out the deal grant (see visibleOffer). An archived deal still lists its offers,
 		// as the single-offer read serves them. Reading them links nothing to
 		// the deal.
 		if err := auth.EnsureVisibleExisting(ctx, tx, dealTable, dealID.UUID); err != nil {

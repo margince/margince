@@ -136,7 +136,7 @@ func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType 
 		// textOnly too: a word is not a thing links hang off, so a tag can
 		// never be a graph anchor even when a caller names one.
 		if searchBranches[i].entity == anchorType &&
-			!searchBranches[i].activityWalk && !searchBranches[i].textOnly {
+			!searchBranches[i].activityWalk && searchBranches[i].anchors() {
 			branch = &searchBranches[i]
 		}
 	}
