@@ -238,7 +238,7 @@ var Declared = map[string][]string{
 	"GET /v1/companies/{id}/capture-triage":                                    {},
 	"GET /v1/companies/{id}/contacts":                                          {"cursor", "limit", "q", "sort", "status"},
 	"GET /v1/companies/{id}/contracts":                                         {"cursor", "limit", "status", "under_contract_only"},
-	"GET /v1/companies/{id}/coverage":                                          {},
+	"GET /v1/companies/{id}/coverage":                                          {"deal_id"},
 	"GET /v1/companies/{id}/documents":                                         {"category", "contract_id", "cursor", "doc_state", "limit", "pinned_only"},
 	"GET /v1/companies/{id}/dossier":                                           {},
 	"GET /v1/companies/{id}/evidence/{entityType}/{entityId}":                  {},

@@ -41,7 +41,7 @@ func TestCoverageCountsTheWholeAccount(t *testing.T) {
 	integration.LinkActivity(t, owner, mail, "contact", waiting)
 	integration.LinkActivitySender(t, owner, mail, waiting)
 
-	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("reading coverage: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestCoverageNamesNoWayInWhenNobodyHasAnswered(t *testing.T) {
 		"outbound", company360Clock.AddDate(0, 0, -10))
 	integration.LinkActivity(t, owner, out, "contact", contact)
 
-	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestCoverageReportsAChampionGapOnACompleteCommittee(t *testing.T) {
 	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, buyer, deal)
 
-	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("reading coverage: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestCoverageReadsAHeldRoleInAnyCase(t *testing.T) {
 	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, ' Economic_Buyer ', 'manual', 'human:x')`, buyer, deal)
 
-	got, err := company360Service(e).Coverage(e.Admin(), ids.CompanyID{UUID: company})
+	got, err := company360Service(e).Coverage(e.Admin(), ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("reading coverage: %v", err)
 	}
@@ -159,7 +159,7 @@ func TestCoverageHidesAnAccountItCannotRead(t *testing.T) {
 	e := integration.Setup(t)
 	svc := company360Service(e)
 
-	_, err := svc.Coverage(e.Admin(), ids.CompanyID{UUID: ids.NewV7()})
+	_, err := svc.Coverage(e.Admin(), ids.CompanyID{UUID: ids.NewV7()}, nil)
 	if err == nil {
 		t.Fatal("an account that does not exist answered rather than hiding")
 	}
@@ -180,7 +180,7 @@ func TestCoverageSeparatesNoDealFromNoAccess(t *testing.T) {
 	contact := e.SeedContact(t, "Jan Roth", nil)
 	employ(t, e, contact, company, "Workshop")
 
-	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +226,7 @@ func TestCoverageReportsNoGapWhenASeatIsUnlisted(t *testing.T) {
 	// contact and drops it, while the count still sees the relationship.
 	e.WsExec(t, `UPDATE contact SET archived_at = now() WHERE id = $1`, champion)
 
-	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("reading coverage: %v", err)
 	}
@@ -263,7 +263,7 @@ func TestCoverageWithholdsDealsFromAReaderWithoutTheGrant(t *testing.T) {
 		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, buyer, deal)
 
 	got, err := svc.Coverage(e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms),
-		ids.CompanyID{UUID: company})
+		ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("the read failed rather than withholding: %v", err)
 	}
@@ -306,7 +306,7 @@ func TestCoverageSeatsCarryTheirRoutes(t *testing.T) {
 	// One colleague who has actually exchanged mail with them.
 	seedTouch(t, e, owner, "email", &e.Rep1, buyer)
 
-	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("reading coverage: %v", err)
 	}
@@ -350,7 +350,7 @@ func TestCoverageMarksASeatTheProductRead(t *testing.T) {
 		VALUES ('deal_stakeholder', $1, $2, 'champion', 'ai_proposal', 'agent:propose_roles')`,
 		read, deal)
 
-	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("reading coverage: %v", err)
 	}
@@ -397,7 +397,7 @@ func TestCoverageMarksPerDealRatherThanPerContact(t *testing.T) {
 		VALUES ('deal_stakeholder', $1, $2, 'champion', 'ai_proposal', 'agent:propose_roles')`,
 		contact, elsewhere)
 
-	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
+	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("reading coverage: %v", err)
 	}

@@ -5427,6 +5427,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.contacts.band.noWayIn": "Không có",
   "co.contacts.band.noWayInWhy": "Đã liên hệ · chưa có trả lời",
   "co.contacts.band.committee": "Nhóm quyết định mua",
+  "co.contacts.band.committeeOf": "Nhóm quyết định mua · {deal}",
+  "co.contacts.board.deal": "Giao dịch có nhóm quyết định mua cần xem",
   "co.contacts.band.missing": "Chưa có {role}",
   "co.contacts.band.committeeComplete": "Đầy đủ",
   "co.contacts.band.committeeUnread": "Bị hạn chế",

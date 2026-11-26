@@ -41009,11 +41009,11 @@ export interface components {
             /** Format: date-time */
             as_of: string;
             summary: components["schemas"]["CompanyCoverageSummary"];
-            /** @description The account's open deals, so the reader can pick which committee to read. */
+            /** @description The account's open deals, most recently changed first, so the reader can pick which committee to read with `deal_id`. */
             deals: components["schemas"]["CompanyCoverageDeal"][];
             /**
              * Format: uuid
-             * @description The deal the committee below describes. Null when the account has no visible open deal.
+             * @description The deal the committee below describes, the one `deal_id` named or else the first of `deals`. Null when the account has no visible open deal.
              */
             selected_deal_id?: string | null;
             best_way_in?: components["schemas"]["CompanyCoverageRoute"];
@@ -70152,7 +70152,14 @@ export interface operations {
     };
     getCompanyCoverage: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description The open deal whose buying committee to read, one of `deals`. Absent, the committee
+                 *     is the most recently changed open deal's. A deal that is not one of this account's
+                 *     open deals the caller may see answers `404`.
+                 */
+                deal_id?: string;
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */

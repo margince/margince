@@ -47,7 +47,7 @@ func TestTheAccountCommitteeCountsOnlyCurrentSeats(t *testing.T) {
 		}
 	}
 
-	got, err := company360Service(e).Coverage(ctx, ids.CompanyID{UUID: company})
+	got, err := company360Service(e).Coverage(ctx, ids.CompanyID{UUID: company}, nil)
 	if err != nil {
 		t.Fatalf("reading coverage: %v", err)
 	}

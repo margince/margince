@@ -5514,6 +5514,8 @@ export const en = {
   "co.contacts.band.noWayIn": "None",
   "co.contacts.band.noWayInWhy": "Contacted · no replies",
   "co.contacts.band.committee": "Buying committee",
+  "co.contacts.band.committeeOf": "Buying committee · {deal}",
+  "co.contacts.board.deal": "Deal whose buying committee to show",
   "co.contacts.band.missing": "No {role}",
   "co.contacts.band.committeeComplete": "Complete",
   "co.contacts.band.committeeUnread": "Restricted",

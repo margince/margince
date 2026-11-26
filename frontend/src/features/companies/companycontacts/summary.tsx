@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { StatCard } from "../../../design-system/atoms";
@@ -21,18 +22,25 @@ export type Coverage = components["schemas"]["CompanyCoverage"];
 
 export type Seat = components["schemas"]["CompanyCoverageSeat"];
 
-export function useCompanyCoverage(companyId: string) {
+// `dealId` picks whose committee to read; null is the server's choice, the
+// open deal changed last. Keyed under the account, so its writes refresh both.
+export function useCompanyCoverage(companyId: string, dealId: string | null) {
   return useQuery({
-    queryKey: ["company-coverage", companyId],
+    queryKey: ["company-coverage", companyId, dealId],
     queryFn: async () => {
       const { data, error } = await api.GET("/companies/{id}/coverage", {
-        params: { path: { id: companyId } },
+        params: {
+          path: { id: companyId },
+          query: { deal_id: dealId ?? undefined },
+        },
       });
       if (error || !data) {
         return throwProblem(error);
       }
       return data;
     },
+    // A change of deal keeps the band on screen until the next committee lands.
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -53,7 +61,8 @@ export function CoverageBand({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const query = useCompanyCoverage(companyId);
+  const [dealId, setDealId] = useState<string | null>(null);
+  const query = useCompanyCoverage(companyId, dealId);
   // A band that could not load is absent, not an error banner: the list below
   // it still answers, and a reading nobody can act on is not worth a shout.
   // `summary` is required by the contract, so its absence means the response
@@ -119,6 +128,7 @@ export function CoverageBand({
         coverage={coverage}
         accountName={accountName}
         companyId={companyId}
+        onDeal={setDealId}
       />
     </>
   );
@@ -174,7 +184,15 @@ function CommitteeReading({ coverage }: Readonly<{ coverage: Coverage }>) {
   // tells them apart: the reader may not look, or there is nothing to look at.
   // Absence alone read as "hidden" accuses the reader's own role on every
   // account that simply has no open deal.
-  const slot = { label: t("co.contacts.band.committee") };
+  // Named for its deal, since an account with several holds one committee each.
+  const deal = coverage.deals.find(
+    (open) => open.deal_id === coverage.selected_deal_id,
+  );
+  const slot = {
+    label: deal
+      ? t("co.contacts.band.committeeOf", { deal: deal.name })
+      : t("co.contacts.band.committee"),
+  };
   if (!coverage.committee) {
     const withheld = !coverage.completeness.committee_read;
     return (

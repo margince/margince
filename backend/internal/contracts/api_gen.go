@@ -43182,10 +43182,10 @@ type CompanyCoverage struct {
 	Committee    *CompanyCoverageCommittee   `json:"committee,omitempty"`
 	Completeness CompanyCoverageCompleteness `json:"completeness"`
 
-	// Deals The account's open deals, so the reader can pick which committee to read.
+	// Deals The account's open deals, most recently changed first, so the reader can pick which committee to read with `deal_id`.
 	Deals []CompanyCoverageDeal `json:"deals"`
 
-	// SelectedDealId The deal the committee below describes. Null when the account has no visible open deal.
+	// SelectedDealId The deal the committee below describes, the one `deal_id` named or else the first of `deals`. Null when the account has no visible open deal.
 	SelectedDealId *openapi_types.UUID    `json:"selected_deal_id,omitempty"`
 	Summary        CompanyCoverageSummary `json:"summary"`
 }
@@ -79201,6 +79201,14 @@ type ListCompanyContractsParams struct {
 // ListCompanyContractsParamsStatus defines parameters for ListCompanyContracts.
 type ListCompanyContractsParamsStatus string
 
+// GetCompanyCoverageParams defines parameters for GetCompanyCoverage.
+type GetCompanyCoverageParams struct {
+	// DealId The open deal whose buying committee to read, one of `deals`. Absent, the committee
+	// is the most recently changed open deal's. A deal that is not one of this account's
+	// open deals the caller may see answers `404`.
+	DealId *openapi_types.UUID `form:"deal_id,omitempty" json:"deal_id,omitempty"`
+}
+
 // ListCompanyDocumentsParams defines parameters for ListCompanyDocuments.
 type ListCompanyDocumentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -102502,7 +102510,7 @@ type ServerInterface interface {
 	ListCompanyContracts(w http.ResponseWriter, r *http.Request, id Id, params ListCompanyContractsParams)
 	// How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
 	// (GET /companies/{id}/coverage)
-	GetCompanyCoverage(w http.ResponseWriter, r *http.Request, id Id)
+	GetCompanyCoverage(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyCoverageParams)
 	// Read the company's WHOLE site in the background — a crawl that ends in staged 🟡 proposals.
 	// (POST /companies/{id}/deep-read)
 	DeepReadCompany(w http.ResponseWriter, r *http.Request, id Id)
@@ -106894,7 +106902,7 @@ func (_ Unimplemented) ListCompanyContracts(w http.ResponseWriter, r *http.Reque
 
 // How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
 // (GET /companies/{id}/coverage)
-func (_ Unimplemented) GetCompanyCoverage(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetCompanyCoverage(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyCoverageParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -126352,8 +126360,24 @@ func (siw *ServerInterfaceWrapper) GetCompanyCoverage(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCompanyCoverageParams
+
+	// ------------- Optional query parameter "deal_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "deal_id", r.URL.Query(), &params.DealId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "deal_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "deal_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCompanyCoverage(w, r, id)
+		siw.Handler.GetCompanyCoverage(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

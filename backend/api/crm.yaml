@@ -4408,6 +4408,14 @@ paths:
         contact the caller cannot see is still a seat: `unlisted_seats` counts them, and
         `gaps` is empty whenever it is non-zero. A partial answer here is worse than
         none, because the reader cannot tell which one they got.
+      parameters:
+        - name: deal_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: |
+            The open deal whose buying committee to read, one of `deals`. Absent, the committee
+            is the most recently changed open deal's. A deal that is not one of this account's
+            open deals the caller may see answers `404`.
       responses:
         '200':
           description: The account's coverage.
@@ -57484,13 +57492,13 @@ components:
         summary: { $ref: '#/components/schemas/CompanyCoverageSummary' }
         deals:
           type: array
-          description: The account's open deals, so the reader can pick which committee to read.
+          description: The account's open deals, most recently changed first, so the reader can pick which committee to read with `deal_id`.
           items: { $ref: '#/components/schemas/CompanyCoverageDeal' }
         selected_deal_id:
           type: string
           format: uuid
           nullable: true
-          description: The deal the committee below describes. Null when the account has no visible open deal.
+          description: The deal the committee below describes, the one `deal_id` named or else the first of `deals`. Null when the account has no visible open deal.
         best_way_in:
           $ref: '#/components/schemas/CompanyCoverageRoute'
         committee:

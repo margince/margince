@@ -65,7 +65,7 @@ func TestAnAccountsDirectionClocksCarryTheirPrecision(t *testing.T) {
 	if !row.LastInboundAt.Equal(inbound) {
 		t.Errorf("the contact row's last inbound is %v, want the day's anchor %v", row.LastInboundAt, inbound)
 	}
-	coverage, err := service.Coverage(e.Admin(), acct.company)
+	coverage, err := service.Coverage(e.Admin(), acct.company, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

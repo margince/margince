@@ -5578,6 +5578,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.band.noWayIn": "Keiner",
   "co.contacts.band.noWayInWhy": "Angeschrieben · keine Antworten",
   "co.contacts.band.committee": "Buying Center",
+  "co.contacts.band.committeeOf": "Buying Center · {deal}",
+  "co.contacts.board.deal": "Deal, dessen Buying Center angezeigt wird",
   "co.contacts.band.missing": "Ohne {role}",
   "co.contacts.band.committeeComplete": "Vollständig",
   "co.contacts.band.committeeUnread": "Eingeschränkt",

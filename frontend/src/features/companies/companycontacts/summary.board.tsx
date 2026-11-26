@@ -3,6 +3,7 @@ import { EntityRef } from "../../../components/entityref";
 import { Badge, Button, SegmentedControl } from "../../../design-system/atoms";
 import { PipelineBoard } from "../../../design-system/pipelineboard";
 import { RelationshipMap } from "../../../design-system/relationshipmap";
+import { Select } from "../../../design-system/select";
 import { ProvenanceTag } from "../../../design-system/trust";
 import { formatNumber } from "../../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../../i18n";
@@ -28,7 +29,14 @@ export function CommitteeBoard({
   coverage,
   accountName,
   companyId,
-}: Readonly<{ coverage: Coverage; accountName: string; companyId: string }>) {
+  onDeal,
+}: Readonly<{
+  coverage: Coverage;
+  accountName: string;
+  companyId: string;
+  /** Picks the open deal whose committee the board reads. */
+  onDeal: (dealId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
@@ -112,9 +120,22 @@ export function CommitteeBoard({
   );
   // The switcher and the reading sit in one row, so the verb is beside the
   // committee in both views. Otherwise the map shows a gap it cannot fill.
+  // Offered only where there is a choice: each open deal has its own committee.
+  const dealPicker = coverage.deals.length > 1 && (
+    <Select
+      aria-label={t("co.contacts.board.deal")}
+      options={coverage.deals.map((deal) => ({
+        value: deal.deal_id,
+        label: deal.name,
+      }))}
+      value={coverage.selected_deal_id ?? ""}
+      onChange={onDeal}
+    />
+  );
   const toolbar = (
     <div className="cp-board-tools">
       {switcher}
+      {dealPicker}
       <SuggestRoles writes={writes} dealId={coverage.selected_deal_id} />
     </div>
   );

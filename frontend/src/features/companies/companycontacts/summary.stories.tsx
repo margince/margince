@@ -97,6 +97,31 @@ export const AWayInAndAGap: Story = {
   ),
 };
 
+/** Two open deals: the tile names whose committee it reads, and a picker switches. */
+export const TwoOpenDeals: Story = {
+  args: { companyId: "o-1", accountName: "Brandt GmbH", onNarrow: () => {} },
+  render: story(
+    coverage({
+      deals: [
+        { deal_id: "d-1", name: "Retrofit 2026" },
+        { deal_id: "d-2", name: "Fleet 2027" },
+      ],
+      committee: {
+        seats: [
+          {
+            contact_id: "p-2",
+            full_name: "Philipp Königs",
+            role: "economic_buyer",
+            engagement: "untried",
+          },
+        ],
+        gaps: ["champion"],
+        unlisted_seats: 0,
+      },
+    }),
+  ),
+};
+
 /**
  * The band at a phone's width, where every slot is one full-width ROW: label
  * and basis leading, figure on the trailing edge, one hairline between and no

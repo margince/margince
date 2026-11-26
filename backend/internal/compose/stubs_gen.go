@@ -1287,7 +1287,7 @@ func (stubs) ListCompanyContracts(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "ListCompanyContracts")
 }
 
-func (stubs) GetCompanyCoverage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) GetCompanyCoverage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetCompanyCoverageParams) {
 	httperr.NotImplemented(w, r, "GetCompanyCoverage")
 }
 

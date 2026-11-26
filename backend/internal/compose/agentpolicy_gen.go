@@ -1302,7 +1302,7 @@ var readViewQueries = map[string][]viewQuery{
 	"GET /v1/bulk/{id}":                                     {},
 	"GET /v1/companies/{id}/360":                            {{Name: "project_id", Type: "string", Format: "uuid"}},
 	"GET /v1/companies/{id}/contacts":                       {{Name: "cursor", Type: "string"}, {Name: "limit", Type: "integer"}, {Name: "q", Type: "string"}, {Name: "sort", Type: "string", Enum: []string{"recommended", "last_interaction", "-last_interaction", "strength", "-strength", "name", "-name"}}, {Name: "status", Type: "string", Enum: []string{"waiting", "answered", "no_reply", "lapsed", "untried"}}},
-	"GET /v1/companies/{id}/coverage":                       {},
+	"GET /v1/companies/{id}/coverage":                       {{Name: "deal_id", Type: "string", Format: "uuid"}},
 	"GET /v1/companies/{id}/documents":                      {{Name: "category", Type: "string", Enum: []string{"contract", "offer", "legal", "email_attachment", "message_attachment", "other", "link"}}, {Name: "contract_id", Type: "string", Format: "uuid"}, {Name: "cursor", Type: "string"}, {Name: "doc_state", Type: "string", Enum: []string{"draft", "current", "final", "superseded"}}, {Name: "limit", Type: "integer"}, {Name: "pinned_only", Type: "boolean"}},
 	"GET /v1/companies/{id}/facts":                          {},
 	"GET /v1/companies/{id}/finance-summary":                {},
