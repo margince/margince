@@ -76812,9 +76812,6 @@ components:
         activated_by: { type: [string, 'null'], readOnly: true, description: 'Who accepted the lead or recorded the win that activated the partner.' }
         activation_lead_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The accepted lead that activated the partner.' }
         activation_deal_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The won deal that activated the partner.' }
-        partner_fit_score: { type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.' }
-        partner_fit_score_computed: { type: [integer, 'null'], minimum: 0, maximum: 100, readOnly: true, description: 'Retained machine-computed partner-fit value while a Commercial Judgement override is in force.' }
-        partner_fit_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.' }
         relationship_health: { type: [string, 'null'], deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.' }
         last_contact_at: { type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.' }
         next_step: { type: [string, 'null'], deprecated: true, description: 'Deprecated as stored text: a value sent here is written as a task on the partner''s company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.' }

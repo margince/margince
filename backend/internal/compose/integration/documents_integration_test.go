@@ -27,11 +27,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seedDocument files one attachment against a parent and rolls it up to an
-// account. The roll-up column is a read path the writers maintain; here it is
-// set directly because the subject is the READ.
+// seedDocument files one attachment against a parent. The row is written
+// directly because the subject is the READ.
 func seedDocument(
-	t *testing.T, e *Env, company ids.UUID, parentType string, parent ids.UUID, name, category string, pinned bool,
+	t *testing.T, e *Env, parentType string, parent ids.UUID, name, category string, pinned bool,
 ) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
@@ -40,9 +39,9 @@ func seedDocument(
 	// with two.
 	e.WsExec(t, `
 		INSERT INTO attachment (id, entity_type, entity_id, filename, storage_key,
-		                        source, captured_by, category, company_id, pinned)
-		VALUES ($1, $2, $3, $4, $5, 'upload', 'human:test', $6, $7, $8)`,
-		id, parentType, parent, name, "k/"+id.String(), category, company, pinned)
+		                        source, captured_by, category, pinned)
+		VALUES ($1, $2, $3, $4, $5, 'upload', 'human:test', $6, $7)`,
+		id, parentType, parent, name, "k/"+id.String(), category, pinned)
 	return id
 }
 
@@ -62,10 +61,10 @@ func TestCompanyDocumentsHideAFileWhoseParentIsOutOfScope(t *testing.T) {
 	private := e.SeedContact(t, "Their private contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", private, e.Rep3)
 
-	seedDocument(t, e, company, "deal", mine, "our-contract.pdf", "contract", false)
-	seedDocument(t, e, company, "deal", theirs, "their-contract.pdf", "contract", false)
-	seedDocument(t, e, company, "contact", private, "their-private-note.pdf", "legal", false)
-	seedDocument(t, e, company, "company", company, "nda.pdf", "legal", false)
+	seedDocument(t, e, "deal", mine, "our-contract.pdf", "contract", false)
+	seedDocument(t, e, "deal", theirs, "their-contract.pdf", "contract", false)
+	seedDocument(t, e, "contact", private, "their-private-note.pdf", "legal", false)
+	seedDocument(t, e, "company", company, "nda.pdf", "legal", false)
 
 	docs, _, err := store.ListCompanyDocuments(
 		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), company, activities.DocumentFilters{})
@@ -100,7 +99,7 @@ func TestADealMovedToAnotherCompanyTakesItsDocumentsAlong(t *testing.T) {
 	after := e.SeedCompany(t, "Acme Holding", &e.Rep1)
 	deal := e.SeedDeal(t, "Framework", pipeline, stage, &e.Rep1)
 	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, before)
-	file := seedDocument(t, e, before, "deal", deal, "framework.pdf", "contract", false)
+	file := seedDocument(t, e, "deal", deal, "framework.pdf", "contract", false)
 
 	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, after)
 
@@ -130,9 +129,9 @@ func TestCompanyDocumentsPutPinnedFirstAndFilterByCategory(t *testing.T) {
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
-	seedDocument(t, e, company, "company", company, "old-offer.pdf", "offer", false)
-	seedDocument(t, e, company, "company", company, "signed-contract.pdf", "contract", true)
-	seedDocument(t, e, company, "company", company, "nda.pdf", "legal", false)
+	seedDocument(t, e, "company", company, "old-offer.pdf", "offer", false)
+	seedDocument(t, e, "company", company, "signed-contract.pdf", "contract", true)
+	seedDocument(t, e, "company", company, "nda.pdf", "legal", false)
 
 	docs, _, err := store.ListCompanyDocuments(ctx, company, activities.DocumentFilters{})
 	if err != nil {
@@ -161,8 +160,8 @@ func TestAttachmentMetadataRefusesASupersedesCycle(t *testing.T) {
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, docWritePerms)
 
-	first := seedDocument(t, e, company, "company", company, "v1.pdf", "contract", false)
-	second := seedDocument(t, e, company, "company", company, "v2.pdf", "contract", false)
+	first := seedDocument(t, e, "company", company, "v1.pdf", "contract", false)
+	second := seedDocument(t, e, "company", company, "v2.pdf", "contract", false)
 
 	// v2 replaces v1 — fine.
 	if _, err := store.UpdateAttachmentMetadata(ctx, second,
@@ -261,8 +260,8 @@ func TestAttachmentMetadataRefusesASupersedesTargetTheCallerCannotSee(t *testing
 	private := e.SeedContact(t, "Their private contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", private, e.Rep3)
 
-	mine := seedDocument(t, e, company, "company", company, "v2.pdf", "contract", false)
-	hidden := seedDocument(t, e, company, "contact", private, "their-v1.pdf", "contract", false)
+	mine := seedDocument(t, e, "company", company, "v2.pdf", "contract", false)
+	hidden := seedDocument(t, e, "contact", private, "their-v1.pdf", "contract", false)
 
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, docWritePerms)
 	_, err := store.UpdateAttachmentMetadata(ctx, mine,
@@ -291,7 +290,7 @@ func TestTheAccountLibraryPagesPastThePinnedGroup(t *testing.T) {
 	// a limit of 2 ends the first page exactly on the pinned/unpinned boundary.
 	want := map[string]bool{}
 	seed := func(name string, pinned bool) {
-		seedDocument(t, e, company, "company", company, name, "contract", pinned)
+		seedDocument(t, e, "company", company, name, "contract", pinned)
 		want[name] = true
 	}
 	seed("pinned-a.pdf", true)
@@ -350,8 +349,8 @@ func TestAnActivityBorneFileReachesTheLibraryAndStaysGated(t *testing.T) {
 	// linked only to a contact they cannot read.
 	visibleEmail := seedActivityWithDeal(t, e, mine)
 	hiddenEmail := seedActivityWithContact(t, e, private)
-	seedDocument(t, e, company, "activity", visibleEmail, "signed-msa.pdf", "contract", false)
-	seedDocument(t, e, company, "activity", hiddenEmail, "their-msa.pdf", "contract", false)
+	seedDocument(t, e, "activity", visibleEmail, "signed-msa.pdf", "contract", false)
+	seedDocument(t, e, "activity", hiddenEmail, "their-msa.pdf", "contract", false)
 
 	docs, _, err := store.ListCompanyDocuments(
 		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), company, activities.DocumentFilters{})
@@ -412,8 +411,8 @@ func TestACompanyMergeCarriesTheDocumentsAcross(t *testing.T) {
 	survivor := e.SeedCompany(t, "Acme", &e.Rep1)
 	dissolved := e.SeedCompany(t, "Acme Holdings", &e.Rep1)
 
-	seedDocument(t, e, dissolved, "company", dissolved, "old-msa.pdf", "contract", false)
-	seedDocument(t, e, survivor, "company", survivor, "new-msa.pdf", "contract", false)
+	seedDocument(t, e, "company", dissolved, "old-msa.pdf", "contract", false)
+	seedDocument(t, e, "company", survivor, "new-msa.pdf", "contract", false)
 
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, docUploadPerms)
 	if _, err := companies.MergeCompany(ctx,

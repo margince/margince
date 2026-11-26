@@ -3268,15 +3268,6 @@ type Partner struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStepDueAt *string `json:"next_step_due_at,omitempty"`
 
-	// PartnerFitOverrideReason Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.
-	PartnerFitOverrideReason *string `json:"partner_fit_override_reason,omitempty"`
-
-	// PartnerFitScore Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.
-	PartnerFitScore *int `json:"partner_fit_score,omitempty" maximum:"100" minimum:"0"`
-
-	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
-	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty" maximum:"100" minimum:"0"`
-
 	// PartnerKinds What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
 	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
 

@@ -169,26 +169,6 @@ func TestAMailFileReachesEveryRecordTheMailIsLinkedTo(t *testing.T) {
 	}
 }
 
-func TestAStaleCompanyStampDoesNotPlaceAMailFile(t *testing.T) {
-	e := Setup(t)
-	pipeline, stage, _ := DealFixture(t, e)
-	reached := e.SeedCompany(t, "Reached", &e.Rep1)
-	stamped := e.SeedCompany(t, "Stamped", &e.Rep1)
-	deal := e.SeedDeal(t, "D", pipeline, stage, &e.Rep1)
-	contact := e.SeedContact(t, "Ada", &e.Rep1)
-	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
-		VALUES ('employment', $1, $2, 'manual', 'human:test')`, contact, reached)
-	mail := seedActivityWithContact(t, e, contact)
-	file := captureMailFile(t, e, mail, "old.pdf", "application/pdf", []byte("%PDF-1.4"))
-	e.WsExec(t, `UPDATE attachment SET company_id = $2 WHERE id = $1`, file, stamped)
-
-	_, _, byReached := documentIDs(e.Admin(), t, e, deal, contact, reached)
-	_, _, byStamped := documentIDs(e.Admin(), t, e, deal, contact, stamped)
-	if !byReached[file] || byStamped[file] {
-		t.Errorf("reached lists it = %v, stamped lists it = %v; want true, false", byReached[file], byStamped[file])
-	}
-}
-
 func TestAMailFileLeavesEveryListWhenItIsNotLive(t *testing.T) {
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)

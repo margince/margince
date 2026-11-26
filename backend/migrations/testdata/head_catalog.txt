@@ -1722,7 +1722,6 @@ public.attachment.bytes_withheld boolean NOT NULL gen=- def=false
 public.attachment.captured_by text NOT NULL gen=- def=-
 public.attachment.category text NOT NULL gen=- def='other'::text
 public.attachment.checksum text gen=- def=-
-public.attachment.company_id uuid gen=- def=-
 public.attachment.content_type text gen=- def=-
 public.attachment.contract_id uuid gen=- def=-
 public.attachment.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1746,7 +1745,6 @@ public.attachment.title text gen=- def=-
 public.attachment.trg_attachment_updated CREATE TRIGGER trg_attachment_updated BEFORE UPDATE ON public.attachment FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.attachment.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.attachment.url text gen=- def=-
-public.attachment_account_ix CREATE INDEX attachment_account_ix ON public.attachment USING btree (company_id, pinned DESC, created_at DESC) WHERE (archived_at IS NULL)
 public.attachment_activity_ix CREATE INDEX attachment_activity_ix ON public.attachment USING btree (activity_id) WHERE (activity_id IS NOT NULL)
 public.attachment_contract_ix CREATE INDEX attachment_contract_ix ON public.attachment USING btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL))
 public.attachment_external_part_key CREATE UNIQUE INDEX attachment_external_part_key ON public.attachment USING btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL)
@@ -8367,7 +8365,6 @@ public.partner.certified_staff smallint NOT NULL gen=- def=0
 public.partner.company_id uuid NOT NULL gen=- def=-
 public.partner.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.partner.id uuid NOT NULL gen=- def=uuidv7()
-public.partner.joined_at date gen=- def=-
 public.partner.margin_tier text gen=- def=-
 public.partner.next_step text gen=- def=-
 public.partner.next_step_due_at date gen=- def=-
@@ -8377,14 +8374,8 @@ public.partner.partner_cert_status_check CHECK ((cert_status = ANY (ARRAY['appli
 public.partner.partner_certified_staff_check CHECK ((certified_staff >= 0))
 public.partner.partner_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.partner.partner_company_id_key UNIQUE (company_id)
-public.partner.partner_fit_override_reason text gen=- def=-
-public.partner.partner_fit_score smallint gen=- def=-
-public.partner.partner_fit_score_computed smallint gen=- def=-
 public.partner.partner_kinds text[] NOT NULL gen=- def='{}'::text[]
 public.partner.partner_margin_tier_check CHECK (((margin_tier IS NULL) OR (margin_tier = ANY (ARRAY['tier1_15'::text, 'tier2_20'::text, 'tier3_25'::text]))))
-public.partner.partner_partner_fit_override_reason_check CHECK (((partner_fit_override_reason IS NULL) OR (length(btrim(partner_fit_override_reason)) > 0)))
-public.partner.partner_partner_fit_score_check CHECK (((partner_fit_score IS NULL) OR ((partner_fit_score >= 0) AND (partner_fit_score <= 100))))
-public.partner.partner_partner_fit_score_computed_check CHECK (((partner_fit_score_computed IS NULL) OR ((partner_fit_score_computed >= 0) AND (partner_fit_score_computed <= 100))))
 public.partner.partner_partner_kinds_check CHECK ((partner_kinds <@ ARRAY['hosting'::text, 'consulting'::text, 'strategic'::text, 'referral'::text]))
 public.partner.partner_pkey PRIMARY KEY (id)
 public.partner.partner_relationship_stage_fkey FOREIGN KEY (relationship_stage) REFERENCES partner_stage(key) ON UPDATE RESTRICT ON DELETE RESTRICT
@@ -8392,12 +8383,11 @@ public.partner.partner_retention_rate_check CHECK (((retention_rate IS NULL) OR 
 public.partner.partner_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text])))
 public.partner.partner_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.partner.relationship_stage text NOT NULL gen=- def=-
-public.partner.renews_at date gen=- def=-
 public.partner.retention_rate smallint gen=- def=-
 public.partner.served_segments text[] gen=- def=-
 public.partner.source text NOT NULL gen=- def=-
-public.partner.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000, "partner_fit_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_fit_override_reason":2000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
-public.partner.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000, "partner_fit_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_fit_override_reason":2000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
+public.partner.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
+public.partner.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
 public.partner.trg_partner_updated CREATE TRIGGER trg_partner_updated BEFORE UPDATE ON public.partner FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.partner.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.partner.version bigint NOT NULL gen=- def=1

@@ -1119,7 +1119,6 @@ public.partner.captured_by document
 public.partner.cert_status document
 public.partner.margin_tier document
 public.partner.next_step document
-public.partner.partner_fit_override_reason note
 public.partner.partner_kinds document
 public.partner.relationship_stage document
 public.partner.served_segments document
