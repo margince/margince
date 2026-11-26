@@ -171,6 +171,10 @@ func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 	if stage := accountStage(t, e, company); stage != "former_customer" {
 		t.Errorf("the account reads %q after the accept, want former_customer", stage)
 	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = $1
+		AND actor_type = 'agent' AND actor_id = $2 AND on_behalf_of = $3`, company, lifecycleProposalActor, e.Rep1); n != 1 {
+		t.Errorf("%d stage moves by %s for the decider, want 1", n, lifecycleProposalActor)
+	}
 	if status := signalStatus(t, e, signal); status != "acknowledged" {
 		t.Errorf("the signal reads %q after the accept, want acknowledged — a page that "+
 			"moved the account while still shouting the signal that moved it contradicts itself",
