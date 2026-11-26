@@ -52,7 +52,6 @@ func scopedTaskClause(alias string, asOf time.Time, identities string, arg func(
  AND ` + occurredday.BegunSQL("request_source", instant) + `
  AND ` + occurredday.FromSQL("request_source", instant+` - make_interval(days => `+horizon+`)`) + ` AND (` + DirectMailRecipientSQL("request_source", MailSeatAddressesSQL(identities, pinner)) + held + `))`
 	engagement := leadEngagementSQL(provenance.TaskSourceActivitySQL(alias), instant, asOf, arg, "") + " AND " + latestLeadAdviceSQL(alias)
-	question := CurrentSourceMailClause(alias+".source_activity_id", asOf, arg)
 	// A request and a lead cue both lapse once their source message is
 	// answered. They ask it once: the answer test is the largest part of
 	// this clause, and Postgres keeps a plan of every copy per connection.
@@ -62,10 +61,9 @@ func scopedTaskClause(alias string, asOf time.Time, identities string, arg func(
  OR (`+pinner+`, %[1]s.id::text) IN (SELECT reader_id, row_id FROM `+auth.EffectiveWorklistPinsSQL(arg)+` adopted WHERE adopted.source='task')
  OR %[1]s.source_system = ANY($%[4]d)
  OR (%[1]s.source_system = $%[2]d AND `+source+`)
- OR (%[1]s.source_system = ANY($%[5]d) AND `+question+`)
  OR (((%[1]s.source_system = $%[3]d AND `+request+`)
-   OR (%[1]s.source_system = ANY($%[6]d) AND `+engagement+`)) AND `+unanswered+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource),
-		arg(taskSourcesOf(currentByItsWriter)), arg(taskSourcesOf(currentBySourceMail)), arg(taskSourcesOf(currentByLeadEngagement)))
+   OR (%[1]s.source_system = ANY($%[5]d) AND `+engagement+`)) AND `+unanswered+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource),
+		arg(taskSourcesOf(currentByItsWriter)), arg(taskSourcesOf(currentByLeadEngagement)))
 }
 
 // HumanOrImportedTaskSQL names the tasks that stay current by their own
@@ -92,8 +90,6 @@ const (
 	// currentByItsWriter: the writer assigned it by its own rule and it lives
 	// by the task's lifecycle.
 	currentByItsWriter
-	// currentBySourceMail: the mail it asks about is current (CurrentSourceMailClause).
-	currentBySourceMail
 	currentByLeadEngagement
 )
 
@@ -134,7 +130,6 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 		currency: currentByItsWriter, undated: true, generatedDate: true,
 		taskType: crmcontracts.TaskTypeReview,
 	},
-	provenance.WhichDealSource:          {currency: currentBySourceMail, undated: true, taskType: crmcontracts.TaskTypeDecide},
 	provenance.PrivacyRequestTaskSource: {currency: currentByItsWriter, dated: true, taskType: crmcontracts.TaskTypeDo},
 }
 
@@ -245,6 +240,6 @@ func taskSourcesWith(keep func(taskSourcePolicy) bool) []string {
 // TaskRepairPolicy derives repair scope from the same current-work policy as reads.
 func TaskRepairPolicy(source string) (supported, requiresSource bool) {
 	policy, known := taskSourceFamilies[source]
-	return known && (policy.currency == currentBySourceMail || policy.currency == currentByLeadEngagement || policy.generatedDate),
-		known && (policy.currency == currentBySourceMail || policy.currency == currentByLeadEngagement)
+	return known && (policy.currency == currentByLeadEngagement || policy.generatedDate),
+		known && policy.currency == currentByLeadEngagement
 }

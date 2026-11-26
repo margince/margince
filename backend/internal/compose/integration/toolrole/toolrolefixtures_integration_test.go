@@ -191,6 +191,8 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"dismiss_deal_suggestion": byID("deal_suggestion"),
 	"get_deal_suggestion":     byID("deal_suggestion"),
 	"accept_tag_suggestion":   byID("tag_suggestion"),
+	"accept_link_suggestion":  byID("link_suggestion"),
+	"reject_link_suggestion":  byID("link_suggestion"),
 	"dismiss_tag_suggestion":  byID("tag_suggestion"),
 	"get_tag_suggestion":      byID("tag_suggestion"),
 	"acknowledge_approval_failure": func(p *recordPool) map[string]any {

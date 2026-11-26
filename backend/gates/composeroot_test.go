@@ -62,7 +62,9 @@ const (
 	// for the exact-range cases, which drive the unexported report scan.
 	// Raised by 8 test files for the agent-for-a-colleague cases of the converted
 	// jobs, which drive the unexported job and effect wiring.
-	composeRootTestFiles = 1932
+	// Raised by 1 test file for the link suggestion tools an agent reads and
+	// answers through, which read the unexported tool registry.
+	composeRootTestFiles = 1933
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -139,7 +141,8 @@ const (
 	// Raised by 153 production and 829 test lines for the jobs that run as an agent
 	// for a named colleague, and their cases.
 	composeRootProductionLines = 232_142
-	composeRootTestLines       = 363_630
+	// Raised by 18 test lines for the link suggestion tool cases.
+	composeRootTestLines = 363_648
 )
 
 // A read under these floors stopped early or read the wrong place, and would

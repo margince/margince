@@ -2,17 +2,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { QueryClient } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
-import {
-  contactFilesKey,
-  dealFilesKey,
-  roomDocumentsKey,
-} from "../lib/attachmentkeys";
 import { routeHash } from "../lib/router";
 import {
   installFetchStub,
@@ -47,11 +41,7 @@ const TASK: Activity = {
   updated_at: "2026-09-08T09:00:00Z",
 };
 
-function show(
-  task: Activity,
-  routes: Parameters<typeof installFetchStub>[0],
-  client?: QueryClient,
-) {
+function show(task: Activity, routes: Parameters<typeof installFetchStub>[0]) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }),
     "GET /contacts/c-1": () =>
@@ -59,7 +49,7 @@ function show(
     ...routes,
   });
   return render(
-    <StoryProviders client={client}>
+    <StoryProviders>
       <TaskNextSteps task={task} />
     </StoryProviders>,
   );
@@ -96,123 +86,4 @@ it("a task to do has no step: Done is the whole of it", async () => {
 
   expect(screen.queryByRole("button")).toBeNull();
   expect(screen.queryByRole("link")).toBeNull();
-});
-
-it("a deal question lists the open deals offered and files the mail on the one picked", async () => {
-  const user = userEvent.setup();
-  const relinks: unknown[] = [];
-  const deal = (id: string, name: string, status: string) => () =>
-    jsonResponse({
-      id,
-      name,
-      status,
-      amount_minor: 4_200_000,
-      currency: "EUR",
-      expected_close_date: "2026-12-15",
-    });
-  show(
-    {
-      ...TASK,
-      subject: "Which deal is this mail about?",
-      task_type: "decide",
-      source_system: "which_deal",
-      source_activity_id: "mail-1",
-      raw: { offered_deal_ids: ["d-1", "d-2", "d-3"] },
-    },
-    {
-      "GET /deals/d-1": deal("d-1", "Nordwind renewal 2027", "open"),
-      "GET /deals/d-2": deal("d-2", "Nordwind pilot", "open"),
-      "GET /deals/d-3": deal("d-3", "Nordwind 2025", "won"),
-      "POST /activities/relink-thread": (body) => {
-        relinks.push(body);
-        return jsonResponse({});
-      },
-    },
-  );
-
-  await user.click(await screen.findByRole("radio", { name: /renewal 2027/ }));
-  expect(screen.getByRole("radio", { name: /pilot/ })).toBeTruthy();
-  expect(screen.queryByRole("radio", { name: /2025/ })).toBeNull();
-  await user.click(
-    screen.getByRole("button", { name: en["tasks.whichDeal.file"] }),
-  );
-  await waitFor(() => expect(relinks).toHaveLength(1));
-  expect(relinks).toEqual([
-    {
-      activity_id: "mail-1",
-      entity_type: "deal",
-      entity_id: "d-1",
-      replace_existing_of_type: false,
-    },
-  ]);
-});
-
-it("filing the mail on a deal refreshes the file lists its files now join", async () => {
-  const user = userEvent.setup();
-  const client = new QueryClient();
-  const showing = [
-    dealFilesKey("d-1"),
-    contactFilesKey("c-1"),
-    roomDocumentsKey("room-1"),
-  ];
-  for (const queryKey of showing) client.setQueryData(queryKey, { data: [] });
-  show(
-    {
-      ...TASK,
-      task_type: "decide",
-      source_system: "which_deal",
-      source_activity_id: "mail-1",
-      raw: { offered_deal_ids: ["d-1"] },
-    },
-    {
-      "GET /deals/d-1": () =>
-        jsonResponse({ id: "d-1", name: "Nordwind renewal", status: "open" }),
-      "POST /activities/relink-thread": () => jsonResponse({}),
-    },
-    client,
-  );
-  await user.click(await screen.findByRole("radio", { name: /renewal/ }));
-  await user.click(
-    screen.getByRole("button", { name: en["tasks.whichDeal.file"] }),
-  );
-  await waitFor(() =>
-    expect(
-      showing.map((queryKey) => client.getQueryState(queryKey)?.isInvalidated),
-    ).toEqual([true, true, true]),
-  );
-});
-
-it("a deal question offers no answer until every deal offered has been read", async () => {
-  const user = userEvent.setup();
-  let failing = true;
-  const deal = (id: string, name: string) =>
-    jsonResponse({ id, name, status: "open", currency: "EUR" });
-  show(
-    {
-      ...TASK,
-      task_type: "decide",
-      source_system: "which_deal",
-      source_activity_id: "mail-1",
-      raw: { offered_deal_ids: ["d-1", "d-2"] },
-    },
-    {
-      "GET /deals/d-1": () => deal("d-1", "Nordwind renewal 2027"),
-      "GET /deals/d-2": () =>
-        failing
-          ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
-          : deal("d-2", "Nordwind pilot"),
-    },
-  );
-
-  const retry = await screen.findByRole("button", { name: en["common.retry"] });
-  expect(screen.queryByRole("radio")).toBeNull();
-  expect(
-    screen.queryByRole("button", { name: en["tasks.whichDeal.none"] }),
-  ).toBeNull();
-  failing = false;
-  await user.click(retry);
-  expect(await screen.findByRole("radio", { name: /pilot/ })).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: en["tasks.whichDeal.none"] }),
-  ).toBeTruthy();
 });

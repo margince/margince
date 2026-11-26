@@ -10482,14 +10482,16 @@ paths:
     get:
       tags: [Activities]
       operationId: listLinkSuggestions
-      x-agent-access: human-only
-      x-human-only-reason: security   # a reader decides what a message attaches to
-      security: [{ cookieAuth: [] }]
-      summary: The records an extension suggests messages belong to, waiting for a reader to decide.
+      x-mcp-tool: { verb: list_link_suggestions, router: read_workspace, action: link_suggestions, tier: auto_execute, scope: read, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: The link suggestions waiting for the caller to decide.
       description: |
         An extension may suggest which deal, company, contact or project a message belongs to. A
-        suggestion attaches nothing. It waits here until a reader accepts or rejects it. Core makes
-        none of its own: this queue holds only what an extension proposed.
+        suggestion attaches nothing. It waits here until a reader accepts or rejects it. Margince
+        itself asks one question here: when several open deals fit a captured mail, it suggests each
+        of them to the one colleague the mailbox confirms is responsible. Such a suggestion has no
+        `unit`, and only that colleague sees and decides it. An agent acting for a colleague sees
+        and decides what that colleague would, and never another colleague's question.
 
         Oldest first, at most 50. A decided suggestion leaves the queue, so asking again shows the
         next ones. A suggestion is left out when the caller may not read its message or its target,
@@ -10509,10 +10511,9 @@ paths:
     post:
       tags: [Activities]
       operationId: acceptLinkSuggestion
-      x-agent-access: human-only
-      x-human-only-reason: security   # a reader decides what a message attaches to
-      security: [{ cookieAuth: [] }]
-      summary: Accept a suggestion, which files the message under the record it names.
+      x-mcp-tool: { verb: accept_link_suggestion, router: change_activities, action: accept_link_suggestion, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Accept a suggestion, filing the message under its record.
       description: |
         Files the message under the suggested record through the same relink as any other filing,
         and closes the suggestion in the same transaction. The caller needs the right to update the
@@ -10536,14 +10537,17 @@ paths:
     post:
       tags: [Activities]
       operationId: rejectLinkSuggestion
-      x-agent-access: human-only
-      x-human-only-reason: security   # a reader decides what a message attaches to
-      security: [{ cookieAuth: [] }]
+      x-mcp-tool: { verb: reject_link_suggestion, router: change_activities, action: reject_link_suggestion, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
       description: |
         Closes the suggestion and attaches nothing. The same target is not proposed for the same
         message a second time. Rejecting a suggestion that is already rejected is the same success.
         An accepted one answers `409`.
+
+        Rejecting a deal Margince itself suggested also declines that deal, as `declineActivityDeal`
+        does: on the message and on each unfiled message of its conversation, so no automatic pass
+        files them there again.
       responses:
         '200':
           description: The suggestion, now rejected.
@@ -10579,9 +10583,10 @@ paths:
         as a member's does. `project_kept` says so.
 
         Without `deal_id`, the answer is "none of them" to the open "Which deal is this about?"
-        question of the message's conversation. Each deal the question offered is declined on the
-        message and on each unfiled message of the conversation, and the question is done. A
-        message with no open question answers 422.
+        question of the message's conversation: the deals Margince suggested to the caller in the
+        link suggestion queue. Each of them is declined on the message and on each unfiled message
+        of the conversation, and the suggestions are rejected. A message with no open question for
+        the caller answers 422.
 
         Declining a deal already declined is the same success and writes nothing. With `deal_id`,
         the caller needs the right to change the deal too, as for `setActivityDealRelevance`.
@@ -45745,9 +45750,11 @@ components:
           description: The ledger's own lifecycle for this sender.
         decision:
           type: string
-          enum: [business, keep_out]
+          enum: [business, keep_out, personal]
           x-extensible-enum: true
-          description: What YOU decided instead, absent when you have not.
+          description: |
+            What YOU decided instead, absent when you have not. `personal` is the standing decision a
+            private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
         overruled_kind:
           type: string
           description: |
@@ -63325,13 +63332,25 @@ components:
         entity_name:
           type: [string, 'null']
           description: The name of the suggested record, for the screen. Absent on a decision's answer.
+        deal_amount_minor:
+          type: [integer, 'null']
+          format: int64
+          description: For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+        deal_currency:
+          type: [string, 'null']
+          pattern: '^[A-Z]{3}$'
+          description: The currency of `deal_amount_minor`, withheld with it.
+        deal_expected_close_date:
+          type: [string, 'null']
+          format: date
+          description: For a suggested deal, when it is expected to close. Absent on a decision's answer.
         unit:
-          type: string
-          description: The extension that proposed it.
+          type: [string, 'null']
+          description: The extension that proposed it. Null when Margince itself asks which deal a mail is about.
         reason:
           type: string
           maxLength: 200
-          description: One short sentence from the extension on why.
+          description: One short sentence from the extension on why, or Margince's own question.
         score: { type: number, minimum: 0, maximum: 1 }
         status: { type: string, enum: [pending, accepted, rejected], x-extensible-enum: true }
         created_at: { type: string, format: date-time }
@@ -63419,7 +63438,7 @@ components:
         questions_closed:
           type: integer
           minimum: 0
-          description: The open deal questions of the conversation this call marked done.
+          description: The messages of the conversation whose open deal question this call closed.
     SetActivityDispositionRequest:
       type: object
       additionalProperties: false
