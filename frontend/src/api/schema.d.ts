@@ -104502,10 +104502,22 @@ export interface operations {
                     entity_id: string;
                     /** Format: binary */
                     file: string;
+                    /** @description When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy. */
+                    reuse_identical?: boolean;
                 };
             };
         };
         responses: {
+            /** @description The identical file the record already held, answered for `reuse_identical`. Nothing was stored. */
+            200: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Attachment"];
+                };
+            };
             /** @description The stored attachment metadata. */
             201: {
                 headers: {

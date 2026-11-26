@@ -400,7 +400,7 @@ func readImportUpload(w http.ResponseWriter, r *http.Request, limit int64) (impo
 	if _, ok := csvTargets[object]; object != "" && !ok && !migration.IsZip(body) {
 		return importUpload{}, importwire.UnsupportedObject()
 	}
-	return importUpload{Object: object, FileName: path.Base(header.Filename), Body: body}, nil
+	return importUpload{Object: object, FileName: path.Base(httperr.MultipartFilename(header)), Body: body}, nil
 }
 
 func readAllUpload(file multipart.File) ([]byte, error) {

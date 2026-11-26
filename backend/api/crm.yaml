@@ -36306,7 +36306,17 @@ paths:
                 entity_type: { type: string, enum: [contact, company, deal, activity, lead, project] }
                 entity_id: { type: string, format: uuid }
                 file: { type: string, format: binary }
+                reuse_identical:
+                  type: boolean
+                  description: 'When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy.'
       responses:
+        '200':
+          description: The identical file the record already held, answered for `reuse_identical`. Nothing was stored.
+          headers:
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attachment' }
         '201':
           description: The stored attachment metadata.
           headers:

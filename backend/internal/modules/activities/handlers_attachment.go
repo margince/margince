@@ -30,6 +30,10 @@ import (
 // the case that scales — a handful of concurrent uploads at the ceiling.
 const multipartSpillBytes = 1 << 20
 
+// entityTypeRefusal answers a file or a link sent with no record kind it can
+// be filed under.
+const entityTypeRefusal = "The entity_type must be one of contact, company, deal, activity, lead or project."
+
 // errUploadLimitUnset reports that this composition never told the handler what
 // its ceiling is. A wiring fault, not a request fault, so it answers 500 rather
 // than refusing the caller's file for a size nobody set.
@@ -107,17 +111,17 @@ func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	entityType := r.FormValue("entity_type")
 	if !crmcontracts.AttachmentEntityType(entityType).Valid() {
 		httperr.Write(w, r, httperr.Validation("entity_type", "invalid_enum",
-			"entity_type must be one of contact, company, deal, activity, lead, project"))
+			entityTypeRefusal))
 		return
 	}
 	entityID, err := ids.Parse(r.FormValue("entity_id"))
 	if err != nil {
-		httperr.Write(w, r, httperr.Validation("entity_id", "invalid_uuid", "entity_id must be a UUID"))
+		httperr.Write(w, r, httperr.Validation("entity_id", "invalid_uuid", "The entity_id must be a UUID."))
 		return
 	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		httperr.Write(w, r, httperr.Validation("file", codeRequired, "a file part is required"))
+		httperr.Write(w, r, httperr.Validation("file", codeRequired, "A file part is required."))
 		return
 	}
 	defer func(ctx context.Context) {
@@ -137,7 +141,7 @@ func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	if raw := r.FormValue("contract_id"); raw != "" {
 		parsed, perr := ids.Parse(raw)
 		if perr != nil {
-			httperr.Write(w, r, httperr.Validation("contract_id", "invalid_uuid", "contract_id must be a UUID"))
+			httperr.Write(w, r, httperr.Validation("contract_id", "invalid_uuid", "The contract_id must be a UUID."))
 			return
 		}
 		contractID = &parsed
@@ -146,20 +150,27 @@ func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	// The part is handed on as a reader, not as bytes: the store hashes it and
 	// streams it to object storage, so the whole file never has to be resident
 	// at once.
-	att, err := h.store.UploadAttachment(r.Context(), AttachmentInput{
+	in := AttachmentInput{
 		EntityType:  entityType,
 		EntityID:    entityID,
-		Filename:    header.Filename,
+		Filename:    httperr.MultipartFilename(header),
 		ContentType: header.Header.Get("Content-Type"),
 		Content:     file,
 		ContractID:  contractID,
-	})
+	}
+	// 200, not 201, when the sender asked for a file the record already holds
+	// instead of a copy, and it was there.
+	att, reused, err := h.store.upload(r.Context(), in, r.FormValue("reuse_identical") == "true")
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
+	status := http.StatusCreated
+	if reused {
+		status = http.StatusOK
+	}
 	w.Header().Set("Location", "/v1/attachments/"+att.Id.String())
-	httperr.WriteJSON(w, http.StatusCreated, att)
+	httperr.WriteJSON(w, status, att)
 }
 
 // ListAttachments returns one entity's attachment metadata (cursor-paginated).
@@ -302,7 +313,7 @@ func (h Handlers) AddAttachmentLink(w http.ResponseWriter, r *http.Request) {
 	}
 	if !req.EntityType.Valid() {
 		httperr.Write(w, r, httperr.Validation("entity_type", "invalid_enum",
-			"entity_type must be one of contact, company, deal, activity, lead, project"))
+			entityTypeRefusal))
 		return
 	}
 	in := LinkInput{

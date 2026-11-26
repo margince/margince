@@ -14,10 +14,8 @@ import { ContractForm } from "./contractform";
 // literal, which would label one deployment's agreements in another country's
 // money and be indistinguishable from a currency an operator chose.
 //
-// The currency also decides the SCALE, so these cases pin both. They used to
-// assert 500_000 minor units for 5000 dong: the form multiplied by a hundred
-// whatever the currency, and this file — whose installation is deliberately a
-// dong one — wrote the hundredfold figure down as expected.
+// The currency also decides the SCALE, so these cases pin both, on an
+// installation whose currency is the dong, which has no minor unit.
 
 const SETTINGS = {
   company_name: "Brandt Automotive GmbH",

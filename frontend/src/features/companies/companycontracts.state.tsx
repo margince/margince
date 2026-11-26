@@ -41,7 +41,7 @@ export function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
  *
  * The pending status change is the most surprising thing a reader can meet, so
  * it leads. A recorded cancellation comes next, whether or not its term has
- * begun, and a row that has one or a successor no longer says it renews.
+ * begun. A row with a cancellation or a successor no longer says it renews.
  */
 export function ContractTermState({
   contract,

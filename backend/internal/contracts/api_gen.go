@@ -78324,6 +78324,9 @@ type UploadAttachmentMultipartBody struct {
 	EntityId   openapi_types.UUID                      `json:"entity_id"`
 	EntityType UploadAttachmentMultipartBodyEntityType `json:"entity_type"`
 	File       openapi_types.File                      `json:"file"`
+
+	// ReuseIdentical When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy.
+	ReuseIdentical *bool `json:"reuse_identical,omitempty"`
 }
 
 // UploadAttachmentMultipartBodyEntityType defines parameters for UploadAttachment.
