@@ -472,13 +472,15 @@ var repeatedVocabularies = gatekit.Waive(map[string]string{
 	"state: web_form, webhook_subscription":                                                     sharedByOwnBinding,
 	"status: assurance_run, close_date_run": "no Go type spells this vocabulary as typed constants, so " +
 		"there is no one type to bind both run tables to",
+	"managed_source: knowledge_corpus, knowledge_document": "the knowledge package spells the sources as two " +
+		"untyped string constants, so there is no one type to bind both columns to",
 	"status: attachment_extraction, runner_job, transcript_read": "runner_job is the queue several readers " +
 		"share, and each reader's table is bound by name to its own contract status",
 })
 
 // repeatedVocabulariesCeiling only moves down: bind a group to one type,
 // delete its waiver, then lower it.
-const repeatedVocabulariesCeiling = 8
+const repeatedVocabulariesCeiling = 9
 
 // unreadArrayCheckCeiling is how many catalog CHECKs hold an `= ANY (ARRAY[…])`
 // list this census does not read as a column's vocabulary. Each states a

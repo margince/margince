@@ -95,6 +95,10 @@ var probes = map[string]func(ctx context.Context, rt extension.Runtime) error{
 		_, err := rt.Objects().Get(ctx, "o")
 		return err
 	},
+	"Knowledge": func(ctx context.Context, rt extension.Runtime) error {
+		_, err := rt.Knowledge().ExternalIDs(ctx)
+		return err
+	},
 }
 
 // refused is the sentinel each probe must answer on a unit that holds nothing.
@@ -108,6 +112,7 @@ var refused = map[string]error{
 	"Activities": extension.ErrAttendedRead, "SetAside": extension.ErrAttendedRead,
 	"Companies": extension.ErrAttendedRead, "MailContent": extension.ErrAttendedRead,
 	"Models": extension.ErrNotDeclared, "Objects": extension.ErrNotDeclared,
+	"Knowledge": extension.ErrNotDeclared,
 }
 
 func TestEveryRuntimeCapabilityHasAProbe(t *testing.T) {
