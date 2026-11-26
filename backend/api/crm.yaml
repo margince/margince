@@ -62117,6 +62117,14 @@ components:
           type: boolean
           readOnly: true
           description: Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
+        mailbox_imported:
+          type: boolean
+          readOnly: true
+          description: Whether an import brought this in; the per-message audience write refuses it.
+        thread_audience_yours:
+          type: boolean
+          readOnly: true
+          description: Whether the thread audience write acts on this row for the caller.
 
         writable:
           type: boolean

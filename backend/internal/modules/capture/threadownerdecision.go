@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -130,9 +131,7 @@ func firstThreadActivityTx(ctx context.Context, tx pgx.Tx, threadKey string, use
 func ThreadActivityIDsTx(ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT a.id FROM activity a
-		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $2
-		 WHERE a.thread_key = $1 AND a.archived_at IS NULL
-		   AND a.restricted_at IS NULL
+		 WHERE a.thread_key = $1 AND `+storekit.ThreadImportedByClause("a", "$2")+`
 		 ORDER BY a.id`, threadKey, user)
 	if err != nil {
 		return nil, fmt.Errorf("capture: listing a thread's messages: %w", err)
