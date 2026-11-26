@@ -214,13 +214,23 @@ func TestActivityAndLinkChangesRefreshTheirWholeReachInTheSameOrder(t *testing.T
 	if _, err := conn.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, contact_id, deal_id, project_id)
 		VALUES (@activity, 'contact', @contactA, NULL, NULL), (@activity, 'contact', @contactB, NULL, NULL),
 		       (@activity, 'deal', NULL, @deal, NULL), (@activity, 'project', NULL, NULL, @project)`,
-		pgx.NamedArgs{"activity": f.early, "contactA": f.contactA, "contactB": f.contactB,
-			"deal": f.deal, "project": f.projectP}); err != nil {
+		pgx.NamedArgs{
+			"activity": f.early,
+			"contactA": f.contactA,
+			"contactB": f.contactB,
+			"deal":     f.deal,
+			"project":  f.projectP,
+		}); err != nil {
 		t.Fatalf("linking the shared activity: %v", err)
 	}
 	tx := recordClockUpdates(t, conn)
-	want := []string{"company/" + f.company, "contact/" + f.contactA, "contact/" + f.contactB,
-		"deal/" + f.deal, "project/" + f.projectP}
+	want := []string{
+		"company/" + f.company,
+		"contact/" + f.contactA,
+		"contact/" + f.contactB,
+		"deal/" + f.deal,
+		"project/" + f.projectP,
+	}
 	if _, err := tx.Exec(ctx, `UPDATE activity SET occurred_at = @at WHERE id = @activity`,
 		pgx.NamedArgs{"activity": f.early, "at": early.AddDate(0, 0, 1)}); err != nil {
 		t.Fatalf("re-dating the activity: %v", err)

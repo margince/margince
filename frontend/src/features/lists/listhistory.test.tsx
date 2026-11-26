@@ -19,6 +19,7 @@ import {
   liveVocabulary,
   revisionHistory,
 } from "../../testing/lists.fixtures";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -33,6 +34,7 @@ afterEach(() => {
 });
 
 function panel(rows: readonly ListHistoryEntry[]) {
+  pretendReaderZone("UTC");
   installFetchStub({
     "GET /me": listsMe(true),
     "GET /filters/vocabulary": () => jsonResponse(liveVocabulary),
