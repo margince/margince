@@ -35,14 +35,14 @@ function accountTrigger(page: Page) {
 
 // The translated destinations are an acceptance expectation, independent of
 // NAV_GROUPS: importing production's list would only prove it renders itself.
-// Home owns the work queue; the queue opens in a drawer rather than occupying
-// a second sidebar destination.
+// The Worklist row opens the work queue as a drawer over Home.
 const primaryDestinations = [
   "Home",
   "Kontakte",
   "Unternehmen",
   "Leads",
   "Deals",
+  "Worklist",
   "Projekte",
   "Filter und Ansichten",
   "Analytics",
