@@ -106,6 +106,9 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 	}
 
 	pageCtx, progress := withPageProgress(runCtx, r, backfillID, generation)
+	if id, n := backfillStall(cursor); n >= backfillMessageStrikes {
+		pageCtx = connector.WithBackfillSkip(pageCtx, id)
+	}
 	pageCtx = capturemetrics.ForProvider(pageCtx, name)
 	res, pageErr := bf.BackfillPage(pageCtx, auth, after, pageToken, r.sink)
 	capturemetrics.ObservePage(pageCtx, pageErr)
@@ -218,9 +221,10 @@ func (r *Registry) countBackfillFailure(ctx context.Context, backfillID ids.UUID
 	err = r.db.Tx(countCtx, func(tx pgx.Tx) error {
 		scanErr := tx.QueryRow(countCtx, `
 			UPDATE capture_backfill
-			SET consecutive_failures = consecutive_failures + 1, last_error_class = $2, backoff_is_mailbox_scoped = $3`+resetInflightProgress+`
+			SET consecutive_failures = consecutive_failures + 1, last_error_class = $2, backoff_is_mailbox_scoped = $3,
+			    cursor = `+stallCursorSQL+resetInflightProgress+`
 			WHERE id = $1 AND status = 'running'
-			RETURNING consecutive_failures`, backfillID, string(class), mailboxScopedBackoff(cause)).Scan(&failures)
+			RETURNING consecutive_failures`, backfillID, string(class), mailboxScopedBackoff(cause), faultedMessage(cause)).Scan(&failures)
 		if errors.Is(scanErr, pgx.ErrNoRows) {
 			return nil
 		}
@@ -237,6 +241,39 @@ func (r *Registry) countBackfillFailure(ctx context.Context, backfillID ids.UUID
 		markBackfillScheduled(ctx)
 	}
 	return failures, live, err
+}
+
+// backfillMessageStrikes is how many consecutive attempts may fail on the same
+// message before the next attempt walks past it.
+const backfillMessageStrikes = 3
+
+// stallCursorSQL keeps the stalled message in the cursor, beside the page
+// token, so it survives retries and a resume. $4 is the message id the failed
+// page named, or "": a failure naming none clears the count.
+const stallCursorSQL = `CASE WHEN $4::text = '' THEN cursor - 'stall_id' - 'stall_count'
+	ELSE COALESCE(cursor, '{}'::jsonb) || jsonb_build_object('stall_id', $4::text,
+	  'stall_count', CASE WHEN cursor->>'stall_id' = $4::text THEN COALESCE((cursor->>'stall_count')::int, 0) + 1 ELSE 1 END) END`
+
+// faultedMessage is the message id a page failure names, or "".
+func faultedMessage(cause error) string {
+	if mf, ok := errors.AsType[*connector.MessageFaultError](cause); ok {
+		return mf.ID
+	}
+	return ""
+}
+
+// backfillStall reads the message that failed the last attempts and how many
+// in a row. An unreadable cursor reads as none. backfillPageCursor fails the
+// run on it already.
+func backfillStall(cursor []byte) (id string, count int) {
+	var c struct {
+		ID    string `json:"stall_id"`
+		Count int    `json:"stall_count"`
+	}
+	if json.Unmarshal(cursor, &c) != nil {
+		return "", 0
+	}
+	return c.ID, c.Count
 }
 
 // backfillRetryDelay is the transient ladder, with the provider's own

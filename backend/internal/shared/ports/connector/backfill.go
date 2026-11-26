@@ -151,6 +151,33 @@ func BackfillProgressFrom(ctx context.Context) BackfillReporter {
 	return BackfillReporter{to: p}
 }
 
+// MessageFaultError names the message a page fetch failed on, so the engine
+// can see the same message fail on consecutive attempts. It wraps the cause
+// unchanged: errors.Is and errors.As see through it.
+type MessageFaultError struct {
+	ID  string
+	Err error
+}
+
+func (e *MessageFaultError) Error() string { return e.Err.Error() }
+func (e *MessageFaultError) Unwrap() error { return e.Err }
+
+// backfillSkipKey is the private context key for the message to walk past.
+type backfillSkipKey struct{}
+
+// WithBackfillSkip tells the page to walk past the message with this id when
+// its fetch fails, counting it in Failed instead of ending the page. The
+// engine sets it once the message has failed several attempts in a row.
+func WithBackfillSkip(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, backfillSkipKey{}, id)
+}
+
+// BackfillSkipFrom returns the id WithBackfillSkip set, or "".
+func BackfillSkipFrom(ctx context.Context) string {
+	id, _ := ctx.Value(backfillSkipKey{}).(string)
+	return id
+}
+
 // Container qualifies one provider container for NormalizedRecord.Containers
 // and for a capture exclusion's stored value. Both sides call it, because a
 // rule and the record it is matched against have to agree on the spelling
