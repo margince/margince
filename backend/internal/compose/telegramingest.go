@@ -191,6 +191,9 @@ func (w *telegramIngestWorker) parseAndFile(actorCtx context.Context, raw connec
 	// activity are keyed differently and nothing else joins them.
 	msg.StoredOriginal = rawID
 	if _, err := capture.FileChatMessage(actorCtx, w.sink, binding, msg); err != nil {
+		if errors.Is(err, capture.ErrChatCodeRedeemed) {
+			return database.WithWorkspaceTx(actorCtx, w.pool, func(tx pgx.Tx) error { return capture.DeleteRawCaptureTx(actorCtx, tx, rawID) })
+		}
 		return w.settleFilingError(actorCtx, err)
 	}
 	return nil

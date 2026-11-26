@@ -39,6 +39,6 @@ func (s *RetentionService) evaluateForwardExpiry(ctx context.Context) error {
 	if len(due) == 0 {
 		return nil
 	}
-	_, err = s.PurgeActivities(ctx, due, PurgeForwardExpired)
+	_, err = s.PurgeActivitiesIf(ctx, due, PurgeForwardExpired, nil)
 	return err
 }

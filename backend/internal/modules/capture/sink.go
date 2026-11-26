@@ -69,6 +69,8 @@ type Sink struct {
 	// members recognises the member behind a chat account. Nil recognises
 	// nobody, so every forward files as the sender's own correspondence.
 	members MemberIdentities
+	// codes verifies a member's chat account from a one-time code. Nil verifies none.
+	codes ChatCodeRedeemer
 	// tracePayloads is the deployment's capture.trace_payloads posture: with it
 	// on, the 24-hour trace keeps each message's sender and subject. Off is the
 	// default and the only value a member can cause.

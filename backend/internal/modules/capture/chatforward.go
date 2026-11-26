@@ -12,22 +12,51 @@ package capture
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// MemberIdentities says which workspace member owns an account on a chat
-// network. A network with no verified member accounts answers no member, and
+// MemberIdentities says which workspace member verified an account on a chat
+// network. Zalo ids are per official account, so scope names it; it is empty elsewhere. A network with no verified member accounts answers no member, and
 // every forward on it files as the sender's own correspondence.
 type MemberIdentities interface {
-	MemberOf(ctx context.Context, tx pgx.Tx, provider, channelUserID string) (ids.UUID, bool, error)
+	MemberOf(ctx context.Context, tx pgx.Tx, provider, scope, channelUserID string) (ids.UUID, bool, error)
+}
+
+// ChatCodeRedeemer verifies the account that sent a member's one-time code. It
+// reports whether the text was a pending code, and so is no message to file.
+type ChatCodeRedeemer interface {
+	RedeemCodeTx(ctx context.Context, tx pgx.Tx, provider, scope, channelUserID, text string) (bool, error)
+}
+
+// ErrChatCodeRedeemed answers a message that was a verification code. It is
+// skipped, so the stored original is destroyed and nothing is filed.
+var ErrChatCodeRedeemed = fmt.Errorf("capture: the message was a verification code: %w", connector.ErrSkip)
+
+// WithChatCodeRedeemer returns a copy that verifies member accounts by code.
+func (s *Sink) WithChatCodeRedeemer(redeemer ChatCodeRedeemer) *Sink {
+	c := *s
+	c.codes = redeemer
+	return &c
+}
+
+// RedeemChatCode satisfies connector.ChatCodeRedeemer.
+func (s *Sink) RedeemChatCode(ctx context.Context, provider, scope, channelUserID, text string) (bool, error) {
+	if s.codes == nil {
+		return false, nil
+	}
+	var redeemed bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		redeemed, err = s.codes.RedeemCodeTx(ctx, tx, provider, scope, channelUserID, text)
+		return err
+	})
+	return redeemed, err
 }
 
 // WithMemberIdentities returns a copy that recognises members by finder. Compose passes ApprovedAccountMembers.
@@ -39,7 +68,7 @@ func (s *Sink) WithMemberIdentities(finder MemberIdentities) *Sink {
 }
 
 // ChatMember satisfies connector.ChatMemberFinder.
-func (s *Sink) ChatMember(ctx context.Context, provider, channelUserID string) (ids.UUID, bool, error) {
+func (s *Sink) ChatMember(ctx context.Context, provider, scope, channelUserID string) (ids.UUID, bool, error) {
 	if s.members == nil {
 		return ids.Nil, false, nil
 	}
@@ -47,38 +76,10 @@ func (s *Sink) ChatMember(ctx context.Context, provider, channelUserID string) (
 	var found bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		member, found, err = s.members.MemberOf(ctx, tx, provider, channelUserID)
+		member, found, err = s.members.MemberOf(ctx, tx, provider, scope, channelUserID)
 		return err
 	})
 	return member, found, err
-}
-
-// ApprovedAccountMembers recognises a member by a chat account an admin approved
-// as theirs. The provider vouched for the account when its owner linked it, so
-// no code has to be typed to prove it. Only Telegram Business has such accounts
-// today. A member's WhatsApp number or Zalo account is not verified anywhere,
-// so those networks recognise no member.
-type ApprovedAccountMembers struct{}
-
-func (ApprovedAccountMembers) MemberOf(ctx context.Context, tx pgx.Tx, provider, channelUserID string) (ids.UUID, bool, error) {
-	if provider != telegram.Provider {
-		return ids.Nil, false, nil
-	}
-	var member ids.UUID
-	err := tx.QueryRow(ctx, `
-		SELECT c.owner_user_id FROM channel_connection c
-		  JOIN app_user u ON u.id = c.owner_user_id AND u.status = 'active' AND NOT u.is_agent
-		 WHERE c.provider = $1 AND c.account_id = $2 AND c.ownership = 'member'
-		   AND c.parent_connection_id IS NOT NULL AND c.approved_at IS NOT NULL
-		   AND c.status = $3 AND c.archived_at IS NULL`,
-		telegram.BusinessProvider, channelUserID, channelStatusConnected).Scan(&member)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.Nil, false, nil
-	}
-	if err != nil {
-		return ids.Nil, false, fmt.Errorf("capture: reading the member behind a chat account: %w", err)
-	}
-	return member, true, nil
 }
 
 // forwardRoute is what FileChatMessage does with a message after it knows who
@@ -99,7 +100,7 @@ func routeForward(ctx context.Context, sink connector.Sink, binding connector.Ch
 	if msg.Forward == nil || msg.Direction != connector.DirectionInbound || !ok {
 		return ctx, unchanged, nil
 	}
-	member, isMember, err := finder.ChatMember(ctx, binding.Provider, msg.Counterparty.UserID)
+	member, isMember, err := finder.ChatMember(ctx, binding.Provider, binding.AccountScope, msg.Counterparty.UserID)
 	if err != nil || !isMember {
 		return ctx, unchanged, err
 	}
@@ -131,4 +132,14 @@ func routeForward(ctx context.Context, sink connector.Sink, binding connector.Ch
 func heldForwardRecord(rec connector.NormalizedRecord) connector.NormalizedRecord {
 	rec.Counterparty = connector.Counterparty{Direction: rec.Counterparty.Direction}
 	return rec
+}
+
+// redeemChatCode reports whether an inbound message is exactly a member's
+// pending verification code. Such a message is never filed.
+func redeemChatCode(ctx context.Context, sink connector.Sink, binding connector.ChatBinding, msg connector.ChatMessage) (bool, error) {
+	redeemer, ok := sink.(connector.ChatCodeRedeemer)
+	if !ok || msg.Direction != connector.DirectionInbound || msg.Forward != nil {
+		return false, nil
+	}
+	return redeemer.RedeemChatCode(ctx, binding.Provider, binding.AccountScope, msg.Counterparty.UserID, msg.Body)
 }

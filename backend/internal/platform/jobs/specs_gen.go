@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "3385630dd54cc347b5d775ee4204c69c312a0842f2283c9ac34f0c033bf7985b"
+const JobContractHash = "a09de17ec3984f57e7f90ce968b1ec34da4d7a0752ec058158d73d0918571b50"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -880,7 +880,7 @@ var specs = map[string]Spec{
 		GoType:      "PrivacyRetentionArgs",
 		Role:        Worker,
 		Queue:       "privacy_retention",
-		Timeout:     TimeoutPolicy{Fixed: 505 * time.Minute, DerivedFrom: "privacyRetentionPassTimeout"},
+		Timeout:     TimeoutPolicy{Fixed: 32300 * time.Second, DerivedFrom: "privacyRetentionPassTimeout"},
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Setting: "installation.retention_sweep_interval_seconds"},

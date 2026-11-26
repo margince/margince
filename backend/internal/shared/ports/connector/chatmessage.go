@@ -193,7 +193,13 @@ type ChatForward struct {
 type ChatMemberFinder interface {
 	// ChatMember returns the member whose verified account on the provider has
 	// this id, and whether there is one.
-	ChatMember(ctx context.Context, provider, channelUserID string) (ids.UUID, bool, error)
+	ChatMember(ctx context.Context, provider, scope, channelUserID string) (ids.UUID, bool, error)
+}
+
+// ChatCodeRedeemer is implemented by a Sink that verifies a member's chat
+// account from a one-time code sent as a message.
+type ChatCodeRedeemer interface {
+	RedeemChatCode(ctx context.Context, provider, scope, channelUserID, text string) (bool, error)
 }
 
 // CaptureOnlyThreadScope is the thread scope of a conversation that is read and

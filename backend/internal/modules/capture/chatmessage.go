@@ -36,6 +36,12 @@ const ChatMessageKind = "message"
 func FileChatMessage(
 	ctx context.Context, sink connector.Sink, binding connector.ChatBinding, msg connector.ChatMessage,
 ) (datasource.EntityRef, error) {
+	if redeemed, err := redeemChatCode(ctx, sink, binding, msg); err != nil || redeemed {
+		if err == nil {
+			err = ErrChatCodeRedeemed
+		}
+		return datasource.EntityRef{}, err
+	}
 	ctx, route, err := routeForward(ctx, sink, binding, msg)
 	if err != nil {
 		return datasource.EntityRef{}, err
