@@ -53,7 +53,6 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "gemini", model: "gemini-3.1-pro-preview"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
-		{provider: "gemini", model: "gemini-3.8-flash"},
 		{provider: "openai_compatible", model: "google/gemma-4-31b-it"},
 		{provider: "openai_compatible", model: "openai/gpt-6-luna"},
 		{provider: "openai_compatible", model: "openai/gpt-6-sol"},
@@ -145,7 +144,7 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "openai_compatible", model: "openai/gpt-oss-120b"},
 		{provider: "openai_compatible", model: "qwen/qwen3.8-27b"},
 	}},
-	// records/rewrite/gemini_gemini-3.8-flash_cloud_frontier.json: p95 4.954s
+	// records/rewrite/gemini_gemini-3.8-flash_cloud_frontier.json: p95 6.34s
 	"rewrite": {limit: 30 * time.Second, measured: []boundModel{
 		{provider: "anthropic", model: "claude-haiku-5-5"},
 		{provider: "anthropic", model: "claude-sonnet-5-5"},

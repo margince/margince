@@ -446,7 +446,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `modelverbenrich_test.go` | H2 | modelVerbsOffEnrich names the agent verbs marked always that spend another scope, and the source that shows why. |
 | `moneysum_test.go` | H2 | Money this product computes has its arithmetic held by the database. |
 | `narrowindextwin_test.go` | H2 | A partial index whose columns already carry an unpredicated one says why it is worth a second B-tree on every write. |
-| `noopprobematch_test.go` | H2 | noOpProbeHelpers are the helpers that send a save of the stored values and check nothing moved, with where each takes its method and path. |
 | `noopsaveinert_test.go` | H2 | A save that changes nothing changes nothing. |
 | `noticeassessmentsources_test.go` | H3 | _(no doc comment)_ |
 | `noticecasecolumns_test.go` | H2 | One SELECT list per whole-row read in the consent package. |

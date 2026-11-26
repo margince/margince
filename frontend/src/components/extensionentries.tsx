@@ -52,6 +52,13 @@ export function entryIcon(name: string): LucideIcon | undefined {
   return Object.hasOwn(ENTRY_ICONS, name) ? ENTRY_ICONS[name] : undefined;
 }
 
+// EntryGlyph draws the glyph an entry names. It takes the glyph from the constant
+// map, which the React Compiler reads as one fixed component.
+function EntryGlyph({ name }: Readonly<{ name: string }>) {
+  const Glyph = entryIcon(name) === undefined ? undefined : ENTRY_ICONS[name];
+  return Glyph ? <Glyph aria-hidden="true" /> : null;
+}
+
 // A slot with this prefix draws each entry as a note, not a button.
 const MARK_SLOT_PREFIX = "record_mark.";
 
@@ -143,7 +150,6 @@ function EntryButton({
   label,
   record,
 }: Readonly<{ entry: UnitEntry; label: string; record?: EntryRecord }>) {
-  const Icon = entryIcon(entry.icon);
   return (
     // The span lets a verb bar's narrow tile cut the label at its end; the
     // title still shows all of it.
@@ -152,7 +158,7 @@ function EntryButton({
       title={label}
       onClick={() => navigate(entryRoute(entry), entryParams(record))}
     >
-      {Icon && <Icon aria-hidden="true" />}{" "}
+      <EntryGlyph name={entry.icon} />{" "}
       <span className="verb-label">{label}</span>
     </Button>
   );
