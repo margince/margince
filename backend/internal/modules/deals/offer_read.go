@@ -228,6 +228,72 @@ func withholdUnreadableBuyerOn(ctx context.Context, tx pgx.Tx, offer *crmcontrac
 	return nil
 }
 
+// BuyerNotReadableError refuses a render or a send of an offer whose buyer
+// company the caller cannot read. A copy without the buyer block would be a
+// contract that names nobody. A missing buyer, a row-scope miss and a missing
+// object grant all answer this one error, so the refusal tells them apart
+// to no one.
+type BuyerNotReadableError struct{}
+
+func (e *BuyerNotReadableError) Error() string {
+	code, message := e.MessageFault()
+	return code + ": " + message
+}
+
+// Unwrap keeps the refusal on the 403 row of the sentinel table.
+func (e *BuyerNotReadableError) Unwrap() error { return apperrors.ErrPermissionDenied }
+
+// MessageFault says what to do without naming the company.
+func (e *BuyerNotReadableError) MessageFault() (code, message string) {
+	return "permission_denied", "The buyer company of this offer is not readable for you, so it cannot be " +
+		"rendered or sent by you. Ask the company's owner to share it with you, or ask an administrator " +
+		"to grant you company read."
+}
+
+// readReadableBuyer reads the buyer company's names under the caller's company
+// grant and row scope, in the one statement that returns them. A scope miss and
+// a read are one answer, so a revoke between a check and a read cannot let a
+// name out. Render and send both take the block from here. It is nil, with no
+// error, for an offer that names no company.
+//
+// A missing grant, a row-scope miss and a missing row all answer
+// BuyerNotReadableError. An archived company stays readable, as it is for the
+// company read with include_archived.
+func readReadableBuyer(ctx context.Context, tx pgx.Tx, offer crmcontracts.Offer) (map[string]any, error) {
+	if offer.BuyerCompanyId == nil {
+		return nil, nil //nolint:nilnil // a nil block is an offer that names no buyer, which renders and sends without one
+	}
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return nil, &BuyerNotReadableError{}
+		}
+		return nil, err
+	}
+	args := []any{ids.UUID(*offer.BuyerCompanyId)}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	scope, err := auth.ScopeClauseFor(ctx, "company", "", arg)
+	if err != nil {
+		return nil, err
+	}
+	query := `SELECT display_name, legal_name FROM company WHERE id = $1`
+	if scope != "" {
+		query += ` AND ` + scope
+	}
+	var displayName string
+	var legalName *string
+	switch err := tx.QueryRow(ctx, query, args...).Scan(&displayName, &legalName); {
+	case errors.Is(err, pgx.ErrNoRows):
+		return nil, &BuyerNotReadableError{}
+	case err != nil:
+		return nil, fmt.Errorf("read buyer company: %w", err)
+	}
+	block := map[string]any{filterCompanyID: offer.BuyerCompanyId.String(), "display_name": displayName}
+	if legalName != nil {
+		block["legal_name"] = *legalName
+	}
+	return block, nil
+}
+
 func readOffer(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived storekit.ArchivedFilter) (crmcontracts.Offer, error) {
 	q := `SELECT ` + offerColumns + ` FROM offer WHERE id = $1`
 	if archived == storekit.LiveOnly {

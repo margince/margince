@@ -270,25 +270,15 @@ func joinNonEmpty(sep string, parts ...string) string {
 
 // sendSnapshots captures the buyer and issuer legal blocks at send time:
 // the sent document stays truthful even when the company or workspace is
-// later renamed.
+// later renamed. A buyer the caller may not read refuses the send, as it
+// refuses the render. The snapshot then never holds a name the document
+// could not print for the same caller.
 func (s *Store) sendSnapshots(ctx context.Context, tx pgx.Tx, baseCurrency string,
 	offer crmcontracts.Offer,
 ) (buyer, issuer map[string]any, err error) {
-	if offer.BuyerCompanyId != nil {
-		var displayName string
-		var legalName *string
-		err := tx.QueryRow(ctx,
-			`SELECT display_name, legal_name FROM company WHERE id = $1`, offer.BuyerCompanyId).
-			Scan(&displayName, &legalName)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil, fmt.Errorf("snapshot buyer company: %w", err)
-		}
-		if err == nil {
-			buyer = map[string]any{filterCompanyID: offer.BuyerCompanyId, "display_name": displayName}
-			if legalName != nil {
-				buyer["legal_name"] = *legalName
-			}
-		}
+	buyer, err = readReadableBuyer(ctx, tx, offer)
+	if err != nil {
+		return nil, nil, err
 	}
 	// The currency is the caller's resolved base, not a second read: the
 	// snapshot must record the basis this offer was actually priced in.
