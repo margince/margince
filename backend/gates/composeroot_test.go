@@ -41,8 +41,10 @@ const (
 	// product acting for a named colleague, split out of the deal-owner seam.
 	// Raised by 1 for the Zalo ingest and token renewal job args, which the
 	// generated job kinds require in this package.
+	// Raised by 1 for reportexactrange.go, which withholds a report number past the
+	// exact range at every scan that puts report numbers on the wire.
 	// Raised by 1 for the seat-bound deal reads a unit asks as its own user.
-	composeRootProductionFiles = 1389
+	composeRootProductionFiles = 1390
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -58,8 +60,9 @@ const (
 	// card and the company page withhold the same billing contacts. Raised by 1
 	// test file for main's managed corpus port cases, met with develop's in the sync.
 	// Raised by 2 test files for the seat-bound deal reads and the stored-object
-	// count, whose cases drive the unexported seat and ledger wiring.
-	composeRootTestFiles = 1924
+	// count, whose cases drive the unexported seat and ledger wiring. Raised by 1
+	// for the exact-range cases, which drive the unexported report scan.
+	composeRootTestFiles = 1925
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -127,14 +130,16 @@ const (
 	// Raised by 44 production and 99 test lines for the agent-for-a-colleague
 	// seam, the finance card's hidden billing count and their cases.
 	// Raised by 94 production lines for the Zalo ingest and token renewal job args.
+	// Raised by 101 production and 118 test lines for the exact-range withholding
+	// of report numbers and the call-flow certification, and their cases.
 	// Raised by 23 production and 11 test lines for the date-only precision a
 	// company route and a quiet reason carry, and their cases.
 	// Raised by 259 production and 267 test lines for the seat-bound deal reads
 	// and the stored-object ledger wiring, and the cases that drive them.
 	// Raised by 14 production and 14 test lines for the date-only precision the
 	// close silence and the customer-progress reads carry, and their case.
-	composeRootProductionLines = 231_993
-	composeRootTestLines       = 362_701
+	composeRootProductionLines = 232_094
+	composeRootTestLines       = 362_832
 )
 
 // A read under these floors stopped early or read the wrong place, and would

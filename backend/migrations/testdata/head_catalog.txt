@@ -7226,6 +7226,7 @@ public.lawful_basis_confirmation_open_lead CREATE INDEX lawful_basis_confirmatio
 public.lawful_basis_confirmation_pkey CREATE UNIQUE INDEX lawful_basis_confirmation_pkey ON public.lawful_basis_confirmation USING btree (id)
 public.lead acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead.archived_at timestamp with time zone gen=- def=-
+public.lead.arrival_origin text gen=- def=-
 public.lead.arrival_owner_id uuid gen=- def=-
 public.lead.candidate_company_key text gen=- def=-
 public.lead.captured_by text NOT NULL gen=- def=-

@@ -17,25 +17,21 @@
     {
       "model": "claude-sonnet-5-5@claude-cli",
       "name": "claude-sonnet-5-5",
-      "trust": "🟡 Mostly",
+      "trust": "🟢 Yes",
       "cases_with_a_committed_run": 81,
-      "cases_that_reached_their_bar": 80,
-      "cases_below_their_bar": 1,
+      "cases_that_reached_their_bar": 81,
+      "cases_below_their_bar": 0,
       "cases_measured_on_an_earlier_listing": 81,
-      "runs": 169,
+      "runs": 167,
       "passed": 163,
-      "reliability": 0.9644970414201184,
-      "cases_below_their_bar_named": [
-        "case64_catch_me_up_and_the_brief"
-      ],
+      "reliability": 0.9760479041916168,
+      "cases_below_their_bar_named": [],
       "route": "Claude Code CLI",
       "self_judged": true,
-      "calls_per_case": "4 over 81",
+      "calls_per_case": "4.5 over 81",
       "slow_cases": [],
-      "median_calls_per_case": "4",
-      "median_turns_per_case": "5",
-      "median_refused_per_case": "0.5",
-      "median_retries_per_case": "0.25"
+      "median_calls_per_case": "4.5",
+      "median_turns_per_case": "5.5"
     },
     {
       "model": "claude-sonnet-5-5@claude-sdk",
@@ -45,55 +41,50 @@
       "cases_that_reached_their_bar": 2,
       "cases_below_their_bar": 0,
       "cases_measured_on_an_earlier_listing": 2,
-      "runs": 4,
+      "runs": 5,
       "passed": 4,
-      "reliability": 1,
+      "reliability": 0.8,
       "cases_below_their_bar_named": [],
       "route": "Claude Agent SDK",
       "self_judged": true,
-      "calls_per_case": "13.5 over 2",
+      "calls_per_case": "11.5 over 2",
       "slow_cases": [],
-      "median_calls_per_case": "13.5",
-      "median_turns_per_case": "14.5",
-      "median_refused_per_case": "1.75",
-      "median_retries_per_case": "-"
+      "median_calls_per_case": "11.5",
+      "median_turns_per_case": "12.5"
     },
     {
       "model": "gemini-4-hydrogen-medium@agy-cli",
       "name": "gemini-4-hydrogen-medium",
-      "trust": "🟡 Mostly",
+      "trust": "🟢 Yes",
       "cases_with_a_committed_run": 81,
-      "cases_that_reached_their_bar": 80,
-      "cases_below_their_bar": 1,
+      "cases_that_reached_their_bar": 81,
+      "cases_below_their_bar": 0,
       "cases_measured_on_an_earlier_listing": 81,
       "runs": 169,
-      "passed": 163,
-      "reliability": 0.9644970414201184,
-      "cases_below_their_bar_named": [
-        "case122_file_the_acceptance_report"
-      ],
+      "passed": 164,
+      "reliability": 0.9704142011834319,
+      "cases_below_their_bar_named": [],
       "route": "Antigravity CLI",
       "self_judged": false,
-      "calls_per_case": "8.5 over 81",
+      "calls_per_case": "9 over 81",
       "slow_cases": [],
-      "median_calls_per_case": "8.5",
-      "median_turns_per_case": "6.5",
-      "median_refused_per_case": "1",
-      "median_retries_per_case": "0"
+      "median_calls_per_case": "9",
+      "median_turns_per_case": "6.5"
     },
     {
       "model": "gpt-5.6-sol@codex-cli",
       "name": "gpt-5.6-sol",
       "trust": "🟡 Mostly",
       "cases_with_a_committed_run": 82,
-      "cases_that_reached_their_bar": 75,
-      "cases_below_their_bar": 7,
+      "cases_that_reached_their_bar": 74,
+      "cases_below_their_bar": 8,
       "cases_measured_on_an_earlier_listing": 82,
-      "runs": 173,
-      "passed": 152,
-      "reliability": 0.8786127167630058,
+      "runs": 174,
+      "passed": 150,
+      "reliability": 0.8620689655172413,
       "cases_below_their_bar_named": [
         "case107_tidy_up_the_room",
+        "case10_finish_the_import",
         "case46_get_us_in_a_room",
         "case47_tidy_the_fair_list",
         "case49_who_can_introduce_us",
@@ -103,12 +94,10 @@
       ],
       "route": "Codex CLI",
       "self_judged": false,
-      "calls_per_case": "9.5 over 82",
+      "calls_per_case": "10 over 82",
       "slow_cases": [],
-      "median_calls_per_case": "9.5",
-      "median_turns_per_case": "-",
-      "median_refused_per_case": "2",
-      "median_retries_per_case": "2"
+      "median_calls_per_case": "10",
+      "median_turns_per_case": "-"
     }
   ],
   "rest_door": {
@@ -118,13 +107,14 @@
         "name": "claude-sonnet-5-5",
         "trust": "⚪ Not enough tested yet",
         "cases_with_a_committed_run": 20,
-        "cases_that_reached_their_bar": 19,
-        "cases_below_their_bar": 1,
+        "cases_that_reached_their_bar": 18,
+        "cases_below_their_bar": 2,
         "cases_measured_on_an_earlier_listing": 20,
         "runs": 42,
         "passed": 38,
         "reliability": 0.9047619047619048,
         "cases_below_their_bar_named": [
+          "case20_put_it_in_the_board_pack",
           "case64_catch_me_up_and_the_brief"
         ],
         "route": "Claude Code CLI",
@@ -132,9 +122,7 @@
         "calls_per_case": "14 over 20",
         "slow_cases": [],
         "median_calls_per_case": "14",
-        "median_turns_per_case": "15",
-        "median_refused_per_case": "0",
-        "median_retries_per_case": "0"
+        "median_turns_per_case": "15"
       }
     ],
     "cases": [
@@ -173,13 +161,7 @@
                 "median": 26,
                 "min": 26,
                 "max": 26
-              },
-              "refused": {
-                "median": 1,
-                "min": 1,
-                "max": 1
-              },
-              "retries": null
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -202,39 +184,31 @@
         "by_model": [
           {
             "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 2,
+            "runs": 3,
+            "passed": 3,
             "pass_at": 2,
             "held": true,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
-              "runs": 2,
+              "runs": 3,
               "calls": {
-                "median": 16,
+                "median": 15,
                 "min": 15,
-                "max": 17
+                "max": 15
               },
               "turns": {
-                "median": 17,
+                "median": 16,
                 "min": 16,
-                "max": 18
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": {
-                "median": 0,
-                "min": 0,
-                "max": 0
+                "max": 16
               }
             },
+            "regraded": true,
             "measured_on_an_earlier_listing": [
               "tool copy",
-              "server instructions and resources"
+              "server instructions and resources",
+              "harness"
             ]
           }
         ]
@@ -263,21 +237,15 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 7,
+                "median": 6.5,
                 "min": 6,
-                "max": 8
+                "max": 7
               },
               "turns": {
-                "median": 8,
+                "median": 7.5,
                 "min": 7,
-                "max": 9
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
+                "max": 8
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -301,30 +269,24 @@
           {
             "model": "claude-sonnet-5-5@claude-cli",
             "runs": 2,
-            "passed": 2,
+            "passed": 0,
             "pass_at": 2,
-            "held": true,
+            "held": false,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 14.5,
-                "min": 14,
-                "max": 15
+                "median": 9.5,
+                "min": 8,
+                "max": 11
               },
               "turns": {
-                "median": 15.5,
-                "min": 15,
-                "max": 16
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
+                "median": 10.5,
+                "min": 9,
+                "max": 12
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -359,21 +321,15 @@
             "efficiency": {
               "runs": 2,
               "calls": {
+                "median": 9.5,
+                "min": 9,
+                "max": 10
+              },
+              "turns": {
                 "median": 10.5,
                 "min": 10,
                 "max": 11
-              },
-              "turns": {
-                "median": 11.5,
-                "min": 11,
-                "max": 12
-              },
-              "refused": {
-                "median": 1.5,
-                "min": 1,
-                "max": 2
-              },
-              "retries": null
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -406,21 +362,15 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 20,
+                "median": 19.5,
                 "min": 19,
-                "max": 21
+                "max": 20
               },
               "turns": {
-                "median": 21,
+                "median": 20.5,
                 "min": 20,
-                "max": 22
-              },
-              "refused": {
-                "median": 1,
-                "min": 0,
-                "max": 2
-              },
-              "retries": null
+                "max": 21
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -453,21 +403,15 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 10,
-                "min": 10,
+                "median": 9.5,
+                "min": 9,
                 "max": 10
               },
               "turns": {
-                "median": 11,
-                "min": 11,
+                "median": 10.5,
+                "min": 10,
                 "max": 11
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -491,7 +435,7 @@
         "by_model": [
           {
             "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 3,
+            "runs": 2,
             "passed": 2,
             "pass_at": 2,
             "held": true,
@@ -499,23 +443,17 @@
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
-              "runs": 3,
+              "runs": 2,
               "calls": {
-                "median": 23,
-                "min": 18,
-                "max": 25
+                "median": 26,
+                "min": 24,
+                "max": 28
               },
               "turns": {
-                "median": 24,
-                "min": 19,
-                "max": 26
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
+                "median": 27,
+                "min": 25,
+                "max": 29
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -548,23 +486,18 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 18,
-                "min": 17,
+                "median": 17.5,
+                "min": 16,
                 "max": 19
               },
               "turns": {
-                "median": 19,
-                "min": 18,
+                "median": 18.5,
+                "min": 17,
                 "max": 20
-              },
-              "refused": {
-                "median": 0.5,
-                "min": 0,
-                "max": 1
-              },
-              "retries": null
+              }
             },
             "measured_on_an_earlier_listing": [
+              "scenario",
               "tool copy",
               "server instructions and resources",
               "harness"
@@ -597,21 +530,15 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 15.5,
+                "median": 14,
                 "min": 14,
-                "max": 17
+                "max": 14
               },
               "turns": {
-                "median": 16.5,
+                "median": 15,
                 "min": 15,
-                "max": 18
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
+                "max": 15
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -646,21 +573,15 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 15,
+                "median": 14,
                 "min": 14,
-                "max": 16
+                "max": 14
               },
               "turns": {
-                "median": 16,
+                "median": 15,
                 "min": 15,
-                "max": 17
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
+                "max": 15
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -692,21 +613,15 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 13.5,
-                "min": 13,
-                "max": 14
+                "median": 17,
+                "min": 16,
+                "max": 18
               },
               "turns": {
-                "median": 14.5,
-                "min": 14,
-                "max": 15
-              },
-              "refused": {
-                "median": 1,
-                "min": 1,
-                "max": 1
-              },
-              "retries": null
+                "median": 18,
+                "min": 17,
+                "max": 19
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -740,21 +655,15 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 17.5,
-                "min": 16,
-                "max": 19
+                "median": 14.5,
+                "min": 14,
+                "max": 15
               },
               "turns": {
-                "median": 18.5,
-                "min": 17,
-                "max": 20
-              },
-              "refused": {
-                "median": 0.5,
-                "min": 0,
-                "max": 1
-              },
-              "retries": null
+                "median": 15.5,
+                "min": 15,
+                "max": 16
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -786,21 +695,15 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 10.5,
-                "min": 9,
-                "max": 12
+                "median": 15.5,
+                "min": 14,
+                "max": 17
               },
               "turns": {
-                "median": 11.5,
-                "min": 10,
-                "max": 13
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
+                "median": 16.5,
+                "min": 15,
+                "max": 18
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -828,7 +731,7 @@
         "by_model": [
           {
             "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 3,
+            "runs": 2,
             "passed": 2,
             "pass_at": 2,
             "held": true,
@@ -836,23 +739,17 @@
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
-              "runs": 3,
+              "runs": 2,
               "calls": {
-                "median": 12,
-                "min": 12,
-                "max": 17
+                "median": 11.5,
+                "min": 8,
+                "max": 15
               },
               "turns": {
-                "median": 13,
-                "min": 13,
-                "max": 18
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 1
-              },
-              "retries": null
+                "median": 12.5,
+                "min": 9,
+                "max": 16
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -884,21 +781,15 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 7.5,
-                "min": 7,
+                "median": 8,
+                "min": 8,
                 "max": 8
               },
               "turns": {
-                "median": 8.5,
-                "min": 8,
+                "median": 9,
+                "min": 9,
                 "max": 9
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": null
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -920,39 +811,31 @@
         "by_model": [
           {
             "model": "claude-sonnet-5-5@claude-cli",
-            "runs": 2,
-            "passed": 0,
+            "runs": 3,
+            "passed": 1,
             "pass_at": 2,
             "held": false,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
-              "runs": 2,
+              "runs": 3,
               "calls": {
-                "median": 11,
-                "min": 10,
-                "max": 12
+                "median": 13,
+                "min": 11,
+                "max": 14
               },
               "turns": {
-                "median": 12,
-                "min": 11,
-                "max": 13
-              },
-              "refused": {
-                "median": 2,
-                "min": 2,
-                "max": 2
-              },
-              "retries": {
-                "median": 0,
-                "min": 0,
-                "max": 0
+                "median": 14,
+                "min": 12,
+                "max": 15
               }
             },
+            "regraded": true,
             "measured_on_an_earlier_listing": [
               "tool copy",
-              "server instructions and resources"
+              "server instructions and resources",
+              "harness"
             ]
           }
         ]
@@ -979,22 +862,17 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 10.5,
-                "min": 10,
+                "median": 9,
+                "min": 7,
                 "max": 11
               },
               "turns": {
-                "median": 11.5,
-                "min": 11,
+                "median": 10,
+                "min": 8,
                 "max": 12
-              },
-              "refused": {
-                "median": 1,
-                "min": 1,
-                "max": 1
-              },
-              "retries": null
+              }
             },
+            "regraded": true,
             "measured_on_an_earlier_listing": [
               "tool copy",
               "server instructions and resources",
@@ -1029,29 +907,20 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 20.5,
-                "min": 20,
+                "median": 19.5,
+                "min": 18,
                 "max": 21
               },
               "turns": {
-                "median": 21.5,
-                "min": 21,
+                "median": 20.5,
+                "min": 19,
                 "max": 22
-              },
-              "refused": {
-                "median": 0,
-                "min": 0,
-                "max": 0
-              },
-              "retries": {
-                "median": 0,
-                "min": 0,
-                "max": 0
               }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
-              "server instructions and resources"
+              "server instructions and resources",
+              "harness"
             ]
           }
         ]
@@ -1081,20 +950,14 @@
               "runs": 2,
               "calls": {
                 "median": 10.5,
-                "min": 10,
-                "max": 11
+                "min": 9,
+                "max": 12
               },
               "turns": {
                 "median": 11.5,
-                "min": 11,
-                "max": 12
-              },
-              "refused": {
-                "median": 0.5,
-                "min": 0,
-                "max": 1
-              },
-              "retries": null
+                "min": 10,
+                "max": 13
+              }
             },
             "measured_on_an_earlier_listing": [
               "tool copy",
@@ -1192,21 +1055,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8.5,
-              "min": 8,
-              "max": 9
+              "median": 10,
+              "min": 9,
+              "max": 11
             },
             "turns": {
-              "median": 9.5,
-              "min": 9,
-              "max": 10
-            },
-            "refused": {
-              "median": 2,
-              "min": 1,
-              "max": 3
-            },
-            "retries": null
+              "median": 11,
+              "min": 10,
+              "max": 12
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -1225,61 +1082,45 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 12.5,
-              "min": 12,
-              "max": 13
+              "median": 14.5,
+              "min": 13,
+              "max": 16
             },
             "turns": {
-              "median": 8,
-              "min": 8,
-              "max": 8
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "median": 10,
+              "min": 9,
+              "max": 11
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 13.5,
-              "min": 12,
-              "max": 15
+              "median": 12,
+              "min": 10,
+              "max": 14
             },
-            "turns": null,
-            "refused": {
-              "median": 5,
-              "min": 5,
-              "max": 5
-            },
-            "retries": {
-              "median": 5,
-              "min": 5,
-              "max": 5
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -1307,29 +1148,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
+              "median": 4,
               "min": 4,
-              "max": 5
+              "max": 4
             },
             "turns": {
-              "median": 5.5,
+              "median": 5,
               "min": 5,
-              "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "max": 5
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -1348,56 +1181,41 @@
               "max": 7
             },
             "turns": {
-              "median": 10.5,
-              "min": 10,
+              "median": 11,
+              "min": 11,
               "max": 11
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 2,
-          "passed": 2,
+          "passed": 0,
           "pass_at": 2,
-          "held": true,
+          "held": false,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
+              "median": 12.5,
               "min": 6,
-              "max": 6
+              "max": 19
             },
-            "turns": null,
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -1434,13 +1252,7 @@
               "median": 4,
               "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -1467,21 +1279,12 @@
               "median": 4.5,
               "min": 4,
               "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -1495,25 +1298,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
+              "median": 6,
+              "min": 5,
+              "max": 7
             },
-            "turns": null,
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -1540,22 +1336,17 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2.5,
+              "median": 3.5,
               "min": 2,
-              "max": 3
+              "max": 5
             },
             "turns": {
-              "median": 3.5,
+              "median": 4.5,
               "min": 3,
-              "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+              "max": 6
+            }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
             "server instructions and resources",
@@ -1573,61 +1364,47 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 1,
+              "median": 1.5,
               "min": 1,
-              "max": 1
+              "max": 2
             },
             "turns": {
-              "median": 3.5,
-              "min": 3,
+              "median": 4,
+              "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
               "median": 1,
-              "min": 0,
+              "min": 1,
               "max": 1
             },
-            "turns": null,
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -1664,22 +1441,12 @@
               "median": 3,
               "min": 3,
               "max": 3
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -1693,29 +1460,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
+              "median": 3,
               "min": 3,
-              "max": 4
+              "max": 3
             },
             "turns": {
-              "median": 5.5,
+              "median": 5,
               "min": 5,
-              "max": 6
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 1
+              "max": 5
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -1729,25 +1487,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
+              "median": 5.5,
+              "min": 5,
+              "max": 6
             },
-            "turns": null,
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -1774,30 +1525,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2.5,
-              "min": 2,
-              "max": 3
-            },
-            "turns": {
               "median": 3.5,
               "min": 3,
               "max": 4
             },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+            "turns": {
+              "median": 4.5,
+              "min": 4,
+              "max": 5
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -1811,29 +1552,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 18,
-              "min": 17,
-              "max": 19
+              "median": 16.5,
+              "min": 16,
+              "max": 17
             },
             "turns": {
-              "median": 7,
-              "min": 7,
+              "median": 6.5,
+              "min": 6,
               "max": 7
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -1847,25 +1579,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9,
-              "min": 5,
-              "max": 13
+              "median": 13,
+              "min": 10,
+              "max": 16
             },
-            "turns": null,
-            "refused": {
-              "median": 2.5,
-              "min": 1,
-              "max": 4
-            },
-            "retries": {
-              "median": 2.5,
-              "min": 1,
-              "max": 4
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -1892,22 +1617,17 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
-              "min": 2,
+              "median": 5,
+              "min": 4,
               "max": 6
             },
             "turns": {
-              "median": 5,
-              "min": 3,
+              "median": 6,
+              "min": 5,
               "max": 7
-            },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": null
+            }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
             "server instructions and resources",
@@ -1931,23 +1651,15 @@
             },
             "turns": {
               "median": 8,
-              "min": 8,
-              "max": 8
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 1
+              "min": 7,
+              "max": 9
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -1961,25 +1673,19 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
-              "min": 6,
+              "median": 5.5,
+              "min": 5,
               "max": 6
             },
-            "turns": null,
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -1996,7 +1702,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -2004,32 +1710,22 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 5,
-              "min": 5,
-              "max": 10
+              "median": 7,
+              "min": 6,
+              "max": 8
             },
             "turns": {
-              "median": 6,
-              "min": 6,
-              "max": 11
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 3
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 3
+              "median": 8,
+              "min": 7,
+              "max": 9
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -2048,24 +1744,15 @@
               "max": 12
             },
             "turns": {
-              "median": 6,
+              "median": 6.5,
               "min": 6,
-              "max": 6
-            },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
+              "max": 7
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -2079,25 +1766,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10.5,
-              "min": 9,
-              "max": 12
+              "median": 12.5,
+              "min": 10,
+              "max": 15
             },
-            "turns": null,
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            },
-            "retries": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -2124,30 +1804,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9.5,
-              "min": 9,
-              "max": 10
+              "median": 7,
+              "min": 5,
+              "max": 9
             },
             "turns": {
-              "median": 10.5,
-              "min": 10,
-              "max": 11
-            },
-            "refused": {
-              "median": 3.5,
-              "min": 3,
-              "max": 4
-            },
-            "retries": {
-              "median": 3.5,
-              "min": 3,
-              "max": 4
+              "median": 8,
+              "min": 6,
+              "max": 10
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -2161,61 +1831,46 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8,
-              "min": 5,
-              "max": 11
+              "median": 9.5,
+              "min": 7,
+              "max": 12
             },
             "turns": {
-              "median": 6.5,
-              "min": 6,
-              "max": 7
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "median": 8,
+              "min": 7,
+              "max": 9
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 9.5,
-              "min": 9,
-              "max": 10
+              "median": 13,
+              "min": 12,
+              "max": 14
             },
-            "turns": null,
-            "refused": {
-              "median": 2.5,
-              "min": 2,
-              "max": 3
-            },
-            "retries": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -2252,13 +1907,7 @@
               "median": 6,
               "min": 6,
               "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -2277,29 +1926,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8.5,
-              "min": 8,
+              "median": 9,
+              "min": 9,
               "max": 9
             },
             "turns": {
               "median": 5.5,
               "min": 5,
               "max": 6
-            },
-            "refused": {
-              "median": 2.5,
-              "min": 2,
-              "max": 3
-            },
-            "retries": {
-              "median": 2.5,
-              "min": 2,
-              "max": 3
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -2313,25 +1953,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9,
-              "min": 9,
-              "max": 9
+              "median": 12,
+              "min": 11,
+              "max": 13
             },
-            "turns": null,
-            "refused": {
-              "median": 2,
-              "min": 1,
-              "max": 3
-            },
-            "retries": {
-              "median": 2,
-              "min": 1,
-              "max": 3
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -2348,7 +1981,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -2356,24 +1989,19 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 4.5,
+              "median": 5,
               "min": 4,
-              "max": 5
-            },
-            "turns": {
-              "median": 5.5,
-              "min": 5,
               "max": 6
             },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": null
+            "turns": {
+              "median": 6,
+              "min": 5,
+              "max": 7
+            }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
             "server instructions and resources",
@@ -2391,29 +2019,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8,
-              "min": 8,
-              "max": 8
+              "median": 10,
+              "min": 10,
+              "max": 10
             },
             "turns": {
-              "median": 7,
+              "median": 7.5,
               "min": 7,
-              "max": 7
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 1
+              "max": 8
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -2427,25 +2047,19 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10,
-              "min": 7,
-              "max": 13
-            },
-            "turns": null,
-            "refused": {
-              "median": 3.5,
-              "min": 2,
-              "max": 5
-            },
-            "retries": {
               "median": 2.5,
               "min": 2,
               "max": 3
-            }
+            },
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -2484,13 +2098,7 @@
               "median": 4,
               "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -2509,29 +2117,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
-              "min": 5,
-              "max": 8
+              "median": 9,
+              "min": 9,
+              "max": 9
             },
             "turns": {
-              "median": 4.5,
-              "min": 4,
+              "median": 5,
+              "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -2545,25 +2144,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10,
-              "min": 9,
-              "max": 11
+              "median": 8,
+              "min": 6,
+              "max": 10
             },
-            "turns": null,
-            "refused": {
-              "median": 2,
-              "min": 0,
-              "max": 4
-            },
-            "retries": {
-              "median": 2,
-              "min": 0,
-              "max": 4
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -2598,58 +2190,43 @@
               "median": 4,
               "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 4,
+              "median": 3.5,
               "min": 3,
-              "max": 5
+              "max": 4
             },
             "turns": {
               "median": 4,
               "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -2663,25 +2240,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
+              "median": 6,
               "min": 4,
-              "max": 5
+              "max": 8
             },
-            "turns": null,
-            "refused": {
-              "median": 2.5,
-              "min": 2,
-              "max": 3
-            },
-            "retries": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "judge",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -2711,21 +2283,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 6,
-              "max": 8
-            },
-            "turns": {
-              "median": 8,
-              "min": 7,
+              "median": 8.5,
+              "min": 8,
               "max": 9
             },
-            "refused": {
-              "median": 1.5,
-              "min": 0,
-              "max": 3
-            },
-            "retries": null
+            "turns": {
+              "median": 9.5,
+              "min": 9,
+              "max": 10
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -2749,24 +2315,15 @@
               "max": 10
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "median": 7.5,
+              "min": 7,
+              "max": 8
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -2780,25 +2337,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 6,
+              "median": 7.5,
+              "min": 7,
               "max": 8
             },
-            "turns": null,
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -2836,22 +2386,12 @@
               "median": 8.5,
               "min": 8,
               "max": 9
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -2873,21 +2413,12 @@
               "median": 6,
               "min": 6,
               "max": 6
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 1
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -2901,25 +2432,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10,
-              "min": 9,
+              "median": 11,
+              "min": 11,
               "max": 11
             },
-            "turns": null,
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            },
-            "retries": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -2957,13 +2481,7 @@
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -2982,29 +2500,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8,
-              "min": 8,
+              "median": 7,
+              "min": 6,
               "max": 8
             },
             "turns": {
-              "median": 5,
-              "min": 5,
+              "median": 4.5,
+              "min": 4,
               "max": 5
-            },
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -3018,25 +2527,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10,
+              "median": 11,
               "min": 10,
-              "max": 10
+              "max": 12
             },
-            "turns": null,
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            },
-            "retries": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -3071,13 +2573,7 @@
               "median": 6,
               "min": 6,
               "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -3096,29 +2592,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
+              "median": 7,
               "min": 7,
-              "max": 8
+              "max": 7
             },
             "turns": {
-              "median": 6,
+              "median": 6.5,
               "min": 6,
-              "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "max": 7
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -3132,25 +2619,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8.5,
-              "min": 8,
-              "max": 9
+              "median": 10,
+              "min": 9,
+              "max": 11
             },
-            "turns": null,
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            },
-            "retries": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -3177,30 +2657,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2.5,
+              "median": 3,
               "min": 2,
-              "max": 3
-            },
-            "turns": {
-              "median": 3.5,
-              "min": 3,
               "max": 4
             },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+            "turns": {
+              "median": 4,
+              "min": 3,
+              "max": 5
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -3214,61 +2684,45 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
+              "median": 4,
               "min": 4,
-              "max": 5
+              "max": 4
             },
             "turns": {
-              "median": 4.5,
+              "median": 4,
               "min": 4,
-              "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "max": 4
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 33,
-              "min": 29,
-              "max": 37
+              "median": 19,
+              "min": 17,
+              "max": 39
             },
-            "turns": null,
-            "refused": {
-              "median": 12,
-              "min": 12,
-              "max": 12
-            },
-            "retries": {
-              "median": 12,
-              "min": 12,
-              "max": 12
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -3295,30 +2749,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
+              "median": 4,
               "min": 3,
-              "max": 8
+              "max": 5
             },
             "turns": {
-              "median": 6.5,
+              "median": 5,
               "min": 4,
-              "max": 9
-            },
-            "refused": {
-              "median": 1,
-              "min": 0,
-              "max": 2
-            },
-            "retries": {
-              "median": 1,
-              "min": 0,
-              "max": 2
+              "max": 6
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -3332,29 +2776,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8.5,
-              "min": 8,
-              "max": 9
+              "median": 5,
+              "min": 5,
+              "max": 5
             },
             "turns": {
-              "median": 5.5,
+              "median": 5,
               "min": 5,
-              "max": 6
-            },
-            "refused": {
-              "median": 1,
-              "min": 0,
-              "max": 2
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
+              "max": 5
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -3368,25 +2803,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 18,
-              "min": 18,
-              "max": 18
-            },
-            "turns": null,
-            "refused": {
               "median": 9,
-              "min": 9,
-              "max": 9
-            },
-            "retries": {
-              "median": 8.5,
               "min": 8,
-              "max": 9
-            }
+              "max": 10
+            },
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -3413,21 +2841,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
+              "median": 4.5,
               "min": 4,
-              "max": 4
-            },
-            "turns": {
-              "median": 5,
-              "min": 5,
               "max": 5
             },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            "turns": {
+              "median": 5.5,
+              "min": 5,
+              "max": 6
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -3437,38 +2859,29 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 12,
-              "min": 12,
-              "max": 12
+              "median": 13,
+              "min": 13,
+              "max": 16
             },
             "turns": {
-              "median": 5.5,
+              "median": 6,
               "min": 5,
               "max": 6
-            },
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -3482,25 +2895,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 15,
-              "min": 13,
-              "max": 17
+              "median": 12,
+              "min": 12,
+              "max": 12
             },
-            "turns": null,
-            "refused": {
-              "median": 5,
-              "min": 3,
-              "max": 7
-            },
-            "retries": {
-              "median": 5,
-              "min": 3,
-              "max": 7
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -3535,22 +2941,12 @@
               "median": 4,
               "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -3564,29 +2960,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
-              "min": 5,
-              "max": 8
+              "median": 5,
+              "min": 4,
+              "max": 6
             },
             "turns": {
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -3604,21 +2991,14 @@
               "min": 3,
               "max": 4
             },
-            "turns": null,
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -3649,24 +3029,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
-              "min": 3,
-              "max": 3
+              "median": 5,
+              "min": 5,
+              "max": 5
             },
             "turns": {
-              "median": 4,
-              "min": 4,
-              "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+              "median": 6,
+              "min": 6,
+              "max": 6
+            }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -3675,9 +3049,9 @@
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
           "runs": 3,
-          "passed": 1,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
@@ -3685,61 +3059,45 @@
             "calls": {
               "median": 4,
               "min": 4,
-              "max": 4
+              "max": 5
             },
             "turns": {
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 5,
+              "median": 7.5,
+              "min": 4,
               "max": 11
             },
-            "turns": null,
-            "refused": {
-              "median": 2,
-              "min": 0,
-              "max": 5
-            },
-            "retries": {
-              "median": 2,
-              "min": 0,
-              "max": 5
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "scenario",
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -3774,13 +3132,7 @@
               "median": 8,
               "min": 8,
               "max": 8
-            },
-            "refused": {
-              "median": 3,
-              "min": 3,
-              "max": 3
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -3799,29 +3151,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 9.5,
+              "min": 7,
+              "max": 12
             },
             "turns": {
-              "median": 4,
-              "min": 4,
-              "max": 4
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "median": 5,
+              "min": 5,
+              "max": 5
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -3835,25 +3178,18 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 13.5,
-              "min": 9,
-              "max": 18
+              "median": 15.5,
+              "min": 12,
+              "max": 19
             },
-            "turns": null,
-            "refused": {
-              "median": 3,
-              "min": 2,
-              "max": 4
-            },
-            "retries": {
-              "median": 1,
-              "min": 0,
-              "max": 2
-            }
+            "turns": null
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
           ]
         }
       ]
@@ -3888,22 +3224,12 @@
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -3925,21 +3251,12 @@
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -3957,13 +3274,7 @@
               "min": 10,
               "max": 24
             },
-            "turns": null,
-            "refused": {
-              "median": 5,
-              "min": 2,
-              "max": 8
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -4010,22 +3321,12 @@
               "median": 3,
               "min": 3,
               "max": 3
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4039,29 +3340,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
-              "min": 2,
+              "median": 3.5,
+              "min": 3,
               "max": 4
             },
             "turns": {
               "median": 4,
               "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4079,13 +3372,7 @@
               "min": 5,
               "max": 8
             },
-            "turns": null,
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -4119,21 +3406,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
+              "median": 7,
               "min": 6,
-              "max": 6
+              "max": 8
             },
             "turns": {
-              "median": 7,
+              "median": 8,
               "min": 7,
-              "max": 7
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+              "max": 9
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -4153,28 +3434,20 @@
             "runs": 2,
             "calls": {
               "median": 7.5,
-              "min": 7,
-              "max": 8
+              "min": 6,
+              "max": 9
             },
             "turns": {
-              "median": 7.5,
-              "min": 7,
+              "median": 7,
+              "min": 6,
               "max": 8
-            },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4192,13 +3465,7 @@
               "min": 6,
               "max": 6
             },
-            "turns": null,
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -4233,22 +3500,17 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
-              "min": 2,
+              "median": 3.5,
+              "min": 3,
               "max": 4
             },
             "turns": {
-              "median": 4,
-              "min": 3,
+              "median": 4.5,
+              "min": 4,
               "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
             "server instructions and resources",
@@ -4272,23 +3534,15 @@
             },
             "turns": {
               "median": 6,
-              "min": 6,
-              "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "min": 5,
+              "max": 7
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4306,13 +3560,7 @@
               "min": 5,
               "max": 6
             },
-            "turns": null,
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 2
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -4347,30 +3595,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 3.5,
+              "min": 3,
+              "max": 4
             },
             "turns": {
-              "median": 6.5,
-              "min": 6,
-              "max": 7
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
+              "median": 4.5,
+              "min": 4,
+              "max": 5
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4384,29 +3622,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9.5,
+              "median": 9,
               "min": 9,
-              "max": 10
+              "max": 9
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
+              "median": 6,
+              "min": 6,
               "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4424,13 +3654,7 @@
               "min": 7,
               "max": 9
             },
-            "turns": null,
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 3
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -4472,22 +3696,12 @@
               "median": 4,
               "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4501,29 +3715,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
-              "min": 4,
+              "median": 5,
+              "min": 5,
               "max": 5
             },
             "turns": {
-              "median": 4.5,
-              "min": 4,
+              "median": 5,
+              "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4541,13 +3746,7 @@
               "min": 8,
               "max": 11
             },
-            "turns": null,
-            "refused": {
-              "median": 4,
-              "min": 4,
-              "max": 4
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -4589,13 +3788,7 @@
               "median": 4.5,
               "min": 4,
               "max": 5
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -4614,29 +3807,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
+              "median": 5.5,
               "min": 5,
-              "max": 5
+              "max": 6
             },
             "turns": {
-              "median": 7,
+              "median": 7.5,
               "min": 7,
-              "max": 7
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 1
+              "max": 8
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4654,13 +3839,7 @@
               "min": 10,
               "max": 12
             },
-            "turns": null,
-            "refused": {
-              "median": 5,
-              "min": 4,
-              "max": 6
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -4697,21 +3876,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 11.5,
+              "median": 6,
               "min": 6,
-              "max": 17
+              "max": 6
             },
             "turns": {
-              "median": 12.5,
+              "median": 7,
               "min": 7,
-              "max": 18
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+              "max": 7
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -4744,30 +3917,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 5,
-              "max": 9
+              "median": 4.5,
+              "min": 4,
+              "max": 5
             },
             "turns": {
-              "median": 8,
-              "min": 6,
-              "max": 10
-            },
-            "refused": {
-              "median": 2,
-              "min": 0,
-              "max": 4
-            },
-            "retries": {
-              "median": 2,
-              "min": 0,
-              "max": 4
+              "median": 5.5,
+              "min": 5,
+              "max": 6
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4781,29 +3944,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 18.5,
+              "median": 18,
               "min": 18,
-              "max": 19
+              "max": 18
             },
             "turns": {
-              "median": 9.5,
-              "min": 7,
-              "max": 12
-            },
-            "refused": {
-              "median": 2.5,
-              "min": 1,
-              "max": 4
-            },
-            "retries": {
-              "median": 2,
-              "min": 1,
-              "max": 3
+              "median": 10,
+              "min": 10,
+              "max": 10
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4821,13 +3975,7 @@
               "min": 8,
               "max": 17
             },
-            "turns": null,
-            "refused": {
-              "median": 2.5,
-              "min": 2,
-              "max": 3
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -4862,30 +4010,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
-              "min": 4,
-              "max": 4
+              "median": 6,
+              "min": 5,
+              "max": 7
             },
             "turns": {
-              "median": 5,
-              "min": 5,
-              "max": 5
-            },
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            },
-            "retries": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
+              "median": 7,
+              "min": 6,
+              "max": 8
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4899,29 +4037,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 36,
-              "min": 29,
-              "max": 43
+              "median": 26.5,
+              "min": 24,
+              "max": 29
             },
             "turns": {
-              "median": 9.5,
-              "min": 8,
-              "max": 11
-            },
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            },
-            "retries": {
-              "median": 2,
-              "min": 2,
-              "max": 2
+              "median": 7,
+              "min": 7,
+              "max": 7
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -4939,13 +4069,7 @@
               "min": 17,
               "max": 38
             },
-            "turns": null,
-            "refused": {
-              "median": 7,
-              "min": 4,
-              "max": 10
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -4990,58 +4114,39 @@
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 1
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
               "median": 12,
-              "min": 9,
+              "min": 10,
               "max": 15
             },
             "turns": {
-              "median": 7,
+              "median": 6,
               "min": 6,
-              "max": 8
-            },
-            "refused": {
-              "median": 2,
-              "min": 1,
-              "max": 3
-            },
-            "retries": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
+              "max": 7
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5059,13 +4164,7 @@
               "min": 14,
               "max": 14
             },
-            "turns": null,
-            "refused": {
-              "median": 6.5,
-              "min": 5,
-              "max": 8
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -5090,7 +4189,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -5098,7 +4197,7 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
               "median": 2,
               "min": 2,
@@ -5108,22 +4207,12 @@
               "median": 3,
               "min": 3,
               "max": 3
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5137,29 +4226,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2.5,
-              "min": 2,
+              "median": 3,
+              "min": 3,
               "max": 3
             },
             "turns": {
-              "median": 6,
+              "median": 6.5,
               "min": 6,
-              "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "max": 7
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5177,17 +4258,10 @@
               "min": 3,
               "max": 4
             },
-            "turns": null,
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness",
@@ -5227,22 +4301,12 @@
               "median": 15,
               "min": 15,
               "max": 15
-            },
-            "refused": {
-              "median": 4,
-              "min": 4,
-              "max": 4
-            },
-            "retries": {
-              "median": 4,
-              "min": 4,
-              "max": 4
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5264,21 +4328,13 @@
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5296,13 +4352,7 @@
               "min": 12,
               "max": 13
             },
-            "turns": null,
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -5345,22 +4395,12 @@
               "median": 7.5,
               "min": 7,
               "max": 8
-            },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5374,29 +4414,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 11,
-              "min": 9,
-              "max": 13
-            },
-            "turns": {
-              "median": 7.5,
-              "min": 7,
+              "median": 8,
+              "min": 8,
               "max": 8
             },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+            "turns": {
+              "median": 7,
+              "min": 6,
+              "max": 8
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5414,13 +4446,7 @@
               "min": 7,
               "max": 10
             },
-            "turns": null,
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -5467,58 +4493,39 @@
               "median": 4,
               "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
               "median": 7,
               "min": 7,
               "max": 7
             },
             "turns": {
-              "median": 8,
+              "median": 8.5,
               "min": 8,
               "max": 9
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5536,17 +4543,10 @@
               "min": 7,
               "max": 8
             },
-            "turns": null,
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness",
@@ -5582,30 +4582,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8,
+              "median": 9.5,
               "min": 7,
-              "max": 9
+              "max": 12
             },
             "turns": {
-              "median": 9,
+              "median": 10.5,
               "min": 8,
-              "max": 10
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "max": 13
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5619,29 +4609,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 13.5,
+              "median": 13,
               "min": 13,
-              "max": 14
+              "max": 13
             },
             "turns": {
-              "median": 7.5,
-              "min": 7,
+              "median": 8,
+              "min": 8,
               "max": 8
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5659,13 +4641,7 @@
               "min": 19,
               "max": 19
             },
-            "turns": null,
-            "refused": {
-              "median": 4,
-              "min": 4,
-              "max": 4
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -5700,30 +4676,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
-              "min": 6,
+              "median": 8.5,
+              "min": 8,
               "max": 9
             },
             "turns": {
-              "median": 8.5,
-              "min": 7,
+              "median": 9.5,
+              "min": 9,
               "max": 10
-            },
-            "refused": {
-              "median": 3.5,
-              "min": 3,
-              "max": 4
-            },
-            "retries": {
-              "median": 3.5,
-              "min": 3,
-              "max": 4
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5737,29 +4703,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 19.5,
-              "min": 19,
+              "median": 18.5,
+              "min": 17,
               "max": 20
             },
             "turns": {
-              "median": 9,
+              "median": 10,
               "min": 9,
-              "max": 9
-            },
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
+              "max": 11
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5777,13 +4735,7 @@
               "min": 13,
               "max": 20
             },
-            "turns": null,
-            "refused": {
-              "median": 4.5,
-              "min": 2,
-              "max": 7
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -5810,7 +4762,7 @@
         {
           "model": "claude-sonnet-5-5@claude-cli",
           "runs": 3,
-          "passed": 2,
+          "passed": 3,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
@@ -5819,30 +4771,21 @@
           "efficiency": {
             "runs": 3,
             "calls": {
-              "median": 11,
+              "median": 15,
               "min": 11,
-              "max": 12
+              "max": 15
             },
             "turns": {
-              "median": 12,
+              "median": 16,
               "min": 12,
-              "max": 13
-            },
-            "refused": {
-              "median": 4,
-              "min": 3,
-              "max": 4
-            },
-            "retries": {
-              "median": 4,
-              "min": 3,
-              "max": 4
+              "max": 16
             }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5864,13 +4807,7 @@
               "median": 6.5,
               "min": 6,
               "max": 7
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -5893,13 +4830,7 @@
               "min": 25,
               "max": 26
             },
-            "turns": null,
-            "refused": {
-              "median": 5,
-              "min": 4,
-              "max": 6
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -5936,30 +4867,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
+              "median": 5,
               "min": 4,
-              "max": 4
+              "max": 6
             },
             "turns": {
-              "median": 5,
+              "median": 6,
               "min": 5,
-              "max": 5
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 1
+              "max": 7
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -5978,24 +4899,16 @@
               "max": 6
             },
             "turns": {
-              "median": 5,
-              "min": 5,
-              "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "median": 6,
+              "min": 6,
+              "max": 6
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -6013,16 +4926,9 @@
               "min": 9,
               "max": 14
             },
-            "turns": null,
-            "refused": {
-              "median": 2,
-              "min": 1,
-              "max": 3
-            },
-            "retries": null
+            "turns": null
           },
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness",
@@ -6049,7 +4955,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -6057,23 +4963,17 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 9,
-              "min": 8,
-              "max": 9
+              "median": 5.5,
+              "min": 5,
+              "max": 6
             },
             "turns": {
-              "median": 10,
-              "min": 9,
-              "max": 10
-            },
-            "refused": {
-              "median": 4,
-              "min": 3,
-              "max": 4
-            },
-            "retries": null
+              "median": 6.5,
+              "min": 6,
+              "max": 7
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6100,13 +5000,7 @@
               "median": 7,
               "min": 6,
               "max": 8
-            },
-            "refused": {
-              "median": 1,
-              "min": 0,
-              "max": 2
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -6130,13 +5024,7 @@
               "min": 7,
               "max": 10
             },
-            "turns": null,
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": null
+            "turns": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6160,40 +5048,31 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
-          "passed": 3,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 9,
-              "min": 9,
-              "max": 12
+              "median": 8.5,
+              "min": 8,
+              "max": 9
             },
             "turns": {
-              "median": 10,
-              "min": 10,
-              "max": 13
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 4
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 4
+              "median": 9.5,
+              "min": 9,
+              "max": 10
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -6207,29 +5086,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10,
-              "min": 10,
+              "median": 9.5,
+              "min": 9,
               "max": 10
             },
             "turns": {
               "median": 6,
               "min": 6,
               "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -6247,13 +5118,7 @@
               "min": 11,
               "max": 16
             },
-            "turns": null,
-            "refused": {
-              "median": 2.5,
-              "min": 1,
-              "max": 4
-            },
-            "retries": null
+            "turns": null
           },
           "measured_on_an_earlier_listing": [
             "scenario",
@@ -6291,21 +5156,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 15.5,
+              "median": 15,
               "min": 15,
-              "max": 16
+              "max": 15
             },
             "turns": {
-              "median": 16.5,
+              "median": 16,
               "min": 16,
-              "max": 17
-            },
-            "refused": {
-              "median": 3,
-              "min": 3,
-              "max": 3
-            },
-            "retries": null
+              "max": 16
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6332,13 +5191,7 @@
               "median": 9.5,
               "min": 9,
               "max": 10
-            },
-            "refused": {
-              "median": 5,
-              "min": 3,
-              "max": 7
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -6362,13 +5215,7 @@
               "min": 25,
               "max": 26
             },
-            "turns": null,
-            "refused": {
-              "median": 8.5,
-              "min": 7,
-              "max": 10
-            },
-            "retries": null
+            "turns": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6412,13 +5259,7 @@
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6437,29 +5278,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9.5,
-              "min": 8,
+              "median": 10,
+              "min": 9,
               "max": 11
             },
             "turns": {
-              "median": 7,
-              "min": 7,
+              "median": 6.5,
+              "min": 6,
               "max": 7
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -6477,13 +5310,7 @@
               "min": 11,
               "max": 13
             },
-            "turns": null,
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            },
-            "retries": null
+            "turns": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6520,21 +5347,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
-              "min": 7,
+              "median": 8,
+              "min": 8,
               "max": 8
             },
             "turns": {
-              "median": 8.5,
-              "min": 8,
+              "median": 9,
+              "min": 9,
               "max": 9
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6561,13 +5382,7 @@
               "median": 6,
               "min": 6,
               "max": 6
-            },
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6590,13 +5405,7 @@
               "min": 10,
               "max": 15
             },
-            "turns": null,
-            "refused": {
-              "median": 4,
-              "min": 3,
-              "max": 4
-            },
-            "retries": null
+            "turns": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6621,7 +5430,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-sdk",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -6629,23 +5438,17 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 15.5,
+              "median": 17,
               "min": 14,
               "max": 17
             },
             "turns": {
-              "median": 16.5,
+              "median": 18,
               "min": 15,
               "max": 18
-            },
-            "refused": {
-              "median": 2.5,
-              "min": 1,
-              "max": 4
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6668,13 +5471,7 @@
               "min": 21,
               "max": 25
             },
-            "turns": null,
-            "refused": {
-              "median": 7,
-              "min": 7,
-              "max": 7
-            },
-            "retries": null
+            "turns": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6707,21 +5504,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
+              "median": 7,
               "min": 5,
-              "max": 8
-            },
-            "turns": {
-              "median": 7.5,
-              "min": 6,
               "max": 9
             },
-            "refused": {
-              "median": 1,
-              "min": 0,
-              "max": 2
-            },
-            "retries": null
+            "turns": {
+              "median": 8,
+              "min": 6,
+              "max": 10
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6748,13 +5539,7 @@
               "median": 6,
               "min": 6,
               "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -6778,13 +5563,7 @@
               "min": 7,
               "max": 11
             },
-            "turns": null,
-            "refused": {
-              "median": 2.5,
-              "min": 2,
-              "max": 3
-            },
-            "retries": null
+            "turns": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6812,7 +5591,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -6820,32 +5599,22 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
               "median": 9,
-              "min": 8,
-              "max": 12
+              "min": 9,
+              "max": 9
             },
             "turns": {
               "median": 10,
-              "min": 9,
-              "max": 13
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 2
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 2
+              "min": 10,
+              "max": 10
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -6867,13 +5636,7 @@
               "median": 6.5,
               "min": 6,
               "max": 7
-            },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -6896,13 +5659,7 @@
               "min": 24,
               "max": 26
             },
-            "turns": null,
-            "refused": {
-              "median": 6,
-              "min": 6,
-              "max": 7
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -6939,30 +5696,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8.5,
-              "min": 8,
-              "max": 9
+              "median": 10.5,
+              "min": 10,
+              "max": 11
             },
             "turns": {
-              "median": 9.5,
-              "min": 9,
-              "max": 10
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
+              "median": 11.5,
+              "min": 11,
+              "max": 12
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -6984,13 +5731,7 @@
               "median": 8,
               "min": 7,
               "max": 8
-            },
-            "refused": {
-              "median": 2,
-              "min": 1,
-              "max": 4
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7013,13 +5754,7 @@
               "min": 16,
               "max": 24
             },
-            "turns": null,
-            "refused": {
-              "median": 6,
-              "min": 4,
-              "max": 10
-            },
-            "retries": null
+            "turns": null
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7054,30 +5789,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
-            },
-            "turns": {
               "median": 5.5,
               "min": 5,
               "max": 6
             },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+            "turns": {
+              "median": 6.5,
+              "min": 6,
+              "max": 7
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -7099,13 +5824,7 @@
               "median": 6.5,
               "min": 6,
               "max": 7
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7128,13 +5847,7 @@
               "min": 8,
               "max": 13
             },
-            "turns": null,
-            "refused": {
-              "median": 2,
-              "min": 0,
-              "max": 4
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -7168,30 +5881,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
+              "median": 5,
               "min": 5,
-              "max": 6
+              "max": 5
             },
             "turns": {
-              "median": 6.5,
+              "median": 6,
               "min": 6,
-              "max": 7
-            },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
+              "max": 6
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -7213,13 +5916,7 @@
               "median": 5.5,
               "min": 5,
               "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7242,13 +5939,7 @@
               "min": 4,
               "max": 9
             },
-            "turns": null,
-            "refused": {
-              "median": 1,
-              "min": 0,
-              "max": 2
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -7294,13 +5985,7 @@
               "median": 7,
               "min": 7,
               "max": 7
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7327,13 +6012,7 @@
               "median": 8.5,
               "min": 8,
               "max": 9
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7356,13 +6035,7 @@
               "min": 5,
               "max": 8
             },
-            "turns": null,
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -7396,30 +6069,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2,
-              "min": 1,
+              "median": 3,
+              "min": 3,
               "max": 3
             },
             "turns": {
-              "median": 3,
-              "min": 2,
+              "median": 4,
+              "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -7441,13 +6104,7 @@
               "median": 5.5,
               "min": 5,
               "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7470,13 +6127,7 @@
               "min": 3,
               "max": 8
             },
-            "turns": null,
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            "turns": null
           },
           "measured_on_an_earlier_listing": [
             "scenario",
@@ -7511,21 +6162,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
-              "min": 6,
-              "max": 6
+              "median": 6.5,
+              "min": 5,
+              "max": 8
             },
             "turns": {
-              "median": 7,
-              "min": 7,
-              "max": 7
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+              "median": 7.5,
+              "min": 6,
+              "max": 9
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7552,13 +6197,7 @@
               "median": 9,
               "min": 9,
               "max": 9
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7581,13 +6220,7 @@
               "min": 18,
               "max": 25
             },
-            "turns": null,
-            "refused": {
-              "median": 7,
-              "min": 6,
-              "max": 8
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -7623,30 +6256,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9.5,
-              "min": 7,
-              "max": 12
+              "median": 12,
+              "min": 10,
+              "max": 14
             },
             "turns": {
-              "median": 10.5,
-              "min": 8,
-              "max": 13
-            },
-            "refused": {
-              "median": 2.5,
-              "min": 1,
-              "max": 4
-            },
-            "retries": {
-              "median": 1.5,
-              "min": 0,
-              "max": 3
+              "median": 13,
+              "min": 11,
+              "max": 15
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -7668,13 +6291,7 @@
               "median": 9,
               "min": 7,
               "max": 11
-            },
-            "refused": {
-              "median": 1.5,
-              "min": 0,
-              "max": 3
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7697,13 +6314,7 @@
               "min": 27,
               "max": 43
             },
-            "turns": null,
-            "refused": {
-              "median": 11.5,
-              "min": 8,
-              "max": 15
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -7745,21 +6356,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 11,
-              "min": 9,
-              "max": 13
+              "median": 10.5,
+              "min": 10,
+              "max": 11
             },
             "turns": {
-              "median": 12,
-              "min": 10,
-              "max": 14
-            },
-            "refused": {
-              "median": 3.5,
-              "min": 2,
-              "max": 5
-            },
-            "retries": null
+              "median": 11.5,
+              "min": 11,
+              "max": 12
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7786,13 +6391,7 @@
               "median": 7.5,
               "min": 7,
               "max": 8
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7815,13 +6414,7 @@
               "min": 16,
               "max": 34
             },
-            "turns": null,
-            "refused": {
-              "median": 6.5,
-              "min": 4,
-              "max": 9
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -7863,22 +6456,12 @@
               "median": 3,
               "min": 3,
               "max": 3
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -7900,13 +6483,7 @@
               "median": 10,
               "min": 10,
               "max": 10
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -7929,13 +6506,7 @@
               "min": 5,
               "max": 7
             },
-            "turns": null,
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -7982,22 +6553,12 @@
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -8019,13 +6580,7 @@
               "median": 6.5,
               "min": 5,
               "max": 8
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -8048,13 +6603,7 @@
               "min": 4,
               "max": 5
             },
-            "turns": null,
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -8097,22 +6646,12 @@
               "median": 4,
               "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -8134,13 +6673,7 @@
               "median": 6.5,
               "min": 6,
               "max": 7
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -8163,13 +6696,7 @@
               "min": 6,
               "max": 8
             },
-            "turns": null,
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -8194,9 +6721,9 @@
         {
           "model": "claude-sonnet-5-5@claude-cli",
           "runs": 3,
-          "passed": 1,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
@@ -8204,28 +6731,20 @@
             "runs": 3,
             "calls": {
               "median": 6,
-              "min": 6,
-              "max": 6
+              "min": 5,
+              "max": 7
             },
             "turns": {
               "median": 7,
-              "min": 7,
-              "max": 7
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 1
+              "min": 6,
+              "max": 8
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -8247,20 +6766,12 @@
               "median": 6,
               "min": 6,
               "max": 6
-            },
-            "refused": {
-              "median": 2.5,
-              "min": 2,
-              "max": 3
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
             "server instructions and resources",
-            "judge",
             "harness"
           ]
         },
@@ -8279,20 +6790,13 @@
               "min": 14,
               "max": 18
             },
-            "turns": null,
-            "refused": {
-              "median": 3.5,
-              "min": 1,
-              "max": 6
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
             "scenario",
             "tool copy",
             "server instructions and resources",
-            "judge",
             "harness",
             "transcript parser"
           ]
@@ -8321,30 +6825,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 7,
+              "min": 6,
+              "max": 8
             },
             "turns": {
-              "median": 6.5,
-              "min": 6,
-              "max": 7
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": {
-              "median": 1,
-              "min": 1,
-              "max": 1
+              "median": 8,
+              "min": 7,
+              "max": 9
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -8366,13 +6860,7 @@
               "median": 9.5,
               "min": 9,
               "max": 10
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -8395,13 +6883,7 @@
               "min": 10,
               "max": 14
             },
-            "turns": null,
-            "refused": {
-              "median": 3,
-              "min": 2,
-              "max": 3
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -8444,22 +6926,13 @@
               "median": 3,
               "min": 3,
               "max": 3
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -8481,13 +6954,7 @@
               "median": 3,
               "min": 3,
               "max": 3
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -8511,13 +6978,7 @@
               "min": 4,
               "max": 6
             },
-            "turns": null,
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -8560,13 +7021,7 @@
               "median": 2,
               "min": 2,
               "max": 2
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -8593,13 +7048,7 @@
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -8623,13 +7072,7 @@
               "min": 2,
               "max": 2
             },
-            "turns": null,
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -8663,30 +7106,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
-              "min": 3,
+              "median": 5,
+              "min": 5,
               "max": 5
             },
             "turns": {
-              "median": 5,
-              "min": 4,
+              "median": 6,
+              "min": 6,
               "max": 6
-            },
-            "refused": {
-              "median": 1,
-              "min": 0,
-              "max": 2
-            },
-            "retries": {
-              "median": 1,
-              "min": 0,
-              "max": 2
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -8708,13 +7141,7 @@
               "median": 7.5,
               "min": 6,
               "max": 9
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -8737,13 +7164,7 @@
               "min": 7,
               "max": 8
             },
-            "turns": null,
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -8767,7 +7188,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -8775,7 +7196,7 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
               "median": 3,
               "min": 3,
@@ -8785,21 +7206,13 @@
               "median": 4,
               "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -8821,13 +7234,7 @@
               "median": 7,
               "min": 6,
               "max": 7
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -8851,13 +7258,7 @@
               "min": 4,
               "max": 6
             },
-            "turns": null,
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -8892,30 +7293,21 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
-              "min": 3,
+              "median": 3,
+              "min": 2,
               "max": 4
             },
             "turns": {
-              "median": 4.5,
-              "min": 4,
+              "median": 4,
+              "min": 3,
               "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -8937,13 +7329,7 @@
               "median": 8,
               "min": 8,
               "max": 8
-            },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -8967,13 +7353,7 @@
               "min": 6,
               "max": 9
             },
-            "turns": null,
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -9008,21 +7388,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
-              "min": 7,
-              "max": 8
+              "median": 3.5,
+              "min": 3,
+              "max": 4
             },
             "turns": {
-              "median": 8.5,
-              "min": 8,
-              "max": 9
-            },
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            },
-            "retries": null
+              "median": 4.5,
+              "min": 4,
+              "max": 5
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -9049,13 +7423,7 @@
               "median": 6.5,
               "min": 6,
               "max": 7
-            },
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -9078,13 +7446,7 @@
               "min": 9,
               "max": 11
             },
-            "turns": null,
-            "refused": {
-              "median": 3,
-              "min": 2,
-              "max": 4
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -9126,14 +7488,9 @@
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
             "server instructions and resources",
@@ -9159,13 +7516,7 @@
               "median": 6,
               "min": 6,
               "max": 7
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -9189,13 +7540,7 @@
               "min": 13,
               "max": 15
             },
-            "turns": null,
-            "refused": {
-              "median": 6,
-              "min": 6,
-              "max": 6
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -9230,30 +7575,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
-              "min": 5,
+              "median": 4.5,
+              "min": 4,
               "max": 5
             },
             "turns": {
-              "median": 6,
-              "min": 6,
+              "median": 5.5,
+              "min": 5,
               "max": 6
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -9275,13 +7610,7 @@
               "median": 7,
               "min": 7,
               "max": 7
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -9304,13 +7633,7 @@
               "min": 9,
               "max": 12
             },
-            "turns": null,
-            "refused": {
-              "median": 2.5,
-              "min": 2,
-              "max": 3
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -9344,22 +7667,17 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
+              "median": 5,
               "min": 4,
-              "max": 4
+              "max": 6
             },
             "turns": {
-              "median": 5,
+              "median": 6,
               "min": 5,
-              "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+              "max": 7
+            }
           },
+          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
             "server instructions and resources",
@@ -9385,13 +7703,7 @@
               "median": 6,
               "min": 5,
               "max": 8
-            },
-            "refused": {
-              "median": 1,
-              "min": 0,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -9415,13 +7727,7 @@
               "min": 5,
               "max": 6
             },
-            "turns": null,
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -9457,21 +7763,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
+              "median": 3.5,
               "min": 3,
-              "max": 3
-            },
-            "turns": {
-              "median": 4,
-              "min": 4,
               "max": 4
             },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            "turns": {
+              "median": 4.5,
+              "min": 4,
+              "max": 5
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -9498,13 +7798,7 @@
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -9527,13 +7821,7 @@
               "min": 5,
               "max": 6
             },
-            "turns": null,
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -9567,21 +7855,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
-              "min": 3,
+              "median": 2,
+              "min": 1,
               "max": 3
             },
             "turns": {
-              "median": 4,
-              "min": 4,
+              "median": 3,
+              "min": 2,
               "max": 4
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -9608,13 +7890,7 @@
               "median": 4.5,
               "min": 4,
               "max": 5
-            },
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -9637,13 +7913,7 @@
               "min": 5,
               "max": 8
             },
-            "turns": null,
-            "refused": {
-              "median": 2.5,
-              "min": 1,
-              "max": 4
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -9685,13 +7955,7 @@
               "median": 4,
               "min": 4,
               "max": 4
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -9718,13 +7982,7 @@
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -9747,13 +8005,7 @@
               "min": 6,
               "max": 6
             },
-            "turns": null,
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -9777,40 +8029,30 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
-          "passed": 3,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 9,
-              "min": 6,
-              "max": 10
-            },
-            "turns": {
-              "median": 10,
-              "min": 7,
+              "median": 9.5,
+              "min": 8,
               "max": 11
             },
-            "refused": {
-              "median": 3,
-              "min": 2,
-              "max": 3
-            },
-            "retries": {
-              "median": 2,
-              "min": 0,
-              "max": 3
+            "turns": {
+              "median": 10.5,
+              "min": 9,
+              "max": 12
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -9832,20 +8074,12 @@
               "median": 10,
               "min": 9,
               "max": 11
-            },
-            "refused": {
-              "median": 3.5,
-              "min": 3,
-              "max": 4
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
             "server instructions and resources",
-            "judge",
             "harness"
           ]
         },
@@ -9864,20 +8098,12 @@
               "min": 14,
               "max": 35
             },
-            "turns": null,
-            "refused": {
-              "median": 14,
-              "min": 6,
-              "max": 22
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
             "server instructions and resources",
-            "judge",
             "harness",
             "transcript parser"
           ]
@@ -9914,22 +8140,12 @@
               "median": 5,
               "min": 5,
               "max": 5
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": {
-              "median": 0,
-              "min": 0,
-              "max": 0
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -9951,13 +8167,7 @@
               "median": 7.5,
               "min": 7,
               "max": 8
-            },
-            "refused": {
-              "median": 3,
-              "min": 3,
-              "max": 3
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -9980,13 +8190,7 @@
               "min": 24,
               "max": 25
             },
-            "turns": null,
-            "refused": {
-              "median": 9.5,
-              "min": 8,
-              "max": 11
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -10026,29 +8230,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10,
-              "min": 8,
-              "max": 12
-            },
-            "turns": {
               "median": 11,
               "min": 9,
               "max": 13
             },
-            "refused": {
-              "median": 2,
-              "min": 0,
-              "max": 4
-            },
-            "retries": {
-              "median": 2,
-              "min": 0,
-              "max": 4
+            "turns": {
+              "median": 12,
+              "min": 10,
+              "max": 14
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -10070,20 +8265,12 @@
               "median": 7.5,
               "min": 7,
               "max": 8
-            },
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
             "server instructions and resources",
-            "judge",
             "harness"
           ]
         },
@@ -10102,20 +8289,12 @@
               "min": 18,
               "max": 19
             },
-            "turns": null,
-            "refused": {
-              "median": 4.5,
-              "min": 3,
-              "max": 6
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
             "server instructions and resources",
-            "judge",
             "harness",
             "transcript parser"
           ]
@@ -10146,21 +8325,15 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
-              "min": 6,
+              "median": 7,
+              "min": 7,
               "max": 7
             },
             "turns": {
-              "median": 7.5,
-              "min": 7,
+              "median": 8,
+              "min": 8,
               "max": 8
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -10187,13 +8360,7 @@
               "median": 6,
               "min": 6,
               "max": 6
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -10216,13 +8383,7 @@
               "min": 7,
               "max": 7
             },
-            "turns": null,
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -10264,13 +8425,7 @@
               "median": 1.5,
               "min": 1,
               "max": 2
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -10297,13 +8452,7 @@
               "median": 3,
               "min": 3,
               "max": 3
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -10327,13 +8476,7 @@
               "min": 2,
               "max": 4
             },
-            "turns": null,
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -10368,20 +8511,14 @@
             "runs": 2,
             "calls": {
               "median": 3.5,
-              "min": 3,
-              "max": 4
+              "min": 2,
+              "max": 5
             },
             "turns": {
               "median": 4.5,
-              "min": 4,
-              "max": 5
-            },
-            "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
-            },
-            "retries": null
+              "min": 3,
+              "max": 6
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -10408,13 +8545,7 @@
               "median": 7.5,
               "min": 7,
               "max": 8
-            },
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -10437,13 +8568,7 @@
               "min": 10,
               "max": 12
             },
-            "turns": null,
-            "refused": {
-              "median": 2,
-              "min": 1,
-              "max": 3
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -10485,13 +8610,7 @@
               "median": 2,
               "min": 2,
               "max": 2
-            },
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -10518,13 +8637,7 @@
               "median": 8,
               "min": 8,
               "max": 8
-            },
-            "refused": {
-              "median": 1.5,
-              "min": 1,
-              "max": 2
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -10547,13 +8660,7 @@
               "min": 3,
               "max": 4
             },
-            "turns": null,
-            "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -10587,30 +8694,20 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
-              "min": 5,
-              "max": 5
+              "median": 3,
+              "min": 3,
+              "max": 3
             },
             "turns": {
-              "median": 6,
-              "min": 6,
-              "max": 6
-            },
-            "refused": {
-              "median": 2,
-              "min": 2,
-              "max": 2
-            },
-            "retries": {
-              "median": 2,
-              "min": 2,
-              "max": 2
+              "median": 4,
+              "min": 4,
+              "max": 4
             }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources"
+            "server instructions and resources",
+            "harness"
           ]
         },
         {
@@ -10632,13 +8729,7 @@
               "median": 9.5,
               "min": 6,
               "max": 13
-            },
-            "refused": {
-              "median": 1,
-              "min": 0,
-              "max": 2
-            },
-            "retries": null
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
@@ -10661,13 +8752,7 @@
               "min": 5,
               "max": 5
             },
-            "turns": null,
-            "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
-            },
-            "retries": null
+            "turns": null
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
@@ -11567,10 +9652,12 @@
       "called_in_held_runs": [
         "case105_what_changed_there",
         "case106_turn_that_rule_off",
+        "case107_tidy_up_the_room",
         "case108_ask_sofia_for_an_intro",
         "case111_how_is_the_workspace_doing",
         "case112_my_plan_and_the_dossier",
-        "case123_take_over_sofias_deal",
+        "case116_the_rate_and_the_logo",
+        "case118_is_the_crane_job_at_risk",
         "case40_sort_the_queue",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
@@ -11617,9 +9704,9 @@
       "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
-          "reliability": 0.6666666666666666,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
@@ -11640,7 +9727,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3307,
+      "tokens": 3239,
       "agents": [],
       "required_by_cases": [
         "case116_the_rate_and_the_logo",
@@ -11683,77 +9770,8 @@
       }
     },
     {
-      "name": "change_activities",
-      "tokens": 3029,
-      "agents": [
-        "overnight_at_risk_sweep"
-      ],
-      "required_by_cases": [
-        "case9_filed_in_the_wrong_place"
-      ],
-      "required_as_one_of_a_set_by_cases": [
-        "case122_file_the_acceptance_report",
-        "case1_log_it",
-        "case42_can_i_answer_on_whatsapp",
-        "case60_send_one_draft_one"
-      ],
-      "permitted_in_cases": [
-        "case110_write_greta_a_thank_you",
-        "case117_log_it_and_say_what_waits",
-        "case126_file_it_i_approve",
-        "case127_log_the_call_again",
-        "case130_put_the_offer_link_on_the_deal",
-        "case46_get_us_in_a_room",
-        "case48_that_whole_thread_is_filed_wrong",
-        "case59_file_it_on_the_meeting_and_the_contract",
-        "case74_read_the_file_back"
-      ],
-      "called_in_held_runs": [
-        "case1_log_it",
-        "case110_write_greta_a_thank_you",
-        "case117_log_it_and_say_what_waits",
-        "case122_file_the_acceptance_report",
-        "case126_file_it_i_approve",
-        "case130_put_the_offer_link_on_the_deal",
-        "case42_can_i_answer_on_whatsapp",
-        "case45_move_the_deal_on",
-        "case46_get_us_in_a_room",
-        "case48_that_whole_thread_is_filed_wrong",
-        "case59_file_it_on_the_meeting_and_the_contract",
-        "case60_send_one_draft_one",
-        "case74_read_the_file_back",
-        "case9_filed_in_the_wrong_place"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "read_workspace",
-      "tokens": 3005,
+      "tokens": 3007,
       "agents": [],
       "required_by_cases": [
         "case111_how_is_the_workspace_doing"
@@ -11806,23 +9824,19 @@
       ],
       "called_in_held_runs": [
         "case1_log_it",
-        "case10_finish_the_import",
         "case102_shorter_in_my_voice",
         "case103_stop_telling_me",
-        "case104_mark_it_seen",
         "case105_what_changed_there",
         "case106_turn_that_rule_off",
         "case107_tidy_up_the_room",
         "case108_ask_sofia_for_an_intro",
         "case109_my_hours_zone_and_language",
-        "case110_write_greta_a_thank_you",
         "case111_how_is_the_workspace_doing",
         "case113_after_the_sales_review",
         "case114_the_fleet_team",
         "case116_the_rate_and_the_logo",
-        "case117_log_it_and_say_what_waits",
         "case118_is_the_crane_job_at_risk",
-        "case119_who_came_to_the_fair",
+        "case122_file_the_acceptance_report",
         "case123_take_over_sofias_deal",
         "case124_log_it_with_read_access",
         "case129_move_it_to_service",
@@ -11874,6 +9888,74 @@
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-4-hydrogen-medium@agy-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "change_activities",
+      "tokens": 2977,
+      "agents": [
+        "overnight_at_risk_sweep"
+      ],
+      "required_by_cases": [
+        "case9_filed_in_the_wrong_place"
+      ],
+      "required_as_one_of_a_set_by_cases": [
+        "case122_file_the_acceptance_report",
+        "case1_log_it",
+        "case42_can_i_answer_on_whatsapp",
+        "case60_send_one_draft_one"
+      ],
+      "permitted_in_cases": [
+        "case110_write_greta_a_thank_you",
+        "case117_log_it_and_say_what_waits",
+        "case126_file_it_i_approve",
+        "case127_log_the_call_again",
+        "case130_put_the_offer_link_on_the_deal",
+        "case46_get_us_in_a_room",
+        "case48_that_whole_thread_is_filed_wrong",
+        "case59_file_it_on_the_meeting_and_the_contract",
+        "case74_read_the_file_back"
+      ],
+      "called_in_held_runs": [
+        "case1_log_it",
+        "case117_log_it_and_say_what_waits",
+        "case122_file_the_acceptance_report",
+        "case126_file_it_i_approve",
+        "case130_put_the_offer_link_on_the_deal",
+        "case42_can_i_answer_on_whatsapp",
+        "case45_move_the_deal_on",
+        "case46_get_us_in_a_room",
+        "case48_that_whole_thread_is_filed_wrong",
+        "case59_file_it_on_the_meeting_and_the_contract",
+        "case60_send_one_draft_one",
+        "case74_read_the_file_back",
+        "case9_filed_in_the_wrong_place"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
       "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
@@ -12124,26 +10206,6 @@
       }
     },
     {
-      "name": "change_capture",
-      "tokens": 1958,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case82_keep_that_newsletter_out",
-        "case97_import_this_card"
-      ],
-      "called_in_held_runs": [
-        "case82_keep_that_newsletter_out",
-        "case97_import_this_card"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {}
-    },
-    {
       "name": "read_view",
       "tokens": 1921,
       "agents": [],
@@ -12160,17 +10222,38 @@
       ],
       "called_in_held_runs": [
         "case106_turn_that_rule_off",
+        "case108_ask_sofia_for_an_intro",
         "case123_take_over_sofias_deal",
         "case128_is_she_here_twice",
         "case31_wrong_word_on_the_record",
         "case40_sort_the_queue",
-        "case47_tidy_the_fair_list",
         "case5_before_the_meeting",
         "case58_quiet_for_three_weeks",
         "case59_file_it_on_the_meeting_and_the_contract",
         "case65_clear_out_the_dead_deals",
+        "case91_add_a_review_stage",
         "case94_a_field_for_the_region",
         "case99_they_raised_money"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {}
+    },
+    {
+      "name": "change_capture",
+      "tokens": 1918,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case82_keep_that_newsletter_out",
+        "case97_import_this_card"
+      ],
+      "called_in_held_runs": [
+        "case82_keep_that_newsletter_out",
+        "case97_import_this_card"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -12260,24 +10343,6 @@
       }
     },
     {
-      "name": "run_research",
-      "tokens": 1419,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case108_ask_sofia_for_an_intro"
-      ],
-      "called_in_held_runs": [
-        "case108_ask_sofia_for_an_intro"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {}
-    },
-    {
       "name": "read_analytics",
       "tokens": 1373,
       "agents": [],
@@ -12294,6 +10359,24 @@
         "case22_can_i_trust_the_numbers",
         "case45_move_the_deal_on",
         "case62_held_meetings_to_opportunities"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {}
+    },
+    {
+      "name": "run_research",
+      "tokens": 1365,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case108_ask_sofia_for_an_intro"
+      ],
+      "called_in_held_runs": [
+        "case108_ask_sofia_for_an_intro"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -12585,6 +10668,7 @@
         "case43_the_fair_leads_are_prospects"
       ],
       "called_in_held_runs": [
+        "case1_log_it",
         "case33_two_cards_for_one_company",
         "case40_sort_the_queue",
         "case43_the_fair_leads_are_prospects"
@@ -12644,9 +10728,9 @@
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
-          "reliability": 0.6666666666666666,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
@@ -12888,6 +10972,7 @@
         "case120_what_the_pump_customer_wants",
         "case121_the_gist_of_the_visit_note",
         "case124_log_it_with_read_access",
+        "case126_file_it_i_approve",
         "case127_log_the_call_again",
         "case128_is_she_here_twice",
         "case129_move_it_to_service",
@@ -12898,10 +10983,10 @@
         "case40_sort_the_queue",
         "case41_close_the_project",
         "case42_can_i_answer_on_whatsapp",
+        "case43_the_fair_leads_are_prospects",
         "case44_chase_what_is_slipping",
         "case45_move_the_deal_on",
         "case46_get_us_in_a_room",
-        "case47_tidy_the_fair_list",
         "case48_that_whole_thread_is_filed_wrong",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
@@ -12955,9 +11040,9 @@
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
-          "reliability": 1,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
@@ -12992,12 +11077,12 @@
         "case105_what_changed_there",
         "case118_is_the_crane_job_at_risk",
         "case120_what_the_pump_customer_wants",
+        "case121_the_gist_of_the_visit_note",
         "case124_log_it_with_read_access",
         "case125_what_waits_for_my_approval",
         "case128_is_she_here_twice",
         "case129_move_it_to_service",
         "case20_put_it_in_the_board_pack",
-        "case22_can_i_trust_the_numbers",
         "case33_two_cards_for_one_company",
         "case4_use_the_moment",
         "case40_sort_the_queue",
@@ -13035,9 +11120,9 @@
         "case5_before_the_meeting"
       ],
       "called_in_held_runs": [
-        "case105_what_changed_there",
         "case108_ask_sofia_for_an_intro",
         "case124_log_it_with_read_access",
+        "case4_use_the_moment",
         "case44_chase_what_is_slipping",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
@@ -13081,7 +11166,7 @@
     },
     {
       "name": "list_documents",
-      "tokens": 351,
+      "tokens": 331,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -13092,7 +11177,6 @@
         "case74_read_the_file_back"
       ],
       "called_in_held_runs": [
-        "case121_the_gist_of_the_visit_note",
         "case130_put_the_offer_link_on_the_deal",
         "case59_file_it_on_the_meeting_and_the_contract",
         "case6_ask_the_company",
@@ -13233,8 +11317,7 @@
         "case105_what_changed_there",
         "case107_tidy_up_the_room",
         "case108_ask_sofia_for_an_intro",
-        "case111_how_is_the_workspace_doing",
-        "case113_after_the_sales_review",
+        "case117_log_it_and_say_what_waits",
         "case118_is_the_crane_job_at_risk",
         "case120_what_the_pump_customer_wants",
         "case121_the_gist_of_the_visit_note",
@@ -13242,11 +11325,11 @@
         "case123_take_over_sofias_deal",
         "case124_log_it_with_read_access",
         "case125_what_waits_for_my_approval",
+        "case126_file_it_i_approve",
         "case127_log_the_call_again",
         "case128_is_she_here_twice",
         "case129_move_it_to_service",
         "case130_put_the_offer_link_on_the_deal",
-        "case131_no_to_the_hand_over",
         "case23_find_us_a_slot",
         "case31_wrong_word_on_the_record",
         "case33_two_cards_for_one_company",
@@ -13256,6 +11339,7 @@
         "case43_the_fair_leads_are_prospects",
         "case44_chase_what_is_slipping",
         "case45_move_the_deal_on",
+        "case48_that_whole_thread_is_filed_wrong",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
         "case50_what_moved_my_quarter",
@@ -13420,6 +11504,8 @@
         "case108_ask_sofia_for_an_intro",
         "case109_my_hours_zone_and_language",
         "case110_write_greta_a_thank_you",
+        "case111_how_is_the_workspace_doing",
+        "case112_my_plan_and_the_dossier",
         "case113_after_the_sales_review",
         "case114_the_fleet_team",
         "case117_log_it_and_say_what_waits",
@@ -13428,15 +11514,16 @@
         "case124_log_it_with_read_access",
         "case126_file_it_i_approve",
         "case127_log_the_call_again",
+        "case130_put_the_offer_link_on_the_deal",
         "case20_put_it_in_the_board_pack",
         "case22_can_i_trust_the_numbers",
         "case23_find_us_a_slot",
+        "case31_wrong_word_on_the_record",
         "case33_two_cards_for_one_company",
         "case4_use_the_moment",
         "case40_sort_the_queue",
         "case41_close_the_project",
         "case42_can_i_answer_on_whatsapp",
-        "case43_the_fair_leads_are_prospects",
         "case44_chase_what_is_slipping",
         "case45_move_the_deal_on",
         "case46_get_us_in_a_room",

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 250287,
+    "tool_catalog_bytes": 250688,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 63977,
-    "largest_tool_bytes": 15665,
+    "approx_wire_tokens_total": 64077,
+    "largest_tool_bytes": 16198,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 52304,
-      "input_schema_bytes": 151664,
+      "description_bytes": 52266,
+      "input_schema_bytes": 152103,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 203968
+      "description_plus_input_schema_bytes": 204369
     }
   },
   "tools": {
@@ -467,6 +467,11 @@
               "format": "uuid",
               "type": "string"
             },
+            "assignee_id": {
+              "description": "task only: Defaults to the human you act for.",
+              "format": "uuid",
+              "type": "string"
+            },
             "attendee_user_ids": {
               "description": "log only: Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused.",
               "items": {
@@ -490,11 +495,7 @@
               "type": "string"
             },
             "content_base64": {
-              "description": "attach only: The whole file, standard base64 with = padding; send this or content_text",
-              "type": "string"
-            },
-            "content_text": {
-              "description": "attach only: A text file's whole contents, as they are; send this instead of content_base64 for text, which then needs no encoding",
+              "description": "attach only: The whole file, standard base64 with = padding",
               "type": "string"
             },
             "content_type": {
@@ -518,6 +519,10 @@
               "description": "log, task only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
               "format": "date-time",
               "type": "string"
+            },
+            "due_has_time": {
+              "description": "task only: True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day.",
+              "type": "boolean"
             },
             "entity_id": {
               "description": "attach, relink, relink_many only",
@@ -681,6 +686,18 @@
             "subject": {
               "description": "log, task only: Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
               "type": "string"
+            },
+            "task_type": {
+              "description": "task only: The work it asks for; it decides the one button the task shows. reply answers a message the way it came in, reach_out contacts someone by email or phone, do is work outside Margince.",
+              "enum": [
+                "reply",
+                "reach_out",
+                "meet",
+                "review",
+                "decide",
+                "do"
+              ],
+              "type": "string"
             }
           },
           "required": [
@@ -791,7 +808,7 @@
         "inputSchema": {
           "properties": {
             "action": {
-              "description": "read_workspace topic actions lists each action's body\nadd_consumer_mail_domain: Add a consumer-mail domain, or carve one out\nadd_counterparty_hold: Keep one party's mail to the contacts on it\nadd_exclusion: Keep an address or a domain out of capture\nadd_owner_identity: Declare another address as your own\nadd_workspace_email_domain: Register one of the workspace's own email domains\narchive_corpus: Archive a corpus and everything filed in it\ncancel_backfill: Cancel a running backfill — captured rows are retained\ncancel_import_run: Cancel a draft, a test run, or a report nobody will approve\ncreate_corpus: Define a document corpus\ndiscard_domain: Answer an open domain question by excluding the domain from your own capture\ndisconnect_channel: Disconnect a messaging channel (archives the binding and destroys the credential)\ndisconnect_mailbox: Disconnect the calling user's mail/calendar capture\ndismiss_mailbox_silence: Dismiss the owner's current mailbox silence warning\nimport_linkedin_connections: Import your own LinkedIn connections export\nimport_vcards: Import a .vcf address-card file\nkeep_domain_as_company: Answer an open domain question by keeping the company\nkeep_domain_as_vendor: Answer an open vendor question by keeping the vendor verdict\nlift_counterparty_hold: Lift a counterparty hold\nlift_exclusion: Lift an exclusion\nremove_consumer_mail_domain: Withdraw a consumer-mail list entry (admin/ops)\nremove_workspace_email_domain: Stop treating a domain as the workspace's own\nreopen_domain: Ask about an undecided domain again (admin/ops)\nrestore_owner_identity: Put back one of your own addresses you just withdrew\nset_blocked_domain: Block a domain, or unblock one\nset_channel_verbosity: Choose how much Margince posts into a record's channel\nset_context_tag: Set the word this connector files what it captures under\nset_history_baseline: Set the date this mailbox's automatic commitment suggestions start from\nset_mail_posture: Set what this mailbox asks of the mail it brings in\nset_sender_decision: Overrule what the classifier decided about a sender\nset_signature_enrichment: Set this mailbox's own answer to the nightly signature pass\nshare_counterparty_hold_history: Re-open the mail the caller's counterparty holds already caught\nundo_import_run: Reverse a completed CSV import run\nunlink_channel: Stop syncing a record with its chat channel\nupdate_corpus: Edit a corpus — its words, its floor, or which one the palette asks\nupdate_import_run: Save choices on a draft import run\nupload_corpus_document: Add a document to this corpus\nvalidate_import_run: Test a draft import run against the estate\nwithdraw_owner_identity: Withdraw one of your own addresses\nwithdraw_sender_decision: Withdraw your decision and hand the sender back to the classifier",
+              "description": "read_workspace topic actions lists each action's body\nadd_consumer_mail_domain: Add a consumer-mail domain, or carve one out\nadd_counterparty_hold: Keep one party's mail to the contacts on it\nadd_exclusion: Keep an address or a domain out of capture\nadd_owner_identity: Declare another address as your own\nadd_workspace_email_domain: Register one of the workspace's own email domains\narchive_corpus: Archive a corpus and everything filed in it\ncancel_backfill: Cancel a running backfill — captured rows are retained\ncancel_import_run: Cancel a draft, a test run, or a report nobody will approve\ncreate_corpus: Define a document corpus\ndiscard_domain: Answer an open domain question by excluding the domain from your own capture\ndisconnect_channel: Disconnect a messaging channel (archives the binding and destroys the credential)\ndisconnect_mailbox: Disconnect the calling user's mail/calendar capture\ndismiss_mailbox_silence: Dismiss the owner's current mailbox silence warning\nimport_linkedin_connections: Import your own LinkedIn connections export\nimport_vcards: Import a .vcf address-card file\nkeep_domain_as_company: Answer an open domain question by keeping the company\nkeep_domain_as_vendor: Answer an open vendor question by keeping the vendor verdict\nlift_counterparty_hold: Lift a counterparty hold\nlift_exclusion: Lift an exclusion\nremove_consumer_mail_domain: Withdraw a consumer-mail list entry (admin/ops)\nremove_workspace_email_domain: Stop treating a domain as the workspace's own\nreopen_domain: Ask about an undecided domain again (admin/ops)\nrestore_corpus: Bring an archived corpus back with everything filed in it\nrestore_owner_identity: Put back one of your own addresses you just withdrew\nset_blocked_domain: Block a domain, or unblock one\nset_channel_verbosity: Choose how much Margince posts into a record's channel\nset_context_tag: Set the word this connector files what it captures under\nset_history_baseline: Set the date this mailbox's automatic commitment suggestions start from\nset_mail_posture: Set what this mailbox asks of the mail it brings in\nset_sender_decision: Overrule what the classifier decided about a sender\nset_signature_enrichment: Set this mailbox's own answer to the nightly signature pass\nshare_counterparty_hold_history: Re-open the mail the caller's counterparty holds already caught\nundo_import_run: Reverse a completed CSV import run\nunlink_channel: Stop syncing a record with its chat channel\nupdate_corpus: Edit a corpus — its words, its floor, or which one the palette asks\nupdate_import_run: Save choices on a draft import run\nupload_corpus_document: Add a document to this corpus\nvalidate_import_run: Test a draft import run against the estate\nwithdraw_owner_identity: Withdraw one of your own addresses\nwithdraw_sender_decision: Withdraw your decision and hand the sender back to the classifier",
               "enum": [
                 "add_consumer_mail_domain",
                 "add_counterparty_hold",
@@ -815,6 +832,7 @@
                 "remove_consumer_mail_domain",
                 "remove_workspace_email_domain",
                 "reopen_domain",
+                "restore_corpus",
                 "restore_owner_identity",
                 "set_blocked_domain",
                 "set_channel_verbosity",
@@ -841,11 +859,7 @@
               "type": "string"
             },
             "content_base64": {
-              "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: The whole file, standard base64 with = padding; send this or content_text",
-              "type": "string"
-            },
-            "content_text": {
-              "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: A text file's whole contents, as they are; send this instead of content_base64 for text, which then needs no encoding",
+              "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: The whole file, standard base64 with = padding",
               "type": "string"
             },
             "content_type": {
@@ -1654,11 +1668,7 @@
               "type": "string"
             },
             "content_base64": {
-              "description": "upload_company_logo, upload_company_logo_icon, upload_legal_entity_logo only: The whole file, standard base64 with = padding; send this or content_text",
-              "type": "string"
-            },
-            "content_text": {
-              "description": "upload_company_logo, upload_company_logo_icon, upload_legal_entity_logo only: A text file's whole contents, as they are; send this instead of content_base64 for text, which then needs no encoding",
+              "description": "upload_company_logo, upload_company_logo_icon, upload_legal_entity_logo only: The whole file, standard base64 with = padding",
               "type": "string"
             },
             "content_type": {
@@ -3752,7 +3762,7 @@
           "readOnlyHint": true,
           "title": "List a record's documents or read one"
         },
-        "description": "List the files stored on a company, contact, deal, lead, project or activity, newest first: name, type, size, who added them and the contract each is filed against. Send entity_type and entity_id to list, or a file's id to read its contents. A stored file answers as content_base64, and a text file also as content_text, up to 6.2 MB; a larger one is refused with the limit. A document link or a withheld mail attachment has no bytes to read, so it is refused too. Check the list before attaching a file again, so the record does not carry the same file twice. Use read_view with view company_documents or deal_documents for a company's or deal's document register, filtered by category, contract or state. Keep next_cursor to read the next page.",
+        "description": "List the files stored on a company, contact, deal, lead, project or activity, newest first: name, type, size, who added them and the contract each is filed against. Send entity_type and entity_id to list, or a file's id to read its contents. A stored file answers as content_base64, up to 6.2 MB; a larger one is refused with the limit. A document link or a withheld mail attachment has no bytes to read, so it is refused too. Check the list before attaching a file again, so the record does not carry the same file twice. Use read_view with view company_documents or deal_documents for a company's or deal's document register, filtered by category, contract or state. Keep next_cursor to read the next page.",
         "inputSchema": {
           "properties": {
             "cursor": {
@@ -3777,7 +3787,7 @@
               "type": "string"
             },
             "id": {
-              "description": "A document's id from this list; naming it answers that file's contents as content_base64, and a text file's also as content_text",
+              "description": "A document's id from this list; naming it answers that file's contents as content_base64",
               "type": "string"
             },
             "limit": {
@@ -6512,6 +6522,31 @@
               ],
               "type": "string"
             },
+            "anchor_id": {
+              "description": "mail_draft only",
+              "format": "uuid",
+              "type": "string"
+            },
+            "anchor_type": {
+              "description": "mail_draft only",
+              "enum": [
+                "activity",
+                "forward",
+                "contact",
+                "company",
+                "deal",
+                "lead",
+                "project"
+              ],
+              "type": "string"
+            },
+            "change_kind": {
+              "description": "deal_margince_changes only",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
             "contact_id": {
               "description": "meeting_proposals only",
               "format": "uuid",
@@ -6566,6 +6601,14 @@
               "description": "company_contracts, contact_overrides, deal_suggestions, field_history, lead_score, legal_reviews, magic, magic_line_records, my_linkedin_reach, notices only",
               "type": "integer"
             },
+            "note_activity_id": {
+              "description": "deal_margince_changes only",
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": "array"
+            },
             "project_id": {
               "description": "company_brief only",
               "format": "uuid",
@@ -6574,6 +6617,11 @@
             "request_body": {
               "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview, website_inquiry_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
+            },
+            "stage_history_id": {
+              "description": "deal_margince_changes only",
+              "format": "uuid",
+              "type": "string"
             },
             "state": {
               "description": "job_health_history only",
@@ -8727,7 +8775,7 @@
               "type": "string"
             },
             "include_archived": {
-              "description": "legal_entities, pipelines, roles, saved_views, web_forms only",
+              "description": "corpora, legal_entities, pipelines, roles, saved_views, web_forms only",
               "type": "boolean"
             },
             "include_inactive": {
@@ -10893,11 +10941,7 @@
             "additionalProperties": false,
             "properties": {
               "content_base64": {
-                "description": "The whole file, standard base64 with = padding; send this or content_text",
-                "type": "string"
-              },
-              "content_text": {
-                "description": "A text file's whole contents, as they are; send this instead of content_base64 for text, which then needs no encoding",
+                "description": "The whole file, standard base64 with = padding",
                 "type": "string"
               },
               "content_type": {
@@ -10933,11 +10977,12 @@
               "entity_type",
               "entity_id",
               "filename",
-              "content_type"
+              "content_type",
+              "content_base64"
             ],
             "type": "object"
           },
-          "does": "Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab, or on one activity such as the meeting it came from — use it whenever the user wants a file kept on a record, and never save a file's text as a note instead. Up to 6.2 MB per file, or less where the workspace sets a smaller upload limit. Send a text file's contents as content_text, as they are; any other file goes as content_base64. Common document, image and email formats are accepted; any other kind is refused, and the refusal names the accepted ones. Tell the user about a refused file; never rename, convert or zip it to get it accepted. The file is stored, not read. It is filed against a contract only when you name contract_id; read_project (view: overview) lists its contracts with their ids. Use change_activities with action=log for what was said about the file, linked to the same record. Keep attachment_id to name the file to the user.",
+          "does": "Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab, or on one activity such as the meeting it came from — use it whenever the user wants a file kept on a record, and never save a file's text as a note instead. Up to 6.2 MB per file, or less where the workspace sets a smaller upload limit. Common document, image and email formats are accepted; any other kind is refused, and the refusal names the accepted ones. Tell the user about a refused file; never rename, convert or zip it to get it accepted. The file is stored, not read. It is filed against a contract only when you name contract_id; read_project (view: overview) lists its contracts with their ids. Use change_activities with action=log for what was said about the file, linked to the same record. Keep attachment_id to name the file to the user.",
           "route": "in process: send body's members at the top level, beside action"
         },
         {
@@ -13820,6 +13865,14 @@
             "domain"
           ],
           "route": "POST /v1/capture/blocked-domains/{domain}/reopen"
+        },
+        {
+          "action": "restore_corpus",
+          "does": "Bring an archived corpus back with everything filed in it.",
+          "ids": [
+            "id"
+          ],
+          "route": "POST /v1/knowledge/corpora/{id}/restore"
         },
         {
           "action": "restore_owner_identity",
@@ -27354,6 +27407,12 @@
         {
           "action": "corpora",
           "does": "The document corpora this workspace has defined.",
+          "query": [
+            {
+              "name": "include_archived",
+              "type": "boolean"
+            }
+          ],
           "route": "GET /v1/knowledge/corpora"
         },
         {
@@ -28322,16 +28381,6 @@
           "action": "ask_corpus",
           "body": {
             "properties": {
-              "audiences": {
-                "description": "Optional. When present and not empty, only documents whose `meta.audience` is one of these values are searched and cited. Values compare with no case, no accents and `đ` as `d`. A document with no audience is left out. When no document matches, the outcome is `not_covered`. Absent or empty, every document is searched.",
-                "items": {
-                  "maxLength": 200,
-                  "minLength": 1,
-                  "type": "string"
-                },
-                "maxItems": 20,
-                "type": "array"
-              },
               "question": {
                 "maxLength": 1000,
                 "minLength": 1,
