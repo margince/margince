@@ -2,10 +2,14 @@
 jurisdiction: sk
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Zákon č. 452/2021 Z. z. o elektronických komunikáciách"
     provision: "§ 116"
     source-url: https://www.slov-lex.sk/ezbierky/pravne-predpisy/SK/ZZ/2021/452/
+    text-url: https://static.slov-lex.sk/static/SK/ZZ/2021/452/20260818.html
+    text-digest: a446c7448b8f9a3c989a7a47e631dfc500b6e9be30c46484b9ec58829fbef549
+    text-fetched: 2026-11-25
 fixtures:
   - finding: objection_route
     triggers: sk/fixtures/advertising-without-objection-route.md

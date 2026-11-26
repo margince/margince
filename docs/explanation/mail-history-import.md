@@ -252,6 +252,19 @@ A sync that works is not proof of a complete Inbox and Sent history. Neither is 
 finished history import. The import has a cap. Some messages can fail, and a provider can start
 again from a later point. The read cannot call that full history.
 
+A Gmail sync whose history cursor expired lists only the 50 newest messages and stores a new cursor.
+It records the span from the last good sync to the earliest message it read as the connection's
+unread span (`unread_from`, `unread_to`). The owner's connection row serves it as
+`unread_period`, beside `last_success_at` and the import's `done`, so neither reads as a complete
+mailbox. Connecting the same account again keeps the cursor and replays nothing.
+
+The recovery is a new history import whose window reaches back over the span. It reads the window
+through the same Sink as a sync. A message already captured lands on its provider key and writes no
+second activity, link, import row or audit row. Sender blocks, thread holds and audiences apply as
+on a first capture. A finished import that failed no message and reaches back over the span clears
+it (`settleUnreadPeriodTx`). `TestAHistoryImportRecoversASentFollowUpTheLostCursorLeftOut` holds
+this through the real Gmail connector.
+
 A calendar connection supplies no mail history. A reader who cannot read connections gets no claim of complete history.
 
 The connection keeps the last try and last success apart. A failed try moves `last_synced_at`,
