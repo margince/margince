@@ -21,9 +21,19 @@ const memberChatIngest = "the member-owned chat ingest; no unit in this tree fil
 // tests, and this census reads no test file.
 const testKitUse = "the unit test kit; units call it from their tests, which this census does not read"
 
+// knowledgeFiling is the reason for the knowledge filing. A unit that syncs an
+// outside document source files into its own corpus. No unit in this tree does yet.
+const knowledgeFiling = "the managed-corpus filing; no unit in this tree files outside documents yet"
+
 // exportWaivers are the exported pkg/extension names with no caller in this
 // tree, each with why it stays.
 var exportWaivers = gatekit.Waive(map[string]string{
+	"extension.Knowledge.UpsertDocument":             knowledgeFiling,
+	"extension.KnowledgeCreated":                     knowledgeFiling,
+	"extension.KnowledgeReplaced":                    knowledgeFiling,
+	"extension.KnowledgeUnchanged":                   knowledgeFiling,
+	"extension.Runtime.Knowledge":                    knowledgeFiling,
+	"extension/exttest.Runtime.Knowledge":            knowledgeFiling,
 	"extension.OccurredPrecision":                    memberChatIngest,
 	"extension.PostureClassified":                    memberChatIngest,
 	"extension.PostureHeld":                          memberChatIngest,
