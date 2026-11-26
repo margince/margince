@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 250676,
+    "tool_catalog_bytes": 250688,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 64074,
+    "approx_wire_tokens_total": 64077,
     "largest_tool_bytes": 16198,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 52266,
-      "input_schema_bytes": 152091,
+      "input_schema_bytes": 152103,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 204357
+      "description_plus_input_schema_bytes": 204369
     }
   },
   "tools": {
@@ -3017,6 +3017,7 @@
                   "company",
                   "contact",
                   "deal",
+                  "deal_room",
                   "lead",
                   "offer_template",
                   "product",

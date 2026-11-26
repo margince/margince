@@ -55077,6 +55077,11 @@ export interface components {
             carried_by?: number | null;
             /** @description On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included. */
             readonly works_at?: components["schemas"]["SearchHitEmployer"] | null;
+            /**
+             * Format: uuid
+             * @description For a `deal_room` hit only: the deal the room belongs to, which is the record a client opens to reach the room. Absent on every other hit type.
+             */
+            readonly deal_id?: string | null;
             /** @description For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type. */
             readonly logo_url?: string | null;
             /** @description Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type. */

@@ -22,6 +22,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
+	"github.com/margince/margince/backend/internal/compose/chatedge"
 	"github.com/margince/margince/backend/internal/compose/chatsync"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
@@ -155,11 +156,9 @@ type JobRunnerConfig struct {
 	// SECOND field of that pass's conjunction — a registry alone does not wire
 	// it.
 	GraphWatch GraphWatchConfig
-	// ChannelVault is the custodian of a channel connection's sealed bot token.
-	// Nil means this role registers no Telegram poller at all: a poll cannot
-	// authenticate without the token, so a dispatcher wired without a vault
-	// could only fail every job it enqueued. Declared by omission, the posture
-	// GmailRegistry already takes.
+	// ChannelVault is the custodian of a channel connection's sealed tokens. Nil
+	// registers no Telegram poller, because a poll cannot authenticate without
+	// its token, and a WhatsApp media download drops its file for want of one.
 	ChannelVault keyvault.Vault
 	// AIKeyVault holds the sealed vendor keys the price sweep lists models with.
 	// Nil lists with the environment's keys only; the sweep still registers.
@@ -169,6 +168,7 @@ type JobRunnerConfig struct {
 	// acceptance suites substitute a fake, because a poller left on the real
 	// client would reach api.telegram.org from a test run.
 	ChannelAPI telegram.API
+	ChatMedia  chatedge.MediaClients // the clients that download a chat message's files; nil fields take the real hosts
 	// CaptureConfig is the deployment's capture suppression-list config
 	// (CAP-PARAM-5/6). The Telegram ingest worker needs it to build the
 	// IDENTICAL guarded Sink every other capture path shares

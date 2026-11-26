@@ -298,6 +298,10 @@ func statefulOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) ([]
 
 // visibleOffer loads one offer and applies the deal-derived row scope:
 // the caller sees the offer iff they can see its deal (miss = 404).
+//
+// This is the row-scope half of auth.DealChildScopeClause, as a probe on the
+// loaded row. It leaves out the deal's object grant: an offer is gated on
+// offer.read, and a seat without deal.read keeps reading the offers it is shown.
 func visibleOffer(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived storekit.ArchivedFilter) (crmcontracts.Offer, error) {
 	offer, err := readOffer(ctx, tx, id, archived)
 	if err != nil {

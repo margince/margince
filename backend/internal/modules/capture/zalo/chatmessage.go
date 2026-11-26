@@ -19,8 +19,8 @@ import (
 const CapturedBy = "connector:zalo_oa"
 
 // ChatMessage maps one decoded message event to what the provider said about it.
-// An attachment files as a placeholder naming its type, until media is
-// downloaded. A colon in a provider id is replaced, because the sink joins
+// A message with no text files as a placeholder naming its first
+// attachment's type, and the ingest worker downloads the files. A colon in a provider id is replaced, because the sink joins
 // scope, conversation and message with colons.
 func ChatMessage(ev Event) (connector.ChatMessage, error) {
 	if ev.Kind != KindMessage || ev.Message == nil || ev.Message.ID == "" || ev.UserID == "" {
