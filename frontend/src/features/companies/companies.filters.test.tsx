@@ -63,7 +63,8 @@ describe("CompaniesScreen — the Customers tab", () => {
         urls.some((url) => {
           const query = searchOf(url);
           return (
-            query.getAll("status").join() === "onboarding,live,customer" &&
+            query.getAll("status_any").join() === "onboarding,live,customer" &&
+            !query.has("status") &&
             query.get("sort") === "last_activity_at"
           );
         }),

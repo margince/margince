@@ -1496,6 +1496,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "source_id", Type: "string"},
 		{Name: "source_system", Type: "string"},
 		{Name: "status", Type: "string", Enum: []string{"unknown", "target", "prospect", "opportunity", "onboarding", "live", "customer", "former_customer", "disqualified"}},
+		{Name: "status_any", Type: "string", Enum: []string{"unknown", "target", "prospect", "opportunity", "onboarding", "live", "customer", "former_customer", "disqualified"}},
 		{Name: "tag_id", Type: "string"},
 		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
 		{Name: "unassigned", Type: "boolean"},

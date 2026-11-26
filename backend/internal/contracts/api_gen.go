@@ -31297,6 +31297,45 @@ func (e ListCompaniesParamsStatus) Valid() bool {
 	}
 }
 
+// Defines values for ListCompaniesParamsStatusAny.
+const (
+	ListCompaniesParamsStatusAnyCustomer       ListCompaniesParamsStatusAny = "customer"
+	ListCompaniesParamsStatusAnyDisqualified   ListCompaniesParamsStatusAny = "disqualified"
+	ListCompaniesParamsStatusAnyFormerCustomer ListCompaniesParamsStatusAny = "former_customer"
+	ListCompaniesParamsStatusAnyLive           ListCompaniesParamsStatusAny = "live"
+	ListCompaniesParamsStatusAnyOnboarding     ListCompaniesParamsStatusAny = "onboarding"
+	ListCompaniesParamsStatusAnyOpportunity    ListCompaniesParamsStatusAny = "opportunity"
+	ListCompaniesParamsStatusAnyProspect       ListCompaniesParamsStatusAny = "prospect"
+	ListCompaniesParamsStatusAnyTarget         ListCompaniesParamsStatusAny = "target"
+	ListCompaniesParamsStatusAnyUnknown        ListCompaniesParamsStatusAny = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the ListCompaniesParamsStatusAny enum.
+func (e ListCompaniesParamsStatusAny) Valid() bool {
+	switch e {
+	case ListCompaniesParamsStatusAnyCustomer:
+		return true
+	case ListCompaniesParamsStatusAnyDisqualified:
+		return true
+	case ListCompaniesParamsStatusAnyFormerCustomer:
+		return true
+	case ListCompaniesParamsStatusAnyLive:
+		return true
+	case ListCompaniesParamsStatusAnyOnboarding:
+		return true
+	case ListCompaniesParamsStatusAnyOpportunity:
+		return true
+	case ListCompaniesParamsStatusAnyProspect:
+		return true
+	case ListCompaniesParamsStatusAnyTarget:
+		return true
+	case ListCompaniesParamsStatusAnyUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListCompaniesParamsRelationshipType.
 const (
 	ListCompaniesParamsRelationshipTypeCompetitor       ListCompaniesParamsRelationshipType = "competitor"
@@ -78961,10 +79000,14 @@ type ListCompaniesParams struct {
 	// Domain Lookup by normalized domain (the employer-inference index).
 	Domain *string `form:"domain,omitempty" json:"domain,omitempty"`
 
-	// Status Where the account stands with us (DM-VOCAB-2, ADR-0079). Repeat the parameter for
-	// several: an account at any one of them matches, so onboarding, live and customer
-	// together select every account we deliver for.
-	Status *[]ListCompaniesParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	// Status Where the account stands with us (DM-VOCAB-2, ADR-0079).
+	Status *ListCompaniesParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// StatusAny Several account stages at once: an account at any one of them matches, so onboarding,
+	// live and customer together select every account we deliver for. Repeat the parameter
+	// for each. Sent together with `status`, an account at `status` or at any of these
+	// matches.
+	StatusAny *[]ListCompaniesParamsStatusAny `form:"status_any,omitempty" json:"status_any,omitempty"`
 
 	// RelationshipType Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both.
 	RelationshipType *ListCompaniesParamsRelationshipType `form:"relationship_type,omitempty" json:"relationship_type,omitempty"`
@@ -79038,6 +79081,9 @@ type ListCompaniesParamsCapturedByKind string
 
 // ListCompaniesParamsStatus defines parameters for ListCompanies.
 type ListCompaniesParamsStatus string
+
+// ListCompaniesParamsStatusAny defines parameters for ListCompanies.
+type ListCompaniesParamsStatusAny string
 
 // ListCompaniesParamsRelationshipType defines parameters for ListCompanies.
 type ListCompaniesParamsRelationshipType string
@@ -125424,13 +125470,26 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 
 	// ------------- Optional query parameter "status" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "status_any" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status_any", r.URL.Query(), &params.StatusAny, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status_any"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status_any", Err: err})
 		}
 		return
 	}

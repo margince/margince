@@ -169,8 +169,8 @@ func TestTheLifecycleFilterReachesOnboardingAndLive(t *testing.T) {
 	}
 }
 
-// The Customers tab names three stages. An account at any one of them is ours
-// to deliver for, and a prospect is not.
+// The Customers tab sends three stages as `status_any`. An account at any one
+// of them is ours to deliver for, and a prospect is not.
 func TestSeveralLifecyclesSelectAnAccountAtAnyOfThem(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

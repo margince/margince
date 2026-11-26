@@ -69421,12 +69421,15 @@ export interface operations {
                 owner_id?: string;
                 /** @description Lookup by normalized domain (the employer-inference index). */
                 domain?: string;
+                /** @description Where the account stands with us (DM-VOCAB-2, ADR-0079). */
+                status?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 /**
-                 * @description Where the account stands with us (DM-VOCAB-2, ADR-0079). Repeat the parameter for
-                 *     several: an account at any one of them matches, so onboarding, live and customer
-                 *     together select every account we deliver for.
+                 * @description Several account stages at once: an account at any one of them matches, so onboarding,
+                 *     live and customer together select every account we deliver for. Repeat the parameter
+                 *     for each. Sent together with `status`, an account at `status` or at any of these
+                 *     matches.
                  */
-                status?: ("unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified")[];
+                status_any?: ("unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified")[];
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
                 /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. */

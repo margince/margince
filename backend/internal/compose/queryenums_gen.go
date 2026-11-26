@@ -133,7 +133,8 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "partner_stage_meaning", Values: []string{"candidate", "signed", "ready", "active", "dormant", "ended"}, Array: false, Explode: true},
 		{Name: "relationship_type", Values: []string{"customer", "partner", "supplier", "investor", "portfolio_company", "competitor", "other"}, Array: false, Explode: true},
 		{Name: "size_band", Values: []string{"1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"}, Array: false, Explode: true},
-		{Name: "status", Values: []string{"unknown", "target", "prospect", "opportunity", "onboarding", "live", "customer", "former_customer", "disqualified"}, Array: true, Explode: true},
+		{Name: "status", Values: []string{"unknown", "target", "prospect", "opportunity", "onboarding", "live", "customer", "former_customer", "disqualified"}, Array: false, Explode: true},
+		{Name: "status_any", Values: []string{"unknown", "target", "prospect", "opportunity", "onboarding", "live", "customer", "former_customer", "disqualified"}, Array: true, Explode: true},
 		{Name: "tag_mode", Values: []string{"any", "all", "none"}, Array: false, Explode: true},
 	},
 	"GET /v1/companies/{id}/contacts": {

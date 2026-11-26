@@ -51,7 +51,7 @@ func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params c
 		AiWritten:        params.AiWritten,
 		Sort:             params.Sort,
 		CustomFilters:    httperr.CustomFieldFilters(r),
-		Status:           enumArgs(params.Status),
+		Status:           anyStatus(enumArg(params.Status), enumArgs(params.StatusAny)),
 		RelationshipType: enumArg(params.RelationshipType),
 		Domain:           params.Domain,
 		TagIDs:           uuidArgs(params.TagId),
@@ -349,6 +349,15 @@ func enumArg[T ~string](v *T) *string {
 	}
 	s := string(*v)
 	return &s
+}
+
+// anyStatus is the stage filter `status` and `status_any` ask for together: an
+// account at any of them matches. Nil when neither was sent.
+func anyStatus(one *string, several []string) []string {
+	if one == nil {
+		return several
+	}
+	return append([]string{*one}, several...)
 }
 
 // enumArgs is enumArg for a repeatable parameter: nil when none was sent.

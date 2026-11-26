@@ -71,12 +71,15 @@ import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
 // the Lifecycle option that names them hold the same value, so the two agree.
 const DELIVERING = ["onboarding", "live", "customer"].join(",");
 
-// The address holds several stages comma-joined; the endpoint takes each as its
-// own `status`. A value that names no stage is dropped rather than sent.
-function statusParam(joined: string | undefined) {
+// The address holds one stage, or several comma-joined. One goes as `status`,
+// several as `status_any`. A value that names no stage is dropped, not sent.
+function statusParams(joined: string | undefined) {
   const named = joined?.split(",") ?? [];
   const stages = LIFECYCLE_OPTIONS.filter((stage) => named.includes(stage));
-  return stages.length > 0 ? stages : undefined;
+  if (stages.length > 1) {
+    return { status_any: stages };
+  }
+  return { status: stages[0] };
 }
 
 async function fetchCompaniesPage(
@@ -96,7 +99,7 @@ async function fetchCompaniesPage(
           cursor: cursor || undefined,
           limit: listFetchLimit(query.perPage),
           ...listQueryParams(filters),
-          status: statusParam(status),
+          ...statusParams(status),
         },
       },
     }),
