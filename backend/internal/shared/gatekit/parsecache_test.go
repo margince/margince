@@ -111,30 +111,6 @@ func TestEachParseModeGetsItsOwnTree(t *testing.T) {
 	}
 }
 
-func TestEverySpellingOfOneFileSharesOneTreeAndOnePositionName(t *testing.T) {
-	t.Parallel()
-	absolute, err := filepath.Abs("parsecache.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	module, err := ParseFile("parsecache.go", 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, spelling := range []string{"../gatekit/parsecache.go", "./parsecache.go", absolute} {
-		tree, err := ParseFile(spelling, parser.SkipObjectResolution)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if tree != module {
-			t.Errorf("%s parsed a second tree of parsecache.go instead of sharing the first", spelling)
-		}
-	}
-	if got := SourceFileSet().Position(module.Package).Filename; got != "parsecache.go" {
-		t.Errorf("a position in a file under the working directory names %q, want it relative to that directory", got)
-	}
-}
-
 func TestAMissingFileIsAnErrorNotAnEmptyTree(t *testing.T) {
 	if file, err := ParseFile(filepath.Join(t.TempDir(), "absent.go"), 0); err == nil {
 		t.Errorf("parsing a file that does not exist returned %v and no error", file)
@@ -182,7 +158,7 @@ func declarationPositions(t *testing.T, path string) []string {
 func waitUntilCollected(t *testing.T, path string, mode parser.Mode) {
 	t.Helper()
 	parses.mu.Lock()
-	entry := parses.entries[parseKey{file: path, name: path, mode: mode}]
+	entry := parses.entries[parseKey{spelled: path, mode: mode}]
 	parses.mu.Unlock()
 	if entry == nil {
 		t.Fatalf("%s was never held", path)
@@ -227,7 +203,7 @@ func TestAFileThatDoesNotParseIsNeverHeld(t *testing.T) {
 		t.Errorf("parsing a broken file again grew the shared FileSet from base %d to %d", grown, sourceFiles.Base())
 	}
 	parses.mu.Lock()
-	entry := parses.entries[parseKey{file: path, name: path, mode: 0}]
+	entry := parses.entries[parseKey{spelled: path, mode: 0}]
 	parses.mu.Unlock()
 	if entry.value.tree.Value() != nil {
 		t.Error("a tree that failed to parse is held, so its error would not be reported again")

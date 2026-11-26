@@ -86,30 +86,6 @@ func sameVersion(held, now os.FileInfo) bool {
 	return os.SameFile(held, now) && held.Size() == now.Size() && held.ModTime().Equal(now.ModTime())
 }
 
-// heldPath is the one key a file is held under, whatever its caller's
-// spelling: "internal/x.go" and "../backend/internal/x.go" are one file.
-func heldPath(path string, fixed bool) (string, error) {
-	if filepath.IsAbs(path) {
-		return filepath.Clean(path), nil
-	}
-	dir, err := workingDir(fixed)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, path), nil
-}
-
-// fixedWorkingDir is read once: FixTree promises the directory stays put, and
-// a fixed tree answers a held path without a syscall.
-var fixedWorkingDir = sync.OnceValues(os.Getwd)
-
-func workingDir(fixed bool) (string, error) {
-	if fixed {
-		return fixedWorkingDir()
-	}
-	return os.Getwd()
-}
-
 // fixtureDir is the temp directory, spelled as t.TempDir spells its children.
 var fixtureDir = sync.OnceValue(func() string { return filepath.Clean(os.TempDir()) })
 
@@ -134,15 +110,10 @@ var (
 // them. Their capacity is their length, so an append copies rather than writes
 // into a neighbour's view. CheckSharedBytes checks the promise after a run.
 func ReadFile(path string) ([]byte, error) {
-	fixed := treeFixed.Load()
-	key, err := heldPath(path, fixed)
-	if err != nil {
-		return nil, err
-	}
-	if !holdable(key) {
+	if !holdable(path) {
 		return os.ReadFile(path) // #nosec G304 -- a gate names the files of its own tree or fixture
 	}
-	entry, err := files.at(key, key, fixed)
+	entry, err := files.at(path, path, treeFixed.Load())
 	if err != nil || !entry.info.Mode().IsRegular() {
 		return os.ReadFile(path) // #nosec G304 -- the os error is the answer a caller already handles
 	}
@@ -158,15 +129,10 @@ func ReadFile(path string) ([]byte, error) {
 // directory. The slice is the caller's own; the entries are shared and
 // immutable.
 func ReadDir(dir string) ([]fs.DirEntry, error) {
-	fixed := treeFixed.Load()
-	key, err := heldPath(dir, fixed)
-	if err != nil {
-		return nil, err
-	}
-	if !holdable(key) {
+	if !holdable(dir) {
 		return os.ReadDir(dir)
 	}
-	entry, err := dirs.at(key, key, fixed)
+	entry, err := dirs.at(dir, dir, treeFixed.Load())
 	if err != nil || !entry.info.IsDir() {
 		return os.ReadDir(dir)
 	}

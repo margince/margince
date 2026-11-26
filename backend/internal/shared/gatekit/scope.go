@@ -176,8 +176,8 @@ func (s Scope) universe(t testing.TB) string {
 
 // ModuleRoot answers the directory holding go.mod, found by walking up from the
 // working directory, and spells it relative to that directory: "." for a gate
-// running from the module root. A path the gate walks from it is then spelled
-// as ParseFile names its positions, so a position names the file the walk found.
+// running from the module root. ParseFile caches one tree per spelled path, so
+// a gate that walked the absolute spelling held a second copy of every file.
 func ModuleRoot(t testing.TB) string {
 	t.Helper()
 	cwd, err := os.Getwd()
