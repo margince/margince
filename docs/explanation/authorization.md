@@ -348,7 +348,9 @@ See [write-backbone.md](write-backbone.md) for the write path that runs inside t
   contacts lists leave out a capture-private contact the reader may not see. So they, and the finance
   card's billing contacts, carry a `HiddenRecords` object. It states how many entries the reader may
   not see, and the live colleagues who own them. It never carries a hidden record's name, value or
-  any other field. So a short list does not read as the whole one, and the reader knows whom to
-  ask. `storekit.ReadHiddenRows` counts from the same statement the list reads.
+  any other field. So a short list does not read as the whole one.
+
+  The reader also knows who to ask. `storekit.ReadHiddenRows` counts from the same statement the list
+  reads.
 - **REST, MCP, agents and workers share one gate.** An agent under a passport is capped by the current
   seat and RBAC of the granting human, at the same store entry point.

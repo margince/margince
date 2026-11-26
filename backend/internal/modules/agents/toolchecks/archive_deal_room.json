@@ -1,6 +1,7 @@
 {
   "verb": "archive_deal_room",
   "checks": [
+    "deal.read",
     "deal_room.delete"
   ],
   "takes": [
