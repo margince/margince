@@ -100,14 +100,11 @@ export type SelectProps = Readonly<{
   // cancel must not also do that here — that would fight the very key that
   // just moved focus away.
   onLeave?: () => void;
-  // The closed face's SHAPE. `field` (the default) is the form-column box every
-  // other dropdown wears. `button` draws the same trigger as a filled
-  // `--controlHeight` button: a value that is the one thing a reader sets on a
-  // record and stands beside its name, where a field box reads as a form that
-  // wandered into the header and a pale chip reads as metadata nobody can act
-  // on. The listbox, the keyboard contract and the ARIA are the same either
-  // way; only the face changes. `compact` is the field face at
-  // `--controlHeight`, for a view filter in a card head beside 32px controls.
+  // The closed face. `field` (the default) is the form-column box. `button` is
+  // a filled `--controlHeight` button, for the one value set beside a record's
+  // name, where a field box reads as a form in the header. `compact` is the
+  // field face at `--controlHeight`, for a view filter in a card head. The
+  // listbox, the keys and the ARIA are the same whatever the face.
   appearance?: "field" | "button" | "compact";
   // Busy, as opposed to refused: a write the pick started has not answered.
   // The field face pairs it with the caller's `disabled`; the button face

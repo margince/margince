@@ -3,8 +3,8 @@
 
 // A pick on a settings page is a draft the page's save bar commits; only a
 // `Switch` writes when turned. The rule finds an `onChange` on any other
-// element that reaches a mutation: in its own body, through a function of the
-// same file, or through a prop the same file hands a mutation to.
+// element that reaches a mutation. It looks in the handler's own body, in a
+// function of the same file, and in a prop the same file hands a mutation to.
 
 import ts from "typescript";
 import type { CensusFile, CensusRule } from "../tree";
@@ -143,7 +143,7 @@ export function instantWritesIn(source: ts.SourceFile): InstantWrite[] {
 }
 
 // A control that writes on change, each with why it is not a page's draft.
-// The count is exact both ways, so a new one fails and a fixed one frees it.
+// The count must match both ways, so a new one fails and a fixed one frees it.
 const WAIVED: ReadonlyMap<
   string,
   Readonly<{ count: number; why: string }>
