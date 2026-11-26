@@ -42316,8 +42316,11 @@ type Company360 struct {
 	// AttentionWithheld The reader may not read this account's activities, so no `attention` was derived on any deal or project row. The rows themselves are still listed and still true — this says the reasons behind them are missing, which a card must show rather than let an unexplained row read as a settled one.
 	AttentionWithheld *bool `json:"attention_withheld,omitempty"`
 
-	// BillingContacts Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld.
+	// BillingContacts Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`. A contact outside the caller's row scope is not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
 	BillingContacts *[]BillingContact `json:"billing_contacts,omitempty"`
+
+	// BillingContactsHidden The billing entries the caller's contact row scope withheld from `billing_contacts`. Absent exactly when `billing_contacts` is.
+	BillingContactsHidden *HiddenRecords `json:"billing_contacts_hidden,omitempty"`
 
 	// Company A company. Mirrors the `company` table.
 	Company  Company `json:"company"`
@@ -42325,6 +42328,9 @@ type Company360 struct {
 		Data []Company360Contact `json:"data"`
 		Page PageInfo            `json:"page"`
 	} `json:"contacts,omitempty"`
+
+	// ContactsHidden The account's current employees the caller may not see, by the contact row scope or by the employment tie's own read scope. Absent exactly when `contacts` is.
+	ContactsHidden *HiddenRecords `json:"contacts_hidden,omitempty"`
 
 	// Deals The account's open deals plus the two lifetime figures the header needs.
 	Deals *Company360Deals `json:"deals,omitempty"`
@@ -43774,9 +43780,12 @@ type CompanyFactListResponse struct {
 // account is healthy on the strength of a missing connector.
 type CompanyFinanceSummary struct {
 	// BillingContacts Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
-	// Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
-	BillingContacts *[]BillingContact  `json:"billing_contacts,omitempty"`
-	CompanyId       openapi_types.UUID `json:"company_id"`
+	// Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
+	BillingContacts *[]BillingContact `json:"billing_contacts,omitempty"`
+
+	// BillingContactsHidden The billing entries the caller's contact row scope withheld from `billing_contacts`, the same answer the company page gives. Absent exactly when `billing_contacts` is.
+	BillingContactsHidden *HiddenRecords     `json:"billing_contacts_hidden,omitempty"`
+	CompanyId             openapi_types.UUID `json:"company_id"`
 
 	// CoverageEnd The issue date of the NEWEST mirrored invoice. On a live account it is recent and the trailing windows below mean what they say; on an account that stopped buying it is the answer to "when did this end", and it is what makes a 365-day figure readable as the historical number it is.
 	CoverageEnd *openapi_types.Date `json:"coverage_end,omitempty"`
@@ -54561,6 +54570,21 @@ type HiddenBacklogRows struct {
 
 // HiddenBacklogRowsRule Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
 type HiddenBacklogRowsRule string
+
+// HiddenRecordHolder defines model for HiddenRecordHolder.
+type HiddenRecordHolder struct {
+	DisplayName string             `json:"display_name"`
+	UserId      openapi_types.UUID `json:"user_id"`
+}
+
+// HiddenRecords What the caller's row scope withheld from one list on a record page, so a short list never reads as the whole one. It states how many entries were withheld and which live colleagues own them, so the reader knows whom to ask. A withheld record's name, value and every other field stay withheld. Count 0 with no holders when nothing was withheld.
+type HiddenRecords struct {
+	// Count How many entries the list would have shown under an unbounded scope and did not. It includes entries owned by a colleague who has left, who is not in `holders`.
+	Count int `json:"count" minimum:"0"`
+
+	// Holders The live colleagues who own at least one withheld entry, each once, by name.
+	Holders []HiddenRecordHolder `json:"holders"`
+}
 
 // HistoryEdge Set when this history entry changed a LINK between two records rather than a field
 // of this one, and null on every ordinary row.
