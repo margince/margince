@@ -33,16 +33,9 @@ export function pixelSnap(
  * `rescaled` when the device pixel ratio changes. Returns the release.
  */
 export function watchPlacement(
-  canvas: HTMLCanvasElement,
   moved: () => void,
   rescaled: () => void,
 ): () => void {
-  // Only an animation or transition on the canvas or an ancestor can move it.
-  const onEnd = (event: Event) => {
-    if (event.target instanceof Node && event.target.contains(canvas)) {
-      moved();
-    }
-  };
   // A resolution query matches one ratio only, so each change arms the next.
   let media: MediaQueryList | null = null;
   const onRatio = () => {
@@ -58,13 +51,14 @@ export function watchPlacement(
     media?.addEventListener("change", onRatio);
   };
   arm();
+  // Any animation can push the canvas, even a sibling's, so every end counts.
   window.addEventListener("resize", moved);
-  document.addEventListener("animationend", onEnd, true);
-  document.addEventListener("transitionend", onEnd, true);
+  document.addEventListener("animationend", moved, true);
+  document.addEventListener("transitionend", moved, true);
   return () => {
     window.removeEventListener("resize", moved);
-    document.removeEventListener("animationend", onEnd, true);
-    document.removeEventListener("transitionend", onEnd, true);
+    document.removeEventListener("animationend", moved, true);
+    document.removeEventListener("transitionend", moved, true);
     media?.removeEventListener("change", onRatio);
     media = null;
   };

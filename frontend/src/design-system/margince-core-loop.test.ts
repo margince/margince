@@ -455,17 +455,30 @@ describe("the Core's placement through the page's events", () => {
     core.release();
   });
 
-  it("ignores a transition that ends outside the canvas and its ancestors", () => {
+  it("answers an unrelated transition with one snap frame, no draw and no wake", () => {
     const core = placed();
     const elsewhere = document.createElement("div");
     document.body.append(elsewhere);
-    core.box.left = 300.25;
 
     elsewhere.dispatchEvent(new Event("transitionend", { bubbles: true }));
-    expect(core.frames.size).toBe(0);
-
-    core.host.dispatchEvent(new Event("animationend", { bubbles: true }));
+    elsewhere.dispatchEvent(new Event("animationend", { bubbles: true }));
+    expect(core.frames.size).toBeLessThanOrEqual(1);
     core.flush();
+
+    expect(core.work).toEqual(core.settled);
+    expect(core.frames.size).toBe(0);
+    core.release();
+  });
+
+  it("re-lands when a sibling's transition pushes the canvas", () => {
+    const core = placed();
+    const sibling = document.createElement("div");
+    core.host.before(sibling);
+    core.box.left = 300.25;
+
+    sibling.dispatchEvent(new Event("transitionend", { bubbles: true }));
+    core.flush();
+
     expect(core.canvas.style.translate).toBe("0.25px 0px");
     expect(core.work).toEqual(core.settled);
     core.release();
@@ -515,8 +528,10 @@ describe("the Core's placement through the page's events", () => {
     const onWindow = tally(window);
     const onDocument = tally(document);
     const core = placed();
+    window.dispatchEvent(new Event("resize"));
     core.release();
 
+    expect(core.frames.size).toBe(0);
     for (const [added, removed] of [...onWindow(), ...onDocument()]) {
       expect(removed).toBe(added);
     }

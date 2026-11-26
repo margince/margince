@@ -98,8 +98,9 @@ const MIN_SHRINK = 0.5;
 /**
  * The points for a canvas of `cssSide` CSS px drawn at `side` device px.
  *
- * Above 80 CSS px the points grow softer and denser. A point wider than the cap
- * is drawn at the cap, with density raised by one over the root of the shrink.
+ * From LARGE_FROM CSS px the points grow softer and denser. A point wider than
+ * the cap is drawn at the cap; density rises by one over the root of the shrink.
+ * The shrink stops at MIN_SHRINK, and the count at MAX_POINTS.
  */
 export function pointsFor(
   cssSide: number,

@@ -107,8 +107,8 @@ void main(){
     arc *= arcLen;
     u = fract(arc - 0.21 * L + 0.012 * t);
   } else if(arc > arcLen){ hide(); return; }
-  /* For gold this divides the scale back out. Folded away, rounding moves
-     pixels a level, so it stays. */
+  /* For gold this divides the scale back out. Folding it into the gold branch
+     changes rounding by one level, so it stays. */
   float s = arc / arcLen;
   float ends = smoothstep(0.0, 0.08, s) * (1.0 - smoothstep(0.86, 1.0, s));
 

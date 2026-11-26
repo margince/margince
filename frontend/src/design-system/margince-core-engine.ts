@@ -286,7 +286,6 @@ function watchCanvas(
   });
   observer.observe(canvas);
   const unplace = watchPlacement(
-    canvas,
     () => loopRef.current?.resnap(),
     () => {
       loopRef.current?.remeasure();
