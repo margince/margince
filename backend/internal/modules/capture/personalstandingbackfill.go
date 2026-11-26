@@ -87,8 +87,8 @@ func CountPersonalWithoutStanding(ctx context.Context, q datatask.Querier, maxim
 // withdrawn when the seat writes to them again.
 func PersonalStandingDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795677677_private_senders_stand", Version: 1,
-		Title: systemtext.Literal("datatask.title.core.1795677677_private_senders_stand"), Requires: []string{"core/1795677677"},
+		ID: "core/1795688930_private_senders_stand", Version: 1,
+		Title: systemtext.Literal("datatask.title.core.1795688930_private_senders_stand"), Requires: []string{"core/1795677677"},
 		Steps: []datatask.Step{{
 			Name: "private_senders", Limit: 100, MinLimit: 5,
 			Audit: datatask.AuditPolicy{PerRecord: true},
