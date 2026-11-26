@@ -27,7 +27,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { AppLink } from "./applink";
-import { Avatar } from "./atoms";
+import { Avatar, Button } from "./atoms";
 import { ContactLink } from "./contactlink";
 import "./recordcard.css";
 
@@ -114,14 +114,15 @@ export function RecordCard({
           {mark}
         </AppLink>
       ) : (
-        <button
-          type="button"
+        <Button
+          variant="link"
+          align="start"
           className="record-card-open"
           aria-haspopup="dialog"
           onClick={onOpen}
         >
           {mark}
-        </button>
+        </Button>
       )}
       {(position || email) && (
         <div className="record-card-facts">
