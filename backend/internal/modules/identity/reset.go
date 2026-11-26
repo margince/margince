@@ -118,7 +118,7 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		if rawToken == "" {
 			return
 		}
-		link := passwordLink(h.passwordLinkBaseURL, rawToken)
+		link := passwordLink(h.passwordLinkBaseURL, resetPasswordRoute, rawToken)
 		words := h.mailCopy(workCtx, email.String())
 		body := words.AccountMessage(false, "", "", link)
 		if err := mailer.SendProduct(workCtx, h.resetMailer, email.String(), words.ResetSubject, body); err != nil {

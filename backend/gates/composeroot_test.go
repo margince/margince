@@ -45,7 +45,9 @@ const (
 	// test file for the data reset cases of an event the sweep orphaned. Raised by
 	// 1 test file for the extension notice kind cases. Raised by 1 test file for
 	// the unit tool coverage cases, which read the unexported tool coverage census.
-	composeRootTestFiles = 1919
+	// Raised by 2 test files for the row scope cases of an owned extension kind.
+	// They drive unexported readers of the kind.
+	composeRootTestFiles = 1921
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -105,8 +107,11 @@ const (
 	// the raw subjects a polled Telegram update records.
 	// Raised by 61 production and 2 test lines for the history-narrowing fleet
 	// worker.
-	composeRootProductionLines = 231_383
-	composeRootTestLines       = 361_806
+	// Raised by 76 production and 459 test lines for the row scope of an owned
+	// extension kind and its cases. They drive the unexported report runner,
+	// History query, boot owner check and filter preview handler.
+	composeRootProductionLines = 231_459
+	composeRootTestLines       = 362_265
 )
 
 // A read under these floors stopped early or read the wrong place, and would

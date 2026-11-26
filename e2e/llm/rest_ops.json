@@ -219,6 +219,7 @@
     "GET /v1/companies/{id}/technical-enrich/latest": "read_view",
     "GET /v1/companies/{id}/vat-check": "read_view",
     "GET /v1/company": "get_anchor_company",
+    "GET /v1/company-types": "read_company_types",
     "GET /v1/company/context": "get_anchor_company_context",
     "GET /v1/company/context/capabilities": "get_anchor_company_context_capabilities",
     "GET /v1/company/site-reads/{readId}": "get_anchor_company_site_read",
@@ -341,6 +342,7 @@
     "GET /v1/legal-reviews": "list_legal_reviews",
     "GET /v1/legal-reviews/settings": "get_legal_review_settings",
     "GET /v1/legal-reviews/{id}": "get_legal_review",
+    "GET /v1/link-types": "read_link_types",
     "GET /v1/list-filters": "describe_list_filters",
     "GET /v1/lists": "read_view",
     "GET /v1/lists/{id}": "read_lists",
@@ -391,6 +393,7 @@
     "GET /v1/query-vocabulary": "describe_query_vocabulary",
     "GET /v1/read-views": "describe_views",
     "GET /v1/record-fields": "describe_record_fields",
+    "GET /v1/record-kinds": "read_record_kinds",
     "GET /v1/record-roles": "read_view",
     "GET /v1/records/references": "read_view",
     "GET /v1/records/{entity_type}/{entity_id}/lists": "read_view",
@@ -2850,6 +2853,7 @@
       "content_type",
       "filename"
     ],
+    "read_company_types": [],
     "read_corpus": [
       "id"
     ],
@@ -2869,6 +2873,7 @@
       "kind",
       "state"
     ],
+    "read_link_types": [],
     "read_lists": [
       "cursor",
       "definition",
@@ -2893,6 +2898,7 @@
       "id",
       "record_type"
     ],
+    "read_record_kinds": [],
     "read_recovery_health": [],
     "read_reporting": [
       "cursor",

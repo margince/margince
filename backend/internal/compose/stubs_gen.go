@@ -827,6 +827,10 @@ func (stubs) ChangePassword(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ChangePassword")
 }
 
+func (stubs) ConfirmMemberMerge(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ConfirmMemberMerge")
+}
+
 func (stubs) RequestPasswordReset(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RequestPasswordReset")
 }
@@ -4313,6 +4317,10 @@ func (stubs) HandOverUserWork(w nethttp.ResponseWriter, r *nethttp.Request, id c
 
 func (stubs) MergeMembers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergeMembersParams) {
 	httperr.NotImplemented(w, r, "MergeMembers")
+}
+
+func (stubs) RequestMemberMerge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RequestMemberMerge")
 }
 
 func (stubs) RemoveUserMfa(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

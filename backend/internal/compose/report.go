@@ -155,6 +155,9 @@ type reportRequest struct {
 type reportSpec struct {
 	entity datasource.EntityType
 	table  string
+	// extensionKind is the `ext:<unit>:<kind>` whose rows table holds, empty
+	// for a core population. It selects the kind's row scope.
+	extensionKind string
 	// joins widen the FROM side with fixed lookup tables (e.g. the
 	// deal's stage for win_probability); the row grain stays the base
 	// table's — a spec must never join a to-many side, or aggregates

@@ -1010,6 +1010,7 @@ var Declared = map[string][]string{
 	"POST /v1/users/{id}/deactivate":                                           {},
 	"POST /v1/users/{id}/handover":                                             {},
 	"POST /v1/users/{id}/merge":                                                {},
+	"POST /v1/users/{id}/merge-requests":                                       {},
 	"POST /v1/users/{id}/password-link":                                        {},
 	"POST /v1/users/{id}/reactivate":                                           {},
 	"POST /v1/users/{id}/remove":                                               {},

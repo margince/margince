@@ -774,6 +774,7 @@ export const ModelsTiersTab: Story = catalogTab("models", "tiers");
 export const ModelsRulesTab: Story = catalogTab("models", "rules");
 export const ModelsTasksTab: Story = catalogTab("models", "tasks");
 export const ModelsPricesTab: Story = catalogTab("models", "prices");
+export const ModelsRulesTab: Story = catalogTab("models", "rules");
 export const UsageAgentsTab: Story = catalogTab("usage", "agents");
 export const UsageSpendTab: Story = catalogTab("usage", "spend");
 export const AutomationsLibraryTab: Story = catalogTab(
