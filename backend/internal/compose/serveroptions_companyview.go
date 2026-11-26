@@ -173,11 +173,11 @@ func WithRoleProposals(brain completer) Option {
 // honestly. What the model buys here is phrasing. A buying role has no such
 // floor, because the only thing left to read one from is the job title.
 func WithIntroRequestDraft(brain completer) Option {
-	return func(s *Server, _ *pgxpool.Pool) {
+	return func(s *Server, pool *pgxpool.Pool) {
 		if s.company360Svc == nil {
 			return
 		}
-		s.company360Handlers = s.WithIntroLane(brain)
+		s.company360Handlers = s.WithIntroLane(brain, ai.NewVoiceStore(InstallationDB(pool)))
 	}
 }
 
@@ -191,7 +191,7 @@ func WithIntroRequestDraft(brain completer) Option {
 //
 // Its absence is a template, not a 501, for the reason stated above.
 func WithIntroNoteDraft(brain completer) Option {
-	return func(s *Server, _ *pgxpool.Pool) {
-		s.Reads = s.WithIntroNoteLane(brain)
+	return func(s *Server, pool *pgxpool.Pool) {
+		s.Reads = s.WithIntroNoteLane(brain, ai.NewVoiceStore(InstallationDB(pool)))
 	}
 }

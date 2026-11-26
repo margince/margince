@@ -43,20 +43,9 @@ func FileChatMessage(
 	if binding.SeatID.IsZero() && connector.IsCaptureOnlyThread(binding.Provider, rec.ThreadKey) {
 		return datasource.EntityRef{}, fmt.Errorf("%w: a business account's message names no seat, so no posture could decide who reads it", apperrors.ErrInvalidArgument)
 	}
-	if binding.Ownership == connector.ChatOwnedByMember {
-		actor, ok := principal.Actor(ctx)
-		if !ok || binding.OwnerUserID.IsZero() {
-			return datasource.EntityRef{}, fmt.Errorf("%w: a member-owned chat connection names no member to file for", apperrors.ErrInvalidArgument)
-		}
-		actor.UserID = binding.OwnerUserID
-		ctx = principal.WithActor(ctx, actor)
-	}
-	if !binding.SeatID.IsZero() {
-		ctx = withChatSeat(ctx, binding.SeatID)
-		if binding.Ownership == connector.ChatOwnedByWorkspace {
-			// A company account is a team seat, imported as a shared mailbox is.
-			ctx = withSharedMailbox(ctx, binding.SeatID)
-		}
+	ctx, err = chatActingContext(ctx, binding)
+	if err != nil {
+		return datasource.EntityRef{}, err
 	}
 	return sink.Upsert(ctx, rec)
 }
@@ -68,10 +57,7 @@ func chatRecord(binding connector.ChatBinding, msg connector.ChatMessage) (conne
 		return connector.NormalizedRecord{}, err
 	}
 	keys := chatKeys(binding, msg)
-	system := binding.SourceSystem
-	if system == "" {
-		system = binding.Provider
-	}
+	system := chatSourceSystem(binding)
 	// A source with keys of its own is stamped with its source system alone; a
 	// derived key is stamped "<provider>:<key>".
 	source := binding.Provider + ":" + keys.SourceID
@@ -88,6 +74,7 @@ func chatRecord(binding connector.ChatBinding, msg connector.ChatMessage) (conne
 			AccountScope:  binding.AccountScope,
 			ChannelUserID: msg.Counterparty.UserID,
 			Username:      msg.Counterparty.Username,
+			Alias:         chatAlias(binding.Provider, msg.Counterparty.Alias),
 		},
 	}.WithDeclaredEmailMerge(msg.Counterparty.EmailMayMatch).WithChosenSubject(msg.ChosenSubject)
 	return connector.NormalizedRecord{
@@ -100,16 +87,18 @@ func chatRecord(binding connector.ChatBinding, msg connector.ChatMessage) (conne
 			SourceIDNamesAContact: keys.SourceIDNamesAContact,
 		},
 		Fields: ActivityFields{
-			Kind:            ChatMessageKind,
-			ChannelProvider: binding.Provider,
-			ProviderPrivate: msg.ProviderPrivate,
-			Subject:         msg.Subject,
-			Body:            msg.Body,
-			OccurredAt:      msg.OccurredAt,
-			DateOnly:        msg.OccurredDay,
-			Direction:       msg.Direction,
-			memberOwned:     binding.Ownership == connector.ChatOwnedByMember,
-			pinnedPosture:   binding.PinnedPosture,
+			Kind:              ChatMessageKind,
+			ChannelProvider:   binding.Provider,
+			ProviderPrivate:   msg.ProviderPrivate,
+			Subject:           msg.Subject,
+			Body:              msg.Body,
+			OccurredAt:        msg.OccurredAt,
+			DateOnly:          msg.OccurredDay,
+			Direction:         msg.Direction,
+			memberOwned:       binding.Ownership == connector.ChatOwnedByMember,
+			pinnedPosture:     binding.PinnedPosture,
+			sourceRevision:    msg.Revision,
+			sourceRevisionSeq: msg.RevisionSeq,
 		},
 		Source:         source,
 		CapturedBy:     binding.CapturedBy,
@@ -142,13 +131,7 @@ func chatKeys(binding connector.ChatBinding, msg connector.ChatMessage) connecto
 // provider's own and are joined with colons, so neither may hold one. A source
 // that supplies its own keys is held to the same bounds the unit door applies.
 func validChatKeyParts(binding connector.ChatBinding, msg connector.ChatMessage) error {
-	if err := validChatOwnership(binding); err != nil {
-		return err
-	}
-	if binding.Provider == "" || binding.CapturedBy == "" {
-		return fmt.Errorf("%w: a chat binding names no provider or capturer", apperrors.ErrInvalidArgument)
-	}
-	if err := validPinnedPosture(binding.PinnedPosture); err != nil {
+	if err := validChatBinding(binding); err != nil {
 		return err
 	}
 	if msg.Counterparty.UserID == "" {
@@ -158,6 +141,18 @@ func validChatKeyParts(binding connector.ChatBinding, msg connector.ChatMessage)
 		return validOwnKeys(msg)
 	}
 	return validScopedKeys(binding, msg)
+}
+
+// validChatBinding holds what every chat connection must state, whether it
+// files a message or changes one.
+func validChatBinding(binding connector.ChatBinding) error {
+	if err := validChatOwnership(binding); err != nil {
+		return err
+	}
+	if binding.Provider == "" || binding.CapturedBy == "" {
+		return fmt.Errorf("%w: a chat binding names no provider or capturer", apperrors.ErrInvalidArgument)
+	}
+	return validPinnedPosture(binding.PinnedPosture)
 }
 
 // validOwnKeys holds a message whose source supplied its own keys. Direction may
@@ -175,15 +170,25 @@ func validOwnKeys(msg connector.ChatMessage) error {
 // validScopedKeys holds a message whose keys are derived from the connection's
 // scopes and the provider's own ids.
 func validScopedKeys(binding connector.ChatBinding, msg connector.ChatMessage) error {
+	if err := validScopedIDs(binding, msg.ConversationID, msg.IdempotencyKey); err != nil {
+		return err
+	}
+	if msg.Direction != connector.DirectionInbound && msg.Direction != connector.DirectionOutbound {
+		return fmt.Errorf("%w: a chat message is neither inbound nor outbound", apperrors.ErrInvalidArgument)
+	}
+	return nil
+}
+
+// validScopedIDs holds the part of a scoped key a change to a message shares
+// with the message: the connection's scopes and the provider's own ids.
+func validScopedIDs(binding connector.ChatBinding, conversationID, messageID string) error {
 	switch {
 	case binding.KeyScope == "" || binding.ThreadScope == "":
 		return fmt.Errorf("%w: a chat binding names no key scope", apperrors.ErrInvalidArgument)
-	case msg.ConversationID == "" || msg.IdempotencyKey == "":
+	case conversationID == "" || messageID == "":
 		return fmt.Errorf("%w: a chat message names no conversation or message", apperrors.ErrInvalidArgument)
-	case strings.Contains(msg.ConversationID, ":") || strings.Contains(msg.IdempotencyKey, ":"):
+	case strings.Contains(conversationID, ":") || strings.Contains(messageID, ":"):
 		return fmt.Errorf("%w: a chat conversation or message id holds a colon, which would make its key ambiguous", apperrors.ErrInvalidArgument)
-	case msg.Direction != connector.DirectionInbound && msg.Direction != connector.DirectionOutbound:
-		return fmt.Errorf("%w: a chat message is neither inbound nor outbound", apperrors.ErrInvalidArgument)
 	}
 	return nil
 }
@@ -207,4 +212,43 @@ func validPinnedPosture(posture string) error {
 		return nil
 	}
 	return fmt.Errorf("%w: a pinned chat posture is classified or held", apperrors.ErrInvalidArgument)
+}
+
+func chatAlias(provider string, alias *connector.ChatAlias) *connector.ChannelIdentity {
+	if alias == nil {
+		return nil
+	}
+	return &connector.ChannelIdentity{Provider: provider, AccountScope: alias.AccountScope, ChannelUserID: alias.UserID}
+}
+
+// chatActingContext puts on the context who a chat connection acts for: the
+// member behind a member-owned account, and the seat the account files through.
+// Filing a message and changing one both run under it, so the two cannot
+// disagree about whose correspondence a message is.
+func chatActingContext(ctx context.Context, binding connector.ChatBinding) (context.Context, error) {
+	if binding.Ownership == connector.ChatOwnedByMember {
+		actor, ok := principal.Actor(ctx)
+		if !ok || binding.OwnerUserID.IsZero() {
+			return ctx, fmt.Errorf("%w: a member-owned chat connection names no member to file for", apperrors.ErrInvalidArgument)
+		}
+		actor.UserID = binding.OwnerUserID
+		ctx = principal.WithActor(ctx, actor)
+	}
+	if !binding.SeatID.IsZero() {
+		ctx = withChatSeat(ctx, binding.SeatID)
+		if binding.Ownership == connector.ChatOwnedByWorkspace {
+			// A company account is a team seat, imported as a shared mailbox is.
+			ctx = withSharedMailbox(ctx, binding.SeatID)
+		}
+	}
+	return ctx, nil
+}
+
+// chatSourceSystem is the natural key's source system: the provider, unless an
+// extension unit's records are keyed under the source the unit declared.
+func chatSourceSystem(binding connector.ChatBinding) string {
+	if binding.SourceSystem == "" {
+		return binding.Provider
+	}
+	return binding.SourceSystem
 }

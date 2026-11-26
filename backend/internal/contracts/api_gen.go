@@ -18085,6 +18085,24 @@ func (e MailDraftEditorStateLanguage) Valid() bool {
 	}
 }
 
+// Defines values for MailHistoryNarrowingPosture.
+const (
+	MailHistoryNarrowingPostureClassified MailHistoryNarrowingPosture = "classified"
+	MailHistoryNarrowingPostureHeld       MailHistoryNarrowingPosture = "held"
+)
+
+// Valid indicates whether the value is a known member of the MailHistoryNarrowingPosture enum.
+func (e MailHistoryNarrowingPosture) Valid() bool {
+	switch e {
+	case MailHistoryNarrowingPostureClassified:
+		return true
+	case MailHistoryNarrowingPostureHeld:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MailLanguage.
 const (
 	MailLanguageDe MailLanguage = "de"
@@ -18532,6 +18550,48 @@ func (e MeetingResponse) Valid() bool {
 	}
 }
 
+// Defines values for MemberMergeConfirmationSide.
+const (
+	MemberMergeConfirmationSideSource   MemberMergeConfirmationSide = "source"
+	MemberMergeConfirmationSideSurvivor MemberMergeConfirmationSide = "survivor"
+)
+
+// Valid indicates whether the value is a known member of the MemberMergeConfirmationSide enum.
+func (e MemberMergeConfirmationSide) Valid() bool {
+	switch e {
+	case MemberMergeConfirmationSideSource:
+		return true
+	case MemberMergeConfirmationSideSurvivor:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MemberMergeConfirmationState.
+const (
+	MemberMergeConfirmationStateConfirmed    MemberMergeConfirmationState = "confirmed"
+	MemberMergeConfirmationStateNotNeeded    MemberMergeConfirmationState = "not_needed"
+	MemberMergeConfirmationStateNotRequested MemberMergeConfirmationState = "not_requested"
+	MemberMergeConfirmationStateRequested    MemberMergeConfirmationState = "requested"
+)
+
+// Valid indicates whether the value is a known member of the MemberMergeConfirmationState enum.
+func (e MemberMergeConfirmationState) Valid() bool {
+	switch e {
+	case MemberMergeConfirmationStateConfirmed:
+		return true
+	case MemberMergeConfirmationStateNotNeeded:
+		return true
+	case MemberMergeConfirmationStateNotRequested:
+		return true
+	case MemberMergeConfirmationStateRequested:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MemberRetirementBlocker.
 const (
 	MemberRetirementBlockerAnalyticsShares        MemberRetirementBlocker = "analytics_shares"
@@ -18540,6 +18600,7 @@ const (
 	MemberRetirementBlockerBookingPages           MemberRetirementBlocker = "booking_pages"
 	MemberRetirementBlockerChooseReceiver         MemberRetirementBlocker = "choose_receiver"
 	MemberRetirementBlockerChooseSurvivor         MemberRetirementBlocker = "choose_survivor"
+	MemberRetirementBlockerConfirmationMissing    MemberRetirementBlocker = "confirmation_missing"
 	MemberRetirementBlockerDataRequests           MemberRetirementBlocker = "data_requests"
 	MemberRetirementBlockerDeactivateFirst        MemberRetirementBlocker = "deactivate_first"
 	MemberRetirementBlockerDealRooms              MemberRetirementBlocker = "deal_rooms"
@@ -18557,9 +18618,9 @@ const (
 	MemberRetirementBlockerSavedViews             MemberRetirementBlocker = "saved_views"
 	MemberRetirementBlockerScheduledMail          MemberRetirementBlocker = "scheduled_mail"
 	MemberRetirementBlockerSelfSurvivor           MemberRetirementBlocker = "self_survivor"
-	MemberRetirementBlockerSourceUsed             MemberRetirementBlocker = "source_used"
 	MemberRetirementBlockerStateChanged           MemberRetirementBlocker = "state_changed"
 	MemberRetirementBlockerStewardedLists         MemberRetirementBlocker = "stewarded_lists"
+	MemberRetirementBlockerSuspendedSide          MemberRetirementBlocker = "suspended_side"
 	MemberRetirementBlockerVoiceProfiles          MemberRetirementBlocker = "voice_profiles"
 	MemberRetirementBlockerWebForms               MemberRetirementBlocker = "web_forms"
 	MemberRetirementBlockerWebhooks               MemberRetirementBlocker = "webhooks"
@@ -18581,6 +18642,8 @@ func (e MemberRetirementBlocker) Valid() bool {
 	case MemberRetirementBlockerChooseReceiver:
 		return true
 	case MemberRetirementBlockerChooseSurvivor:
+		return true
+	case MemberRetirementBlockerConfirmationMissing:
 		return true
 	case MemberRetirementBlockerDataRequests:
 		return true
@@ -18616,11 +18679,11 @@ func (e MemberRetirementBlocker) Valid() bool {
 		return true
 	case MemberRetirementBlockerSelfSurvivor:
 		return true
-	case MemberRetirementBlockerSourceUsed:
-		return true
 	case MemberRetirementBlockerStateChanged:
 		return true
 	case MemberRetirementBlockerStewardedLists:
+		return true
+	case MemberRetirementBlockerSuspendedSide:
 		return true
 	case MemberRetirementBlockerVoiceProfiles:
 		return true
@@ -18645,6 +18708,7 @@ const (
 	MemberRetirementConsequenceOriginalAttribution      MemberRetirementConsequence = "original_attribution"
 	MemberRetirementConsequencePrivateAlertsArchived    MemberRetirementConsequence = "private_alerts_archived"
 	MemberRetirementConsequencePrivateAudiencesRetained MemberRetirementConsequence = "private_audiences_retained"
+	MemberRetirementConsequenceSignInDropped            MemberRetirementConsequence = "sign_in_dropped"
 	MemberRetirementConsequenceSourceSignedOut          MemberRetirementConsequence = "source_signed_out"
 	MemberRetirementConsequenceSurvivorAccess           MemberRetirementConsequence = "survivor_access"
 	MemberRetirementConsequenceSurvivorInactive         MemberRetirementConsequence = "survivor_inactive"
@@ -18665,11 +18729,49 @@ func (e MemberRetirementConsequence) Valid() bool {
 		return true
 	case MemberRetirementConsequencePrivateAudiencesRetained:
 		return true
+	case MemberRetirementConsequenceSignInDropped:
+		return true
 	case MemberRetirementConsequenceSourceSignedOut:
 		return true
 	case MemberRetirementConsequenceSurvivorAccess:
 		return true
 	case MemberRetirementConsequenceSurvivorInactive:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MemberUnavailableActionAction.
+const (
+	MemberUnavailableActionActionMerge MemberUnavailableActionAction = "merge"
+)
+
+// Valid indicates whether the value is a known member of the MemberUnavailableActionAction enum.
+func (e MemberUnavailableActionAction) Valid() bool {
+	switch e {
+	case MemberUnavailableActionActionMerge:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MemberUnavailableActionReason.
+const (
+	MemberUnavailableActionReasonAgentSeat MemberUnavailableActionReason = "agent_seat"
+	MemberUnavailableActionReasonSelf      MemberUnavailableActionReason = "self"
+	MemberUnavailableActionReasonSoleAdmin MemberUnavailableActionReason = "sole_admin"
+)
+
+// Valid indicates whether the value is a known member of the MemberUnavailableActionReason enum.
+func (e MemberUnavailableActionReason) Valid() bool {
+	switch e {
+	case MemberUnavailableActionReasonAgentSeat:
+		return true
+	case MemberUnavailableActionReasonSelf:
+		return true
+	case MemberUnavailableActionReasonSoleAdmin:
 		return true
 	default:
 		return false
@@ -28630,6 +28732,42 @@ func (e WeeklyReviewOutlookPeriodKind) Valid() bool {
 	}
 }
 
+// Defines values for WhatsAppConnectionMailVisibility.
+const (
+	WhatsAppConnectionMailVisibilityHeld   WhatsAppConnectionMailVisibility = "held"
+	WhatsAppConnectionMailVisibilityShared WhatsAppConnectionMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the WhatsAppConnectionMailVisibility enum.
+func (e WhatsAppConnectionMailVisibility) Valid() bool {
+	switch e {
+	case WhatsAppConnectionMailVisibilityHeld:
+		return true
+	case WhatsAppConnectionMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WhatsAppConnectionStatus.
+const (
+	WhatsAppConnectionStatusConnected    WhatsAppConnectionStatus = "connected"
+	WhatsAppConnectionStatusDisconnected WhatsAppConnectionStatus = "disconnected"
+)
+
+// Valid indicates whether the value is a known member of the WhatsAppConnectionStatus enum.
+func (e WhatsAppConnectionStatus) Valid() bool {
+	switch e {
+	case WhatsAppConnectionStatusConnected:
+		return true
+	case WhatsAppConnectionStatusDisconnected:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorkArea.
 const (
 	WorkAreaAdminSettings     WorkArea = "admin_settings"
@@ -36455,6 +36593,24 @@ type AiTaskSettings struct {
 	Thinking *string `json:"thinking,omitempty"`
 }
 
+// AiTeamRules defines model for AiTeamRules.
+type AiTeamRules struct {
+	Text string `json:"text"`
+
+	// UpdatedAt When the text was last saved. Left out while none was saved.
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+
+	// UpdatedBy Who saved it last. Left out while none was saved.
+	UpdatedBy *string `json:"updated_by,omitempty"`
+}
+
+// AiTeamRulesChange defines model for AiTeamRulesChange.
+type AiTeamRulesChange struct {
+	// ExpectedUpdatedAt The updated_at the editor read. Left out when the editor read no saved version.
+	ExpectedUpdatedAt *time.Time `json:"expected_updated_at,omitempty"`
+	Text              string     `json:"text"`
+}
+
 // AiTierBinding One tier's binding. A key this schema does not declare is refused with a 422 naming its
 // path, on every routing write.
 type AiTierBinding struct {
@@ -40511,7 +40667,12 @@ type CaptureConnection struct {
 	// owner chose none, which keeps the normal policy. Set and cleared through
 	// PUT /connectors/{provider}/history-baseline.
 	HistoryBaseline *MailHistoryBaseline `json:"history_baseline,omitempty"`
-	Id              openapi_types.UUID   `json:"id"`
+
+	// HistoryNarrowing Earlier mail of this mailbox that a background job is still narrowing, after a change
+	// asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+	// yet keeps the audience it had.
+	HistoryNarrowing *MailHistoryNarrowing `json:"history_narrowing,omitempty"`
+	Id               openapi_types.UUID    `json:"id"`
 
 	// LastSuccessAt Last successful sync for this mailbox; null before one succeeds.
 	LastSuccessAt *time.Time `json:"last_success_at,omitempty"`
@@ -48866,6 +49027,21 @@ type CreateWebhookSubscriptionRequest struct {
 
 	// TargetUrl HTTPS-only; http:// is rejected (the contract enforces the scheme, matching the store's check).
 	TargetUrl string `json:"target_url"`
+}
+
+// CreateWhatsAppConnectionRequest defines model for CreateWhatsAppConnectionRequest.
+type CreateWhatsAppConnectionRequest struct {
+	// AccessToken The system-user access token for the WhatsApp Business Account. Sealed into the credential store on arrival and never echoed back.
+	AccessToken string `json:"accessToken"`
+
+	// AppSecret The Meta app's secret, which signs each webhook delivery. Sealed into the credential store on arrival and never echoed back.
+	AppSecret          string `json:"appSecret"`
+	DisplayPhoneNumber string `json:"displayPhoneNumber"`
+	PhoneNumberId      string `json:"phoneNumberId"`
+
+	// ReaderTeamId The team that reads the number's messages. The number's seat starts `held`: only this team reads them until an admin shares them.
+	ReaderTeamId openapi_types.UUID `json:"readerTeamId"`
+	WabaId       string             `json:"wabaId"`
 }
 
 // CreateWorkspaceEmailDomainRequest defines model for CreateWorkspaceEmailDomainRequest.
@@ -59051,6 +59227,20 @@ type MailHistoryBaseline struct {
 	Timezone string `json:"timezone"`
 }
 
+// MailHistoryNarrowing Earlier mail of this mailbox that a background job is still narrowing, after a change
+// asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+// yet keeps the audience it had.
+type MailHistoryNarrowing struct {
+	// Posture What the earlier mail is narrowed to.
+	Posture MailHistoryNarrowingPosture `json:"posture"`
+
+	// Remaining Messages still to narrow.
+	Remaining int `json:"remaining" minimum:"0"`
+}
+
+// MailHistoryNarrowingPosture What the earlier mail is narrowed to.
+type MailHistoryNarrowingPosture string
+
 // MailLanguage A language this build writes the installation's own mail in.
 type MailLanguage string
 
@@ -59760,6 +59950,22 @@ type MeetingRecordLinkEntityType string
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
 type MeetingResponse string
 
+// MemberMergeConfirmation defines model for MemberMergeConfirmation.
+type MemberMergeConfirmation struct {
+	DisplayName string                      `json:"display_name"`
+	Side        MemberMergeConfirmationSide `json:"side"`
+
+	// State `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
+	State  MemberMergeConfirmationState `json:"state"`
+	UserId openapi_types.UUID           `json:"user_id"`
+}
+
+// MemberMergeConfirmationSide defines model for MemberMergeConfirmation.Side.
+type MemberMergeConfirmationSide string
+
+// MemberMergeConfirmationState `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
+type MemberMergeConfirmationState string
+
 // MemberRetirementBlocker defines model for MemberRetirementBlocker.
 type MemberRetirementBlocker string
 
@@ -59792,7 +59998,10 @@ type MemberRetirementPreview struct {
 	// BlockingRecords The records behind each blocker that is about records, such as `deal_rooms` or
 	// `webhooks`. A blocker that is a state, such as `deactivate_first`, has no entry.
 	BlockingRecords *[]MemberRetirementBlockingRecords `json:"blocking_records,omitempty"`
-	Consequences    []MemberRetirementConsequence      `json:"consequences"`
+
+	// Confirmations Present for a merge whose source account has been used: one entry per side, saying whether that side's holder has confirmed. `confirmation_missing` is in `blockers` while any side is `requested` or `not_requested`.
+	Confirmations *[]MemberMergeConfirmation    `json:"confirmations,omitempty"`
+	Consequences  []MemberRetirementConsequence `json:"consequences"`
 
 	// Owned Live records per kind.
 	Owned         HandoverCounts       `json:"owned"`
@@ -59803,6 +60012,20 @@ type MemberRetirementPreview struct {
 	SurvivorName  *string              `json:"survivor_name,omitempty"`
 	Token         string               `json:"token"`
 }
+
+// MemberUnavailableAction One member verb the caller holds the grant for and this member refuses, with why.
+type MemberUnavailableAction struct {
+	Action MemberUnavailableActionAction `json:"action"`
+
+	// Reason Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
+	Reason MemberUnavailableActionReason `json:"reason"`
+}
+
+// MemberUnavailableActionAction defines model for MemberUnavailableAction.Action.
+type MemberUnavailableActionAction string
+
+// MemberUnavailableActionReason Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
+type MemberUnavailableActionReason string
 
 // MergeMembersRequest defines model for MergeMembersRequest.
 type MergeMembersRequest struct {
@@ -69097,7 +69320,8 @@ type SetMailPostureRequest struct {
 	// ApplyToHistory Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
 	// narrows: a move towards `shared` leaves history where it is, because opening what was
 	// captured under a stricter answer is a separate decision from what to do next. Rows a
-	// human set to `selected` are never touched.
+	// human set to `selected` are never touched. A background job does the narrowing after
+	// the answer; a narrowing to `held` still pending is never loosened to `classified`.
 	ApplyToHistory *bool `json:"apply_to_history,omitempty"`
 
 	// DefaultSender `true` makes this mailbox the one the caller's new mail goes out from, and unmarks the
@@ -69376,6 +69600,11 @@ type SharedMailbox struct {
 
 	// ConnectedBy The admin who last connected it.
 	ConnectedBy *openapi_types.UUID `json:"connected_by,omitempty"`
+
+	// HistoryNarrowing Earlier mail of this mailbox that a background job is still narrowing, after a change
+	// asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+	// yet keeps the audience it had.
+	HistoryNarrowing *MailHistoryNarrowing `json:"history_narrowing,omitempty"`
 
 	// Id The connection id. It stays the same across a disconnect and a reconnect.
 	Id openapi_types.UUID `json:"id"`
@@ -72989,6 +73218,9 @@ type User struct {
 	// Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
 	Locale *UserLocale `json:"locale,omitempty"`
 
+	// MergeNeedsConfirmation True when `merge` is in `allowed_actions` and this account has been used (a password, a sign-in or a linked provider), so merging it waits for the holder of each side that can still sign in to confirm. Absent otherwise, and on the same views as `allowed_actions`.
+	MergeNeedsConfirmation *bool `json:"merge_needs_confirmation,omitempty"`
+
 	// MergedFrom Original account identities consolidated into this member, present only on the administration view.
 	MergedFrom *[]SeatName `json:"merged_from,omitempty"`
 
@@ -73012,8 +73244,11 @@ type User struct {
 	TimezoneChosen *bool `json:"timezone_chosen,omitempty"`
 
 	// TimezoneSetBy The agent that set `timezone` for this user, as its `captured_by` stamp. Present on the caller's own seat while the zone is the agent's; absent once the user chooses, and on the roster.
-	TimezoneSetBy *string    `json:"timezone_set_by,omitempty"`
-	UpdatedAt     *time.Time `json:"updated_at,omitempty"`
+	TimezoneSetBy *string `json:"timezone_set_by,omitempty"`
+
+	// UnavailableActions The member verbs the caller holds the `user_admin` grant for and this member refuses, each with the reason, so a client explains the missing button instead of hiding it. An action never appears here and in `allowed_actions`. Present wherever `allowed_actions` is; empty when nothing is refused.
+	UnavailableActions *[]MemberUnavailableAction `json:"unavailable_actions,omitempty"`
+	UpdatedAt          *time.Time                 `json:"updated_at,omitempty"`
 }
 
 // UserAllowedActions defines model for User.AllowedActions.
@@ -74774,6 +75009,68 @@ type WeeklyScorecardLeadBlock struct {
 	// are a floor, and a reader should say so.
 	MeetingsPartialHistory int `json:"meetings_partial_history" minimum:"0"`
 	Promoted               int `json:"promoted" minimum:"0"`
+}
+
+// WhatsAppConnection One WhatsApp Business phone number connected to the workspace. No secret is part of it.
+type WhatsAppConnection struct {
+	ConnectedAt time.Time `json:"connectedAt"`
+
+	// DisplayPhoneNumber The number in the form WhatsApp shows it. Display only.
+	DisplayPhoneNumber string             `json:"displayPhoneNumber"`
+	Id                 openapi_types.UUID `json:"id"`
+
+	// MailVisibility What the seat asks of the number's messages. Changed with `PATCH /channel-connections/whatsapp/{id}/visibility`.
+	MailVisibility *WhatsAppConnectionMailVisibility `json:"mailVisibility,omitempty"`
+
+	// PhoneNumberId Meta's id of the phone number, the key a webhook item is matched to its connection by.
+	PhoneNumberId string `json:"phoneNumberId"`
+
+	// ReaderTeamId The team that reads the number's messages.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
+
+	// SeatId The seat the number's messages file through.
+	SeatId *openapi_types.UUID      `json:"seatId,omitempty"`
+	Status WhatsAppConnectionStatus `json:"status"`
+
+	// WabaId The WhatsApp Business Account id.
+	WabaId string `json:"wabaId"`
+}
+
+// WhatsAppConnectionMailVisibility What the seat asks of the number's messages. Changed with `PATCH /channel-connections/whatsapp/{id}/visibility`.
+type WhatsAppConnectionMailVisibility string
+
+// WhatsAppConnectionStatus defines model for WhatsAppConnection.Status.
+type WhatsAppConnectionStatus string
+
+// WhatsAppConnectionCreated defines model for WhatsAppConnectionCreated.
+type WhatsAppConnectionCreated struct {
+	// Connection One WhatsApp Business phone number connected to the workspace. No secret is part of it.
+	Connection WhatsAppConnection `json:"connection"`
+
+	// VerifyToken The token Meta sends in the webhook subscription check. Made by the server and shown only in this response.
+	VerifyToken string `json:"verifyToken"`
+}
+
+// WhatsAppConnectionListResponse defines model for WhatsAppConnectionListResponse.
+type WhatsAppConnectionListResponse struct {
+	Data []WhatsAppConnection `json:"data"`
+}
+
+// WhatsAppWebhookDelivery One batch of changes from Meta, as the signature covers it. The route reads the raw body, so the items inside `entry` are decoded by the server and not described here.
+type WhatsAppWebhookDelivery struct {
+	Entry []map[string]interface{} `json:"entry"`
+
+	// Object Always `whatsapp_business_account`.
+	Object string `json:"object"`
+}
+
+// WhatsAppWebhookReceipt defines model for WhatsAppWebhookReceipt.
+type WhatsAppWebhookReceipt struct {
+	// Skipped Items not kept: a number that is not connected, a field not handled, or an item that could not be decoded.
+	Skipped int `json:"skipped" minimum:"0"`
+
+	// Stored Items kept and queued for filing. A redelivered item counts again and is stored once.
+	Stored int `json:"stored" minimum:"0"`
 }
 
 // WordingCorrectionContext The current approved wording, visible only to its original human approver while the
@@ -78366,6 +78663,11 @@ type ChangePasswordJSONBody struct {
 	NewPassword     string `json:"new_password"`
 }
 
+// ConfirmMemberMergeJSONBody defines parameters for ConfirmMemberMerge.
+type ConfirmMemberMergeJSONBody struct {
+	Token string `json:"token"`
+}
+
 // RequestPasswordResetJSONBody defines parameters for RequestPasswordReset.
 type RequestPasswordResetJSONBody struct {
 	Email openapi_types.Email `json:"email"`
@@ -78726,6 +79028,14 @@ type CatchUpOnRecordParams struct {
 
 // CatchUpOnRecordParamsRecordType defines parameters for CatchUpOnRecord.
 type CatchUpOnRecordParamsRecordType string
+
+// VerifyWhatsAppWebhookParams defines parameters for VerifyWhatsAppWebhook.
+type VerifyWhatsAppWebhookParams struct {
+	// HubMode Always `subscribe`.
+	HubMode        *string `form:"hub.mode,omitempty" json:"hub.mode,omitempty"`
+	HubVerifyToken *string `form:"hub.verify_token,omitempty" json:"hub.verify_token,omitempty"`
+	HubChallenge   *string `form:"hub.challenge,omitempty" json:"hub.challenge,omitempty"`
+}
 
 // ListCommissionEntriesParams defines parameters for ListCommissionEntries.
 type ListCommissionEntriesParams struct {
@@ -86546,6 +86856,9 @@ type ReplaceAiTaskOverridesJSONRequestBody = AiTaskOverrides
 // PreviewAiTaskOverridesJSONRequestBody defines body for PreviewAiTaskOverrides for application/json ContentType.
 type PreviewAiTaskOverridesJSONRequestBody = AiTaskOverrides
 
+// ReplaceAiTeamRulesJSONRequestBody defines body for ReplaceAiTeamRules for application/json ContentType.
+type ReplaceAiTeamRulesJSONRequestBody = AiTeamRulesChange
+
 // AssessSalesReviewJSONRequestBody defines body for AssessSalesReview for application/json ContentType.
 type AssessSalesReviewJSONRequestBody = SalesAssessmentRequest
 
@@ -86666,6 +86979,9 @@ type UpdateAttachmentMetadataJSONRequestBody = UpdateAttachmentMetadataRequest
 // ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
 type ChangePasswordJSONRequestBody ChangePasswordJSONBody
 
+// ConfirmMemberMergeJSONRequestBody defines body for ConfirmMemberMerge for application/json ContentType.
+type ConfirmMemberMergeJSONRequestBody ConfirmMemberMergeJSONBody
+
 // RequestPasswordResetJSONRequestBody defines body for RequestPasswordReset for application/json ContentType.
 type RequestPasswordResetJSONRequestBody RequestPasswordResetJSONBody
 
@@ -86747,11 +87063,20 @@ type ApproveTelegramBusinessConnectionJSONRequestBody = ApproveTelegramBusinessC
 // UpdateTelegramBusinessConnectionVisibilityJSONRequestBody defines body for UpdateTelegramBusinessConnectionVisibility for application/json ContentType.
 type UpdateTelegramBusinessConnectionVisibilityJSONRequestBody = UpdateTelegramBusinessConnectionVisibilityRequest
 
+// CreateWhatsAppConnectionJSONRequestBody defines body for CreateWhatsAppConnection for application/json ContentType.
+type CreateWhatsAppConnectionJSONRequestBody = CreateWhatsAppConnectionRequest
+
+// UpdateWhatsAppConnectionVisibilityJSONRequestBody defines body for UpdateWhatsAppConnectionVisibility for application/json ContentType.
+type UpdateWhatsAppConnectionVisibilityJSONRequestBody = UpdateTelegramBusinessConnectionVisibilityRequest
+
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
 
 // ReceiveDispactChannelEventJSONRequestBody defines body for ReceiveDispactChannelEvent for application/json ContentType.
 type ReceiveDispactChannelEventJSONRequestBody = DispactChannelEvent
+
+// ReceiveWhatsAppWebhookJSONRequestBody defines body for ReceiveWhatsAppWebhook for application/json ContentType.
+type ReceiveWhatsAppWebhookJSONRequestBody = WhatsAppWebhookDelivery
 
 // SetChannelVerbosityJSONRequestBody defines body for SetChannelVerbosity for application/json ContentType.
 type SetChannelVerbosityJSONRequestBody = SetChannelVerbosityRequest
@@ -87727,6 +88052,9 @@ type HandOverUserWorkJSONRequestBody = HandOverUserWorkRequest
 
 // MergeMembersJSONRequestBody defines body for MergeMembers for application/json ContentType.
 type MergeMembersJSONRequestBody = MergeMembersRequest
+
+// RequestMemberMergeJSONRequestBody defines body for RequestMemberMerge for application/json ContentType.
+type RequestMemberMergeJSONRequestBody = MergeMembersRequest
 
 // RemoveMemberJSONRequestBody defines body for RemoveMember for application/json ContentType.
 type RemoveMemberJSONRequestBody = RemoveMemberRequest
@@ -101815,6 +102143,12 @@ type ServerInterface interface {
 	// Judge a draft of the overrides without saving it (ai_routing read and update).
 	// (POST /ai/task-overrides/preview)
 	PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request)
+	// Read the team rules every AI draft follows (ai_team_rules read).
+	// (GET /ai/team-rules)
+	GetAiTeamRules(w http.ResponseWriter, r *http.Request)
+	// Replace the team rules every AI draft follows (ai_team_rules update).
+	// (PUT /ai/team-rules)
+	ReplaceAiTeamRules(w http.ResponseWriter, r *http.Request)
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
@@ -102133,6 +102467,9 @@ type ServerInterface interface {
 	// Change your own password.
 	// (POST /auth/change-password)
 	ChangePassword(w http.ResponseWriter, r *http.Request)
+	// Confirm that this account may be merged into another, from the mailed link.
+	// (POST /auth/confirm-member-merge)
+	ConfirmMemberMerge(w http.ResponseWriter, r *http.Request)
 	// Request a password-reset email.
 	// (POST /auth/forgot-password)
 	RequestPasswordReset(w http.ResponseWriter, r *http.Request)
@@ -102370,6 +102707,18 @@ type ServerInterface interface {
 	// Change who may read a business account's messages.
 	// (PATCH /channel-connections/telegram-business/{id}/visibility)
 	UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
+	// List the WhatsApp Business numbers connected to the workspace.
+	// (GET /channel-connections/whatsapp)
+	ListWhatsAppConnections(w http.ResponseWriter, r *http.Request)
+	// Connect a WhatsApp Business number to the workspace.
+	// (POST /channel-connections/whatsapp)
+	CreateWhatsAppConnection(w http.ResponseWriter, r *http.Request)
+	// Disconnect a WhatsApp Business number from the workspace.
+	// (DELETE /channel-connections/whatsapp/{id})
+	DisconnectWhatsAppConnection(w http.ResponseWriter, r *http.Request, id Id)
+	// Change who may read a WhatsApp number's messages.
+	// (PATCH /channel-connections/whatsapp/{id}/visibility)
+	UpdateWhatsAppConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
 	// Disconnect a messaging channel (archives the binding and destroys the credential).
 	// (DELETE /channel-connections/{id})
 	DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id)
@@ -102379,6 +102728,12 @@ type ServerInterface interface {
 	// Take a signed notice of new talk in a linked Dispact channel (anonymous).
 	// (POST /channel-events/dispact)
 	ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request)
+	// Answer Meta's webhook subscription check (anonymous).
+	// (GET /channel-events/whatsapp)
+	VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Request, params VerifyWhatsAppWebhookParams)
+	// Take a signed WhatsApp Business webhook delivery (anonymous).
+	// (POST /channel-events/whatsapp)
+	ReceiveWhatsAppWebhook(w http.ResponseWriter, r *http.Request)
 	// Stop syncing a record with its chat channel.
 	// (DELETE /channel-links/{record_type}/{id})
 	UnlinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
@@ -104731,6 +105086,9 @@ type ServerInterface interface {
 	// Merge a duplicate into the selected surviving member.
 	// (POST /users/{id}/merge)
 	MergeMembers(w http.ResponseWriter, r *http.Request, id Id, params MergeMembersParams)
+	// Ask the holders of two accounts to confirm merging them. Admin-only, human-only.
+	// (POST /users/{id}/merge-requests)
+	RequestMemberMerge(w http.ResponseWriter, r *http.Request, id Id)
 	// Remove a member's second factor. Admin-only, human-only.
 	// (DELETE /users/{id}/mfa)
 	RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id)
@@ -105538,6 +105896,18 @@ func (_ Unimplemented) PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read the team rules every AI draft follows (ai_team_rules read).
+// (GET /ai/team-rules)
+func (_ Unimplemented) GetAiTeamRules(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the team rules every AI draft follows (ai_team_rules update).
+// (PUT /ai/team-rules)
+func (_ Unimplemented) ReplaceAiTeamRules(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // AI usage + budget — the spend is never invisible.
 // (GET /ai/usage)
 func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams) {
@@ -106174,6 +106544,12 @@ func (_ Unimplemented) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Confirm that this account may be merged into another, from the mailed link.
+// (POST /auth/confirm-member-merge)
+func (_ Unimplemented) ConfirmMemberMerge(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Request a password-reset email.
 // (POST /auth/forgot-password)
 func (_ Unimplemented) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
@@ -106648,6 +107024,30 @@ func (_ Unimplemented) UpdateTelegramBusinessConnectionVisibility(w http.Respons
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the WhatsApp Business numbers connected to the workspace.
+// (GET /channel-connections/whatsapp)
+func (_ Unimplemented) ListWhatsAppConnections(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Connect a WhatsApp Business number to the workspace.
+// (POST /channel-connections/whatsapp)
+func (_ Unimplemented) CreateWhatsAppConnection(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disconnect a WhatsApp Business number from the workspace.
+// (DELETE /channel-connections/whatsapp/{id})
+func (_ Unimplemented) DisconnectWhatsAppConnection(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change who may read a WhatsApp number's messages.
+// (PATCH /channel-connections/whatsapp/{id}/visibility)
+func (_ Unimplemented) UpdateWhatsAppConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Disconnect a messaging channel (archives the binding and destroys the credential).
 // (DELETE /channel-connections/{id})
 func (_ Unimplemented) DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id) {
@@ -106663,6 +107063,18 @@ func (_ Unimplemented) ReplaceChannelToken(w http.ResponseWriter, r *http.Reques
 // Take a signed notice of new talk in a linked Dispact channel (anonymous).
 // (POST /channel-events/dispact)
 func (_ Unimplemented) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer Meta's webhook subscription check (anonymous).
+// (GET /channel-events/whatsapp)
+func (_ Unimplemented) VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Request, params VerifyWhatsAppWebhookParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take a signed WhatsApp Business webhook delivery (anonymous).
+// (POST /channel-events/whatsapp)
+func (_ Unimplemented) ReceiveWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -111370,6 +111782,12 @@ func (_ Unimplemented) MergeMembers(w http.ResponseWriter, r *http.Request, id I
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Ask the holders of two accounts to confirm merging them. Admin-only, human-only.
+// (POST /users/{id}/merge-requests)
+func (_ Unimplemented) RequestMemberMerge(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Remove a member's second factor. Admin-only, human-only.
 // (DELETE /users/{id}/mfa)
 func (_ Unimplemented) RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id) {
@@ -115604,6 +116022,46 @@ func (siw *ServerInterfaceWrapper) PreviewAiTaskOverrides(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewAiTaskOverrides(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiTeamRules operation middleware
+func (siw *ServerInterfaceWrapper) GetAiTeamRules(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiTeamRules(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceAiTeamRules operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceAiTeamRules(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceAiTeamRules(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -121471,6 +121929,20 @@ func (siw *ServerInterfaceWrapper) ChangePassword(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ConfirmMemberMerge operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmMemberMerge(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmMemberMerge(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RequestPasswordReset operation middleware
 func (siw *ServerInterfaceWrapper) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 
@@ -124277,6 +124749,110 @@ func (siw *ServerInterfaceWrapper) UpdateTelegramBusinessConnectionVisibility(w 
 	handler.ServeHTTP(w, r)
 }
 
+// ListWhatsAppConnections operation middleware
+func (siw *ServerInterfaceWrapper) ListWhatsAppConnections(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWhatsAppConnections(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateWhatsAppConnection operation middleware
+func (siw *ServerInterfaceWrapper) CreateWhatsAppConnection(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateWhatsAppConnection(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectWhatsAppConnection operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectWhatsAppConnection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectWhatsAppConnection(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateWhatsAppConnectionVisibility operation middleware
+func (siw *ServerInterfaceWrapper) UpdateWhatsAppConnectionVisibility(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateWhatsAppConnectionVisibility(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DisconnectChannel operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectChannel(w http.ResponseWriter, r *http.Request) {
 
@@ -124348,6 +124924,79 @@ func (siw *ServerInterfaceWrapper) ReceiveDispactChannelEvent(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReceiveDispactChannelEvent(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// VerifyWhatsAppWebhook operation middleware
+func (siw *ServerInterfaceWrapper) VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params VerifyWhatsAppWebhookParams
+
+	// ------------- Optional query parameter "hub.mode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "hub.mode", r.URL.Query(), &params.HubMode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "hub.mode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hub.mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "hub.verify_token" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "hub.verify_token", r.URL.Query(), &params.HubVerifyToken, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "hub.verify_token"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hub.verify_token", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "hub.challenge" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "hub.challenge", r.URL.Query(), &params.HubChallenge, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "hub.challenge"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hub.challenge", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.VerifyWhatsAppWebhook(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReceiveWhatsAppWebhook operation middleware
+func (siw *ServerInterfaceWrapper) ReceiveWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReceiveWhatsAppWebhook(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -158839,6 +159488,38 @@ func (siw *ServerInterfaceWrapper) MergeMembers(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// RequestMemberMerge operation middleware
+func (siw *ServerInterfaceWrapper) RequestMemberMerge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestMemberMerge(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RemoveUserMfa operation middleware
 func (siw *ServerInterfaceWrapper) RemoveUserMfa(w http.ResponseWriter, r *http.Request) {
 
@@ -162687,6 +163368,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/ai/task-overrides/preview", wrapper.PreviewAiTaskOverrides)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/team-rules", wrapper.GetAiTeamRules)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/team-rules", wrapper.ReplaceAiTeamRules)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)
 	})
 	r.Group(func(r chi.Router) {
@@ -163005,6 +163692,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/auth/change-password", wrapper.ChangePassword)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/confirm-member-merge", wrapper.ConfirmMemberMerge)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/forgot-password", wrapper.RequestPasswordReset)
 	})
 	r.Group(func(r chi.Router) {
@@ -163242,6 +163932,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/channel-connections/telegram-business/{id}/visibility", wrapper.UpdateTelegramBusinessConnectionVisibility)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-connections/whatsapp", wrapper.ListWhatsAppConnections)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-connections/whatsapp", wrapper.CreateWhatsAppConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/channel-connections/whatsapp/{id}", wrapper.DisconnectWhatsAppConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/channel-connections/whatsapp/{id}/visibility", wrapper.UpdateWhatsAppConnectionVisibility)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-connections/{id}", wrapper.DisconnectChannel)
 	})
 	r.Group(func(r chi.Router) {
@@ -163249,6 +163951,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-events/dispact", wrapper.ReceiveDispactChannelEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-events/whatsapp", wrapper.VerifyWhatsAppWebhook)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-events/whatsapp", wrapper.ReceiveWhatsAppWebhook)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.UnlinkChannel)
@@ -165601,6 +166309,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/merge", wrapper.MergeMembers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/{id}/merge-requests", wrapper.RequestMemberMerge)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/users/{id}/mfa", wrapper.RemoveUserMfa)

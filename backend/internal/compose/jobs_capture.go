@@ -19,7 +19,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/whatsappedge"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/whatsapp"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -94,6 +96,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	addDeclaredWorker[CaptureBackfillReconcileArgs](reg, &captureBackfillReconcileWorker{
 		pool: pool, registry: cfg.GmailRegistry, log: log, enrichEnabled: cfg.EnrichBrain != nil,
 	})
+	addDeclaredWorker[CaptureHistoryNarrowingArgs](reg, &captureHistoryNarrowingWorker{pool: pool, registry: cfg.GmailRegistry})
 
 	// The Telegram ingest job is not periodic — a poll enqueues one per accepted
 	// update in the same transaction as the raw capture row; the worker role only
@@ -102,6 +105,9 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// credential (no deployment-wide OAuth app to gate on), so there is nothing
 	// to check for before wiring it up.
 	addDeclaredWorker[TelegramIngestArgs](reg, newTelegramIngestWorker(pool, cfg.CaptureConfig, log))
+	addDeclaredWorker[WhatsAppIngestArgs](reg, &whatsappedge.Worker[WhatsAppIngestArgs]{
+		Bind: workspaceJobCtx, Pool: pool, Sink: newCaptureSink(pool, cfg.CaptureConfig), Actor: chatChannelPrincipal(whatsapp.CapturedBy), Log: log,
+	})
 	// The captured-company auto-enrich sweep (ADR-0072): always
 	// registered, it enqueues system deep reads the site worker applies.
 	autoEnrich := newCaptureAutoEnrichSweepWorker(pool, log)

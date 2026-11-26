@@ -29,7 +29,9 @@ const expiredCredentialReapLimit = 200
 //
 //   - a session dies at its absolute deadline or at its idle one, whichever
 //     comes first, and a revoked session is dead the moment it is revoked;
-//   - an auth_token is dead once used, because the use is one-time;
+//   - an auth_token is dead once used, because the use is one-time, except a
+//     merge confirmation, whose use IS the confirmation and which waits for the
+//     merge until it expires;
 //   - a consumed setup_token is dead, and it carries no expiry at all, so age
 //     since creation is what bounds an unconsumed one.
 //
@@ -40,7 +42,7 @@ const expiredCredentialReapLimit = 200
 //nolint:gosec // G101 reads a table name holding "token" beside a string as a
 var deadCredentialPredicate = map[string]string{
 	"session":                  "revoked_at IS NOT NULL OR expires_at < now() OR idle_expires_at < now()",
-	"auth_token":               "used_at IS NOT NULL OR expires_at < now()",
+	"auth_token":               "(used_at IS NOT NULL AND purpose <> '" + purposeMemberMergeConfirm + "') OR expires_at < now()",
 	"oauth_refresh_token":      "expires_at < now()",
 	"oauth_authorization_code": "expires_at < now()",
 	"setup_token":              "consumed_at IS NOT NULL OR created_at < now() - interval '30 days'",

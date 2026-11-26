@@ -20219,7 +20219,7 @@ paths:
       operationId: mergeMembers
       summary: Merge a duplicate into the selected surviving member.
       description: |-
-        The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+        An unused source merges at once. A used source merges only after the holder of each side that is not deactivated has confirmed through `requestMemberMerge`; a deactivated side needs no confirmation, so two deactivated accounts merge on an administrator's say alone. The acting administrator can be neither side.
 
         Needs the passport permission Change records.
 
@@ -28985,6 +28985,7 @@ components:
             readable by colleagues the moment it lands. `classified` — held to its participants
             until a classifier judges the thread ordinary. `held` — held whatever any classifier
             concludes.
+        history_narrowing: {$ref: '#/components/schemas/MailHistoryNarrowing'}
         context_tag: {$ref: '#/components/schemas/ConnectorContextTag'}
         history_baseline: {$ref: '#/components/schemas/MailHistoryBaseline'}
         created_at: {type: string, format: date-time, readOnly: true}
@@ -29087,7 +29088,20 @@ components:
             Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
             narrows: a move towards `shared` leaves history where it is, because opening what was
             captured under a stricter answer is a separate decision from what to do next. Rows a
-            human set to `selected` are never touched.
+            human set to `selected` are never touched. A background job does the narrowing after
+            the answer; a narrowing to `held` still pending is never loosened to `classified`.
+    MailHistoryNarrowing:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required: [posture, remaining]
+      description: |-
+        Earlier mail of this mailbox that a background job is still narrowing, after a change
+        asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+        yet keeps the audience it had.
+      properties:
+        posture: {type: string, enum: [classified, held], description: What the earlier mail is narrowed to.}
+        remaining: {type: integer, minimum: 0, description: Messages still to narrow.}
     WorkspaceEmailDomain:
       type: object
       required: [domain, source, verified]
@@ -48223,12 +48237,25 @@ components:
           description: >-
             Moves the member to this legal entity, from `listLegalEntities`, in the same transaction as the rest of the edit. Omit to keep their entity. An unknown or archived entity is refused as 422 `unknown_legal_entity`.
         expected_updated_at: {type: string, format: date-time}
+    MemberUnavailableAction:
+      type: object
+      required: [action, reason]
+      description: One member verb the caller holds the grant for and this member refuses, with why.
+      properties:
+        action:
+          type: string
+          enum: [merge]
+        reason:
+          type: string
+          enum: [sole_admin, self, agent_seat]
+          description: >-
+            Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
     MemberRetirementBlocker:
       type: string
-      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, source_used, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
+      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, confirmation_missing, suspended_side, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
     MemberRetirementConsequence:
       type: string
-      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive]
+      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive, sign_in_dropped]
     MemberRetirementPreview:
       type: object
       required: [owned, signal_count, blockers, token, source_name, source_email, consequences]
@@ -48252,6 +48279,23 @@ components:
         source_email: {type: string, format: email}
         survivor_name: {type: string}
         survivor_email: {type: string, format: email}
+        confirmations:
+          type: array
+          items: {$ref: '#/components/schemas/MemberMergeConfirmation'}
+          description: >-
+            Present for a merge whose source account has been used: one entry per side, saying whether that side's holder has confirmed. `confirmation_missing` is in `blockers` while any side is `requested` or `not_requested`.
+    MemberMergeConfirmation:
+      type: object
+      required: [user_id, side, display_name, state]
+      properties:
+        user_id: {type: string, format: uuid}
+        side: {type: string, enum: [source, survivor]}
+        display_name: {type: string}
+        state:
+          type: string
+          enum: [confirmed, requested, not_requested, not_needed]
+          description: >-
+            `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
     MemberRetirementBlockingRecords:
       type: object
       description: |-
@@ -48399,6 +48443,15 @@ components:
             enum: [change_role, issue_password_link, resend_invite, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
           description: >-
             The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+        merge_needs_confirmation:
+          type: boolean
+          description: >-
+            True when `merge` is in `allowed_actions` and this account has been used (a password, a sign-in or a linked provider), so merging it waits for the holder of each side that can still sign in to confirm. Absent otherwise, and on the same views as `allowed_actions`.
+        unavailable_actions:
+          type: array
+          items: {$ref: '#/components/schemas/MemberUnavailableAction'}
+          description: >-
+            The member verbs the caller holds the `user_admin` grant for and this member refuses, each with the reason, so a client explains the missing button instead of hiding it. An action never appears here and in `allowed_actions`. Present wherever `allowed_actions` is; empty when nothing is refused.
         last_active_at:
           type: [string, 'null']
           format: date-time

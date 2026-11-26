@@ -156,6 +156,30 @@ describe("the Shared mailboxes card", () => {
     expect(within(row).queryByRole("button", { name: "Change" })).toBeNull();
   });
 
+  it("shows an unread span and a narrowing still running side by side", async () => {
+    backend(() =>
+      json({
+        items: [
+          {
+            ...SALES,
+            unread_period: {
+              from: "2026-03-01T09:00:00Z",
+              to: "2026-03-04T09:00:00Z",
+            },
+            history_narrowing: { posture: "held", remaining: 40 },
+          },
+        ],
+      }),
+    );
+    draw();
+
+    const row = await screen.findByTestId("shared-mailbox");
+    expect(within(row).getByText(/was never read\./)).toBeTruthy();
+    expect(
+      within(row).getByText(/in the background: 40 messages left/),
+    ).toBeTruthy();
+  });
+
   it("tells a colleague without the admin role why there is nothing to manage", async () => {
     backend(() => json({ code: "permission_denied" }, 403));
     draw();

@@ -14001,7 +14001,7 @@
             "properties": {
               "apply_to_history": {
                 "default": false,
-                "description": "Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only narrows: a move towards `shared` leaves history where it is, because opening what was captured under a stricter answer is a separate decision from what to do next. Rows a human set to `selected` are never touched.",
+                "description": "Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only narrows: a move towards `shared` leaves history where it is, because opening what was captured under a stricter answer is a separate decision from what to do next. Rows a human set to `selected` are never touched. A background job does the narrowing after the answer; a narrowing to `held` still pending is never loosened to `classified`.",
                 "type": "boolean"
               },
               "default_sender": {

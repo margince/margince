@@ -8,6 +8,8 @@ package leaddraft_test
 import (
 	"context"
 	"errors"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"slices"
 	"testing"
 	"time"
@@ -201,5 +203,16 @@ func TestTheGroundingNamesTheLeadAndItsCorrespondence(t *testing.T) {
 	}
 	if !slices.Equal(grounding, want) {
 		t.Errorf("grounding = %v, want %v", grounding, want)
+	}
+}
+
+// The team rules are workspace policy: when the setting cannot be read the draft
+// is refused, not written without them.
+func TestALeadDraftIsRefusedWhenTheTeamRulesCannotBeRead(t *testing.T) {
+	t.Parallel()
+	svc := leaddraft.NewService(&leadReader{lead: lead(nil)}, &correspondence{}, nil).WithVoice(ai.NewVoiceStore(nil), nil)
+
+	if _, _, err := svc.Draft(humanCtx(), someLead, leaddraft.Request{}); !errors.Is(err, draftvoice.ErrRulesUnavailable) {
+		t.Fatalf("an unreadable team rules setting must refuse the draft, got %v", err)
 	}
 }

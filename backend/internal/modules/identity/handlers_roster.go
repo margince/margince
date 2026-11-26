@@ -45,8 +45,14 @@ func (h Handlers) ListUsers(w http.ResponseWriter, r *http.Request, params crmco
 	for _, u := range roster.Users {
 		user := wire(u)
 		if actions, computed := roster.Actions[u.ID]; computed {
-			allowed := h.wireMemberActions(actions)
+			allowed := h.wireMemberActions(actions.Allowed)
 			user.AllowedActions = &allowed
+			refused := wireRefusedActions(actions.Refused)
+			user.UnavailableActions = &refused
+			if actions.MergeNeedsConfirmation {
+				needs := true
+				user.MergeNeedsConfirmation = &needs
+			}
 		}
 		data = append(data, user)
 	}
@@ -129,7 +135,8 @@ func rosterUserMapping(isAdmin bool) func(userRow) crmcontracts.User {
 // hold several is worse than saying nothing.
 func wireUserWithRoles(u userRow) crmcontracts.User {
 	wire := wireUser(u)
-	wire.EmailEditable = &u.Unused
+	unused := u.Usage.unused()
+	wire.EmailEditable = &unused
 	if u.Roles != nil {
 		roles := u.Roles
 		wire.Roles = &roles
@@ -181,6 +188,18 @@ func (h Handlers) wireMemberActions(actions []memberAction) []crmcontracts.UserA
 			continue
 		}
 		out = append(out, crmcontracts.UserAllowedActions(action))
+	}
+	return out
+}
+
+// wireRefusedActions maps the roster's refusals onto the wire.
+func wireRefusedActions(refusals []memberRefusal) []crmcontracts.MemberUnavailableAction {
+	out := make([]crmcontracts.MemberUnavailableAction, 0, len(refusals))
+	for _, refusal := range refusals {
+		out = append(out, crmcontracts.MemberUnavailableAction{
+			Action: crmcontracts.MemberUnavailableActionAction(refusal.Action),
+			Reason: crmcontracts.MemberUnavailableActionReason(refusal.Reason),
+		})
 	}
 	return out
 }

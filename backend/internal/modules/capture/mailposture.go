@@ -116,14 +116,9 @@ func (r *Registry) SetMailPosture(
 		if !applyToHistory {
 			return nil
 		}
-		// In the SAME transaction as the posture change, so a caller who asked
-		// for both never sees the posture moved and the history not — the two
-		// are one answer to one question.
-		//
-		// Bounded per pass, looped here. A mailbox with a year of history has
-		// tens of thousands of import rows, and the batch is what keeps this
-		// from holding locks across all of them while captures wait.
-		return r.narrowHistoryTo(ctx, tx, seatImporter(actor.UserID), posture)
+		// The job narrows the earlier mail after this commits. Until it reaches
+		// a message, that message keeps the audience it has.
+		return requestHistoryNarrowingTx(ctx, tx, match, posture)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ConnectionView{}, ErrNoConnection
@@ -132,41 +127,6 @@ func (r *Registry) SetMailPosture(
 		return ConnectionView{}, fmt.Errorf("capture: setting the mailbox's posture: %w", err)
 	}
 	return r.connectionFor(ctx, match.id)
-}
-
-// narrowHistoryTo applies one posture to the mail an importer already brought in,
-// batch by batch, until nothing is left to do.
-//
-// The loop ends when a pass claims nothing, which holds only while the batch
-// predicate excludes the value it writes. A predicate that stopped doing so
-// would spin here forever, holding this transaction's locks and turning a
-// settings change into a request that never returns.
-//
-// So progress is checked rather than assumed: every pass must leave FEWER rows
-// to do than the one before. That fails on the first repeat instead of after a
-// ceiling nobody would wait out, and it names the posture and the count, which
-// is what somebody debugging it needs.
-func (r *Registry) narrowHistoryTo(ctx context.Context, tx pgx.Tx, by importer, posture string) error {
-	remaining := -1
-	for {
-		moved, err := narrowHistoryTx(ctx, tx, by, posture, r.sink.recomputeAudience)
-		if err != nil {
-			return err
-		}
-		if moved == 0 {
-			return nil
-		}
-		left, err := narrowRemainingTx(ctx, tx, by, posture)
-		if err != nil {
-			return err
-		}
-		if remaining >= 0 && left >= remaining {
-			return fmt.Errorf(
-				"capture: applying the %s posture to history made no progress: %d rows still due after a pass that moved %d",
-				posture, left, moved)
-		}
-		remaining = left
-	}
 }
 
 // replacePostureTx sets the posture of the one live connection match names,

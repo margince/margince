@@ -6,6 +6,8 @@ package contactdraft_test
 import (
 	"context"
 	"errors"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"testing"
 	"time"
 
@@ -51,5 +53,18 @@ func TestAContactDraftReadsTheNewestLoggedTouchOfItsContact(t *testing.T) {
 	reader.err = errors.New("down")
 	if _, _, err := svc.Draft(human, contactID, contactdraft.Request{}); err == nil {
 		t.Error("a failed logged-touch read still produced a draft")
+	}
+}
+
+// The team rules are workspace policy: when the setting cannot be read the draft
+// is refused, not written without them. A store with no database handle is the
+// failing reader.
+func TestAContactDraftIsRefusedWhenTheTeamRulesCannotBeRead(t *testing.T) {
+	contactID, contact := contactAt("ada@customer.test")
+	human := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:u-1"})
+	svc := contactdraft.NewService(pathContact{contact}, nil).WithVoice(ai.NewVoiceStore(nil), nil)
+
+	if _, _, err := svc.Draft(human, contactID, contactdraft.Request{}); !errors.Is(err, draftvoice.ErrRulesUnavailable) {
+		t.Fatalf("an unreadable team rules setting must refuse the draft, got %v", err)
 	}
 }
