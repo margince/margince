@@ -22,14 +22,14 @@ func TestARenameChainLandsOnTheNameTheDatabaseHasToday(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	writeFixture(t, dir, map[string]string{
-		"0001_first.up.sql":    "ALTER TABLE person RENAME TO contact;",
-		"0002_second.up.sql":   "ALTER TABLE contact RENAME TO party;\nALTER INDEX person_pkey RENAME TO party_pkey;",
-		"0002_second.down.sql": "ALTER TABLE party RENAME TO lost;",
+		"a_first.up.sql":    "ALTER TABLE ledger RENAME TO journal;",
+		"b_second.up.sql":   "ALTER TABLE journal RENAME TO book;\nALTER INDEX ledger_pkey RENAME TO book_pkey;",
+		"b_second.down.sql": "ALTER TABLE book RENAME TO lost;",
 	})
-	if got := CurrentNames(dir)["person"]; got != "party" {
-		t.Errorf("person ended up as %q, want party: a name renamed twice keeps one entry for where it landed", got)
+	if got := CurrentNames(dir)["ledger"]; got != "book" {
+		t.Errorf("ledger ended up as %q, want book: a name renamed twice keeps one entry for where it landed", got)
 	}
-	if got := WithCurrentNames(dir, "SELECT 1 FROM person JOIN person_pkey_x ON true"); got != "SELECT 1 FROM party JOIN person_pkey_x ON true" {
+	if got := WithCurrentNames(dir, "SELECT 1 FROM ledger JOIN ledger_pkey_x ON true"); got != "SELECT 1 FROM book JOIN ledger_pkey_x ON true" {
 		t.Errorf("the rewrite read %q: it renames whole words only, and never a down migration's names", got)
 	}
 }
@@ -40,7 +40,7 @@ func TestADirectoryWithNoMigrationsRenamesNothing(t *testing.T) {
 	if renames := CurrentNames(dir); renames != nil {
 		t.Errorf("an empty directory gave renames %v", renames)
 	}
-	if got := WithCurrentNames(dir, "SELECT 1 FROM person"); got != "SELECT 1 FROM person" {
+	if got := WithCurrentNames(dir, "SELECT 1 FROM ledger"); got != "SELECT 1 FROM ledger" {
 		t.Errorf("with no renames the SQL changed to %q", got)
 	}
 }
