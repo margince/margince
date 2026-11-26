@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId } from "react";
 import { AppLink } from "../../design-system/applink";
 import { Button, StatCard } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
@@ -13,6 +13,7 @@ import {
   formatMoneyCompact,
 } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { landingBasisLines } from "./analytics.forecast.landing";
 import { formatMoneyCompactRange } from "./analytics.moneyrange";
 import {
@@ -34,6 +35,11 @@ import {
 /** Which reading the quarter's chart shows. */
 export type HeroChart = "won" | "forecast" | "range";
 
+const HERO_CHARTS: readonly HeroChart[] = ["won", "forecast", "range"];
+// The shown tab is in the address, so Back from a door at the chart's foot
+// returns to the same tab, and the door is there to take focus again.
+const CHART_DIAL = "chart";
+
 type QuarterProps = Parameters<typeof QuarterOverviewMetrics>[0];
 
 /**
@@ -45,7 +51,9 @@ export function SalesOverviewMetrics({
   ...quarter
 }: Omit<QuarterProps, "tabs"> &
   Readonly<{ trajectory?: (shown: HeroChart) => ReactNode }>) {
-  const [shown, setShown] = useState<HeroChart>("won");
+  const [params] = useUrlParams();
+  const shown =
+    HERO_CHARTS.find((chart) => chart === params.get(CHART_DIAL)) ?? "won";
   if (quarter.evaluation.selection.period !== "this_quarter")
     return (
       <Panel className="analytics-sales-hero">
@@ -62,7 +70,7 @@ export function SalesOverviewMetrics({
     );
   const tab = (chart: HeroChart): ChartTab => ({
     pressed: shown === chart,
-    onShow: () => setShown(chart),
+    onShow: () => replaceDial(CHART_DIAL, chart === "won" ? undefined : chart),
   });
   return (
     <Panel className="analytics-sales-hero analytics-sales-tabs">
