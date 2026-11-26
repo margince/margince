@@ -257,8 +257,8 @@ func TestNoScreenDecidesAuthorizationFromARoleKey(t *testing.T) {
 	}
 	// A scan that read nothing reports PASS, which is the one way this gate
 	// could fail silently: the tree moved and nobody was told.
-	if scanned < 600 {
-		t.Fatalf("scanned only %d frontend sources, of roughly 690 eligible — the tree has moved and this gate "+
+	if scanned < 2700 {
+		t.Fatalf("scanned only %d frontend sources, of roughly 2,830 eligible — the tree has moved and this gate "+
 			"is reading part of it. The floor is close to the real count on purpose: losing one directory "+
 			"has to fail here rather than pass quietly", scanned)
 	}
