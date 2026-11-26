@@ -81,6 +81,7 @@ function backend(
   allow: GrantSpec,
   catalogReads: string[],
   failCatalogs = { times: 0 },
+  pagedObject?: CustomField["object"],
 ) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -100,6 +101,14 @@ function backend(
     const known = (["contact", "company", "deal"] as const).find(
       (one) => one === object,
     );
+    // The paged record type holds its field on a second page only.
+    if (known && known === pagedObject) {
+      const cursor = new URL(url).searchParams.get("cursor");
+      return json({
+        data: cursor === "p2" ? [budget(known)] : [],
+        page: { next_cursor: cursor === "p2" ? null : "p2", has_more: !cursor },
+      });
+    }
     return json({
       data: known ? [budget(known)] : [],
       page: { next_cursor: null },
@@ -184,6 +193,23 @@ describe("FieldChangeTrail", () => {
     expect(screen.queryAllByRole("listitem")).toEqual([]);
 
     await user.click(retry);
+    const rows = await screen.findAllByRole("listitem");
+    expect(within(rows[1] as HTMLElement).getByText(/ · /).textContent).toBe(
+      "Company · Budget",
+    );
+    expect(catalogReads.filter((one) => one === "company")).toHaveLength(2);
+  });
+
+  it("names a field its catalog lists on a later page", async () => {
+    const catalogReads: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      backend({ audit_log: ["read"] }, catalogReads, { times: 0 }, "company"),
+    );
+    const user = userEvent.setup();
+    mount();
+
+    await user.click(await screen.findByText("Recent field changes"));
     const rows = await screen.findAllByRole("listitem");
     expect(within(rows[1] as HTMLElement).getByText(/ · /).textContent).toBe(
       "Company · Budget",

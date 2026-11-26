@@ -100,7 +100,10 @@ const routes = (allow: Parameters<typeof meRoute>[0]) => ({
     const object = OBJECTS.find(
       (one) => one === url.searchParams.get("object"),
     );
-    return jsonResponse({ data: object ? [budget(object)] : [] });
+    return jsonResponse({
+      page: { has_more: false },
+      data: object ? [budget(object)] : [],
+    });
   },
 });
 
