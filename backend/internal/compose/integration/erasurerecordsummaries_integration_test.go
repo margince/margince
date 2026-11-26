@@ -3,42 +3,47 @@
 
 //go:build integration
 
-package compose
+package integration
 
 // A deal's status card and an account brief are prose written from the record's
 // timeline, held per reader and keyed by the record. Neither privacy act removes
 // the deal or the company, so only a named purge reaches them.
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 func TestBothPrivacyActsDestroyTheSummariesWrittenFromTheSubjectsWords(t *testing.T) {
-	acts := map[string]func(*integration.Env, ids.UUID) error{
-		"erasure": func(e *integration.Env, subject ids.UUID) error {
-			return eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject, "subject request")
+	acts := map[string]func(*Env, ids.UUID) error{
+		"erasure": func(e *Env, subject ids.UUID) error {
+			return privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), subject, "subject request")
 		},
-		"anonymise": func(e *integration.Env, subject ids.UUID) error {
-			service := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-			_, err := service.AnonymiseContacts(e.Admin(), []ids.UUID{subject}, privacy.PurgeOwnerRule, anonymiseAsChosen)
+		"anonymise": func(e *Env, subject ids.UUID) error {
+			service := privacy.NewRetentionService(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
+			_, err := service.AnonymiseContacts(e.Admin(), []ids.UUID{subject}, privacy.PurgeOwnerRule,
+				func(context.Context, pgx.Tx, ids.UUID) (bool, error) { return true, nil })
 			return err
 		},
 	}
 	for name, act := range acts {
 		t.Run(name, func(t *testing.T) {
-			e := integration.Setup(t)
+			e := Setup(t)
 			subject := e.SeedContact(t, "Quoted Subject", &e.AdminUser)
-			pipeline, open, _ := integration.DealFixture(t, e)
+			pipeline, open, _ := DealFixture(t, e)
 			seed := func(account string, speaker ids.UUID) summarisedRecord {
 				company := e.SeedCompany(t, account, &e.AdminUser)
 				return summarise(t, e, speaker, company, rolloutOn(t, e, company, pipeline, open))
@@ -64,7 +69,7 @@ func TestBothPrivacyActsDestroyTheSummariesWrittenFromTheSubjectsWords(t *testin
 // summarisedRecord is a deal on an account, each with one reader's summary cached.
 type summarisedRecord struct{ company, deal ids.UUID }
 
-func rolloutOn(t *testing.T, e *integration.Env, company ids.UUID, pipeline ids.PipelineID, open ids.StageID) ids.UUID {
+func rolloutOn(t *testing.T, e *Env, company ids.UUID, pipeline ids.PipelineID, open ids.StageID) ids.UUID {
 	t.Helper()
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Source: provenance.RecordSourceManual, Name: "Rollout", PipelineID: pipeline, StageID: open,
@@ -80,7 +85,7 @@ func rolloutOn(t *testing.T, e *integration.Env, company ids.UUID, pipeline ids.
 // status card and an account brief.
 //
 // The note is not filed under the account, so the brief is reached through the deal.
-func summarise(t *testing.T, e *integration.Env, speaker, company, deal ids.UUID) summarisedRecord {
+func summarise(t *testing.T, e *Env, speaker, company, deal ids.UUID) summarisedRecord {
 	t.Helper()
 	record := summarisedRecord{company: company, deal: deal}
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
@@ -94,7 +99,9 @@ func summarise(t *testing.T, e *integration.Env, speaker, company, deal ids.UUID
 		generatedsummary.DealStatusCard(ids.From[ids.DealKind](record.deal)),
 		generatedsummary.CompanyBrief(ids.From[ids.CompanyKind](record.company)),
 	} {
-		if err := generatedsummary.Save(e.Admin(), e.Pool, reader, subject, briefEntry("fp-1")); err != nil {
+		if err := generatedsummary.Save(e.Admin(), e.Pool, reader, subject, generatedsummary.Entry{
+			Fingerprint: "fp-1", GeneratedAt: clocktest.Now(t), GeneratedBy: "deterministic", Payload: []byte(`{"headline":"Retrofit before March"}`),
+		}); err != nil {
 			t.Fatalf("caching a summary: %v", err)
 		}
 	}
@@ -104,7 +111,7 @@ func summarise(t *testing.T, e *integration.Env, speaker, company, deal ids.UUID
 	return record
 }
 
-func (r summarisedRecord) cached(t *testing.T, e *integration.Env) int {
+func (r summarisedRecord) cached(t *testing.T, e *Env) int {
 	t.Helper()
 	var n int
 	if err := e.Pool.QueryRow(e.Admin(),
