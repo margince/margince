@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/capturehealth"
+	"github.com/margince/margince/backend/internal/compose/footerhealth"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
@@ -360,4 +361,12 @@ func (s Server) receiptsSummary(ctx context.Context) (crmcontracts.HealthSource,
 	f.Impact = crmcontracts.HealthFindingImpactMeasured
 	f.Urgency = 1
 	return source, []crmcontracts.HealthFinding{f}, nil
+}
+
+// footerSummary reads footerhealth's source through the send path's disclosure store.
+func (s Server) footerSummary(ctx context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
+	source, pool := healthSource(footerhealth.SourceID, footerhealth.Object), s.jobHealthHandlers.pool
+	return footerhealth.Summary(ctx, pool, newDisclosureAdapter(InstallationDB(pool)).store, source, utcNow(), func(held int) crmcontracts.HealthFinding {
+		return healthFinding(source, footerhealth.IncompleteCode, healthWaitingHuman, held, "messages")
+	})
 }

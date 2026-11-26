@@ -118,7 +118,7 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, prop
 				return err
 			}
 			return stageFollowUpDraft(onBehalfOf(ctx, owner), tx, s.svc, draft.summary,
-				dealID, proposal.EvidenceActivityID.UUID, draft.proposal)
+				dealID, proposal.EvidenceActivityID.UUID, proposal.EvidenceOccurredAt, draft.proposal)
 		}
 		// An unowned deal has nobody to follow it up, so nothing is filed.
 		if owner.IsZero() {

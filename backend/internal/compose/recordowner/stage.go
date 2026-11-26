@@ -65,6 +65,7 @@ func FileTx(ctx context.Context, tx pgx.Tx, staging *approvals.Service, req Requ
 	digest := sha256.Sum256(body)
 	ttl := req.TTL
 	in := approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           req.Kind,
 		ProposedChange: body,
 		DiffHash:       hex.EncodeToString(digest[:]),

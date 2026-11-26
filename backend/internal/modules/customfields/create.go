@@ -16,9 +16,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // pgDuplicateColumn is SQLSTATE 42701: the ALTER TABLE's ADD COLUMN hit
@@ -51,6 +53,9 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 	}
 	if errs := Validate(spec); len(errs) > 0 {
 		return crmcontracts.CustomField{}, &ValidationError{Errors: errs}
+	}
+	if err := requireLabelWithin(spec.Label); err != nil {
+		return crmcontracts.CustomField{}, err
 	}
 	if IsStructural(spec.Label) {
 		return crmcontracts.CustomField{}, ErrStructural
@@ -319,6 +324,12 @@ func allocateColumn(ctx context.Context, tx pgx.Tx, object, slug string) (string
 	}
 	return "", &LabelTakenError{message: fmt.Sprintf(
 		"too many custom fields on %s were named %q; choose a different label", object, slug)}
+}
+
+// requireLabelWithin refuses a label past the label limit, measured as it is
+// stored: the label keeps the spaces it was sent with.
+func requireLabelWithin(label string) error {
+	return httperr.RequireWithin(fieldLabel, label, values.TextLabelCharacters)
 }
 
 // foldedLabel is a stored label as the collision test reads it: trimmed of any

@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryProviders } from "../testing/story-utils";
-import { AppErrorBoundary } from "./errorboundary";
+import { AppErrorBoundary, ScreenErrorBoundary } from "./errorboundary";
 
 // What a reader meets when a screen throws mid-render. Without the boundary the
 // first throw unmounts the whole document and leaves a white page nobody can
@@ -72,6 +72,18 @@ export const ViewStoppedWorkingDark: Story = {
       <AppErrorBoundary>
         <Fragile />
       </AppErrorBoundary>
+    </StoryProviders>
+  ),
+};
+
+/** The routed screen's own boundary, which the shell draws around this box. */
+export const ScreenStoppedWorking: Story = {
+  tags: ["uat-expected-console-error"],
+  render: () => (
+    <StoryProviders>
+      <ScreenErrorBoundary>
+        <Fragile />
+      </ScreenErrorBoundary>
     </StoryProviders>
   ),
 };

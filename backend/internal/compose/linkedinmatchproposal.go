@@ -244,6 +244,7 @@ func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, said app
 	// then stage" leaves open — a human rejecting between the two would have
 	// the same question re-asked immediately.
 	_, proposed, err := svc.StageUnlessDeclined(ctx, approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           linkedInMatchKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,

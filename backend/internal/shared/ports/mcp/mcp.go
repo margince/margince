@@ -91,6 +91,7 @@ type ToolSpec struct {
 	// InputSchema/OutputSchema are client-facing documentation advertised by
 	// tools/list; they are NOT generically validated (M2) — handlers decode
 	// into strict typed structs and enforce their own invariants.
+	// tools/list carries OutputSchema only where a view reads the answer.
 	InputSchema  json.RawMessage
 	OutputSchema json.RawMessage
 	// OpenAPIOp names the crm.yaml operations this tool runs as, operationIds
@@ -143,6 +144,9 @@ type ToolSpec struct {
 	// the user's yes first. Nothing enforces that; a human-approved call already
 	// has its yes.
 	AskUserFirst bool
+	// PreviewArgument names a boolean argument that, sent true, makes the call
+	// write nothing. Such a call needs no yes, so the ask-first note exempts it.
+	PreviewArgument string
 	// UI names the interactive view that renders this tool's result, and is
 	// nil on a tool that has none. It carries no authority: a view is a second
 	// renderer for an answer this tool already gives in text, never a second
@@ -178,6 +182,11 @@ type ToolAction struct {
 	Verb         string
 	Tier         RiskTier
 	AskUserFirst bool
+	// PreviewArgument is the verb's own (ToolSpec.PreviewArgument).
+	PreviewArgument string
+	// PickedBy names the arguments that choose this action, for a router that
+	// has no action field and picks by which arguments a call names.
+	PickedBy string
 }
 
 // ReadOnly reports whether the tool only reads — the protocol's
@@ -215,32 +224,24 @@ func (s ToolSpec) ReadOnly() bool {
 // looking for one should find the other beside it. What holds it to that and
 // stops it drifting into the frame is the runner's assertion that the frame
 // states nothing about a member the listing still renders per tool.
+//
+// ReservedConfirmCodeArg is the one-time code a call's own preview answered,
+// sent back when the user said yes in the conversation (agents/confirmcode.go).
 const (
 	ReservedApprovalIDArg     = "approval_id"
 	ReservedIdempotencyKeyArg = "idempotency_key"
+	ReservedConfirmCodeArg    = "confirm_code"
 )
 
-// ReservedIdempotencyKeyRule is what the retry key MEANS.
+// ReservedIdempotencyKeyRule is what the retry key MEANS, stated once for a
+// whole listing: in the MCP server instructions and in the runner's frame. No
+// schema repeats it, so a listing of thirty writes pays for it once.
 //
-// Held by: TestTheCompactionStillRemovesWhatTheFrameStatesOnce
-// (backend/internal/compose/agenttoollistingcompaction_test.go), which reads the
-// SERVED description off the real catalog and fails when it stops carrying this
-// constant — so the catalogue and the frame cannot come to state the rule from
-// two sources again.
-//
-// Two surfaces state it and they must not drift: the tool catalogue carries it
-// as the member's own `description` (the surface splices it into every mutating
-// core tool), and the agent runner's system frame states it once for the whole
-// listing because the listing omits it per tool. It was written out twice, and
-// every check on it matched the literal text — so a reword would have left the
-// frame asserting a rule the catalogue no longer made, with the leak detector
-// searching for a string that was no longer anywhere and passing on nothing.
-//
-// It reads as a bare clause rather than a sentence so each surface can frame it
-// in its own voice. Both frames lead with what omitting the key costs, which is
-// the fact a caller deciding whether to send one needs. The schema states it
-// before this clause, and the frame names the argument and its type first.
-const ReservedIdempotencyKeyRule = "Same key, same result; a key reused with other arguments is refused."
+// Held by: TestTheRetryKeyRuleIsStatedOnceAndNoSchemaRepeatsIt
+// (backend/internal/compose/agenttoollistingcompaction_test.go)
+const ReservedIdempotencyKeyRule = "A tool that LISTS `" + ReservedIdempotencyKeyArg + "` takes it as a string " +
+	"you choose, and a retry without it may repeat the write. Same key, same result; a key reused with " +
+	"other arguments is refused."
 
 // ConflictingSourcesRule is what a model does when two things it was given
 // disagree. Without it a model smooths: measured on the use-case lane, the

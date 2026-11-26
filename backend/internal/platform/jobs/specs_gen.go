@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "401df0b031076f276af35df743ece8f223f2b6826efd9ce4c200fe5ab94b5a49"
+const JobContractHash = "4a9336dc7431ca4c053c2089e3570d37980f3967d45a1ad9ee20d0fbc042b360"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -1018,7 +1018,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Cadence:      Cadence{Fixed: 1 * time.Hour},
-		Registration: Registration{When: []string{"Blobstore"}},
+		Registration: Registration{When: []string{"JournalBlobstore"}},
 	},
 	"tag_scout": {
 		Kind:         "tag_scout",
@@ -1059,7 +1059,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
-		Args:      []ArgField{{Name: "BotID"}, {Name: "ConnectionID"}, {Name: "RawCaptureID"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "BotID"}, {Name: "BusinessLinkID", Scalar: true, Reason: "The approved business link row id the poll admitted the update through; empty for a message sent to the bot itself. It names no contact and carries no message content."}, {Name: "ConnectionID"}, {Name: "RawCaptureID"}, {Name: "Workspace"}},
 	},
 	"telegram_poll": {
 		Kind:         "telegram_poll",

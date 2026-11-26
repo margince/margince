@@ -102,7 +102,7 @@ func (w *notificationMailWorker) approvalReading(seatCtx context.Context, items 
 		var kept []approvalMailItem
 		var refs sendRefs
 		for _, item := range items {
-			if item.attempt.ApprovalID != nil && excluded[item.attempt.ApprovalID.UUID] {
+			if (item.attempt.ApprovalID != nil && excluded[item.attempt.ApprovalID.UUID]) || excluded[item.attempt.Notice.ID] {
 				continue
 			}
 			refreshed, facts, current, err := refreshApprovalNotice(seatCtx, w.pool, item.attempt, clock(), forSingleEmail)
@@ -114,6 +114,9 @@ func (w *notificationMailWorker) approvalReading(seatCtx context.Context, items 
 			}
 			if refreshed.ApprovalID != nil {
 				refs.approvals = append(refs.approvals, refreshed.ApprovalID.UUID)
+			}
+			if refreshed.TeamRequestPage != nil {
+				refs.teamRequests = append(refs.teamRequests, teamRequestRef{notice: refreshed.Notice.ID, page: *refreshed.TeamRequestPage, member: refreshed.Recipient})
 			}
 			kept = append(kept, approvalMailItem{attempt: refreshed, facts: facts})
 		}

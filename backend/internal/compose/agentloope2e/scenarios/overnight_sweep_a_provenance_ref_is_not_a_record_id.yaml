@@ -1,0 +1,15 @@
+name: overnight_sweep_a_provenance_ref_is_not_a_record_id
+agent: overnight_at_risk_sweep
+worklist: [pump_station_retrofit]
+criteria:
+  - Does the note on Pump Station Retrofit name that the deal has had no recorded activity for about four weeks?
+  - Is the note linked to the deal itself, and does it cite the record or field it rests on?
+  - Does no note name a record's source or captured_by value as if it were a record id?
+  - Is every cause in the note one the seeded records carry, with no invented lost champion, competitor or price dispute?
+seed:
+  deals:
+    - name: pump_station_retrofit
+      activities:
+        - days_ago: 27
+          subject: Site survey
+          body: "Survey done; the client will come back after the budget meeting."

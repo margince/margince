@@ -125,6 +125,9 @@ export function projectCreateFields(
       key: "phase",
       label: "project.startPhase",
       type: "select",
+      // Required, so the form opens on Initiative: the phase the server gives
+      // a project created without one.
+      required: true,
       options: START_PHASES.map((phase) => ({
         value: phase,
         label: t(PHASE_LABEL[phase]),

@@ -66,12 +66,16 @@ func (s *Store) stampProvenSenders(ctx context.Context, tx pgx.Tx, activities []
 // an address-only row the promotion names @cohort_contact on. The address must
 // prove the contact, as it must for a stamped sender: a live address no other
 // contact ever held.
+// An activity that still holds an older, mixed-case address waits for the data
+// task: two spellings promoted together would meet on the identity key.
 func promotableParticipantSQL(alias string) string {
 	return alias + `.contact_id IS NULL
 		   AND ` + alias + `.user_id IS NULL
 		   AND ` + alias + `.address IS NOT NULL
 		   AND NOT ` + alias + `.past_party_cap
-		   AND ` + relstrength.AddressProvesSQL("@cohort_contact", alias+".address")
+		   AND ` + relstrength.AddressProvesSQL("@cohort_contact", alias+".address") + `
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant older
+		        WHERE older.activity_id = ` + alias + `.activity_id AND older.address <> lower(btrim(older.address)))`
 }
 
 // promoteParticipantsToContact is that update over the given activities: the

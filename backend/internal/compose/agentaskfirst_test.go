@@ -118,7 +118,7 @@ func TestEverySendAsksTheUserFirst(t *testing.T) {
 
 // irreversibleOpPrefixes are the contract verbs that act on a record or a
 // queue in a way the conversation has no verb to take back.
-var irreversibleOpPrefixes = []string{"archive", "merge", "disqualify", "approve", "reject", "executeBulkChange"}
+var irreversibleOpPrefixes = []string{"archive", "merge", "disqualify", "approve", "reject"}
 
 func hasAnyPrefix(op string, prefixes []string) bool {
 	return slices.ContainsFunc(prefixes, func(p string) bool { return strings.HasPrefix(op, p) })
@@ -336,5 +336,26 @@ func TestOnlyAnUnnegatedFinalSentenceCounts(t *testing.T) {
 		if got := callsItFinal(text); got != want {
 			t.Errorf("callsItFinal(%q) = %v, want %v", text, got, want)
 		}
+	}
+}
+
+// A call that waits for its own user is confirmed in that user's conversation
+// with a preview of what it would do (agents/confirmcode.go). A tool that could
+// not describe its target would answer its user a bare refusal instead. The set
+// is read off the production registry, so a newly flagged tool is held too.
+func TestEveryToolThatWaitsForItsUserCanPreviewTheCall(t *testing.T) {
+	registry := NewRegistry(nil, SendPath{})
+	held := 0
+	for _, spec := range registry.Specs() {
+		if !spec.WaitsEvenForItsUser {
+			continue
+		}
+		held++
+		if !registry.Stageable(spec.Name) {
+			t.Errorf("%s waits for its own user but cannot describe its target, so its user gets no preview to say yes to", spec.Name)
+		}
+	}
+	if held == 0 {
+		t.Fatal("no tool waits for its own user: the census read nothing, so it proves nothing")
 	}
 }

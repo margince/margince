@@ -10,10 +10,10 @@ import (
 
 // TestEveryReasonIsARefusalOrAnAllow reads every Reason constant off the
 // package's own files. A code added under any name must be placed: in
-// RefusalCodes, or named here as one of the two codes an allow carries.
+// RefusalCodes, or named here as one of the codes an allow carries.
 func TestEveryReasonIsARefusalOrAnAllow(t *testing.T) {
 	t.Parallel()
-	allows := []string{ReasonAllowed, ReasonAllowedByOverride}
+	allows := []string{ReasonAllowed, ReasonAllowedByOverride, ReasonOptOutAllowed}
 	refusals := RefusalCodes()
 	declared := reasonConstants(t)
 	for _, code := range declared {

@@ -25,6 +25,7 @@ cat > "$scratch/bin/make" <<'SH'
 for name in $SCENARIO; do
   if [[ " $STOPS " == *" $name "* ]]; then
     echo "HARNESS: $name run 1 did not run to an answer:"
+    [[ -z "${REASON:-}" ]] || echo "  $REASON"
     echo "  This is not a use-case failure. Nothing was scored."
     exit 2
   fi
@@ -48,6 +49,16 @@ if [[ ! -f "$scratch/backend/internal/compose/aicert/records/mcp_e2e/stand-in@cl
 fi
 if [[ "$out" != *"LANE STOPPED lane"* ]]; then
   echo "FAIL: a lane left with only cases that always stop did not stop"; echo "$out" | sed 's/^/    /'
+  failures=$((failures + 1))
+fi
+# The claude CLI's own limit, as the judge meets it, is waited out like any other
+# limit; deferred, every judged case would stall the lane until it gave up.
+out="$(cd "$scratch" && PATH="$scratch/bin:$PATH" STOPS="case1_job" \
+  REASON="the judge could not be reached: You've hit your 5-hour limit · resets 5:20pm" \
+  E2E_SWEEP_WAIT=0 E2E_SWEEP_MAX_WAITS=1 E2E_SWEEP_SINCE="$(date +%s)" E2E_SWEEP_LOGS="$scratch/logs2" \
+  bash scripts/e2e-llm-sweep.sh lane 1 2>&1)" || true
+if [[ "$out" != *"LIMIT lane: case1_job hit a limit"* || "$out" == *"DEFERRED"* ]]; then
+  echo "FAIL: the claude CLI's 5-hour limit was not read as a limit"; echo "$out" | sed 's/^/    /'
   failures=$((failures + 1))
 fi
 [[ $failures -eq 0 ]] || exit 1

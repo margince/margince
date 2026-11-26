@@ -33,7 +33,7 @@ func TestAnEntitySenderSignsWithTheEntityThroughTheRealSend(t *testing.T) {
 		t.Fatalf("save the workspace template: %v", err)
 	}
 	companyLogo := "logos/" + ids.NewV7().String() + ".png"
-	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_origin, source, captured_by)
+	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_source, source, captured_by)
 		VALUES ($1, 'Acme', true, $2, 'upload', 'manual', 'human:x')`, ids.NewV7(), companyLogo)
 	template, imprint := "<p>{logo}<b>{name}</b></p><p>{imprint}</p>", "Acme Wien GmbH\nFN 123456 a"
 	vienna, err := store.CreateLegalEntity(admin, contacts.LegalEntityInput{

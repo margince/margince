@@ -39,6 +39,8 @@ case " ${GOFLAGS:-} " in
 	*" -trimpath "*) ;;
 	*) [ -n "${CI:-}" ] || export GOFLAGS="${GOFLAGS:+$GOFLAGS }-trimpath" ;;
 esac
+# -trimpath leaves runtime.GOROOT empty in gen-composition, as the Makefiles say.
+[ -n "${CI:-}" ] || [ -n "${GOROOT:-}" ] || export GOROOT="$(go env GOROOT)"
 # Runtime state (logs, pids, claims) lives under dev_state_root below, one
 # directory per machine rather than per worktree — keep everything this script
 # writes owner-only.
@@ -1240,7 +1242,8 @@ up)
   # Scanned only to choose between a real model and the offline fake below. The
   # binding itself is never read from a file by the api or the worker.
   routing_src="config/margince.yaml"
-  if seeded_ai_routing config/margince.dev.yaml | grep -q .; then
+  dev_routing="$(seeded_ai_routing config/margince.dev.yaml)"
+  if [[ -n "$dev_routing" ]]; then
     routing_src="config/margince.dev.yaml"
   fi
 
@@ -1559,7 +1562,7 @@ up)
     # The only seat on a cold start is the bootstrap admin, and the deployment
     # config is where it is defined — read the address back from that file
     # rather than restating it, so an edited config prints the truth.
-    admin_email="$(sed -n 's/^[[:space:]]*email:[[:space:]]*\(.*\)$/\1/p' "$deploy_cfg" | head -1)"
+    admin_email="$(sed -n 's/^[[:space:]]*email:[[:space:]]*\(.*\)$/\1/p' "$deploy_cfg" | sed -n 1p)"
     echo "  login    ${admin_email} / $(cat "$admin_pw_file")  (bootstrap admin — cold start, no other data)"
     echo "  demo     make seed-dev  — adds the demo records + rep seats on top"
     # Name the reading tool, not just the file: the raw log interleaves three
@@ -1700,8 +1703,15 @@ restore)
   psql_owner postgres -c "CREATE DATABASE \"${db}\" TEMPLATE \"${db}_tmpl\"" </dev/null
   ;;
 
+query)
+  # SQL from stdin against this stack's database, as its owner, tab-separated.
+  # The e2e lane reads what a run left before the next restore takes it away.
+  ensure_infra
+  psql_owner "$db" -X -q -A -F $'\t' -P footer=off -v ON_ERROR_STOP=1
+  ;;
+
 *)
-  echo "usage: dev.sh {up|stop|sweep|snapshot|restore} [slug] [--drop]" >&2
+  echo "usage: dev.sh {up|stop|sweep|snapshot|restore|query} [slug] [--drop]" >&2
   exit 2
   ;;
 esac

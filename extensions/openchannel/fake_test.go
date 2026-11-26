@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension/exttest"
 )
 
 // The two members the suite runs as, canonical because that is what the column
@@ -46,6 +47,8 @@ const (
 
 // fakeRuntime is one invocation's Runtime.
 type fakeRuntime struct {
+	exttest.Runtime
+
 	secrets *fakeSecrets
 	tx      *fakeTx
 	caller  extension.Caller
@@ -96,24 +99,6 @@ func (r *fakeRuntime) Secrets() extension.Secrets { return r.secrets }
 
 func (r *fakeRuntime) Caller() extension.Caller { return r.caller }
 
-func (r *fakeRuntime) Activities() extension.Activities { return nil }
-
-func (r *fakeRuntime) SetAside() extension.SetAside        { return nil }
-func (r *fakeRuntime) AI() extension.AI                    { return nil }
-func (r *fakeRuntime) Companies() extension.Companies      { return nil }
-func (r *fakeRuntime) MailContent() extension.MailContents { return nil }
-func (r *fakeRuntime) Models() extension.Models            { return nil }
-func (r *fakeRuntime) Objects() extension.Objects          { return nil }
-
-// The batch pair is unused by this unit; the seam's shape is all it answers for.
-func (r *fakeRuntime) IngestBatch(context.Context, extension.UserID, extension.SourceName, []extension.Record, extension.BatchPosition) ([]extension.Result, error) {
-	return nil, nil
-}
-
-func (r *fakeRuntime) IngestPosition(context.Context, extension.SourceName) (extension.BatchPosition, error) {
-	return "", nil
-}
-
 func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, extension.Tx) error) error {
 	if r.txErr != nil {
 		return r.txErr
@@ -160,6 +145,8 @@ func (r *fakeRuntime) Ingest(_ context.Context, on extension.UserID, rec extensi
 // is unused by this unit and a fake that served it would invite a handler to
 // start using one.
 type fakeSecrets struct {
+	exttest.Secrets
+
 	stored map[string][]byte
 	putErr error
 	getErr error
@@ -167,12 +154,6 @@ type fakeSecrets struct {
 	// paths are asserted: they must do the same work as a wrong signature.
 	gets int
 }
-
-func (s *fakeSecrets) Get(context.Context, string) ([]byte, error) {
-	return nil, extension.ErrSecretNotFound
-}
-func (s *fakeSecrets) Put(context.Context, string, []byte) error { return nil }
-func (s *fakeSecrets) Delete(context.Context, string) error      { return nil }
 
 func (s *fakeSecrets) userKey(user extension.UserID, key string) string {
 	return string(user) + "/" + key
@@ -242,9 +223,8 @@ func (t *fakeTx) failure() error {
 	return t.err
 }
 
-// Core is nil: this unit files nothing through the governed core port, and a
-// fake that handed one back would let a handler start using it unnoticed.
-func (t *fakeTx) Core() extension.Core { return nil }
+// Core is the kit's: this unit files nothing through the governed core port.
+func (t *fakeTx) Core() extension.Core { return exttest.Core{} }
 
 func (t *fakeTx) Record(_ context.Context, ch extension.Change, ev extension.Event) error {
 	// The published grammar, run here rather than waved through: an entity
@@ -465,21 +445,6 @@ func (*fakeRuntime) SyncNow(_ context.Context, job extension.JobName) error {
 	}
 	return nil
 }
-
-// openchannel declares no OAuth app, so the core refuses every provider it names.
-func (*fakeRuntime) OAuthAccessToken(context.Context, extension.OAuthProvider) (string, error) {
-	return "", extension.ErrNoSuchOAuthApp
-}
-
-func (*fakeRuntime) OAuthDisconnect(context.Context, extension.OAuthProvider) error {
-	return extension.ErrNoSuchOAuthApp
-}
-
-// This unit makes no system read. A handler that starts making one fails here
-// on a nil port, never against an answer nothing scripted.
-func (*fakeRuntime) Deals() extension.Deals         { return nil }
-func (*fakeRuntime) Authority() extension.Authority { return nil }
-func (*fakeRuntime) Directory() extension.Directory { return nil }
 
 // declaredJob is the job named in api/jobs.yaml, spelled here so the fake
 // refuses exactly what the core refuses.

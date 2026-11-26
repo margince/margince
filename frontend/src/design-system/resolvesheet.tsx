@@ -208,7 +208,9 @@ function suppresses(outcome: ResolveOutcome | ""): boolean {
   return outcome === "value_correct" || outcome === "not_relevant";
 }
 
-// ResolveOutcome is the six answers a contact can give.
+// ResolveOutcome is the seven answers a contact can give. `separate` answers only
+// a finding about two deals that may be one buying motion, and its own sheet
+// offers it.
 //
 // `condition_cleared` is deliberately absent: that is the check's own answer,
 // and a contact naming it would be saying the condition stopped being true
@@ -219,7 +221,8 @@ export type ResolveOutcome =
   | "value_correct"
   | "not_relevant"
   | "remind_later"
-  | "reassign";
+  | "reassign"
+  | "separate";
 
 // ResolveAnswer is what the sheet submits: the outcome, and only the fields
 // that outcome takes.

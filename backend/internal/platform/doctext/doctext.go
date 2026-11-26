@@ -119,6 +119,9 @@ type excerptWriter struct {
 	truncated bool
 }
 
+// room is how many more runes the excerpt accepts.
+func (w *excerptWriter) room() int { return w.limit - w.held }
+
 // write appends s, or as much of it as the budget allows, and answers errFull
 // once nothing more fits.
 func (w *excerptWriter) write(s string) error {

@@ -19,6 +19,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
   DocumentList,
   INGEST_POLL_MS,
@@ -329,8 +330,18 @@ function NewDocumentSet() {
       screen="settings"
       stay
       testId="new-document-set"
+      conflict={{
+        field: "name",
+        code: "name_taken",
+        sentence: t("knowledge.new.nameTaken"),
+      }}
       fields={[
-        { key: "name", label: "knowledge.new.name", required: true },
+        {
+          key: "name",
+          label: "knowledge.new.name",
+          required: true,
+          maxLength: TEXT_LIMITS.label,
+        },
         {
           key: "topic_statement",
           label: "knowledge.new.topic",

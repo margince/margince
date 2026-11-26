@@ -66,6 +66,8 @@ type invitationRow struct {
 	// Team is the colleagues of a team booking link whose time this meeting
 	// holds beside its host. Empty on every other booking.
 	Team []ids.UUID
+	// Page is the booking page a public booking came through, nil otherwise.
+	Page *ids.UUID
 }
 
 type schedulingArgs []any
@@ -184,6 +186,9 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 	row.Appointment = invitationAppointment(profile, in)
 	row.Appointment.LeadID = intent.Lead.UUID
 	row.Team = teamIDs(intent.Team)
+	if intent.Page != ids.Nil {
+		row.Page = &intent.Page
+	}
 	row.Appointment.Attendees, row.Appointment.Roster = rosterAddresses(roster), roster
 	if intent.DescriptionFromBooker {
 		row.Appointment.Description = ""
@@ -222,12 +227,12 @@ func reserveInvitation(ctx context.Context, tx pgx.Tx, host ids.UserID, start, e
 
 func readInvitation(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool) (invitationRow, error) {
 	args := schedulingArgs{}
-	query := `SELECT activity_id,host_user_id,provider,calendar_id,appointment,receipt,status,version,command,attempts,management_ref,reminder_status,public_intent,attention_reason,attention_episode,team_user_ids FROM meeting_invitation WHERE activity_id=` + args.add(id)
+	query := `SELECT activity_id,host_user_id,provider,calendar_id,appointment,receipt,status,version,command,attempts,management_ref,reminder_status,public_intent,attention_reason,attention_episode,team_user_ids,booking_page_id FROM meeting_invitation WHERE activity_id=` + args.add(id)
 	if lock {
 		query += " FOR UPDATE"
 	}
 	var row invitationRow
-	err := tx.QueryRow(ctx, query, args...).Scan(&row.ID, &row.Host, &row.Provider, &row.Calendar, &row.Appointment, &row.Receipt, &row.Status, &row.Version, &row.Command, &row.Attempts, &row.ManagementRef, &row.ReminderStatus, &row.PublicIntent, &row.AttentionReason, &row.AttentionEpisode, &row.Team)
+	err := tx.QueryRow(ctx, query, args...).Scan(&row.ID, &row.Host, &row.Provider, &row.Calendar, &row.Appointment, &row.Receipt, &row.Status, &row.Version, &row.Command, &row.Attempts, &row.ManagementRef, &row.ReminderStatus, &row.PublicIntent, &row.AttentionReason, &row.AttentionEpisode, &row.Team, &row.Page)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return row, apperrors.ErrNotFound
 	}
@@ -289,7 +294,7 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		}
 		// The page lock comes before every host lock, on every path that takes both.
 		if intent.DescriptionFromBooker || len(row.Team) > 0 {
-			if err := confirmTeamTx(ctx, tx, host, row.Team); err != nil {
+			if err := confirmTeamTx(ctx, tx, host, intent.Page, row.Team); err != nil {
 				return err
 			}
 		}
@@ -332,14 +337,14 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		}
 		row.Appointment.RequestID = row.ID.String()
 		args := schedulingArgs{}
-		values := []string{args.add(row.ID), args.add(host), args.add(row.Provider), args.add(row.Calendar), args.add(row.Appointment), args.add(row.Status), args.add(hash), args.add(row.ManagementRef), args.add(s.now()), args.add(row.ReminderStatus), args.add(row.PublicIntent), args.add(s.now()), args.add(row.Team)}
-		_, err = tx.Exec(ctx, `INSERT INTO meeting_invitation(activity_id,host_user_id,provider,calendar_id,appointment,status,management_hash,management_ref,next_attempt_at,reminder_status,public_intent,created_at,team_user_ids) VALUES (`+strings.Join(values, ",")+`)`, args...)
+		values := []string{args.add(row.ID), args.add(host), args.add(row.Provider), args.add(row.Calendar), args.add(row.Appointment), args.add(row.Status), args.add(hash), args.add(row.ManagementRef), args.add(s.now()), args.add(row.ReminderStatus), args.add(row.PublicIntent), args.add(s.now()), args.add(row.Team), args.add(row.Page)}
+		_, err = tx.Exec(ctx, `INSERT INTO meeting_invitation(activity_id,host_user_id,provider,calendar_id,appointment,status,management_hash,management_ref,next_attempt_at,reminder_status,public_intent,created_at,team_user_ids,booking_page_id) VALUES (`+strings.Join(values, ",")+`)`, args...)
 		if err != nil {
 			return err
 		}
 		// The door's own flag: Public is nil for a booking sent without a key.
 		if intent.DescriptionFromBooker {
-			if _, err := stampBookingPageUseTx(ctx, tx, host, s.now()); err != nil {
+			if _, err := stampBookingPageUseTx(ctx, tx, host, intent.Page, s.now()); err != nil {
 				return err
 			}
 		}

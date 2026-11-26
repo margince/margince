@@ -216,37 +216,31 @@ def from_codex(lines, path, model, driver, offered):
 # agy keeps under its own home, then calls it through call_mcp_tool. Any other
 # tool stops the run, so a Gemini verdict never rests on a file or web read.
 _AGY_RESOURCE_HELPERS = {"list_resources", "read_resource"}
-_AGY_SCHEMA_DIR = f"/mcp/{SERVER}/"
-# A long tool result is not put in the model's context: agy writes it to this
-# file of the conversation and the model reads it back.
-_AGY_SPILL = re.compile(r"/\.gemini/antigravity-cli/brain/([^/]+)/\.system_generated/steps/\d+/[a-z0-9_]+\.txt$")
 
 
-# The run's own folder holds nothing but the agent file, so a look into it
-# reads no answer; a look anywhere else stops the run.
+# A look may stay inside the run's own folder, which holds only the agent file,
+# and inside the run's agy home (clean.agy_home), which holds only what this run
+# wrote: tool schemas and long results agy kept out of the stream. A look
+# anywhere else, the home's keychain link included, stops the run.
 _AGY_LOOKS = {"read_file", "view_file", "list_dir", "find_by_name", "grep_search"}
 
 
-def _agy_inside(workspace, params):
+def _agy_inside(roots, params):
     paths = [os.path.realpath(v) for v in params.values() if isinstance(v, str) and v.startswith("/")]
-    root = os.path.realpath(workspace) if workspace else ""
-    return bool(root and paths) and all(p == root or p.startswith(root + os.sep) for p in paths)
+    tops = [os.path.realpath(root) for root in roots if root]
+    return bool(tops and paths) and all(any(p == top or p.startswith(top + os.sep) for top in tops) for p in paths)
 
 
-def _agy_tool(out, step, conversation, workspace=""):
+def _agy_tool(out, step, conversation, workspace="", home=""):
     """Write one finished agy tool step; return why the run must stop, or ""."""
     name = step.get("tool_name")
     info = step.get("tool_info") or {}
     params = info.get("parameters") or {}
-    path = str(params.get("Path") or "")
-    if name in _AGY_LOOKS and _agy_inside(workspace, params):
+    if name in _AGY_LOOKS and _agy_inside((workspace, home), params):
         return ""
-    if name == "read_file" and _AGY_SCHEMA_DIR in path:
-        return ""
-    spill = _AGY_SPILL.search(os.path.realpath(path)) if path else None
-    # Every step of this conversation is one the lane allows, since any other
-    # stops the run, so a file agy spilled for it holds nothing from outside.
-    if name == "read_file" and spill and conversation and spill.group(1) == conversation:
+    # A look that ended in an error read nothing, as a failed outside call below
+    # reached nothing; Gemini sometimes mangles the path of a schema file it reads.
+    if name in _AGY_LOOKS and step.get("state") == "ERROR":
         return ""
     if name in _AGY_RESOURCE_HELPERS and params.get("ServerName") == SERVER:
         return ""
@@ -261,7 +255,7 @@ def _agy_tool(out, step, conversation, workspace=""):
         if step.get("state") == "ERROR":
             text, is_error = str((info.get("error") or {}).get("message") or "the call failed"), True
         else:
-            text, is_error = str(info.get("output") or "") or _agy_spilled(conversation, step.get("step_index")), False
+            text, is_error = str(info.get("output") or "") or _agy_spilled(home, conversation, step.get("step_index")), False
         out.tool_results([(call_id, text, is_error)])
         return ""
     # The arguments say what the model went outside for, which is the whole of
@@ -270,10 +264,11 @@ def _agy_tool(out, step, conversation, workspace=""):
     return f"agy used a tool outside the lane's MCP server: {name} {target}".strip()
 
 
-def _agy_spilled(conversation, step_index):
+def _agy_spilled(home, conversation, step_index):
     """The long result agy kept out of the stream, read from the file it wrote."""
-    path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{conversation}/.system_generated/steps/{step_index}/output.txt")
-    if not conversation or not os.path.isfile(path):
+    path = os.path.join(home, ".gemini", "antigravity-cli", "brain", conversation, ".system_generated",
+                        "steps", str(step_index), "output.txt")
+    if not home or not conversation or not os.path.isfile(path):
         return ""
     with open(path, encoding="utf-8", errors="replace") as handle:
         return handle.read()
@@ -291,7 +286,7 @@ def _agy_usage(usage):
     }
 
 
-def from_agy(lines, path, model, driver, offered, workspace=""):
+def from_agy(lines, path, model, driver, offered, workspace="", home=""):
     """Write an `agy -p --output-format stream-json` run as a transcript: 0 when it ran, 3 when not.
 
     agy's init lists its whole tool registry, not what the model was offered, so
@@ -320,7 +315,7 @@ def from_agy(lines, path, model, driver, offered, workspace=""):
                 if state == "DONE" and texts.get(step.get("step_index")):
                     out.assistant(texts.pop(step.get("step_index")))
             elif step.get("tool_name") and state in ("DONE", "ERROR"):
-                stop = _agy_tool(out, step, conversation, workspace)
+                stop = _agy_tool(out, step, conversation, workspace, home)
                 if stop:
                     out.finish(True, f"HARNESS: {stop}", 0)
                     return 3

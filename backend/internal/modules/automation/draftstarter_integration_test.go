@@ -112,7 +112,7 @@ func TestSeedingEnablesAStarterOnlyWhenItsSetupIsComplete(t *testing.T) {
 			continue
 		}
 		var enabled bool
-		if err := fx.owner.QueryRow(ctx, "SELECT enabled FROM automation WHERE key = $1 AND origin = 'catalog'", entry.Key).Scan(&enabled); err != nil {
+		if err := fx.owner.QueryRow(ctx, "SELECT enabled FROM automation WHERE key = $1", entry.Key).Scan(&enabled); err != nil {
 			t.Fatalf("%s: %v", entry.Key, err)
 		}
 		if want := seededEnabled(entry); enabled != want {

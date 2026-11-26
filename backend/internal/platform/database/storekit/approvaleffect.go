@@ -43,3 +43,31 @@ func withReleasedByLink(ctx context.Context, entityID ids.UUID, evidence map[str
 	linked[EvidenceKeyReleasedBy] = approval.String()
 	return linked
 }
+
+// EvidenceKeyConfirmedInConversation names the one-time code whose yes in the
+// conversation released the work that wrote the audit row: the conversation's
+// counterpart of EvidenceKeyReleasedBy. One code is good once, so two effects
+// carrying one id are a replay.
+const EvidenceKeyConfirmedInConversation = "confirmed_in_conversation"
+
+type confirmedByKey struct{}
+
+// WithConfirmingCode marks every audit row written under ctx as work its user
+// confirmed in the conversation with the code named by once.
+func WithConfirmingCode(ctx context.Context, once string) context.Context {
+	return context.WithValue(ctx, confirmedByKey{}, once)
+}
+
+// withConfirmedByLink adds the code's id to a row the confirmed work wrote.
+//
+//craft:ignore naked-any the audit evidence seam is jsonb; its members are each writer's own shape
+func withConfirmedByLink(ctx context.Context, evidence map[string]any) map[string]any {
+	once, ok := ctx.Value(confirmedByKey{}).(string)
+	if !ok || once == "" {
+		return evidence
+	}
+	linked := make(map[string]any, len(evidence)+1)
+	maps.Copy(linked, evidence)
+	linked[EvidenceKeyConfirmedInConversation] = once
+	return linked
+}

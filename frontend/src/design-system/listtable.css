@@ -342,9 +342,10 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-/* Save view and Manage views share the footer's width, on a phone as above. */
+/* Each button grows from its label's width, and wraps below when both do not
+   fit. Not a zero basis: an even split lets a long label run past its button. */
 .lt-vfoot > .btn {
-  flex: 1 1 0;
+  flex: 1 1 auto;
 }
 /* A Save view with nothing to save draws nothing, and its rule goes too. */
 .lt-vfoot:empty {
@@ -1410,10 +1411,8 @@
   /* The identity cell is the card's heading: no label, full width, and it reads
    * as the thing you tapped rather than as one field among several.
    *
-   * Nothing is frozen in a stack — there is no sideways scroll for a cell to
-   * slide under — so the desktop column's chrome comes off here. Its opaque
-   * ground was still being painted over the card's translucent one, which put a
-   * patch of a slightly different white behind every card's title. */
+   * A stack scrolls nothing sideways, so nothing is frozen and the desktop
+   * column's chrome comes off here. */
   .lt-table:where(:not(.lt-phonerows)) td.lt-identity {
     display: block;
     position: static;

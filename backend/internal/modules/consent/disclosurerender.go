@@ -162,6 +162,9 @@ func owedDisclosures(sender jurisdiction.Code, recipients []jurisdiction.Code) (
 	for _, code := range recipients {
 		if marketingRules, _, found := applicableRules(code); found {
 			owed = appendOwed(owed, marketingRules.Disclosures, false)
+			// A pack may owe the controller's identity on advertising alone, as
+			// an anti-spam law does; the sender's own pack cannot say so for it.
+			owed = appendOwed(owed, advertisingOnlyIdentity(marketingRules.Disclosures), true)
 			// One body leads with one language, so the first recipient's
 			// pack that names one decides it.
 			if layout.packLanguage == "" {
@@ -202,6 +205,13 @@ func appendOwed(owed, declared []messagingrules.Disclosure, dataProtection bool)
 	return owed
 }
 
+// advertisingOnlyIdentity is the data-protection kinds a pack owes on advertising only.
+func advertisingOnlyIdentity(declared []messagingrules.Disclosure) []messagingrules.Disclosure {
+	return slices.DeleteFunc(slices.Clone(declared), func(d messagingrules.Disclosure) bool {
+		return !d.MarketingOnly || !dataProtectionDisclosure(d.Kind)
+	})
+}
+
 // dataProtectionDisclosure reports whether a kind discharges a data-protection
 // duty (who the controller is, who answers about the data) rather than a
 // marketing one.
@@ -224,6 +234,9 @@ func particularFor(kind messagingrules.DisclosureKind, p ControllerParticulars) 
 		// reporting it met would tell an operator their configuration is
 		// complete when a supervisory authority would say otherwise.
 		return bothParticulars(p.LegalName, p.PostalAddress)
+	case messagingrules.Advertisement:
+		// The legal name alone; layoutDisclosures turns it into the sentence.
+		return strings.TrimSpace(p.LegalName)
 	case messagingrules.PrivacyContact:
 		return strings.TrimSpace(p.PrivacyContact)
 	case messagingrules.ObjectionRoute:

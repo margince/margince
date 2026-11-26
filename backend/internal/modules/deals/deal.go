@@ -325,6 +325,9 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	}
 	after := p.After()
 	resultingAmount := patchedMoney(after, amountField, current.AmountMinor)
+	if resultingAmount == nil && current.AmountMinor != nil && string(current.Status) != string(DealOpen) {
+		return &ClosedDealAmountError{}
+	}
 	resultingArr := patchedMoney(after, arrField, current.ExpectedArrMinor)
 	resultingCurrency := current.Currency
 	if v, ok := after[currencyField]; ok {

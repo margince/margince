@@ -67,4 +67,5 @@ const (
 	previewFieldLastName      = "last_name"
 	previewFieldTargetEndDate = "target_end_date"
 	previewFieldValidUntil    = "valid_until"
+	previewFieldProductID     = "product_id"
 )

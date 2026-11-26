@@ -255,6 +255,8 @@ export async function readHealthReport(
         2,
       );
     }
+    case "footer":
+      return JSON.stringify(finding.footer_gap ?? null, null, 2);
     default:
       throw new Error("Unknown health source");
   }

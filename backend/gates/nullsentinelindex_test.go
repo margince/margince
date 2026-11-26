@@ -28,6 +28,7 @@ package gates
 // not match the detector rather than needing to be excused by name.
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"testing"
@@ -77,7 +78,7 @@ func defaultsToALiteral(arguments string) bool {
 }
 
 var uniqueIndexDefinition = regexp.MustCompile(
-	`^(?:public|ext)\.([A-Za-z0-9_]+) CREATE UNIQUE INDEX \S+ ON (?:public|ext)\.([a-z0-9_]+) USING btree (.*)$`)
+	`^(public|ext)\.([A-Za-z0-9_]+) CREATE UNIQUE INDEX \S+ ON (?:public|ext)\.([a-z0-9_]+) USING btree (.*)$`)
 
 // sentinelsThatAreNotNullMarkers are the literals this schema keeps, each because
 // the COALESCE does something other than stand in for a null in the key.
@@ -92,6 +93,12 @@ var sentinelsThatAreNotNullMarkers = gatekit.Waive(map[string]string{
 		"TestAParticipantKeyTellsEveryIdentityApart holds a null apart from an empty text",
 })
 
+// sentinelIndexesBeingRetired lists old indexes kept for one release of a
+// two-step key swap (recipe: docs/how-to/apply-migrations.md). A key is
+// "<schema>.<table>.<index>", and the reason names the release that drops it.
+// An entry whose index is gone, or whose table lacks the replacement, fails.
+var sentinelIndexesBeingRetired = gatekit.Waive(map[string]string{})
+
 // uniqueIndexFloor is what the catalog held when this gate was written. A census
 // that silently reads a smaller schema reports PASS with nothing to notice.
 const uniqueIndexFloor = 400
@@ -99,33 +106,125 @@ const uniqueIndexFloor = 400
 func TestNoUniqueKeyFakesANullWithASentinel(t *testing.T) {
 	t.Parallel()
 	defer sentinelsThatAreNotNullMarkers.AssertAllMatched(t)
+	defer sentinelIndexesBeingRetired.AssertAllMatched(t)
 
+	findings, examined := sentinelIndexFindings(t, catalogRecords(t), sentinelIndexesBeingRetired)
+	for _, finding := range findings {
+		t.Error(finding)
+	}
+	if examined < uniqueIndexFloor {
+		t.Fatalf("read %d unique indexes, fewer than the %d this gate was written against — "+
+			"the census is reading less than the schema", examined, uniqueIndexFloor)
+	}
+}
+
+// sentinelIndexFindings returns one message per unique index that keys off a
+// sentinel without a kept exception or a declared swap, and the count read.
+func sentinelIndexFindings(t testing.TB, records []string, retiring *gatekit.Waivers[string]) ([]string, int) {
+	t.Helper()
+	var findings []string
 	examined := 0
-	for _, record := range catalogRecords(t) {
+	for _, record := range records {
 		m := uniqueIndexDefinition.FindStringSubmatch(strings.TrimSpace(record))
 		if m == nil {
 			continue
 		}
 		examined++
+		schema, index, table, definition := m[1], m[2], m[3], m[4]
 		// A key's own COALESCE lives in the column list; a predicate's belongs to
 		// the WHERE and binds which rows are indexed, not how they are compared.
-		columns, _, ok := parenGroup(m[3])
+		columns, rest, ok := parenGroup(definition)
 		if !ok {
-			t.Errorf("%s on %s: cannot read its column list from %q", m[1], m[2], m[3])
+			findings = append(findings, fmt.Sprintf("%s on %s: cannot read its column list from %q", index, table, definition))
 			continue
 		}
 		found := sentinelCoalesce(columns)
-		if found == "" || sentinelsThatAreNotNullMarkers.Waived(t, m[1]) {
+		if found == "" || sentinelsThatAreNotNullMarkers.Waived(t, index) {
 			continue
 		}
-		t.Errorf("%s on %s keys off %s, so the sentinel is a value no row may store — "+
-			"drop the COALESCE and append NULLS NOT DISTINCT to the index instead",
-			m[1], m[2], found)
+		if !retiring.Waived(t, schema+"."+table+"."+index) {
+			findings = append(findings, fmt.Sprintf("%s on %s keys off %s, so the sentinel is a value no row may store — "+
+				"drop the COALESCE and append NULLS NOT DISTINCT to the index instead; if the old index must stay for one "+
+				"release while the new one is added, declare it in sentinelIndexesBeingRetired as %s.%s.%s",
+				index, table, found, schema, table, index))
+			continue
+		}
+		if !hasNullsNotDistinctReplacement(records, schema, table, index, columns, rest) {
+			findings = append(findings, fmt.Sprintf("%s on %s is declared as a swap in progress, but %s has no other unique "+
+				"index over the same key columns that is NULLS NOT DISTINCT; add the replacement in the same release",
+				index, table, table))
+		}
 	}
+	return findings, examined
+}
 
-	if examined < uniqueIndexFloor {
-		t.Fatalf("read %d unique indexes, fewer than the %d this gate was written against — "+
-			"the census is reading less than the schema", examined, uniqueIndexFloor)
+// keyColumns reduces a key's column list to what names the key: each sentinel
+// COALESCE becomes its first argument, and casts and parentheses are dropped.
+func keyColumns(columns string) []string {
+	var out []string
+	for _, column := range splitTopLevel(columns) {
+		column = strings.TrimSpace(column)
+		if coalesceCall.MatchString(column) {
+			if inner, _, ok := parenGroup(column); ok {
+				column = splitTopLevel(inner)[0]
+			}
+		}
+		column = castSuffix.ReplaceAllString(column, "")
+		out = append(out, strings.NewReplacer("(", "", ")", "", " ", "").Replace(column))
+	}
+	return out
+}
+
+var castSuffix = regexp.MustCompile(`::[a-z_ ]+`)
+
+// hasNullsNotDistinctReplacement reports whether another unique index on the
+// same table covers the old key's columns and predicate with NULLS NOT DISTINCT.
+func hasNullsNotDistinctReplacement(records []string, schema, table, oldIndex, oldColumns, oldRest string) bool {
+	wantColumns := strings.Join(keyColumns(oldColumns), ",")
+	wantRest := strings.TrimSpace(oldRest)
+	for _, record := range records {
+		m := uniqueIndexDefinition.FindStringSubmatch(strings.TrimSpace(record))
+		if m == nil || m[1] != schema || m[3] != table || m[2] == oldIndex {
+			continue
+		}
+		columns, rest, ok := parenGroup(m[4])
+		if !ok || !strings.Contains(rest, "NULLS NOT DISTINCT") || sentinelCoalesce(columns) != "" {
+			continue
+		}
+		rest = strings.TrimSpace(strings.Replace(rest, "NULLS NOT DISTINCT", "", 1))
+		if strings.Join(keyColumns(columns), ",") == wantColumns && strings.Join(strings.Fields(rest), " ") == strings.Join(strings.Fields(wantRest), " ") {
+			return true
+		}
+	}
+	return false
+}
+
+// TestASwapInProgressIsToleratedOnlyWhenDeclared: the old index is a finding
+// without a declaration. With one and a replacement it is silent. Without the
+// replacement it is a finding again.
+func TestASwapInProgressIsToleratedOnlyWhenDeclared(t *testing.T) {
+	t.Parallel()
+	oldIndex := "public.uq_old CREATE UNIQUE INDEX uq_old ON public.mail_thread USING btree (workspace_id, COALESCE(team_id, '00000000-0000-0000-0000-000000000000'::uuid))"
+	newIndex := "public.uq_new CREATE UNIQUE INDEX uq_new ON public.mail_thread USING btree (workspace_id, team_id) NULLS NOT DISTINCT"
+	declare := func() *gatekit.Waivers[string] {
+		return gatekit.Waive(map[string]string{
+			"public.mail_thread.uq_old": "old key of the team swap; the next release drops it once no binary infers it",
+		})
+	}
+	undeclared, examined := sentinelIndexFindings(t, []string{oldIndex, newIndex}, gatekit.Waive(map[string]string{}))
+	if examined != 2 || len(undeclared) != 1 || !strings.Contains(undeclared[0], "uq_old") {
+		t.Fatalf("without a declaration the old index must be the one finding, got %d of %d: %v", len(undeclared), examined, undeclared)
+	}
+	if findings, _ := sentinelIndexFindings(t, []string{oldIndex, newIndex}, declare()); len(findings) != 0 {
+		t.Fatalf("a declared swap with its replacement must not be reported, got %v", findings)
+	}
+	noReplacement, _ := sentinelIndexFindings(t, []string{oldIndex}, declare())
+	if len(noReplacement) != 1 || !strings.Contains(noReplacement[0], "no other unique index") {
+		t.Fatalf("a declared swap without a replacement must be a finding, got %v", noReplacement)
+	}
+	otherKey := strings.Replace(newIndex, "team_id", "owner_id", 1)
+	if findings, _ := sentinelIndexFindings(t, []string{oldIndex, otherKey}, declare()); len(findings) != 1 {
+		t.Fatalf("a replacement over other columns must not count, got %v", findings)
 	}
 }
 

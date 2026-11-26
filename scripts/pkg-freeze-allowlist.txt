@@ -15,9 +15,18 @@
 # so the gate only warns about it; remove it with the next edit here.
 # Package removals are never allowlistable (deprecate-then-major cycle,
 # ADR-0120 §3).
-github.com/margince/margince/backend/pkg/extension: Runtime.AI: added # Runtime is implemented only by the core and by unit test fakes, so only fakes must add one method; ratified in #8293
-github.com/margince/margince/backend/pkg/extension: Runtime.Models: added # an extension unit calls the core's AI models; only the core implements Runtime, so no outside code breaks (#11447)
-github.com/margince/margince/backend/pkg/extension: Runtime.Objects: added # an extension unit reads and writes the core's file store; only the core implements Runtime, so no outside code breaks (#11447)
-github.com/margince/margince/backend/pkg/extension: Runtime.Companies: added # a background job reads companies visible to the workspace; only the core implements Runtime, so no outside code breaks (#11449)
-github.com/margince/margince/backend/pkg/extension: Runtime.MailContent: added # a background job reads one mail's subject and body; only the core implements Runtime, so no outside code breaks (#11449)
-github.com/margince/margince/backend/pkg/extension: Directory.ByRole: added # a job finds members by role key; only the core implements Directory, so no outside code breaks (#11449)
+github.com/margince/margince/backend/pkg/extension: Runtime.IngestMemberBatch: added # a member-owned chat source saves its batch on one member's place; only the core implements Runtime, so no outside code breaks, ratified in #13478
+github.com/margince/margince/backend/pkg/extension: Runtime.MemberIngestPosition: added # a member-owned chat source reads one member's saved position; only the core implements Runtime, so no outside code breaks, ratified in #13478
+github.com/margince/margince/backend/pkg/extension: CompanyQuery.Lifecycle: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension: CompanySummary.Lifecycle: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: Company.Lifecycle: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycle: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleCustomer: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleDisqualified: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleFormerCustomer: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleLive: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleOnboarding: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleOpportunity: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleProspect: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleTarget: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleUnknown: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294

@@ -25,10 +25,10 @@ import (
 // to read: where the mark came from, where the one before it did, who made the
 // change and under which source vocabulary.
 //
-// `origin` is what NAMES the mark — the page a read resolved it from, or the
-// file a contact chose — and it is the one value both the row's `logo_origin`
-// and the field's history carry, so the NEXT write's before-image can say what
-// it replaced. Only a removal has none.
+// `origin` NAMES the mark: the page a read resolved it from, or the file a
+// contact chose. The row's `logo_source` and the field's history both carry it,
+// so the NEXT write's before-image can say what it replaced. Only a removal has
+// none.
 //
 // `sourceURL` is narrower: the page, when there was one. An upload names a file
 // and not a URL, and putting a filename in a field called `source_url` would

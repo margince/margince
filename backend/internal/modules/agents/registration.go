@@ -145,7 +145,7 @@ func (r *Registry) Register(t mcp.Tool) {
 	keyless := served && !r.routeKeyed[spec.Name]
 	r.routeServed[spec.Name] = keyless
 	spec.Areas = workarea.OfVerb(spec.Name)
-	r.specs[spec.Name] = copySchemas(withRetryKey(envelopedSpec(spec), owned || keyless))
+	r.specs[spec.Name] = copySchemas(withConfirmCode(withRetryKey(envelopedSpec(spec), owned || keyless)))
 	// Derived from the tool's OWN schema, never the spliced one: the reserved
 	// members are popped before any of these checks runs, so a check that knew
 	// about them would be describing arguments no handler can be reached with.
@@ -180,24 +180,31 @@ func envelopedSpec(spec mcp.ToolSpec) mcp.ToolSpec {
 	return spec
 }
 
-// retryKeyProperty is the advertised member, served in the tools/list catalog.
-//
-// Keep it short: a client holds this catalogue for a whole session. The runner's
-// listing omits this description and states the rule once in its frame
-// (runner.surfaceSchemaRules), so it is the catalogue that pays for the sentence
-// and not every turn of every run.
-//
-// The LEAD-IN states what omitting the key costs. The schema's `required` array
-// already carries whether the member is optional, so a model weighing one more
-// argument is owed the consequence rather than the permission. The verb is
-// hedged because a tool carrying `if_version` refuses a keyless retry as skew
-// instead of writing twice.
-//
-// The SENTENCE is mcp.ReservedIdempotencyKeyRule, not a literal here: the
-// runner's frame states the same rule once for the whole listing, and two
-// hand-written copies of it would drift with nothing failing.
-const retryKeyProperty = `{"type":"string","maxLength":255,` +
-	`"description":"A retry without it may repeat the write. ` + mcp.ReservedIdempotencyKeyRule + `"}`
+// retryKeyProperty is the advertised member, with no description. The MCP server
+// instructions and the runner's frame each state mcp.ReservedIdempotencyKeyRule,
+// so no write repeats it.
+const retryKeyProperty = `{"type":"string","maxLength":255}`
+
+// confirmCodeProperty advertises the code a preview answers, on a tool that can
+// ask its own user in the conversation (confirmcode.go).
+const confirmCodeProperty = `{"type":"string","maxLength":1024,"description":` +
+	`"Only after the user said yes to this call's preview: the confirm_code that preview answered. ` +
+	`Never invent one; call without it to get a preview."}`
+
+// withConfirmCode advertises confirm_code on a tool that waits for its own user,
+// the one kind of call the conversation can confirm.
+func withConfirmCode(spec mcp.ToolSpec) mcp.ToolSpec {
+	if !spec.WaitsEvenForItsUser {
+		return spec
+	}
+	spliced, err := spliceReservedMember(spec.InputSchema, confirmCodeArg, confirmCodeProperty)
+	if err != nil {
+		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
+		panic(fmt.Sprintf("crmagents: cannot advertise confirm_code on %s: %v", spec.Name, err))
+	}
+	spec.InputSchema = spliced
+	return spec
+}
 
 // unitOwned reports whether an extension unit shipped this tool's handler,
 // rather than the core tree. mcp.UnitScopedTool is the one declaration of that
@@ -265,6 +272,11 @@ func withRetryKey(spec mcp.ToolSpec, unitOwned bool) mcp.ToolSpec {
 // map sorts its keys, so every process produces the same bytes — and these
 // bytes are embedded verbatim into tools/list, which a client caches.
 func spliceRetryKey(inputSchema json.RawMessage) (json.RawMessage, error) {
+	return spliceReservedMember(inputSchema, idempotencyKeyArg, retryKeyProperty)
+}
+
+// spliceReservedMember adds one surface-owned member to a schema's `properties`.
+func spliceReservedMember(inputSchema json.RawMessage, member, property string) (json.RawMessage, error) {
 	var shape map[string]json.RawMessage
 	if err := json.Unmarshal(inputSchema, &shape); err != nil {
 		return nil, fmt.Errorf("its input schema is not a JSON object: %w", err)
@@ -294,15 +306,15 @@ func spliceRetryKey(inputSchema json.RawMessage) (json.RawMessage, error) {
 	if err := assertNoSchemaComposition("its input schema", "schema", shape); err != nil {
 		return nil, err
 	}
-	if _, taken := properties[idempotencyKeyArg]; taken {
+	if _, taken := properties[member]; taken {
 		// A tool that wrote the member itself would have TWO definitions of it —
 		// its own, and this one — and only one can win a splice. Refused at boot
 		// rather than resolved silently, because the two could disagree about
 		// type or bound and the surface would enforce whichever this happened to
 		// keep.
-		return nil, fmt.Errorf("it declares `%s` itself; the surface owns that argument", idempotencyKeyArg)
+		return nil, fmt.Errorf("it declares `%s` itself; the surface owns that argument", member)
 	}
-	properties[idempotencyKeyArg] = json.RawMessage(retryKeyProperty)
+	properties[member] = json.RawMessage(property)
 	encoded, err := json.Marshal(properties)
 	if err != nil {
 		return nil, fmt.Errorf("cannot encode its properties: %w", err)
@@ -343,7 +355,7 @@ func assertNoRequiredReservedArgument(spec mcp.ToolSpec) error {
 		return nil
 	}
 	for _, field := range shape.Required {
-		if field == approvalIDArg || field == idempotencyKeyArg {
+		if field == approvalIDArg || field == idempotencyKeyArg || field == confirmCodeArg {
 			return fmt.Errorf("%s requires `%s`, which the surface pops from every call before the tool "+
 				"sees it — every caller would be refused for omitting what they sent. Name the tool's own "+
 				"argument something else", spec.Name, field)

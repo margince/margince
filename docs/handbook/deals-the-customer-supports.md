@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance/rules.go backend/internal/compose/assurancebundle.go backend/internal/compose/viabilitytasks/viabilitytasks.go backend/internal/compose/dealcloselost.go frontend/src/features/deals/deal360/dealmarginceline.tsx backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go backend/internal/compose/dealstatus/ourreply.go frontend/src/features/deals/deal360/dealverdict.ts backend/internal/modules/activities/dealrelevance.go frontend/src/features/records/dealdecline.tsx backend/internal/modules/deals/closereoffer.go backend/internal/compose/jobs_dealbackfill.go backend/internal/modules/deals/proposalstage.go -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance/rules.go backend/internal/compose/assurancebundle.go backend/internal/compose/viabilitytasks/viabilitytasks.go backend/internal/compose/dealcloselost.go frontend/src/features/deals/deal360/dealmarginceline.tsx backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go backend/internal/compose/dealstatus/ourreply.go frontend/src/features/deals/deal360/dealverdict.ts backend/internal/modules/activities/dealrelevance.go frontend/src/features/records/dealdecline.tsx backend/internal/modules/deals/closereoffer.go backend/internal/compose/jobs_dealbackfill.go backend/internal/modules/deals/proposalstage.go backend/internal/modules/assurance/duplicatemotion.go -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
@@ -43,6 +43,19 @@ date or plan the next step on the deal, and the next check clears them. An
 open task Margince filed earlier for nothing but these is marked done once. When
 Margince could not read the mailboxes on the deal, it cannot judge the
 customer's side. The check then files its task as before.
+
+## When two open deals look like one
+
+The check also compares the open deals of one account. Two of them are named
+**May be one buying motion** when they share a mail, a meeting or a contact on the
+deal. They must also sit in one pipeline and close within 60 days of each other. A deal
+with no close date is never named. Deals that share nothing are left alone, because a
+large account runs several deals at once.
+
+The check is filed on the deal created later. **Merge deal** keeps one of the two, and
+**Keep the other deal instead** changes which. **These are separate** closes the check
+for that pair, and Margince does not raise it again. A seat that may not open the other
+deal sees the check without its name and without the merge.
 
 ## When the customer stops answering for 120 days
 

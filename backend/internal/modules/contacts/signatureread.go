@@ -21,7 +21,7 @@ import (
 // completes, and a model that misquoted once may quote right next time.
 type SignatureSkipReason string
 
-// The reasons a read is rejected. They mirror the last_skip_reason CHECK.
+// The reasons a read is rejected.
 const (
 	SignatureSkipNameGate     SignatureSkipReason = "name_gate"
 	SignatureSkipEvidenceGate SignatureSkipReason = "evidence_gate"
@@ -30,18 +30,10 @@ const (
 )
 
 // SignatureRead is what one read of a contact's newest mail yielded. The zero
-// value is a clean read that found nothing to apply.
+// value is a clean read.
 type SignatureRead struct {
-	Skip    SignatureSkipReason
-	Applied bool
+	Skip SignatureSkipReason
 }
-
-// The last_outcome values, one per shape of SignatureRead.
-const (
-	signatureOutcomeApplied = "applied"
-	signatureOutcomeNothing = "nothing_to_apply"
-	signatureOutcomeSkipped = "skipped"
-)
 
 // Retried reports a rejection a later pass may overturn. A mail whose signature
 // is not the contact's stays so, and most mail carries no signature at all.
@@ -49,18 +41,8 @@ func (r SignatureRead) Retried() bool {
 	return r.Skip != "" && r.Skip != SignatureSkipNameGate
 }
 
-func (r SignatureRead) outcome() string {
-	switch {
-	case r.Skip != "":
-		return signatureOutcomeSkipped
-	case r.Applied:
-		return signatureOutcomeApplied
-	}
-	return signatureOutcomeNothing
-}
-
 // SignatureReadAttempts is how many times the pass reads one mail it keeps
-// rejecting. The last rejected read consumes the mail and keeps its reason.
+// rejecting. The last rejected read consumes the mail.
 const SignatureReadAttempts = 3
 
 // SignatureRetryDelay leaves time for transient extraction faults to change.
@@ -88,13 +70,13 @@ func (s *Store) MarkSignatureRead(ctx context.Context, contactID ids.ContactID, 
 		// caller: the watermark and the candidate query must compare one number.
 		args := []any{
 			contactID, activityID, historyDepth, version.Generation, version.Snapshot,
-			consume, read.outcome(), string(read.Skip), retries,
+			consume, retries,
 		}
 		_, err = tx.Exec(ctx, fmt.Sprintf(`
             INSERT INTO contact_signature_enrich_state AS st (contact_id, activity_id, last_activity_at, history_depth, read_snapshot,
-                   last_outcome, last_skip_reason, retry_activity_id, retry_count)
+                   retry_activity_id, retry_count)
             SELECT $%[1]d, CASE WHEN $%[6]d THEN a.id END, CASE WHEN $%[6]d THEN a.occurred_at END, $%[3]d, NULLIF($%[5]d::text,'')::pg_snapshot,
-                   $%[7]d, NULLIF($%[8]d::text, ''), CASE WHEN $%[9]d::smallint > 0 THEN a.id END, $%[9]d
+                   CASE WHEN $%[7]d::smallint > 0 THEN a.id END, $%[7]d
               FROM activity a
 			 WHERE a.id = $%[2]d AND a.restricted_at IS NULL
 			ON CONFLICT (contact_id) DO UPDATE
@@ -104,8 +86,6 @@ func (s *Store) MarkSignatureRead(ctx context.Context, contactID ids.ContactID, 
 			    history_depth = EXCLUDED.history_depth,
 			    attempted_at = now(),
                 read_snapshot=COALESCE(EXCLUDED.read_snapshot,st.read_snapshot),
-			    last_outcome = EXCLUDED.last_outcome,
-			    last_skip_reason = EXCLUDED.last_skip_reason,
 			    retry_activity_id = EXCLUDED.retry_activity_id,
 			    retry_count = EXCLUDED.retry_count
             WHERE st.requested_generation<=$%[4]d::bigint`, signatureReadPlaceholders(len(args))...), args...)

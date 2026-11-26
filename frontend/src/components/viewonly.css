@@ -1,0 +1,17 @@
+/* The panel behind the View only pill: the owner, why, then the asks. */
+.view-only-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.view-only-panel > p {
+  margin: 0;
+}
+.view-only-owner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightBold);
+}

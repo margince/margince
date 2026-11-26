@@ -50,7 +50,7 @@ describe("the moved cards", () => {
       expect(await tabDraws("connections", tab, "MailSharingCard")).toBe(false);
     }
     // And the personal autonomy choice belongs on the page about agents
-    // deciding without you, under the tier reference it is written in terms of.
+    // deciding without you, in view rather than behind "For developers".
     // `agents` draws a tab COMPONENT that holds the cards. An assertion on
     // the page alone would pass with the card nowhere at all.
     for (const tab of tabsOf("account")) {
@@ -59,13 +59,18 @@ describe("the moved cards", () => {
       );
     }
     expect(await tabDraws("agents", "", "AiAccessTab")).toBe(true);
-    const aiAccess = [
-      bodyOf("AiAccessTab", "settings.aiaccess.tsx"),
-      bodyOf("DeveloperTabs", "settings.aiaccess.tsx"),
-    ].join("\n");
-    expect(aiAccess).toContain("<AutonomySettingsCard />");
-    expect(aiAccess).toContain("<ConnectAiToolCard />");
-    expect(aiAccess).toContain("<PassportCard />");
+    const page = bodyOf("AiAccessTab", "settings.aiaccess.tsx");
+    const developers = bodyOf("DeveloperSection", "settings.aiaccess.tsx");
+    expect(page).toContain("<ConnectAiToolCard />");
+    for (const own of [
+      "<AutonomySettingsCard />",
+      "<ApprovalPreferencesCard />",
+    ]) {
+      expect(page).toContain(own);
+      expect(developers).not.toContain(own);
+    }
+    expect(developers).toContain("<PassportCard />");
+    expect(developers).toContain("<AutonomyTiersCard />");
     // The mailbox list stays the first thing Connections draws.
     expect(tabsOf("connections")[0]).toBe("mail");
     expect(await tabDraws("connections", "mail", "ConnectorsCard")).toBe(true);

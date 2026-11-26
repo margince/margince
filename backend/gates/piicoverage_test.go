@@ -320,15 +320,13 @@ var piiTables = map[string]piiHandling{
 	// subject's own words held outside the message. It goes when the body goes,
 	// and the contact foreign key cannot do it: Art. 17 anonymizes that
 	// row in place, so nothing cascades.
-	//
-	// Neither sarRead nor sarForbidden, deliberately and temporarily. Whether
-	// an Art. 15 package returns a colleague's or an agent's READING of the
-	// subject's words as well as the words is a product and legal call, and it
-	// is open — until it is answered, declaring either here would assert a
-	// decision nobody has made. Registered unflagged means a future SAR query
-	// over this table passes this gate silently, which is the cost of leaving
-	// it open and is named here so the next reader is not surprised by it.
-	"conversation_claim": {erasureWrite: true},
+	// Art. 15 returns the reading with the words; who wrote it is a colleague's
+	// data, so the three user columns stay out.
+	"conversation_claim": {
+		erasureWrite: true,
+		sarRead:      true,
+		sarWithholds: []string{"captured_by", "corrected_by_user_id", "taken_by_user_id"},
+	},
 	// A stage-evidence snippet quotes the message a claim about a deal was read
 	// from, so it goes when the message's text goes. The row stays.
 	//

@@ -94,9 +94,9 @@ while :; do
   stopped="$(grep -m1 -oE '^HARNESS: case[0-9]+_[a-z0-9_]+' "$log" | cut -d' ' -f2)"
   limited=0
   # Only the harness block names a limit; a case's own answer may say "unavailable".
-  sed -n '/^HARNESS:/,/Nothing was scored/p' "$log" \
-    | grep -qE 'out of credits|usage limit|rate limit|[Qq]uota reached|RESOURCE_EXHAUSTED|UNAVAILABLE|code 503|answered HTTP 429' \
-    && limited=1
+  harness_block="$(sed -n '/^HARNESS:/,/Nothing was scored/p' "$log")"
+  grep -qE 'out of credits|usage limit|rate limit|hit your [0-9a-z-]* ?limit|[Qq]uota reached|RESOURCE_EXHAUSTED|UNAVAILABLE|code 503|answered HTTP 429' \
+    <<<"$harness_block" && limited=1
   if [[ $limited -eq 1 ]]; then
     waits=$((waits + 1))
     if [[ $waits -gt $max_waits ]]; then

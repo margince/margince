@@ -50,7 +50,7 @@ expect() {
 		echo "FAIL: $name"
 		echo "  exit    want $want_exit got $status"
 		echo "  deleted want '$want_deleted' got '$deleted'"
-		printf '  output: %s\n' "$out" | head -5
+		printf '  output: %s\n' "$out" | sed -n 1,5p
 		failures=$((failures + 1))
 	else
 		echo "ok: $name"

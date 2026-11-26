@@ -25,3 +25,11 @@ type CalendarAnswer struct {
 type MeetingRemover interface {
 	RemoveCalendarMeeting(ctx context.Context, key NaturalKey, identity CrossDoorIdentity, at time.Time) error
 }
+
+// UnlistedMeetingRetirer retires the stored meetings of the acting seat's
+// calendar that a complete listing no longer holds. listed is every event id
+// the listing returned, and only meetings starting after from and up to until
+// are judged. A connector calls it only after the whole listing was settled.
+type UnlistedMeetingRetirer interface {
+	RetireUnlistedMeetings(ctx context.Context, sourceSystem string, listed []string, from, until time.Time) error
+}

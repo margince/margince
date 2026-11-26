@@ -231,7 +231,7 @@ lane_bin_list() { # filter-json
   payload="$(cut -d. -f2 <<<"${ACTIONS_RUNTIME_TOKEN:?}" | tr '_-' '/+')"
   while (( ${#payload} % 4 )); do payload+="="; done
   ids="$(base64 -d <<<"$payload" 2>/dev/null | jq -r '.scp // empty' | tr ' ' '\n' \
-    | sed -n 's/^Actions\.Results:\([^:]*\):\([^:]*\)$/{"workflow_run_backend_id":"\1","workflow_job_run_backend_id":"\2"}/p' | head -n1)"
+    | sed -n 's/^Actions\.Results:\([^:]*\):\([^:]*\)$/{"workflow_run_backend_id":"\1","workflow_job_run_backend_id":"\2"}/p' | sed -n 1p)"
   if [[ -z "$ids" ]]; then
     echo "test-binaries: the runtime token names no run for the results service" >&2
     return 1

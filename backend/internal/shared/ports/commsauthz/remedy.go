@@ -56,6 +56,7 @@ var remedies = map[string][]Remedy{
 
 	// Allows, not refusals.
 	ReasonAllowed:           {},
+	ReasonOptOutAllowed:     {},
 	ReasonAllowedByOverride: {},
 }
 
