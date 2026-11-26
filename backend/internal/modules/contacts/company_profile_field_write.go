@@ -167,7 +167,7 @@ func (s *Store) writeProfileField(
 	ctx context.Context, companyID ids.CompanyID, field string, in ProfileFieldWriteInput,
 ) (crmcontracts.CompanyProfileField, error) {
 	w := evidenceWrite[crmcontracts.CompanyProfileField]{
-		table:      "company_profile_field",
+		entity:     "company_profile_field",
 		archived:   storekit.NoArchiveColumn,
 		changedKey: field,
 		value:      in.Value,
@@ -410,22 +410,21 @@ func insertHumanProfileField(
 		return err
 	}
 	// ON CONFLICT DO NOTHING because this write takes no lock that would order
-	// two writers: auth.EnsureWritableLive checks scope and liveness, and
-	// LockSubjectLive — the one that holds the company's row — is not on
-	// this path. Two statements of the same empty field therefore both reach
-	// the insert, and the loser would fail on uq_company_profile_field; DO NOTHING
-	// lets it fall through to the re-read below and patch the row the winner
-	// created, which is the same row it was asking for.
+	// two writers. auth.EnsureWritableLive checks scope and liveness, and
+	// LockSubjectLive, which holds the company's row, is not on this path.
+	// Two statements of the same empty field both reach the insert.
+	// The loser would fail on the evidence key. DO NOTHING lets it fall through
+	// to the re-read below and patch the row the winner created.
 	//
 	// NOT held by a test. TestRepsStatingTheSameFieldAtOnceAllSucceed drives
 	// eight concurrent writers and passes with this clause removed, so it does
 	// not prove the clause — the collision window is real but that test does not
 	// reach it. Said plainly rather than left as a claim a reader would trust.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO company_profile_field
-		       (company_id, field, value, source, captured_by)
-		VALUES ($1, $2, '', 'human', $3)
-		ON CONFLICT (company_id, field) DO NOTHING`,
+		INSERT INTO field_provenance
+		       (object_type, object_id, field_name, value, source, captured_by)
+		VALUES ('company', $1, $2, '', 'human', $3)
+		ON CONFLICT (object_type, object_id, field_name, value_key) WHERE value IS NOT NULL DO NOTHING`,
 		companyID, field, capturedBy); err != nil {
 		return fmt.Errorf("create company profile field: %w", err)
 	}

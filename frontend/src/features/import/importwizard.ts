@@ -16,6 +16,12 @@ import {
   usePresetContact,
 } from "./importaddress";
 import {
+  type CarriedChoices,
+  carriedEdits,
+  carriedObject,
+  choicesToCarry,
+} from "./importcarry";
+import {
   choicesOf,
   type DraftPatch,
   type Edits,
@@ -59,6 +65,8 @@ type UploadInput = Readonly<{
   retype: boolean;
   /** The draft this upload takes the place of, cancelled once it lands. */
   replaces: string | null;
+  /** The choices of the tested run this file is uploaded in place of. */
+  carry: CarriedChoices | null;
 }>;
 
 /** The upload of a file the reader just picked, typed by its name or preset. */
@@ -67,6 +75,7 @@ export function firstUpload(
   format: ImportFormat,
   recent: readonly ImportRun[] | undefined,
   preset?: ImportObject,
+  carry: CarriedChoices | null = null,
 ): UploadInput {
   return {
     file,
@@ -74,6 +83,7 @@ export function firstUpload(
     recent,
     retype: false,
     replaces: null,
+    carry,
   };
 }
 
@@ -99,10 +109,33 @@ async function uploadReplacing(
   return profile;
 }
 
+// A file uploaded in place of a tested run is read as the type that run had.
+// Only the first answer shows whether the headers match, so a type the name
+// or the header did not give takes a second upload.
+async function uploadCarrying(
+  input: UploadInput,
+  retire: (id: string) => void,
+): Promise<ImportProfile> {
+  const profile = await uploadReplacing(input, retire);
+  const object = input.carry ? carriedObject(input.carry, profile) : undefined;
+  if (!object) return profile;
+  return uploadReplacing(
+    { ...input, object, replaces: profile.run_id },
+    retire,
+  );
+}
+
 // What a landed upload starts the reader's edits from: none, so nothing is
-// saved until they change something. A type change keeps the name and tag.
-function editsAfterUpload(retype: boolean, current: Edits): Edits {
-  return retype
+// saved until they change something. A type change keeps the name and tag. A
+// file with the headers of the tested run it replaces keeps that run's choices.
+function editsAfterUpload(
+  input: UploadInput,
+  profile: ImportProfile,
+  current: Edits,
+): Edits {
+  const carried = input.carry ? carriedEdits(input.carry, profile) : null;
+  if (carried) return carried;
+  return input.retype
     ? {
         ...NO_EDITS,
         sourceName: current.sourceName,
@@ -155,6 +188,7 @@ export function useImportWizard() {
   const generation = useRef(0);
   const [source, setSource] = useState<File | null>(null);
   const [edits, setEditsState] = useState<Edits>(NO_EDITS);
+  const [replaced, setReplaced] = useState<CarriedChoices | null>(null);
   const latest = useRef(edits);
   const [runId, setRunId] = useAddressedRun();
   const run = useImportRun(runId);
@@ -193,7 +227,7 @@ export function useImportWizard() {
   const upload = useMutation({
     mutationFn: async (input: UploadInput) => {
       const at = generation.current;
-      const profile = await uploadReplacing(input, retire.mutate);
+      const profile = await uploadCarrying(input, retire.mutate);
       return {
         at,
         input,
@@ -204,7 +238,8 @@ export function useImportWizard() {
     onSuccess: ({ at, input, profile }) => {
       if (at !== generation.current) return;
       setSource(input.file);
-      edit((current) => editsAfterUpload(input.retype, current));
+      setReplaced(null);
+      edit((current) => editsAfterUpload(input, profile, current));
       setRunId(profile.run_id);
     },
   });
@@ -300,6 +335,7 @@ export function useImportWizard() {
     latest.current = NO_EDITS;
     sent.current = NO_EDITS;
     setEditsState(NO_EDITS);
+    setReplaced(null);
     setSource(null);
     setRunId(null);
   };
@@ -325,6 +361,7 @@ export function useImportWizard() {
           recent: undefined,
           retype: true,
           replaces: runId,
+          carry: null,
         });
         return;
       }
@@ -417,6 +454,15 @@ export function useImportWizard() {
     /** The cancel of a draft an upload replaced; its refusal is shown. */
     retiring: retire,
     reset,
+    /** The tested run's choices, held for the next file the reader picks. */
+    replaced,
+    // Back to the upload for a corrected file, which keeps this run's choices
+    // when its headers are the same.
+    reupload: () => {
+      const keep = choicesToCarry(files, zip, choices);
+      reset();
+      setReplaced(keep);
+    },
   };
 }
 

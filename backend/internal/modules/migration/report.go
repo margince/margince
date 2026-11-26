@@ -166,6 +166,10 @@ func (or *ObjectReport) record(row Row, res EnsureResult) {
 			skip.Column, skip.Kind, skip.Value = res.Problem.Column, res.Problem.Kind, res.Problem.Value
 		}
 		or.Skipped = append(or.Skipped, skip)
+		for _, more := range res.MoreProblems {
+			more.ExternalID, more.Line = row.ExternalID, row.Line
+			or.Skipped = append(or.Skipped, more)
+		}
 	case res.Unchanged:
 		or.Unchanged++
 	case res.Created:

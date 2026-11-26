@@ -121,6 +121,27 @@ func TestARowsProblemReachesItsSkipOrItsWarning(t *testing.T) {
 	}
 }
 
+// Every cell a skipped row has to have corrected is one skip of that row, so a
+// screen names them all from one upload.
+func TestEachFaultOfASkippedRowIsReportedOnItsLine(t *testing.T) {
+	var or ObjectReport
+	or.record(Row{ExternalID: "D-1", Line: 4}, EnsureResult{
+		Skipped: true, SkipReason: "not an amount",
+		Problem:      &SkippedRow{Column: "amount", Kind: ProblemInvalidValue, Value: "1.234,56"},
+		MoreProblems: []SkippedRow{{Column: "close_date", Kind: ProblemInvalidValue, Value: "31.03.2027", Reason: "not a date"}},
+	})
+	var columns []string
+	for _, skip := range or.Skipped {
+		if skip.ExternalID != "D-1" || skip.Line != 4 {
+			t.Errorf("skip %+v, want it on row D-1, line 4", skip)
+		}
+		columns = append(columns, skip.Column)
+	}
+	if !reflect.DeepEqual(columns, []string{"amount", "close_date"}) || len(or.Warnings) != 0 {
+		t.Fatalf("skips on %v, %d warnings; want the amount and the close date as skips", columns, len(or.Warnings))
+	}
+}
+
 func TestIndependentRowWarningsRemainBesideTheLandingOutcome(t *testing.T) {
 	var report ObjectReport
 	report.record(Row{ExternalID: "row-1", Line: 2}, EnsureResult{
