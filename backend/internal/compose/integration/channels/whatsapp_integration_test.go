@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -344,18 +345,18 @@ func (c *telegramEnv) eraserCtx(t *testing.T) context.Context {
 	return originalstore.Bind(principal.WithActor(ctx, actor), c.DB(), nil)
 }
 
-func TestErasingAWhatsAppContactDestroysItsRawOriginalsFiledAndNot(t *testing.T) {
+func TestErasingAWhatsAppContactDestroysTheRawRowOfItsMessageAndOfItsEdit(t *testing.T) {
 	c := setupWhatsApp(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
 	n := c.connectNumber(t, "7101")
 	c.deliverWA(t, n, waInbound(n.phoneID, "wamid.P1", "filed message"))
 	awaitWA(t, sub)
-	c.deliverWA(t, n, waReaction(n.phoneID, "wamid.P2", "wamid.P1"))
+	c.deliverWA(t, n, waEdit(n.phoneID, "wamid.P2", "wamid.P1", "edited message", 1764000360))
 	awaitWA(t, sub)
 	filed, _ := c.waFiled(t, "wamid.P1")
-	if got := c.waRaw(t); got != 2 {
-		t.Fatalf("%d raw rows before the erasure, want one filed and one kept", got)
+	if got := c.waRaw(t); got != 1 {
+		t.Fatalf("%d raw rows before the erasure, want the edit's row, which replaced the original", got)
 	}
 	contact, err := ids.Parse(filed.contact)
 	if err != nil {
@@ -366,10 +367,10 @@ func TestErasingAWhatsAppContactDestroysItsRawOriginalsFiledAndNot(t *testing.T)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
-	if len(pkg.RawCapture) != 2 {
-		t.Errorf("the access export lists %d raw originals, want both", len(pkg.RawCapture))
+	if len(pkg.RawCapture) != 1 {
+		t.Errorf("the access export lists %d raw originals, want the edit's", len(pkg.RawCapture))
 	}
-	if err := privacy.NewEraser(c.DB()).EraseContact(c.eraserCtx(t), contact, "test"); err != nil {
+	if err := privacy.NewEraser(c.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(c.eraserCtx(t), contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 	if got := c.waRaw(t); got != 0 {
@@ -412,7 +413,7 @@ func TestAMessageNamingAPhoneAndABSUIDBindsBothAndErasureSuppressesBoth(t *testi
 		t.Fatalf("the contact holds %d WhatsApp identities, want its phone and its BSUID", got)
 	}
 	contact, _ := ids.Parse(filed.contact)
-	if err := privacy.NewEraser(c.DB()).EraseContact(c.eraserCtx(t), contact, "test"); err != nil {
+	if err := privacy.NewEraser(c.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(c.eraserCtx(t), contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 
@@ -424,16 +425,67 @@ func TestAMessageNamingAPhoneAndABSUIDBindsBothAndErasureSuppressesBoth(t *testi
 	}
 }
 
-func TestAReactionAndARevokeKeepTheirRawRowAndCreateNoEntry(t *testing.T) {
+func waEdit(phoneID, wamid, original, text string, at int) string {
+	return waChange("messages", phoneID, waAda, "messages",
+		fmt.Sprintf(`{"from":"491701234567","id":%q,"timestamp":"%d","type":"edit","edit":{"original_message_id":%q,"text":{"body":%q}}}`, wamid, at, original, text))
+}
+
+func (c *telegramEnv) waBody(t *testing.T, wamid string) string {
+	t.Helper()
+	var body string
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT coalesce(body, '') FROM activity WHERE source_system = 'whatsapp' AND source_id LIKE '%:' || $1`, wamid).Scan(&body)
+	}); err != nil {
+		t.Fatalf("reading the filed body: %v", err)
+	}
+	return body
+}
+
+func TestAReactionLeavesNoRowAndNoEntry(t *testing.T) {
 	c := setupWhatsApp(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
 	n := c.connectNumber(t, "7104")
 	c.deliverWA(t, n, waReaction(n.phoneID, "wamid.C1", "wamid.GONE"))
 	awaitWA(t, sub)
-	c.deliverWA(t, n, waRevoke(n.phoneID, "wamid.C2", "wamid.GONE"))
+	if a, r := c.waActivities(t), c.waRaw(t); a != 0 || r != 0 {
+		t.Errorf("%d activities and %d raw rows after a reaction, want none", a, r)
+	}
+}
+
+func TestAWhatsAppEditChangesTheFiledTextAndARevokeOnACompanyNumberKeepsIt(t *testing.T) {
+	c := setupWhatsApp(t)
+	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
+	startTelegramWorker(t, runner)
+	n := c.connectNumber(t, "7105")
+	c.deliverWA(t, n, waInbound(n.phoneID, "wamid.A1", "first words"))
 	awaitWA(t, sub)
-	if a, r := c.waActivities(t), c.waRaw(t); a != 0 || r != 2 {
-		t.Errorf("%d activities and %d raw rows, want no entry and both changes kept", a, r)
+
+	c.deliverWA(t, n, waEdit(n.phoneID, "wamid.A2", "wamid.A1", "corrected words", 1764000360))
+	awaitWA(t, sub)
+	if got := c.waBody(t, "wamid.A1"); got != "corrected words" {
+		t.Fatalf("body %q after the edit, want the edited text", got)
+	}
+	if a, r := c.waActivities(t), c.waRaw(t); a != 1 || r != 1 {
+		t.Fatalf("%d activities and %d raw rows after the edit, want one message holding one original", a, r)
+	}
+
+	c.deliverWA(t, n, waEdit(n.phoneID, "wamid.A3", "wamid.A1", "older words", 1764000330))
+	awaitWA(t, sub)
+	if got := c.waBody(t, "wamid.A1"); got != "corrected words" {
+		t.Fatalf("body %q after an older edit, want the newest text", got)
+	}
+	if r := c.waRaw(t); r != 1 {
+		t.Fatalf("%d raw rows after an older edit, want the edit that changed nothing deleted", r)
+	}
+
+	c.deliverWA(t, n, waRevoke(n.phoneID, "wamid.A4", "wamid.A1"))
+	awaitWA(t, sub)
+	if got := c.waBody(t, "wamid.A1"); got != "corrected words" {
+		t.Fatalf("body %q after a revoke on a company number, want the team's copy kept", got)
+	}
+	if a, r := c.waActivities(t), c.waRaw(t); a != 1 || r != 1 {
+		t.Fatalf("%d activities and %d raw rows after the revoke, want the message and its one original", a, r)
 	}
 }
