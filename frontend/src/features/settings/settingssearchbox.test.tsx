@@ -180,14 +180,43 @@ describe("the settings search box", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  // Enter on an untouched query opens nothing: the first row is a candidate,
-  // not a choice the reader has made.
-  it("opens nothing on Enter before an option is chosen", async () => {
+  // Enter on an untouched query with several rows opens nothing: the first row
+  // is a candidate, not a choice the reader has made.
+  it("opens nothing on Enter before one of several options is chosen", async () => {
     const user = userEvent.setup();
     const navigate = vi.spyOn(router, "navigate").mockImplementation(() => {});
     mount();
-    await user.type(box(), "audit");
+    await user.type(box(), "email");
+    expect(options().length).toBeGreaterThan(1);
     await user.keyboard("{Enter}");
+
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("opens the only option on Enter without an arrow key", async () => {
+    const user = userEvent.setup();
+    const navigate = vi.spyOn(router, "navigate").mockImplementation(() => {});
+    mount();
+    await user.type(box(), "loss reasons");
+    expect(options()).toHaveLength(1);
+    await user.keyboard("{Enter}");
+
+    expect(navigate).toHaveBeenCalledWith({
+      screen: "settings",
+      id: "deals",
+      id2: "loss",
+    });
+    expect(box()).toHaveProperty("value", "");
+  });
+
+  it("leaves an input method's Enter alone when one option is left", async () => {
+    const user = userEvent.setup();
+    const navigate = vi.spyOn(router, "navigate").mockImplementation(() => {});
+    mount();
+    await user.type(box(), "loss reasons");
+    expect(options()).toHaveLength(1);
+
+    fireEvent.keyDown(box(), { key: "Enter", keyCode: 229 });
 
     expect(navigate).not.toHaveBeenCalled();
   });

@@ -185,7 +185,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	}
 
 	voice := d.loadVoice(ctx)
-	draft, voiceVersion, draftRef, err := d.completeVoiced(ctx, anchor, data, voice)
+	draft, voiceVersion, draftRef, err := d.completeVoiced(ai.WithFloor(ctx), anchor, data, voice)
 	if err != nil {
 		// Drafting is an assistive read, not the authority to send. Preserve
 		// the deterministic floor and leave the routed ai_call failure visible.

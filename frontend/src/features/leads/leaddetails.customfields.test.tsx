@@ -57,7 +57,8 @@ function show(record: typeof withValue) {
       { lead: ["read", "update"], list: ["read", "update"] },
       { seat: "full" },
     ),
-    "GET /custom-fields": () => jsonResponse({ data: [budgetNote] }),
+    "GET /custom-fields": () =>
+      jsonResponse({ page: { has_more: false }, data: [budgetNote] }),
     [`GET /records/lead/${record.id}/lists`]: () => jsonResponse({ data: [] }),
     [`PATCH /leads/${record.id}`]: (body) => {
       patches.push(body);

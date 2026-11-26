@@ -39,7 +39,7 @@ import {
 } from "./legalentityfields";
 
 // The companies this installation trades as. With one entity the card lists
-// the default alone, named after the company above it. An installation that
+// the default alone, named after the company profile. An installation that
 // never adds a second one sees what it always had.
 export function LegalEntitiesCard() {
   const t = useT();
@@ -136,11 +136,20 @@ function jurisdictionCell(
   return <Badge tone="warning">{t("legalEntities.jurisdictionMissing")}</Badge>;
 }
 
+// The default entity keeps no legal name or country of its own. Its empty cell
+// says where the value is set.
+function ownOrProfile(entity: LegalEntity, value: string, t: Translator) {
+  if (value !== "" || !entity.is_default) return value;
+  return (
+    <span className="t-caption">{t("legalEntities.fromCompanyProfile")}</span>
+  );
+}
+
 function entityColumns(
   law: LawContext,
   verbs: RowVerbs,
 ): DataTableColumn<LegalEntity>[] {
-  const { t } = law;
+  const { t, locale } = law;
   const columns: DataTableColumn<LegalEntity>[] = [
     {
       key: "name",
@@ -158,13 +167,18 @@ function entityColumns(
     {
       key: "legal",
       header: t("legalEntities.colLegalName"),
-      render: (entity) => entity.legal_name ?? "",
+      render: (entity) => ownOrProfile(entity, entity.legal_name ?? "", t),
     },
     {
       key: "country",
       header: t("legalEntities.colCountry"),
       fold: "end",
-      render: (entity) => entity.country?.toUpperCase() ?? "",
+      render: (entity) =>
+        ownOrProfile(
+          entity,
+          entity.country ? jurisdictionName(entity.country, locale) : "",
+          t,
+        ),
     },
     {
       key: "jurisdiction",
