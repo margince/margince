@@ -37,6 +37,7 @@ var syntheticAuditFields = setOf(
 var sharedInternalColumns = setOf(append(lifecycleStamps,
 	"id", "captured_by", "search_tsv", "body_own_end", "legal_hold",
 	"source_author_id", "source_author_name", "source_id", "source_system",
+	"source_revision", "source_revision_seq",
 	"address_city", "address_country", "address_line1", "address_line2",
 	"address_postal_code", "address_region",
 )...)

@@ -221,7 +221,8 @@ var directoryAdvice = map[DirectoryFailure]string{
 // member is already invited, the map has an entry, a credential is stored and
 // the token's hosted domain is the credential's own. The lookup asks for the
 // token's immutable subject, which for a Workspace user is the Directory user
-// id, so an address Google has handed to someone else reads nobody's groups.
+// id. An address Google has handed to someone else therefore reads nobody's
+// groups.
 // It runs before the login transaction opens, so no network call waits inside
 // the transaction that holds the authorization lock.
 //

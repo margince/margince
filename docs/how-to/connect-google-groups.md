@@ -14,14 +14,14 @@ Without the connection the map still works for Microsoft, and a Google member ge
 - A token that carries groups wins, and no lookup runs.
 - Only a Workspace account whose token names the admin's own domain (`hd`) is looked up. A personal Google account,
   or one from another domain, gets no groups. The lookup asks for the account's Google subject, which for a Workspace
-  user is the Directory user id, so a reused address never reads another person's groups.
+  user is the Directory user id, so a reused address never reads the groups of whoever held it before.
 - A failed or slow lookup (five seconds at most) signs the member in with no new roles. The map only adds roles, so a
   failure takes nothing away. Nothing is retried inside the sign-in.
 - Each failure writes one `system_log` row with the action `google_directory` and a reason class. Settings →
   **Sign-in and security** → **Group role grants** shows the newest result.
 - Only groups the member belongs to directly count. The Directory API's `userKey` query does not resolve groups nested
   inside other groups.
-- A group is named by its email address. Enter it in the map exactly as Google lists it, for example
+- A group is named by its email address. Enter it in the map as Google lists it, for example
   `sales@example.com`.
 
 ## Set it up in Google

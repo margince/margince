@@ -46,8 +46,8 @@ func (c *Client) JWTBearer(ctx context.Context, assertion string) (MintedToken, 
 }
 
 // exchangeFailure classes a failed assertion exchange the way token does for
-// the other grants: a throttle waits, another 4xx rejects the auth, and
-// anything else is the provider being unreachable.
+// the other grants. A throttle waits and another 4xx rejects the auth. Anything
+// else is the provider being unreachable.
 func (c *Client) exchangeFailure(err error) error {
 	if refused, ok := errors.AsType[googlejwt.ErrExchangeRefused](err); ok {
 		if refused.Status == http.StatusTooManyRequests {

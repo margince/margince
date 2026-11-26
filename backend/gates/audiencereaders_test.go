@@ -122,6 +122,8 @@ const credentialRepairReader = "the credential repair, which reads every mail be
 const qualifyTaskTextReader = "a system data task adds display metadata to qualify tasks; it shows no row to anyone and leaves the subject unchanged"
 
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/activities/chatedit.go:writeProviderEdit":         "reads the old reply verdict of the one row it updates, in the same statement, to report whether the edit cleared it. It runs for the connector worker and returns a boolean, never a row.",
+	"internal/modules/capture/sinkchatchange.go:Sink.dropUnlinkedRaw":   "asks whether any activity still keeps a raw capture before the ingestion job deletes it. It returns a boolean to the system job and shows no row to anyone.",
 	"internal/compose/proposalstage/proposalstage.go:proposalNamedFile": "reads one outbound mail's attachments through dealscout.WorkspaceEvidence, which composes auth.WorkspaceAudienceSQL, so only a mail the whole workspace may read can announce a proposal. The gate sees the audience test only when it is spelled in the statement.",
 	"internal/compose/proposalstage/proposalstage.go:proposalFirstFile": "the same read for a mail the model's reading named, through dealscout.WorkspaceEvidence; only the attachment's id and file name leave it.",
 	"internal/modules/contacts/promisekept.go:lockKeptPromise":          "System-only decision on one claim. It reads a linked task only for its assignee and returns nothing to a user. The evidence is found afterwards under the owner's own scope.",
