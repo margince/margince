@@ -16,8 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// legacyEvidenceTable is one table whose rows the data task moves, and the
-// kind of subject a row of it belongs to, which its <kind>_id column names.
+// legacyEvidenceTable is one table whose rows the data task moves. Its rows
+// belong to one kind of subject, named by the <kind>_id column.
 type legacyEvidenceTable struct {
 	step        string
 	table       string
