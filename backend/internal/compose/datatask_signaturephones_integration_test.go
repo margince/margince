@@ -26,7 +26,7 @@ func orphanSignatureNumber(t *testing.T, e *integration.Env, address string) ids
 	contact := seedEnrichContact(t, e, address, "Bob Contact\n"+germany)
 	applySignature(t, e, contact, onlyMailOf(t, e, contact), phoneField(germany))
 	// The legacy retraction removed evidence but left the writer's phone row.
-	e.WsExec(t, `DELETE FROM contact_profile_field WHERE contact_id = @contact`, pgx.StrictNamedArgs{"contact": contact})
+	e.WsExec(t, `DELETE FROM field_provenance WHERE object_type = 'contact' AND value IS NOT NULL AND object_id = @contact`, pgx.StrictNamedArgs{"contact": contact})
 	if got := liveNumbers(t, e, contact); len(got) != 1 {
 		t.Fatalf("orphan fixture has %v, want the signature number", got)
 	}
@@ -48,7 +48,7 @@ func TestTheSignaturePhoneTaskRestoresOnlyASupportedPredecessor(t *testing.T) {
 			if got := liveNumbers(t, e, contact); !slices.Equal(got, []string{"+491715550109"}) {
 				t.Fatalf("the fixture did not replace the old number: %v", got)
 			}
-			e.WsExec(t, `DELETE FROM contact_profile_field WHERE contact_id = @id`, pgx.StrictNamedArgs{"id": contact})
+			e.WsExec(t, `DELETE FROM field_provenance WHERE object_type = 'contact' AND value IS NOT NULL AND object_id = @id`, pgx.StrictNamedArgs{"id": contact})
 			task := signaturePhonesDataTask()
 			task.Steps[0].Limit, task.Steps[0].MinLimit = 1, 1
 			runMachineAddressTask(ctx, t, e, task)

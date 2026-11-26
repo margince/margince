@@ -99,8 +99,10 @@ const (
 	// Raised by 240 production and 260 test lines for the extension card's setup
 	// state and the schedule book's time zone. Both drive the unexported
 	// inventory handler, schedule book and catch-up schedule.
-	composeRootProductionLines = 231_379
-	composeRootTestLines       = 361_878
+	// Raised by 2 production and 27 test lines for the unread mail period on the
+	// owner's connection row, mapped and checked in the unexported connection wire.
+	composeRootProductionLines = 231_231
+	composeRootTestLines       = 361_893
 )
 
 // A read under these floors stopped early or read the wrong place, and would

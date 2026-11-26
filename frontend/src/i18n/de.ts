@@ -7216,7 +7216,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.updating": "Wird aktualisiert…",
-  "brief.briefedAt": "Von Margince zusammengefasst um {time}",
+  "brief.briefedAt": "Von Margince vorbereitet um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
   "brief.first.title": "Braucht dich",
@@ -8883,6 +8883,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.moveUndoFailed":
     "Die Aufgabe wurde nicht zurückverschoben. Versuche es erneut.",
   "tasks.remind.menu": "Erinnerung",
+  "tasks.remind.chipName": "Erinnerung (am {when})",
   "tasks.remind.inAnHour": "In 1 Stunde",
   "tasks.remind.tomorrowMorning": "Morgen früh",
   "tasks.remind.beforeDue": "1 Stunde vor Fälligkeit",
@@ -8900,6 +8901,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.remind.needsTime": "Gib einen Tag und eine Uhrzeit ein.",
   "tasks.remind.past": "Wähle eine Zeit, die noch bevorsteht.",
   "tasks.log.action": "Ergebnis erfassen",
+  "tasks.more": "Mehr",
+  "tasks.context": "Kontext",
   "tasks.log.record": "Zu welchem Datensatz gehört diese Aktivität?",
   "tasks.log.chooseRecord": "Anderen Datensatz wählen",
   "tasks.log.noRecord": "Ohne Datensatz erfassen",
@@ -10760,9 +10763,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.recent.files_other": "{count} Dateien",
   "import.recent.filesBy": "{files} · von {name}",
   "import.recent.undo": "Rückgängig",
+  "import.recent.rowsImported": "{written} von {read} importiert",
   "import.status.pending": "Entwurf",
   "import.status.validating": "Wird geprüft",
-  "import.status.awaiting_approval": "Nicht importiert",
+  "import.status.awaiting_approval": "Testlauf bereit",
   "import.status.running": "Wird importiert",
   "import.status.complete": "Abgeschlossen",
   "import.status.failed": "Angehalten",
@@ -11069,7 +11073,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.reason.undo_failed":
     "Der Datensatz konnte nicht zurückgenommen werden.",
   "import.reason.amount_negative":
-    "„{value}“ liegt unter null, und der Betrag eines Deals darf das nicht sein.",
+    "„{value}“ liegt unter null, und ein importierter Betrag darf das nicht sein.",
   "import.reason.author_too_long":
     "Die Angabe, wer den Eintrag erstellt hat, ist länger als {max} Zeichen.",
   "import.reason.cannot_create":
@@ -11116,10 +11120,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Unternehmensspalte ist leer, daher nennt die Zeile keinen Arbeitgeber.",
   "import.reason.employer_column_empty_dropped":
     "Die Unternehmensspalte ist leer, daher nennt die Zeile keinen Arbeitgeber. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.employer_column_empty_will_drop":
+    "Die Unternehmensspalte ist leer, daher nennt die Zeile keinen Arbeitgeber. Die Zeile wird ohne Verknüpfung importiert.",
   "import.reason.employer_not_found":
-    "Im CRM gibt es kein Unternehmen namens „{name}“, daher gab es nichts, womit dieser Kontakt verknüpft werden konnte.",
+    "Im CRM gibt es kein Unternehmen namens „{name}“, daher gibt es nichts, womit dieser Kontakt verknüpft werden kann.",
   "import.reason.employer_not_found_dropped":
-    "Im CRM gibt es kein Unternehmen namens „{name}“, daher gab es nichts, womit dieser Kontakt verknüpft werden konnte. Die Zeile wurde ohne Verknüpfung importiert.",
+    "Im CRM gibt es kein Unternehmen namens „{name}“, daher gibt es nichts, womit dieser Kontakt verknüpft werden kann. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.employer_not_found_will_drop":
+    "Im CRM gibt es kein Unternehmen namens „{name}“, daher gibt es nichts, womit dieser Kontakt verknüpft werden kann. Die Zeile wird ohne Verknüpfung importiert.",
   "import.reason.employer_refused":
     "Der Arbeitgeber konnte nicht zugeordnet werden. Wähle ein eindeutiges Unternehmen, das du verknüpfen darfst.",
   "import.reason.employer_will_create":
@@ -11143,10 +11151,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Mehr als ein Unternehmen heißt „{name}“, daher kann nur ein Mensch entscheiden, welches diesen Kontakt beschäftigt.",
   "import.reason.link_ambiguous_dropped":
     "Mehr als ein Unternehmen heißt „{name}“, daher kann nur ein Mensch entscheiden, welches diesen Kontakt beschäftigt. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.link_ambiguous_will_drop":
+    "Mehr als ein Unternehmen heißt „{name}“, daher kann nur ein Mensch entscheiden, welches diesen Kontakt beschäftigt. Die Zeile wird ohne Verknüpfung importiert.",
   "import.reason.link_not_found":
     "Kein Unternehmen mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
   "import.reason.link_not_found_dropped":
     "Kein Unternehmen mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.link_not_found_will_drop":
+    "Kein Unternehmen mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wird ohne Verknüpfung importiert.",
   "import.reason.linkedin_held":
     "Diese LinkedIn-URL gehört im CRM bereits einem anderen Datensatz, daher kann die Zeile sie nicht beanspruchen.",
   "import.reason.natural_key_taken":
@@ -11157,7 +11169,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ ist keine Domain, die gespeichert werden kann.",
   "import.reason.not_a_number": "„{value}“ ist keine Zahl.",
   "import.reason.not_an_amount":
-    "„{value}“ ist kein Betrag in {currency}. Schreibe ihn so: 12000.50.",
+    "„{value}“ ist kein Betrag in {currency}. Schreibe ihn so: {example}.",
+  "import.reason.amount_too_many_decimals":
+    "„{value}“ hat mehr Nachkommastellen, als {currency} zulässt. Schreibe den Betrag so: {example}.",
+  "import.reason.amount_needs_currency":
+    "Der Betrag „{value}“ hat keine Währung. Fülle die Währungsspalte dieser Zeile mit einem Code, etwa EUR.",
+  "import.reason.not_a_phone":
+    "„{value}“ ist keine Telefonnummer. Schreibe sie mit Landesvorwahl, zum Beispiel +49 30 1234567.",
   "import.reason.not_an_email":
     "„{value}“ ist keine E-Mail-Adresse, die gespeichert werden kann.",
   "import.reason.not_yes_no": "„{value}“ ist weder Ja noch Nein.",
@@ -11209,6 +11227,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ ist keine Phase der Pipeline „{pipeline}“. Mögliche Phasen: {names}.",
   "import.reason.currency_not_a_code":
     "„{value}“ ist kein Währungscode. Schreibe die drei Buchstaben, etwa EUR.",
+  "import.reason.currency_not_money":
+    "„{value}“ ist der Code für keine Währung oder für Tests und gibt keinem Deal einen Preis. Schreibe die Währung des Deals, etwa EUR.",
+  "import.reason.close_date_far":
+    "„{value}“ liegt mehr als {years} Jahre in der Zukunft. Prüfe, ob dieses Abschlussdatum stimmt.",
   "import.reason.close_date_future":
     "„{value}“ liegt in der Zukunft, und das Abschlussdatum eines abgeschlossenen Deals darf das nicht sein.",
   "import.reason.close_date_past":
@@ -11237,6 +11259,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kein Kontakt mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
   "import.reason.contact_not_found_dropped":
     "Kein Kontakt mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.contact_not_found_will_drop":
+    "Kein Kontakt mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wird ohne Verknüpfung importiert.",
   "import.reason.activity_type_unnamed":
     "Nenne den Typ der Aktivität: note, call, meeting oder email.",
   "import.reason.activity_type_unknown":
@@ -11285,12 +11309,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kein Lead mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
   "import.reason.lead_not_found_dropped":
     "Kein Lead mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.lead_not_found_will_drop":
+    "Kein Lead mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wird ohne Verknüpfung importiert.",
   "import.reason.deal_not_found":
     "Kein Deal mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
   "import.reason.link_row_skipped":
     "Die Zeile „{ref}“ wurde in diesem Import übersprungen, daher gibt es nichts zu verknüpfen.",
   "import.reason.link_row_skipped_dropped":
     "Die Zeile „{ref}“ wurde in diesem Import übersprungen, daher gibt es nichts zu verknüpfen. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.link_row_skipped_will_drop":
+    "Die Zeile „{ref}“ wurde in diesem Import übersprungen, daher gibt es nichts zu verknüpfen. Die Zeile wird ohne Verknüpfung importiert.",
   "import.reason.undo_edited":
     "Jemand hat diesen Datensatz nach dem Import geändert, daher blieb er bestehen.",
   "import.reason.undo_still_referenced":
@@ -11301,10 +11329,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Datei kann den Status „{value}“ nicht setzen. Nutze Qualifizieren oder Disqualifizieren am Lead. Eine Datei darf setzen: {allowed}.",
   "import.reason.deal_not_found_dropped":
     "Kein Deal mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.deal_not_found_will_drop":
+    "Kein Deal mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wird ohne Verknüpfung importiert.",
   "import.reason.activity_link_ambiguous":
     "Mehr als ein Unternehmen heißt „{name}“, daher kann nur ein Mensch entscheiden, um welches es in dieser Aktivität geht.",
   "import.reason.activity_link_ambiguous_dropped":
     "Mehr als ein Unternehmen heißt „{name}“, daher kann nur ein Mensch entscheiden, um welches es in dieser Aktivität geht. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.activity_link_ambiguous_will_drop":
+    "Mehr als ein Unternehmen heißt „{name}“, daher kann nur ein Mensch entscheiden, um welches es in dieser Aktivität geht. Die Zeile wird ohne Verknüpfung importiert.",
   "import.reason.value_unreadable": "„{value}“ kann nicht gelesen werden.",
   "import.problem.broken_link": "Fehlerhafte Verknüpfung",
   "import.problem.dropped_link": "Verknüpfung ausgelassen",
@@ -17765,6 +17797,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.svc.queued": "Startet gleich",
   "connectors.svc.imported": "Importiert",
   "connectors.svc.stopped": "Gestoppt",
+  "connectors.svc.mailMissing": "E-Mails fehlen",
+  "connectors.svc.unreadPeriod":
+    "E-Mails von {from} bis {to} fehlen möglicherweise. Importiere ältere E-Mails mit einem Zeitraum, der bis {from} zurückreicht.",
   "connectors.svc.calendar": "Kalender",
   "connectors.svc.calendarDesc":
     "Termine erscheinen bei Kontakten und Deals, und dein Buchungslink bietet nur deine freien Zeiten an.",

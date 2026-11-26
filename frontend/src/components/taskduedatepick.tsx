@@ -102,6 +102,7 @@ export function TaskDueDatePick({
   dueHasTime,
   dueIntent,
   update,
+  onMoved,
 }: Readonly<{
   activityId: string;
   version: number | undefined;
@@ -109,6 +110,8 @@ export function TaskDueDatePick({
   dueHasTime?: boolean;
   dueIntent?: components["schemas"]["IntentTime"];
   update: ReturnType<typeof useTaskUpdate>;
+  /** The move landed, so a panel that holds the fields can close. */
+  onMoved?: () => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -154,7 +157,9 @@ export function TaskDueDatePick({
       to,
       back: draft.back,
     }).then((moved) => {
-      if (moved) setDraft(null);
+      if (!moved) return;
+      setDraft(null);
+      onMoved?.();
     });
   };
   return (

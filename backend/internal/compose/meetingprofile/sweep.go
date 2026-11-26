@@ -4,6 +4,7 @@
 package meetingprofile
 
 import (
+	"cmp"
 	"context"
 
 	"github.com/jackc/pgx/v5"
@@ -22,6 +23,8 @@ const sweepBatch = 200
 // longer fill them: narrowed to fewer readers, restricted, archived or redacted.
 type Sweep struct {
 	Pool *pgxpool.Pool
+	// Batch is the rows one transaction takes. Zero is sweepBatch.
+	Batch int
 }
 
 // Workspace runs one workspace's pass, as the system. Each batch deletes what
@@ -33,13 +36,15 @@ func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
 		var removed int
 		if err := database.WithWorkspaceTx(ctx, s.Pool, func(tx pgx.Tx) error {
 			var err error
-			removed, err = contacts.RetractStaleMeetingProfilesTx(ctx, tx, sweepBatch)
+			removed, err = contacts.RetractStaleMeetingProfilesTx(ctx, tx, s.batch())
 			return err
 		}); err != nil {
 			return err
 		}
-		if removed < sweepBatch {
+		if removed < s.batch() {
 			return nil
 		}
 	}
 }
+
+func (s Sweep) batch() int { return cmp.Or(s.Batch, sweepBatch) }

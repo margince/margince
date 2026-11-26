@@ -14,24 +14,24 @@
   "self_judged": false,
   "stamp": {
     "scenario": "b64141641ea58f59",
-    "tools": "9855e17f41f34145",
-    "instructions": "4eab26d5fff0793f",
+    "tools": "259c8fb435341710",
+    "instructions": "d707a123fe53827f",
     "judge": "claude-haiku-5-5",
-    "harness": "ae24b6799c8461d2",
+    "harness": "0fe690d35efcc703",
     "parsers": {
       "gemini:cli": "fa1db64bc14e971b",
       "gpt:cli": "d48ca27c983f8b3f"
     },
-    "commit": "5dfb7ceebe8ce1b1607ab3992fb9d36b3ac8208f",
-    "ran_at": "2026-11-25T06:48:48Z",
-    "graded_commit": "8d1a2e3f3d0e19ca67b1a23f47f3c2d8686628c3",
-    "graded_at": "2026-11-25T10:49:07Z"
+    "commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "ran_at": "2026-11-26T04:49:11Z",
+    "graded_commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "graded_at": "2026-11-26T04:49:11Z"
   },
   "usage": {
-    "input_tokens": 170497,
-    "output_tokens": 23379,
+    "input_tokens": 101753,
+    "output_tokens": 19196,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 656809,
+    "cache_read_input_tokens": 316564,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -40,19 +40,19 @@
     {
       "passed": true,
       "tools": [
-        "at_risk_relationships",
         "catch_me_up_on",
         "describe_query_vocabulary",
         "find_records",
         "list_records",
-        "read_attention",
+        "query_workspace",
         "read_context",
         "read_record",
         "read_workspace",
-        "review_commitments",
         "search_records",
-        "whats_slipping_this_week",
         "whoami"
+      ],
+      "refused": [
+        "find_records"
       ]
     },
     {
@@ -60,46 +60,56 @@
       "tools": [
         "at_risk_relationships",
         "catch_me_up_on",
-        "describe_query_vocabulary",
         "find_records",
         "list_records",
+        "query_workspace",
         "read_attention",
         "read_context",
-        "read_relationships",
-        "read_workspace",
-        "search_context",
-        "search_records",
+        "read_record",
         "whats_slipping_this_week",
         "whoami"
+      ],
+      "refused": [
+        "read_context"
       ]
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 18.5,
-      "min": 17,
+      "median": 19.5,
+      "min": 19,
       "max": 20
     },
     "turns": {
-      "median": 10,
+      "median": 9,
       "min": 9,
-      "max": 11
+      "max": 9
     },
     "refused": {
+      "median": 1.5,
+      "min": 1,
+      "max": 2
+    },
+    "retries": {
+      "median": 1.5,
+      "min": 1,
+      "max": 2
+    },
+    "client_refused": {
       "median": 0,
       "min": 0,
       "max": 0
     },
     "prompt_tokens": {
-      "median": 413653,
-      "min": 364373,
-      "max": 462933
+      "median": 209158.5,
+      "min": 201019,
+      "max": 217298
     },
     "output_tokens": {
-      "median": 11689.5,
-      "min": 11161,
-      "max": 12218
+      "median": 9598,
+      "min": 9594,
+      "max": 9602
     }
   }
 }

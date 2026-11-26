@@ -181,6 +181,8 @@ var erasureCascadeFiles = []string{
 	// and the runs that bought it (ADR-0101). Same Art. 17 transaction, its
 	// own file for the same size reason the timeline has one.
 	"internal/modules/privacy/erasure_provider.go",
+	// The company facts that repeat the subject's own address or number.
+	"internal/modules/privacy/erasure_companyevidence.go",
 	// The messages nobody has decided yet, and the quotations they carry.
 	// Same Art. 17 transaction; its own file because it belongs to neither
 	// destructive engine and both reach it.

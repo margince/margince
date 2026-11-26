@@ -541,3 +541,30 @@ func TestConnectingWithNoCaptureAtAllStaysGeneric(t *testing.T) {
 		t.Errorf("a deployment with no capture registry was told to visit Settings: %s", body)
 	}
 }
+
+// A connection whose last poll succeeded and whose import is done can still
+// hold mail no sync read. The row says so beside both, so neither reads as
+// proof that the mailbox is complete.
+func TestTheConnectionRowCarriesTheMailNoSyncRead(t *testing.T) {
+	from := time.Date(2026, 6, 1, 9, 0, 0, 0, time.FixedZone("CEST", 2*3600))
+	to := from.AddDate(0, 0, 13)
+	succeeded := to.Add(time.Hour)
+	view := capture.ConnectionView{
+		Provider: "gmail", Status: "connected", LastSuccessAt: &succeeded,
+		Backfill:   &capture.BackfillRun{Status: "done", WindowMonths: 3},
+		UnreadFrom: &from, UnreadTo: &to,
+	}
+
+	row := toContractConnection(view)
+	if row.UnreadPeriod == nil || !row.UnreadPeriod.From.Equal(from) || !row.UnreadPeriod.To.Equal(to) {
+		t.Fatalf("unread period on the wire = %+v, want %s..%s", row.UnreadPeriod, from, to)
+	}
+	if row.UnreadPeriod.From.Location() != time.UTC {
+		t.Errorf("the period is sent in %s, want UTC", row.UnreadPeriod.From.Location())
+	}
+
+	view.UnreadFrom, view.UnreadTo = nil, nil
+	if row := toContractConnection(view); row.UnreadPeriod != nil {
+		t.Errorf("a mailbox with nothing left unread reports %+v", row.UnreadPeriod)
+	}
+}

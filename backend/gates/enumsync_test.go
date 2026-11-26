@@ -17,6 +17,7 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -415,6 +416,13 @@ func tableCheckSets(t *testing.T) map[string][]string {
 			t.Fatal(err)
 		}
 	}
+	// The evidence views store nothing, so their vocabularies are the lists on
+	// field_provenance, read from the catalog the migrations build.
+	evidence, err := readEvidenceVocabularies()
+	if err != nil {
+		t.Fatal(err)
+	}
+	maps.Copy(sets, evidence)
 	return sets
 }
 

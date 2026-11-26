@@ -52,7 +52,8 @@ export function useRemindsReader(assigneeId: string | null | undefined) {
   return me !== undefined && assigneeId === me;
 }
 
-/** The task detail's "Remind me": a menu of the reminder lines. */
+/** The task detail's "Remind me": a chip in its line of facts that names the
+ *  reminder once one stands, and opens the menu of the reminder lines. */
 export function TaskRemindMenu({
   task,
   update,
@@ -61,13 +62,21 @@ export function TaskRemindMenu({
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
   if (!useRemindsReader(task.assignee_id)) return null;
+  const when = task.remind_at
+    ? formatDue(task.remind_at, true, locale, zone, task.remind_intent)
+    : undefined;
+  // The chip reads the reminder, so its name carries the verb and that reading.
   return (
     <OverflowMenu
-      label={t("tasks.remind.menu")}
-      text={t("tasks.remind.menu")}
-      face="button"
-      icon={<Bell aria-hidden="true" />}
+      label={
+        when ? t("tasks.remind.chipName", { when }) : t("tasks.remind.menu")
+      }
+      text={when ? t("tasks.remind.current", { when }) : t("tasks.remind.menu")}
+      face="chip"
+      icon={<Bell size={12} aria-hidden="true" />}
       align="start"
       pending={update.isPending}
     >

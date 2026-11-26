@@ -406,7 +406,7 @@ func sarProvenanceSections(pkg *SARPackage, contactID ids.ContactID, external []
  OR rc.id = ANY(` + externalIDs + `) OR rc.id IN (` + linkedOriginalsSQL("contact_id", "$1", false) + `)`, rawArgs},
 		{&pkg.FieldOrigins, `SELECT fp.field_name, fp.source, fp.captured_by, fp.captured_at, fp.confidence, fp.evidence_ref
 		   FROM field_provenance fp
-		   WHERE fp.object_type = 'contact' AND fp.object_id = $1`, nil},
+		   WHERE fp.object_type = 'contact' AND fp.object_id = $1 AND fp.value IS NULL`, nil},
 		// The STORED value, not the one the 360 renders. contact360's
 		// readProfileFields overlays whatever verdict a human recorded, because
 		// a page showing the machine's claim as fact would be showing a claim
