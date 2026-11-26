@@ -12,6 +12,7 @@ package migrations_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -185,44 +186,106 @@ func TestALinkStatementLocksItsContactBeforeItsProject(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
-	ctx := context.Background()
-
 	early := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
 	f := seedLinkClockFixture(t, conn, early, early.AddDate(0, 0, 7), early.AddDate(0, 0, 14))
+	tx := recordClockUpdates(t, conn)
+	if _, err := tx.Exec(context.Background(), `INSERT INTO activity_link (activity_id, entity_type, contact_id, project_id)
+		VALUES ($1, 'project', NULL, $3), ($1, 'contact', $2, NULL)`, f.late, f.contactA, f.projectP); err != nil {
+		t.Fatalf("linking: %v", err)
+	}
+	assertClockWriteOrder(t, tx, []string{"contact/" + f.contactA, "project/" + f.projectP})
+}
+
+func TestActivityAndLinkChangesRefreshTheirWholeReachInTheSameOrder(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	headSchema(t, conn)
+	ctx := context.Background()
+	early := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
+	f := seedLinkClockFixture(t, conn, early, early.AddDate(0, 0, 7), early.AddDate(0, 0, 14))
+	if f.contactA > f.contactB {
+		f.contactA, f.contactB = f.contactB, f.contactA
+	}
+	if _, err := conn.Exec(ctx, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		VALUES ('employment', @contact, @company, 'manual', 'test')`,
+		pgx.NamedArgs{"contact": f.contactB, "company": f.company}); err != nil {
+		t.Fatalf("linking the later contact to its employer: %v", err)
+	}
+	if _, err := conn.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, contact_id, deal_id, project_id)
+		VALUES (@activity, 'contact', @contactA, NULL, NULL), (@activity, 'contact', @contactB, NULL, NULL),
+		       (@activity, 'deal', NULL, @deal, NULL), (@activity, 'project', NULL, NULL, @project)`,
+		pgx.NamedArgs{"activity": f.early, "contactA": f.contactA, "contactB": f.contactB,
+			"deal": f.deal, "project": f.projectP}); err != nil {
+		t.Fatalf("linking the shared activity: %v", err)
+	}
+	tx := recordClockUpdates(t, conn)
+	want := []string{"company/" + f.company, "contact/" + f.contactA, "contact/" + f.contactB,
+		"deal/" + f.deal, "project/" + f.projectP}
+	if _, err := tx.Exec(ctx, `UPDATE activity SET occurred_at = @at WHERE id = @activity`,
+		pgx.NamedArgs{"activity": f.early, "at": early.AddDate(0, 0, 1)}); err != nil {
+		t.Fatalf("re-dating the activity: %v", err)
+	}
+	assertClockWriteOrder(t, tx, want)
+	if _, err := tx.Exec(ctx, `TRUNCATE advanced_in_order`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE activity_link SET activity_id = @late WHERE activity_id = @early`,
+		pgx.NamedArgs{"early": f.early, "late": f.late}); err != nil {
+		t.Fatalf("moving all links: %v", err)
+	}
+	assertClockWriteOrder(t, tx, want)
+	if _, err := tx.Exec(ctx, `TRUNCATE advanced_in_order`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM activity_link WHERE activity_id = @activity`,
+		pgx.NamedArgs{"activity": f.late}); err != nil {
+		t.Fatalf("removing all links: %v", err)
+	}
+	assertClockWriteOrder(t, tx, want)
+}
+
+func recordClockUpdates(t *testing.T, conn *pgx.Conn) pgx.Tx {
+	t.Helper()
+	ctx := context.Background()
 	tx, err := conn.Begin(ctx)
 	if err != nil {
 		t.Fatalf("opening the recording transaction: %v", err)
 	}
-	defer func() {
+	t.Cleanup(func() {
 		if err := tx.Rollback(ctx); err != nil {
 			t.Errorf("rolling the recorder back: %v", err)
 		}
-	}()
+	})
 	if _, err := tx.Exec(ctx, `
-		CREATE TEMP TABLE advanced_in_order (seq serial, kind text) ON COMMIT DROP;
+		CREATE TEMP TABLE advanced_in_order (seq serial, kind text, id uuid) ON COMMIT DROP;
 		CREATE FUNCTION pg_temp.record_clock_advance() RETURNS trigger
 		    LANGUAGE plpgsql AS $$
 		BEGIN
-		  INSERT INTO advanced_in_order (kind) VALUES (TG_TABLE_NAME);
+		  INSERT INTO advanced_in_order (kind, id) VALUES (TG_TABLE_NAME, NEW.id);
 		  RETURN NULL;
 		END;
 		$$;
+		CREATE TRIGGER record_company_advance AFTER UPDATE OF last_activity_at ON company
+		  FOR EACH ROW EXECUTE FUNCTION pg_temp.record_clock_advance();
 		CREATE TRIGGER record_contact_advance AFTER UPDATE OF last_activity_at ON contact
+		  FOR EACH ROW EXECUTE FUNCTION pg_temp.record_clock_advance();
+		CREATE TRIGGER record_deal_advance AFTER UPDATE OF last_activity_at ON deal
 		  FOR EACH ROW EXECUTE FUNCTION pg_temp.record_clock_advance();
 		CREATE TRIGGER record_project_advance AFTER UPDATE OF last_activity_at ON project
 		  FOR EACH ROW EXECUTE FUNCTION pg_temp.record_clock_advance();`); err != nil {
 		t.Fatalf("installing the recorder: %v", err)
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, contact_id, project_id)
-		VALUES ($1, 'project', NULL, $3), ($1, 'contact', $2, NULL)`, f.late, f.contactA, f.projectP); err != nil {
-		t.Fatalf("linking: %v", err)
-	}
+	return tx
+}
+
+func assertClockWriteOrder(t *testing.T, tx pgx.Tx, want []string) {
+	t.Helper()
 	var order []string
-	if err := tx.QueryRow(ctx, `SELECT coalesce(array_agg(kind ORDER BY seq), '{}') FROM advanced_in_order`).Scan(&order); err != nil {
+	if err := tx.QueryRow(context.Background(),
+		`SELECT coalesce(array_agg(kind || '/' || id ORDER BY seq), '{}') FROM advanced_in_order`).Scan(&order); err != nil {
 		t.Fatalf("reading the order: %v", err)
 	}
-	if len(order) != 2 || order[0] != "contact" || order[1] != "project" {
-		t.Fatalf("the statement advanced %v, want [contact project]: a project locked first can deadlock "+
-			"against an activity update, which locks the contact first", order)
+	if !slices.Equal(order, want) {
+		t.Fatalf("clock write order = %v, want %v", order, want)
 	}
 }

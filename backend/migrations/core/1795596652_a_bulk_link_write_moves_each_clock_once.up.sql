@@ -76,6 +76,16 @@ LANGUAGE plpgsql AS $$BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION trg_activity_last_activity() RETURNS trigger
+LANGUAGE plpgsql AS $$BEGIN
+  PERFORM refresh_last_activity_for_links(
+    ARRAY(SELECT contact_id FROM activity_link WHERE activity_id = NEW.id AND contact_id IS NOT NULL),
+    ARRAY(SELECT deal_id FROM activity_link WHERE activity_id = NEW.id AND deal_id IS NOT NULL),
+    ARRAY(SELECT company_id FROM activity_link WHERE activity_id = NEW.id AND company_id IS NOT NULL));
+  RETURN NULL;
+END;
+$$;
+
 CREATE FUNCTION trg_activity_link_last_activity_added() RETURNS trigger
 LANGUAGE plpgsql AS $$
 DECLARE

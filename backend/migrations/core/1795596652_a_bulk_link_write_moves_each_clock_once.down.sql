@@ -37,6 +37,23 @@ DROP FUNCTION IF EXISTS trg_activity_link_last_activity_added();
 DROP FUNCTION IF EXISTS trg_activity_link_last_activity_moved();
 DROP FUNCTION IF EXISTS trg_activity_link_last_activity_removed();
 
+CREATE OR REPLACE FUNCTION trg_activity_last_activity() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  l record;
+BEGIN
+  FOR l IN
+     SELECT contact_id, deal_id, company_id FROM activity_link
+      WHERE activity_id = NEW.id
+      ORDER BY contact_id, deal_id, company_id
+  LOOP
+    PERFORM refresh_last_activity_for_link(l.contact_id, l.deal_id, l.company_id);
+  END LOOP;
+  RETURN NULL;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION refresh_last_activity_for_link(cid uuid, did uuid, oid uuid) RETURNS void
 LANGUAGE plpgsql AS $$
 DECLARE

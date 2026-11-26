@@ -32,7 +32,7 @@ public.activity.activity_internal_mail_remains_restricted CHECK (((internal_mail
 public.activity.activity_invitation_sender_fkey FOREIGN KEY (invitation_sender) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_kind_fkey FOREIGN KEY (kind) REFERENCES activity_kind(kind) ON DELETE RESTRICT
 public.activity.activity_language_fkey FOREIGN KEY (language) REFERENCES language(code) ON UPDATE RESTRICT ON DELETE RESTRICT NOT VALID
-public.activity.activity_last_activity CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, audience_reason, thread_key, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.audience_reason IS DISTINCT FROM new.audience_reason) OR (old.thread_key IS DISTINCT FROM new.thread_key) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome) OR (old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested))) EXECUTE FUNCTION trg_activity_last_activity()
+public.activity.activity_last_activity CREATE TRIGGER activity_last_activity AFTER UPDATE ON public.activity REFERENCING OLD TABLE AS clock_before NEW TABLE AS clock_after FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_last_activity()
 public.activity.activity_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.activity.activity_meeting_host CHECK (((host_user_id IS NULL) OR (kind = 'meeting'::text)))
 public.activity.activity_meeting_intent_kind CHECK (((meeting_wall IS NULL) OR ((kind = 'meeting'::text) AND (occurred_precision = 'instant'::text))))
@@ -52,7 +52,6 @@ public.activity.activity_owed_verdict_check CHECK (((owed_verdict IS NULL) OR (o
 public.activity.activity_owed_verdict_ruleset_shape CHECK (((owed_verdict_ruleset IS NULL) OR (owed_verdict IS NOT NULL)))
 public.activity.activity_owed_verdict_stamped CHECK (((owed_verdict IS NULL) = (owed_verdict_at IS NULL)))
 public.activity.activity_pkey PRIMARY KEY (id)
-public.activity.activity_project_last_activity CREATE TRIGGER activity_project_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome) OR (old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested))) EXECUTE FUNCTION trg_activity_project_last_activity()
 public.activity.activity_raw_capture_id_fkey FOREIGN KEY (raw_capture_id) REFERENCES raw_capture(id) ON DELETE SET NULL
 public.activity.activity_refuse_restricted_mutation CREATE TRIGGER activity_refuse_restricted_mutation BEFORE DELETE OR UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()
 public.activity.activity_reminder_intent_pair CHECK (valid_intent_time(remind_wall, remind_zone))
@@ -1022,26 +1021,30 @@ BEGIN
   SELECT array_agg(u.rid ORDER BY u.rid), array_agg(u.at ORDER BY u.rid)
     INTO moved_ids, moved_ats
     FROM (SELECT p.rid, max(p.at) AS at FROM unnest(rids, ats) p(rid, at)
-           WHERE p.rid IS NOT NULL AND p.at IS NOT NULL GROUP BY p.rid) u;
+           WHERE p.rid IS NOT NULL GROUP BY p.rid) u;
   IF moved_ids IS NULL THEN RETURN; END IF;
   PERFORM set_config('margince.last_activity_move', 'on', true);
   CASE tbl
     WHEN 'contact'::regclass THEN
-      PERFORM 1 FROM contact WHERE id = ANY (moved_ids) ORDER BY id FOR UPDATE;
+      PERFORM 1 FROM contact WHERE id = ANY (moved_ids) ORDER BY id FOR NO KEY UPDATE;
       UPDATE contact SET last_activity_at = m.at FROM unnest(moved_ids, moved_ats) m(rid, at)
-       WHERE contact.id = m.rid AND (contact.last_activity_at IS NULL OR contact.last_activity_at < m.at);
+       WHERE contact.id = m.rid AND m.at IS NOT NULL
+         AND (contact.last_activity_at IS NULL OR contact.last_activity_at < m.at);
     WHEN 'deal'::regclass THEN
-      PERFORM 1 FROM deal WHERE id = ANY (moved_ids) ORDER BY id FOR UPDATE;
+      PERFORM 1 FROM deal WHERE id = ANY (moved_ids) ORDER BY id FOR NO KEY UPDATE;
       UPDATE deal SET last_activity_at = m.at FROM unnest(moved_ids, moved_ats) m(rid, at)
-       WHERE deal.id = m.rid AND (deal.last_activity_at IS NULL OR deal.last_activity_at < m.at);
+       WHERE deal.id = m.rid AND m.at IS NOT NULL
+         AND (deal.last_activity_at IS NULL OR deal.last_activity_at < m.at);
     WHEN 'company'::regclass THEN
-      PERFORM 1 FROM company WHERE id = ANY (moved_ids) ORDER BY id FOR UPDATE;
+      PERFORM 1 FROM company WHERE id = ANY (moved_ids) ORDER BY id FOR NO KEY UPDATE;
       UPDATE company SET last_activity_at = m.at FROM unnest(moved_ids, moved_ats) m(rid, at)
-       WHERE company.id = m.rid AND (company.last_activity_at IS NULL OR company.last_activity_at < m.at);
+       WHERE company.id = m.rid AND m.at IS NOT NULL
+         AND (company.last_activity_at IS NULL OR company.last_activity_at < m.at);
     WHEN 'project'::regclass THEN
-      PERFORM 1 FROM project WHERE id = ANY (moved_ids) ORDER BY id FOR UPDATE;
+      PERFORM 1 FROM project WHERE id = ANY (moved_ids) ORDER BY id FOR NO KEY UPDATE;
       UPDATE project SET last_activity_at = m.at FROM unnest(moved_ids, moved_ats) m(rid, at)
-       WHERE project.id = m.rid AND (project.last_activity_at IS NULL OR project.last_activity_at < m.at);
+       WHERE project.id = m.rid AND m.at IS NOT NULL
+         AND (project.last_activity_at IS NULL OR project.last_activity_at < m.at);
   END CASE;
   PERFORM set_config('margince.last_activity_move', 'off', true);
 END;
@@ -8151,10 +8154,10 @@ BEGIN
      ORDER BY 1, 2
   LOOP
     CASE reached.kind
-      WHEN 'company' THEN PERFORM 1 FROM company WHERE id = reached.id FOR UPDATE;
-      WHEN 'contact' THEN PERFORM 1 FROM contact WHERE id = reached.id FOR UPDATE;
-      WHEN 'deal' THEN PERFORM 1 FROM deal WHERE id = reached.id FOR UPDATE;
-      WHEN 'project' THEN PERFORM 1 FROM project WHERE id = reached.id FOR UPDATE;
+      WHEN 'company' THEN PERFORM 1 FROM company WHERE id = reached.id FOR NO KEY UPDATE;
+      WHEN 'contact' THEN PERFORM 1 FROM contact WHERE id = reached.id FOR NO KEY UPDATE;
+      WHEN 'deal' THEN PERFORM 1 FROM deal WHERE id = reached.id FOR NO KEY UPDATE;
+      WHEN 'project' THEN PERFORM 1 FROM project WHERE id = reached.id FOR NO KEY UPDATE;
     END CASE;
   END LOOP;
 END;
@@ -8400,17 +8403,17 @@ BEGIN
   IF rid IS NULL THEN RETURN; END IF;
   CASE tbl
     WHEN 'contact'::regclass THEN
-      PERFORM 1 FROM contact WHERE id = rid FOR UPDATE;
+      PERFORM 1 FROM contact WHERE id = rid FOR NO KEY UPDATE;
       v := last_activity_of_contact(rid);
       PERFORM set_config('margince.last_activity_move', 'on', true);
       UPDATE contact SET last_activity_at = v WHERE id = rid AND last_activity_at IS DISTINCT FROM v;
     WHEN 'deal'::regclass THEN
-      PERFORM 1 FROM deal WHERE id = rid FOR UPDATE;
+      PERFORM 1 FROM deal WHERE id = rid FOR NO KEY UPDATE;
       v := last_activity_of_deal(rid);
       PERFORM set_config('margince.last_activity_move', 'on', true);
       UPDATE deal SET last_activity_at = v WHERE id = rid AND last_activity_at IS DISTINCT FROM v;
     WHEN 'company'::regclass THEN
-      PERFORM 1 FROM company WHERE id = rid FOR UPDATE;
+      PERFORM 1 FROM company WHERE id = rid FOR NO KEY UPDATE;
       v := last_activity_of_company(rid);
       PERFORM set_config('margince.last_activity_move', 'on', true);
       UPDATE company SET last_activity_at = v WHERE id = rid AND last_activity_at IS DISTINCT FROM v;
@@ -8438,7 +8441,7 @@ DECLARE
   v timestamptz;
 BEGIN
   IF pid IS NULL THEN RETURN; END IF;
-  PERFORM 1 FROM project WHERE id = pid FOR UPDATE;
+  PERFORM 1 FROM project WHERE id = pid FOR NO KEY UPDATE;
   v := last_activity_of_project(pid);
   PERFORM set_config('margince.last_activity_move', 'on', true);
   UPDATE project SET last_activity_at = v WHERE id = pid AND last_activity_at IS DISTINCT FROM v;
@@ -9621,7 +9624,7 @@ DECLARE
   moving text := current_setting('margince.last_activity_move', true);
 BEGIN
   IF cids IS NULL OR cardinality(cids) = 0 THEN RETURN; END IF;
-  PERFORM 1 FROM contact WHERE id = ANY (cids) ORDER BY id FOR UPDATE;
+  PERFORM 1 FROM contact WHERE id = ANY (cids) ORDER BY id FOR NO KEY UPDATE;
   PERFORM set_config('margince.last_activity_move', 'on', true);
   UPDATE contact p
      SET strength_last_interaction_at = f.interaction_at,
@@ -9645,16 +9648,24 @@ public.refresh_last_activity_for_link(cid uuid, did uuid, oid uuid) secdef=false
   PERFORM refresh_last_activity_for_links(ARRAY[cid], ARRAY[did], ARRAY[oid]);
 END;
 
-public.refresh_last_activity_for_links(cids uuid[], dids uuid[], oids uuid[]) secdef=false cfg=- acl=- 
+public.refresh_last_activity_for_links(cids uuid[], dids uuid[], oids uuid[], strength_cids uuid[]) secdef=false cfg=- acl=- 
 DECLARE
   reached record;
 BEGIN
   FOR reached IN
-     SELECT reach.kind, reach.id
-       FROM last_activity_reach(cids, dids, oids) reach
-      ORDER BY reach.kind, reach.id
+     SELECT r.kind, r.id, bool_or(r.move_clock) AS move_clock
+       FROM (
+         SELECT reach.kind, reach.id, true AS move_clock FROM last_activity_reach(cids, dids, oids) reach
+         UNION ALL
+         SELECT 'contact', cid, false FROM unnest(strength_cids) cid WHERE cid IS NOT NULL
+       ) r
+      GROUP BY r.kind, r.id ORDER BY r.kind, r.id
   LOOP
-    PERFORM move_last_activity(reached.kind::regclass, reached.id);
+    IF reached.move_clock THEN
+      PERFORM move_last_activity(reached.kind::regclass, reached.id);
+    ELSE
+      PERFORM 1 FROM contact WHERE id = reached.id FOR NO KEY UPDATE;
+    END IF;
   END LOOP;
 END;
 
@@ -11363,7 +11374,7 @@ DECLARE
   moving text := current_setting('margince.last_activity_move', true);
 BEGIN
   IF cids IS NULL OR cardinality(cids) = 0 THEN RETURN; END IF;
-  PERFORM 1 FROM contact WHERE id IN (SELECT unnest(cids)) ORDER BY id FOR UPDATE;
+  PERFORM 1 FROM contact WHERE id IN (SELECT unnest(cids)) ORDER BY id FOR NO KEY UPDATE;
   PERFORM set_config('margince.last_activity_move', 'on', true);
   WITH grouped AS (
     SELECT t.cid, array_agg(t.aid) AS aids, array_agg(t.was) AS was, bool_or(t.was IS NULL) AS unknown
@@ -11476,14 +11487,37 @@ public.transcript_read_proposal_pkey CREATE UNIQUE INDEX transcript_read_proposa
 public.transcript_read_proposal_position_key CREATE UNIQUE INDEX transcript_read_proposal_position_key ON public.transcript_read_proposal USING btree (transcript_read_id, "position")
 public.trg_activity_last_activity() secdef=false cfg=- acl=- 
 DECLARE
-  l record;
+  cids uuid[];
+  dids uuid[];
+  oids uuid[];
+  pids uuid[];
+  pid uuid;
 BEGIN
-  FOR l IN
-     SELECT contact_id, deal_id, company_id FROM activity_link
-      WHERE activity_id = NEW.id
-      ORDER BY contact_id, deal_id, company_id
-  LOOP
-    PERFORM refresh_last_activity_for_link(l.contact_id, l.deal_id, l.company_id);
+  -- Transition tables require the changed-field guard inside the trigger function.
+  WITH changed AS (
+    SELECT n.id,
+           ROW(o.occurred_at, o.archived_at, o.audience, o.origin, o.kind, o.meeting_status,
+               o.occurred_precision, o.call_outcome, o.bulk_mail_attested)
+           IS DISTINCT FROM
+           ROW(n.occurred_at, n.archived_at, n.audience, n.origin, n.kind, n.meeting_status,
+               n.occurred_precision, n.call_outcome, n.bulk_mail_attested) AS clock_changed,
+           ROW(o.audience_reason, o.thread_key)
+           IS DISTINCT FROM ROW(n.audience_reason, n.thread_key) AS scope_changed
+      FROM clock_before o JOIN clock_after n ON n.id = o.id
+  )
+  SELECT array_agg(l.contact_id) FILTER (WHERE l.contact_id IS NOT NULL),
+         array_agg(l.deal_id) FILTER (WHERE l.deal_id IS NOT NULL),
+         array_agg(l.company_id) FILTER (WHERE l.company_id IS NOT NULL),
+         array_agg(l.project_id) FILTER (WHERE c.clock_changed AND l.project_id IS NOT NULL)
+    INTO cids, dids, oids, pids
+    FROM changed c JOIN activity_link l ON l.activity_id = c.id
+   WHERE c.clock_changed OR c.scope_changed;
+  IF cids IS NULL AND dids IS NULL AND oids IS NULL AND pids IS NULL THEN RETURN NULL; END IF;
+  PERFORM refresh_last_activity_for_links(cids, dids, oids,
+    ARRAY(SELECT l.contact_id FROM clock_after n JOIN activity_link l ON l.activity_id = n.id
+           WHERE l.contact_id IS NOT NULL));
+  FOR pid IN SELECT DISTINCT p.id FROM unnest(pids) p(id) WHERE p.id IS NOT NULL ORDER BY p.id LOOP
+    PERFORM move_project_last_activity(pid);
   END LOOP;
   RETURN NULL;
 END;
@@ -11505,7 +11539,6 @@ BEGIN
                               WHEN 'deal' THEN t.deal_at ELSE t.at END AS at
          FROM timed t
         CROSS JOIN LATERAL last_activity_reach(ARRAY[t.contact_id], ARRAY[t.deal_id], ARRAY[t.company_id]) reach
-        WHERE t.at IS NOT NULL OR t.deal_at IS NOT NULL
      )
      SELECT reached.kind, array_agg(reached.id) AS ids, array_agg(reached.at) AS ats
        FROM reached GROUP BY reached.kind ORDER BY reached.kind
@@ -11627,13 +11660,6 @@ END;
 public.trg_activity_participant_strength_dates_removed() secdef=false cfg=- acl=- 
 BEGIN
   PERFORM touch_strength_dates_of_activities(ARRAY(SELECT DISTINCT o.activity_id FROM removed o));
-  RETURN NULL;
-END;
-
-public.trg_activity_project_last_activity() secdef=false cfg=- acl=- 
-BEGIN
-  PERFORM move_project_last_activity(l.project_id)
-     FROM activity_link l WHERE l.activity_id = NEW.id AND l.project_id IS NOT NULL;
   RETURN NULL;
 END;
 
