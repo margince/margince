@@ -7911,9 +7911,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "task.next.reviewProject": "Projekt prüfen",
   "task.next.reviewContact": "Kontakt prüfen",
   "task.next.reviewCompany": "Unternehmen prüfen",
-  "tasks.whichDeal.legend": "Um welchen Deal geht es in der E-Mail?",
-  "tasks.whichDeal.file": "E-Mail-Thread dem Deal zuordnen",
-  "tasks.whichDeal.filed": "E-Mail-Thread dem Deal zugeordnet",
   "today.withheld":
     "Nicht enthalten: {sections}. Du hast keinen Zugriff darauf.",
   "today.source.moments": "Erkenntnisse von Margince",
@@ -8996,8 +8993,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.email_request": "Erstellt aus einer Anfrage in einer E-Mail.",
   "tasks.origin.which_deal":
     "Erstellt, weil eine erfasste E-Mail zu mehr als einem offenen Deal passt. Wähle den Deal, zu dem sie gehört, oder „Keiner dieser Deals“.",
-  "tasks.whichDeal.none": "Keiner dieser Deals",
-  "tasks.whichDeal.noneDone": "E-Mail keinem dieser Deals zugeordnet",
   "tasks.origin.system":
     "Von einer Automatisierung erstellt, nicht von einem Teammitglied eingegeben.",
 
@@ -19608,6 +19603,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand verknüpft einen Deal, ein Unternehmen oder einen Kontakt mit einem anderen Datensatz oder entfernt eine Verknüpfung.",
   "linkSuggestions.title": "Verknüpfungsvorschläge",
   "linkSuggestions.reason": "{unit}: {reason}",
+  "linkSuggestions.byMargince": "Margince",
   "linkSuggestions.target": "{subject} zu {record} ({kind})",
   "linkSuggestions.noSubject": "Eine Nachricht ohne Betreff",
   "linkSuggestions.kind.contact": "Kontakt",

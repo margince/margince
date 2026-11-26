@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
-import { useT } from "../i18n";
-import { isTimelineRead, TASK_QUEUE_KEY } from "./activitykeys";
-import { unwrap } from "./problem";
-import { recordWriteKeys } from "./recordwritekeys";
-import { worklistKey } from "./workkeys";
+import { api } from "../../api/client";
+import type { components } from "../../api/schema";
+import { useT } from "../../i18n";
+import { isTimelineRead, TASK_QUEUE_KEY } from "../../lib/activitykeys";
+import { unwrap } from "../../lib/problem";
+import { recordWriteKeys } from "../../lib/recordwritekeys";
+import { worklistKey } from "../../lib/workkeys";
 
 type DealDecline = components["schemas"]["ActivityDealDecline"];
 

@@ -371,7 +371,7 @@ mail. For mail from a **Held** mailbox:
 - A reply reminder needs the AI to find a request. Whether it reads held mail is the **Check private mail for requests** setting, see [Your day](your-day.md#what-happens-to-a-request-in-an-email).
 - With that setting off, held mail shows on your Worklist only when you wrote on its conversation first.
 - A follow-up on a promise is never made from held mail.
-- When several open deals fit, the task **Which deal is this about?** goes to that colleague. Only they see it.
+- When several open deals fit, the question **Which deal is this about?** goes to that colleague's **Suggested links** panel. Only they see it.
 
 When you open such an email, the reason under its subject says **In a shared
 mailbox**. The line below it names the mailbox and the team that reads it.

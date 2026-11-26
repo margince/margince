@@ -76,14 +76,10 @@ const (
 // pack with deadlines of its own. Its source_id names the request's act.
 const PrivacyRequestTaskSource = "privacy_request"
 
-// WhichDealSource names the one "Which deal is this about?" task capture raises
-// for a mail several open deals fit. Its source_id is the mail's thread, so a
-// thread is asked about once.
+// WhichDealSource is the source stored on old "Which deal is this about?"
+// tasks. No code writes it, since the question waits in the link suggestion
+// queue. It stays reserved so no caller can spell it.
 const WhichDealSource = "which_deal"
-
-// WhichDealOfferedKey names, in the raw of a WhichDealSource task, the ids of
-// the deals the question offered.
-const WhichDealOfferedKey = "offered_deal_ids"
 
 // WebsiteLeadSource names a lead read off a company's website and accepted by
 // a human. Only that accept writes it. A lead under it is sent an Art. 14

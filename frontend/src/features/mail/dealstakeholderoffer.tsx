@@ -3,16 +3,16 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
-import { Checkbox } from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
-import { readEmailPresentation } from "../design-system/emailmessage";
-import { useToast } from "../design-system/toast";
-import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "../lib/problem";
-import type { Relationship } from "./relationships";
-import { invalidateAfterEdge } from "./relationships.edges";
+import { api } from "../../api/client";
+import type { components } from "../../api/schema";
+import type { Relationship } from "../../components/relationships";
+import { invalidateAfterEdge } from "../../components/relationships.edges";
+import { Checkbox } from "../../design-system/atoms";
+import { ConfirmModal } from "../../design-system/confirmmodal";
+import { readEmailPresentation } from "../../design-system/emailmessage";
+import { useToast } from "../../design-system/toast";
+import { useT } from "../../i18n";
+import { problemMessageOf, unwrap } from "../../lib/problem";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 
