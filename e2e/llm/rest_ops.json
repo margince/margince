@@ -342,6 +342,7 @@
     "GET /v1/legal-reviews": "list_legal_reviews",
     "GET /v1/legal-reviews/settings": "get_legal_review_settings",
     "GET /v1/legal-reviews/{id}": "get_legal_review",
+    "GET /v1/link-suggestions": "list_link_suggestions",
     "GET /v1/link-types": "read_link_types",
     "GET /v1/list-filters": "describe_list_filters",
     "GET /v1/lists": "read_view",
@@ -749,6 +750,8 @@
     "POST /v1/legal-entities/{id}/logo": "upload_legal_entity_logo",
     "POST /v1/legal-reviews/{id}/decide": "decide_legal_review",
     "POST /v1/legal-reviews/{id}/withdraw": "withdraw_legal_review",
+    "POST /v1/link-suggestions/{id}/accept": "accept_link_suggestion",
+    "POST /v1/link-suggestions/{id}/reject": "reject_link_suggestion",
     "POST /v1/lists": "change_lists",
     "POST /v1/lists/{id}/members": "change_lists",
     "POST /v1/lists/{id}/members/remove": "change_lists",
@@ -1017,6 +1020,9 @@
       "id",
       "idempotency_key",
       "request_body"
+    ],
+    "accept_link_suggestion": [
+      "id"
     ],
     "accept_offer": [
       "id",
@@ -2434,6 +2440,7 @@
       "limit",
       "status"
     ],
+    "list_link_suggestions": [],
     "list_meeting_proposals": [
       "contact_id"
     ],
@@ -3066,6 +3073,9 @@
     "regenerate_offer": [
       "id",
       "idempotency_key"
+    ],
+    "reject_link_suggestion": [
+      "id"
     ],
     "reject_offer": [
       "id",

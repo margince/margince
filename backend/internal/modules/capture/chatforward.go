@@ -11,6 +11,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -116,7 +117,7 @@ func routeForward(ctx context.Context, sink connector.Sink, binding connector.Ch
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return ctx, unchanged, fmt.Errorf("capture: a forwarded chat message arrived with no connector on the context")
+		return ctx, unchanged, errors.New("capture: a forwarded chat message arrived with no connector on the context")
 	}
 	actor.UserID = member
 	ctx = principal.WithActor(ctx, actor)
