@@ -2272,6 +2272,7 @@ export const en = {
   "systemJob.capture_personal_purge": "Personal mail removal",
   "systemJob.capture_purge_receipt": "Mail removal receipt",
   "systemJob.capture_part_slim_worker": "Mail storage cleanup",
+  "systemJob.chat_clarification": "Question about forwarded messages",
   "systemJob.capture_trace_sweep": "Mail trace cleanup",
   "systemJob.capture_which_deal": "Deal question from mail",
   "systemJob.close_date": "Close date check",
@@ -11401,6 +11402,8 @@ export const en = {
   "jobs.kind.capture_enrich": "Contact details from signatures",
   "jobs.kind.captured_deal_refile": "File recent captured activity on deals",
   "jobs.kind.captured_deal_refile_sweep": "Recover captured activity filing",
+  "jobs.kind.chat_clarification_sweep":
+    "Ask colleagues who wrote the chat messages they forwarded",
   "jobs.kind.capture_part_slim": "Mail storage cleanup",
   "jobs.kind.capture_sync": "Mailbox sync",
   "jobs.kind.check_company_vat": "VAT number check",

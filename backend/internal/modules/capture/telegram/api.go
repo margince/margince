@@ -32,6 +32,9 @@ type OutboundChannelMessage struct {
 	// fresh. Telegram has no header-based threading, so the parent id IS the
 	// thread identity.
 	ReplyToMessageID int64
+	// BusinessConnectionID sends the message as the Telegram Business account
+	// that link names, into that account's chat. Empty sends as the bot itself.
+	BusinessConnectionID string
 	// Files are what the message carries. A non-empty set moves the message off
 	// sendMessage and onto the upload path in sendfiles.go, where Text becomes
 	// the album's CAPTION rather than a message body — which is why the two
@@ -250,6 +253,9 @@ func highestUpdateID(batch []json.RawMessage) int64 {
 // SendMessage transmits one message into a chat.
 func (a *httpAPI) SendMessage(ctx context.Context, token string, m OutboundChannelMessage) (int64, error) {
 	body := map[string]any{"chat_id": m.ChatID, "text": m.Text}
+	if m.BusinessConnectionID != "" {
+		body["business_connection_id"] = m.BusinessConnectionID
+	}
 	if m.ReplyToMessageID != 0 {
 		// reply_parameters is the current spelling; the deprecated
 		// reply_to_message_id is not sent, so a Telegram deprecation cannot

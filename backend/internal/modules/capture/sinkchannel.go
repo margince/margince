@@ -54,6 +54,9 @@ type EnsureChannelRequest struct {
 	// LinkOnly files the message under a contact the sender already has and
 	// creates none.
 	LinkOnly bool
+	// RequireHeld files the message only while it is still a held forward, which
+	// the ensure checks under the activity's lock.
+	RequireHeld bool
 }
 
 // WithChannelEnsurer returns a copy wired to the channel auto-create path. A

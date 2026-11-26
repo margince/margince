@@ -120,7 +120,7 @@ func (w *Worker[T]) file(ctx context.Context, connection, rawID ids.UUID, decode
 	actorCtx := principal.WithCorrelationID(principal.WithActor(ctx, w.Actor), ids.NewV7())
 	live, err := capture.FileThroughLiveChatLink(actorCtx, w.Pool, connection.String(), rawID, func(link connector.ChatLink) error {
 		if _, err := capture.FileChatMessage(actorCtx, w.Sink, decoded.Binding(link), decoded.Message); err != nil {
-			if errors.Is(err, capture.ErrChatCodeRedeemed) {
+			if errors.Is(err, capture.ErrChatCodeRedeemed) || errors.Is(err, capture.ErrChatMessageConsumed) {
 				return capture.ErrDiscardOriginal
 			}
 			if errors.Is(err, connector.ErrSkip) {
