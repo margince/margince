@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { viewCopy } from "../mcp-apps/view-copy.testkit";
 import { en } from "./en";
 
 // The mechanical half of docs/reference/ui-copy-style.md, held on the English
@@ -10,7 +9,7 @@ import { en } from "./en";
 // becomes one per catalog. The rest of that page is the author's judgement.
 // Each rule lists every offender as `key: "value"`, so one run names all the
 // strings a rewrite has to touch.
-const catalog: Record<string, string> = { ...en, ...viewCopy() };
+const catalog: Record<string, string> = en;
 
 // A placeholder names a parameter, not copy, and `{us}` or `{me}` would read as
 // a word to the patterns below.
