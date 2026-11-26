@@ -56,9 +56,9 @@ A `merge_group` run builds `main` + everything ahead of it in the queue + the en
 
 - **The full tree, always.** The change classifier is overridden on `merge_group` (every scope reports
   `true`), so no job can be skipped there, with one exception below.
-- **One integration lane per tree.** A group of one entry on an unchanged `main` has the tree of the
-  pull request's last run. [`scripts/ci-integration-proven.sh`](../../scripts/ci-integration-proven.sh)
-  finds that run's `proven-integration-<tree>` artifact, and `ci` admits the skipped lane.
+- **One integration lane per tree.** A group of one entry on the same `main` has the tree of the pull
+  request's last run. [`scripts/ci-integration-proven.sh`](../../scripts/ci-integration-proven.sh) finds
+  that run's `proven-integration-<tree>` artifact. Then `ci` admits the skipped lane.
 - **The tree that lands.** Each group's head is the tree that reaches `main`. With `HEADGREEN` it is
   the only one that must pass, so a commit inside a group can land without a green run of its own.
 
@@ -326,8 +326,8 @@ It reaches a verdict from `needs.*.result` through [`scripts/ci-verdict.sh`](../
 The rule it exists to hold: **a skip is not a pass on `merge_group`**. GitHub counts a skipped *required*
 check as passing. So checks required one by one could pass on a run that did nothing. The classifier
 skips the jobs, and the ruleset reads the skips as green. The aggregate refuses any result other than
-`success` on `merge_group`, except an `integration` skip that `changes` reports as proven.
-The job also runs the test budget, to spare the verdict one more wait for a runner.
+`success` on `merge_group`, except an `integration` skip that `changes` reports in `integration_proven`.
+The job also runs the test budget, so the verdict waits for one runner less.
 
 On `pull_request` it admits `skipped`. There the classifier is doing its job, and the queue lane covers
 the rest when the queue is on.
