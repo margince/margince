@@ -1715,6 +1715,7 @@
   "deal.openDeal": "Open deal",
   "record.notShown": "Not shown",
   "format.notForecast": "Not forecast",
+  "format.tooLargeExact": "Too large to show exactly",
   "record.fieldRequired": "This field is required.",
   "amount.refused.ambiguous": "Enter the amount as {whole} or {decimal}.",
   "amount.refused.ambiguousWhole": "Enter the amount as {whole}.",

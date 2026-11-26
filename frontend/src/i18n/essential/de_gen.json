@@ -1715,6 +1715,7 @@
   "deal.openDeal": "Deal öffnen",
   "record.notShown": "Nicht angezeigt",
   "format.notForecast": "Nicht prognostiziert",
+  "format.tooLargeExact": "Zu groß für eine exakte Anzeige",
   "record.fieldRequired": "Dieses Feld ist erforderlich.",
   "amount.refused.ambiguous": "Gib den Betrag als {whole} oder {decimal} ein.",
   "amount.refused.ambiguousWhole": "Gib den Betrag als {whole} ein.",

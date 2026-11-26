@@ -168,9 +168,10 @@ Served next to `/v1`:
   `margince_home_cache_reads_total`. Its `read` label is `worklist` or `magic`. Its `outcome` label
   is `hit` when a kept answer served the read, and `miss` when Home was read fresh. It is `stale`
   when a kept answer served the read after its five minutes ran out. Home is then read again in the
-  background. It is `first` when Home was read fresh and no answer had been kept for that question
-  yet. The worklist question names the day, so for `read="worklist"` that is a member's first Home
-  read of the day.
+  background.
+
+  It is `first` when Home was read fresh and no answer had been kept for that question yet. For
+  `read="worklist"` the question names the day, so `first` is a member's first Home read that day.
 
   A refresh in the background counts as none of them. The share of reads a kept answer served, over 5 minutes:
 
@@ -179,7 +180,7 @@ Served next to `/v1`:
     / sum(rate(margince_home_cache_reads_total[5m]))
   ```
 
-  The share of worklist reads that were a member's first of the day, built in full, over a day:
+  The share of `read="worklist"` reads that were a member's first of the day, built in full, over a day:
 
   ```promql
   sum(increase(margince_home_cache_reads_total{read="worklist",outcome="first"}[1d]))
