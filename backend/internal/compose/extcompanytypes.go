@@ -43,16 +43,8 @@ func registerCompanyTypes(exts []extension.Extension) {
 	}
 }
 
-// composedCompanyTypesFor returns the company types the named unit declared in
-// this boot's composition, composedChannelsFor's twin. What a unit may set is
-// what the boot validated.
 func composedCompanyTypesFor(unit string) []extension.CompanyType {
-	for _, ext := range ComposedExtensions() {
-		if string(ext.Name) == unit {
-			return ext.CompanyTypes
-		}
-	}
-	return nil
+	return composedFor(unit, func(e extension.Extension) []extension.CompanyType { return e.CompanyTypes })
 }
 
 // SetExtensionTypes is the unit's one door onto a company's type field. The unit

@@ -1763,6 +1763,12 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
+**Points at**
+
+| Columns | Table | When the parent goes |
+|---|---|---|
+| `default_language` | `language` | the parent cannot be deleted while this row points at it |
+
 **Rules**
 
 - `legal_entity_bic_shape`: `CHECK (((bic IS NULL) OR (bic ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$')))`

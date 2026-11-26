@@ -323,3 +323,5 @@
 1795688931_a_private_sender_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795693170_the_lead_arrival_origin_checks_its_text_limit.up.sql | * | the file only replaces trigger definitions and writes no row
 1795693170_the_lead_arrival_origin_checks_its_text_limit.down.sql | * | the file only replaces trigger definitions and writes no row
+1795713760_a_language_column_names_a_registered_language.up.sql | * | the migration seeds three rows into the table it creates and adds every key and check NOT VALID, so it scans and rewrites no stored row
+1795713761_the_old_language_checks_become_validated_keys.down.sql | * | the down migration is a single SELECT 1 that changes nothing

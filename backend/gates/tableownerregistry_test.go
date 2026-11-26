@@ -511,6 +511,7 @@ var tableOwners = map[string]string{
 	// way it owns idempotency_key and agent_task.
 	"activity_kind":    "internal/compose",
 	"channel_provider": "internal/compose",
+	"language":         "internal/compose/languages",
 	"analytics_share":  "internal/compose",
 	"report_run":       "internal/compose",
 	"brief_run":        "internal/compose/briefs",

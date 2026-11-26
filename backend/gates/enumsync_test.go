@@ -189,7 +189,6 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"ai_feedback.verdict":                          {"internal/contracts", "AIFeedbackInputVerdict"},
 	"analytics_share.kind":                         {"internal/contracts", "ForecastShareKind"},
 	"analytics_share.scope_kind":                   {"internal/contracts", "ForecastCallScopeKind"},
-	"app_user.locale":                              {"internal/contracts", "SaveMyLocaleRequestLocale"},
 	"app_user.morning_brief_delivery":              {"internal/contracts", "BriefDeliveryMorningBriefDelivery"},
 	"app_user.routine_mail_scope":                  {"internal/contracts", "BriefDeliveryRoutineMailScope"},
 	"app_user.seat_type":                           {"internal/shared/kernel/principal", "SeatType"},

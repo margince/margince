@@ -37,7 +37,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `greeting_name_chosen_at` | `timestamp with time zone` |  |  |
 | `is_agent` | `boolean`, default `false` | yes |  |
 | `last_active_at` | `timestamp with time zone` |  |  |
-| `locale` | `text` |  | One of `en`, `de`, `vi`. |
+| `locale` | `text` |  | Points at `language.code`. |
 | `locked_until` | `timestamp with time zone` |  |  |
 | `merged_into_user_id` | `uuid` |  | Points at `app_user.id`. |
 | `morning_brief_delivery` | `text` |  |  |
@@ -67,6 +67,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `locale` | `language` | the parent cannot be deleted while this row points at it |
 | `merged_into_user_id` | `app_user` | the parent cannot be deleted while this row points at it |
 | `routine_mail_team_id` | `team` | deleting the parent keeps this row and clears the link |
 
@@ -89,7 +90,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `app_user_failed_login_count_check`: `CHECK ((failed_login_count >= 0))`
 - `app_user_forced_rotation_needs_a_password`: `CHECK ((NOT (must_change_password AND (password_hash IS NULL))))`
 - `app_user_greeting_name_length`: `CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 120))))`
-- `app_user_locale_shipped`: `CHECK ((locale = ANY (ARRAY['en', 'de', 'vi'])))`
 - `app_user_merge_is_retired`: `CHECK (((merged_into_user_id IS NULL) OR (removed_at IS NOT NULL)))`
 - `app_user_morning_brief_delivery_check`: `CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none', 'email']))))`
 - `app_user_removed_is_deactivated`: `CHECK (((removed_at IS NULL) OR (status = 'deactivated')))`
