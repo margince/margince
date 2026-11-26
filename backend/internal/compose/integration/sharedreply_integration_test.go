@@ -382,9 +382,9 @@ func TestAChangeCommittedBetweenTheLookupAndTheProviderCallParksTheReply(t *test
 	}
 }
 
-// An agent acts for a member of the team, yet a team address is a member's own
-// choice: a passport naming the mailbox on the REST door gets the answer of an
-// unknown id, and nothing is staged or audited.
+// An agent acts for a member of the team, but a team address is a member's own
+// choice. A passport naming the mailbox gets the answer of an unknown id.
+// Nothing is staged or audited.
 func TestAPassportNamingTheSharedMailboxOnTheRESTDoorIsRefused(t *testing.T) {
 	p := setupPreflight(t)
 	p.stakeADeal(t)
