@@ -179,10 +179,8 @@ func TestALinkStatementMovesAClockWithoutEditingTheRecord(t *testing.T) {
 	}
 }
 
-// A link statement locks its contacts before its project, the order an
-// activity update takes them in, so the two cannot wait on each other. The
-// advance is replaced by a recorder inside a rolled-back transaction, because
-// locks leave no ordered trace of their own.
+// Clock updates retain their row locks, so their write order records the
+// contact-before-project order an activity update also takes.
 func TestALinkStatementLocksItsContactBeforeItsProject(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
@@ -202,14 +200,17 @@ func TestALinkStatementLocksItsContactBeforeItsProject(t *testing.T) {
 	}()
 	if _, err := tx.Exec(ctx, `
 		CREATE TEMP TABLE advanced_in_order (seq serial, kind text) ON COMMIT DROP;
-		CREATE OR REPLACE FUNCTION advance_last_activities(tbl regclass, rids uuid[], ats timestamptz[]) RETURNS void
+		CREATE FUNCTION pg_temp.record_clock_advance() RETURNS trigger
 		    LANGUAGE plpgsql AS $$
 		BEGIN
-		  IF EXISTS (SELECT 1 FROM unnest(rids) r WHERE r IS NOT NULL) THEN
-		    INSERT INTO advanced_in_order (kind) VALUES (tbl::text);
-		  END IF;
+		  INSERT INTO advanced_in_order (kind) VALUES (TG_TABLE_NAME);
+		  RETURN NULL;
 		END;
-		$$;`); err != nil {
+		$$;
+		CREATE TRIGGER record_contact_advance AFTER UPDATE OF last_activity_at ON contact
+		  FOR EACH ROW EXECUTE FUNCTION pg_temp.record_clock_advance();
+		CREATE TRIGGER record_project_advance AFTER UPDATE OF last_activity_at ON project
+		  FOR EACH ROW EXECUTE FUNCTION pg_temp.record_clock_advance();`); err != nil {
 		t.Fatalf("installing the recorder: %v", err)
 	}
 	if _, err := tx.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, contact_id, project_id)
