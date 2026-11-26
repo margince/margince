@@ -313,9 +313,8 @@ func newJobRunner(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, 
 		TranscriptProposeBrain: modelPath.TranscriptPropose,
 		StageEvidenceBrain:     modelPath.StageEvidenceExtract,
 		// How it stands reads with the summarize lane, as every brief does.
-		StandingLineLane: compose.StandingLineLane{
-			StandingLineBrain: modelPath.Summarize, StandingLineRoutingVersion: modelPath.RoutingVersion,
-		},
+		StandingLineBrain:          modelPath.Summarize,
+		StandingLineRoutingVersion: modelPath.RoutingVersion,
 		// The account scan registers regardless too: a queued scan on a
 		// brainless worker settles on the rules' floor with a reason.
 		AccountScanBrain:          modelPath.AccountScan,

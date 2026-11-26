@@ -51,8 +51,7 @@ func WithContactBrief(brain completer, routingVersion func() string) Option {
 	}
 }
 
-// WithTaskExplanation binds the summarize lane that explains a task. Without
-// it the explanation states the facts alone and says so in generated_by.
+// WithTaskExplanation binds the lane that explains a task; without it, the facts alone.
 func WithTaskExplanation(brain completer, routingVersion func() string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		if s.contact360Svc == nil {
@@ -62,8 +61,7 @@ func WithTaskExplanation(brain completer, routingVersion func() string) Option {
 	}
 }
 
-// taskExplainService reads the task through the activities store and the
-// relationship through the contact page's own composite read.
+// taskExplainService reads the relationship through the contact page's own read.
 func (s *Server) taskExplainService(pool *pgxpool.Pool, brain completer, routingVersion func() string) *taskexplain.Service {
 	return taskexplain.NewService(pool, activities.NewStore(InstallationDB(pool)), s.contact360Svc, brain, routingVersion, time.Now).
 		WithEmailSummaries(emailRows(pool))
