@@ -1297,6 +1297,7 @@
   "systemJob.capture_personal_purge": "Personal mail removal",
   "systemJob.capture_purge_receipt": "Mail removal receipt",
   "systemJob.capture_part_slim_worker": "Mail storage cleanup",
+  "systemJob.chat_clarification": "Question about forwarded messages",
   "systemJob.capture_trace_sweep": "Mail trace cleanup",
   "systemJob.capture_which_deal": "Deal question from mail",
   "systemJob.close_date": "Close date check",

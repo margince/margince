@@ -1297,6 +1297,7 @@
   "systemJob.capture_personal_purge": "Entfernung privater E-Mails",
   "systemJob.capture_purge_receipt": "Fehlende Löschbelege für E-Mails nachtragen",
   "systemJob.capture_part_slim_worker": "Bereinigung des E-Mail-Speichers",
+  "systemJob.chat_clarification": "Frage zu weitergeleiteten Nachrichten",
   "systemJob.capture_trace_sweep": "Bereinigung der E-Mail-Spuren",
   "systemJob.capture_which_deal": "Deal-Frage aus E-Mail",
   "systemJob.close_date": "Prüfung der Abschlussdaten",

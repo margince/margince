@@ -147,7 +147,7 @@ func (p *preflightEnv) dispatchAsMailboxWith(t *testing.T, provider *sharedMailb
 		Auth:       graph.SharedAuthConfig{TokenURLFormat: provider.srv.URL + "/%s/token", HTTPClient: provider.srv.Client()},
 		HTTPClient: provider.srv.Client(), APIBase: provider.srv.URL,
 	}))
-	var resolver comms.ConnectionResolver = compose.NewSendConnectionResolver(registry)
+	resolver := compose.NewSendConnectionResolver(registry)
 	if between != nil {
 		resolver = changeAfterResolve{ConnectionResolver: resolver, change: between}
 	}
@@ -309,7 +309,7 @@ func TestASuppressedRecipientIsRefusedWhenTheReplyGoesOutAsTheMailbox(t *testing
 
 // An agent's send tools take no mailbox argument, so an agent never names the
 // shared mailbox. Nothing it sends is chosen onto one by default.
-func TestAnAgentCannotNameTheSharedMailboxAndItsOwnSendsStayOnItsPersonsMailbox(t *testing.T) {
+func TestAnAgentCannotNameTheSharedMailboxAndItsOwnSendsStayOnItsUsersMailbox(t *testing.T) {
 	a := accountSendOn(t, setupPreflightServingMCP(t))
 	box := a.sharedMailbox(t, a.user)
 	agent := apptest.NewMCPClient(a.AppEnv, apptest.MCPBearerToken(t, a.AppEnv, "outreach agent", "read", "write", "send"))
@@ -334,7 +334,7 @@ func TestAnAgentCannotNameTheSharedMailboxAndItsOwnSendsStayOnItsPersonsMailbox(
 		t.Fatal(err)
 	}
 	if connection == nil || *connection == box.String() {
-		t.Fatalf("the agent's send went out through %v, want its person's own mailbox", connection)
+		t.Fatalf("the agent's send went out through %v, want its user's own mailbox", connection)
 	}
 	if got := a.sendAudits(t, box); len(got) != 0 {
 		t.Fatalf("the shared mailbox has send audit rows %+v after an agent send that never named it", got)
