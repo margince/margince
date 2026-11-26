@@ -17,9 +17,13 @@ const publishedInV1 = "released in v1.0.0, so code outside this tree may call it
 // files a member's own chats calls it. No unit in this tree does yet.
 const memberChatIngest = "the member-owned chat ingest; no unit in this tree files a member's own chats yet"
 
-// testKit is the reason for the unit test kit. Its callers are units' tests,
+// testKit is the reason for extensiontest, a unit test kit. Its callers are units' tests,
 // which this census does not read; extensions/finance-demo's test calls each.
 const testKit = "the unit test kit; its callers are units' test files, which the census does not read"
+
+// testKitUse is the reason for exttest, a unit test kit. A unit calls it from its own
+// tests, and this census reads no test file.
+const testKitUse = "the unit test kit; units call it from their tests, which this census does not read"
 
 // exportWaivers are the exported pkg/extension names with no caller in this
 // tree, each with why it stays.
@@ -154,4 +158,21 @@ var exportWaivers = gatekit.Waive(map[string]string{
 	"extension.Runtime.MailContent":                  "the door a unit reads a mail's words through; no unit in this tree reads one",
 	"extension/reach.Deal":                           "a unit declares a column holding deal ids so a deal merge moves it; no unit in this tree has one",
 	"extension/messaging.Rules.ResolveCitation":      "a rule pack outside this tree fills a citation through it; Rules.Validate calls it inside the package",
+	"extension/exttest.Core":                         testKitUse,
+	"extension/exttest.Core.LinkSuggestions":         testKitUse,
+	"extension/exttest.Core.Notices":                 testKitUse,
+	"extension/exttest.Core.Signals":                 testKitUse,
+	"extension/exttest.Runtime":                      testKitUse,
+	"extension/exttest.Runtime.Authority":            testKitUse,
+	"extension/exttest.Runtime.Directory":            testKitUse,
+	"extension/exttest.Runtime.IngestBatch":          testKitUse,
+	"extension/exttest.Runtime.IngestMemberBatch":    testKitUse,
+	"extension/exttest.Runtime.IngestPosition":       testKitUse,
+	"extension/exttest.Runtime.MailContent":          testKitUse,
+	"extension/exttest.Runtime.MemberIngestPosition": testKitUse,
+	"extension/exttest.Runtime.OAuthAccessToken":     testKitUse,
+	"extension/exttest.Runtime.OAuthDisconnect":      testKitUse,
+	"extension/exttest.Runtime.SetAside":             testKitUse,
+	"extension/exttest.Runtime.SyncNow":              testKitUse,
+	"extension/exttest.Secrets":                      testKitUse,
 })
