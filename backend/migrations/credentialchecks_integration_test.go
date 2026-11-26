@@ -48,8 +48,7 @@ func TestACredentialOrRateRowTheWritersRefuseIsRefusedByTheDatabase(t *testing.T
 			VALUES ('c', gen_random_uuid(), '{read,admin}')`, "oauth_grant_scopes_vocabulary"},
 		{"a code with no scope", codeColumns + `'{}')`, "oauth_authorization_code_scopes_present"},
 		{"a code with an unknown scope", codeColumns + `'{read,admin}')`, "oauth_authorization_code_scopes_vocabulary"},
-		{"an invitation numbered zero", invitationColumns + `0)`,
-			"deal_room_invitation_attempt_no_check"},
+		{"an invitation numbered zero", invitationColumns + `0)`, "deal_room_invitation_attempt_no_check"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			if got := refusingConstraint(t, conn, c.sql); got != c.constraint {
