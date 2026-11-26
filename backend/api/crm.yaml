@@ -19962,7 +19962,7 @@ paths:
             keep a record's own author out of the matches suggested for that record.
         - name: per_type
           in: query
-          schema: { type: integer, minimum: 1, maximum: 16 }
+          schema: { type: integer, minimum: 1, maximum: 20 }
           description: >
             Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each
             type's best first. Relevance is not comparable across types — a message naming an
@@ -75397,6 +75397,13 @@ components:
             that the query matched, which is why the hit is here — the contact's own text did not
             match. When the contact works at several matching companies, the best-matching one.
             Null on every other hit, a contact the query matched by its own text included.
+        deal_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >
+            For a `deal_room` hit only: the deal the room belongs to, which is the record a
+            client opens to reach the room. Absent on every other hit type.
         logo_url:
           type: [string, 'null']
           readOnly: true

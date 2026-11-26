@@ -60,7 +60,7 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
 ```
 
 - **The entity types search can find** are declared once, in `searchBranches`: `contact`,
-  `company`, `deal`, `lead`, `project`, `product`, `offer_template`, `tag`, `activity`. To let search
+  `company`, `deal`, `lead`, `project`, `product`, `offer_template`, `deal_room`, `tag`, `activity`. To let search
   find another entity, add a row there, plus the matching `embedText` and `pendingSources`
   entries. The query builder works out the rest. `SearchedTables()` is what the GIN check on the
   table shape asks about, so a branch added without an index fails and is not missed.
@@ -70,6 +70,10 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
   `workspaceWide` for the same reason, and `textOnly` too. A word has no record shape to plan
   a query over, nothing next to it to walk to, and no text to embed. That is why it alone is not a
   context anchor.
+- **A deal room has no owner either.** `dealChild` scopes it through its deal with
+  `auth.DealChildScopeClause`. The Deal Room list and the single read use the same clause, so search
+  and the list show a caller the same rooms. A buyer principal has no search, and the object gate
+  refuses the kind. A room hit carries `deal_id`, because a client opens a room through its deal.
 - **`active` does not narrow what search finds.** A product the company no longer offers still stands on
   older offers, and a user who looks one up may be holding one of them. `archived_at`, which every
   branch carries, is the one "is it still live" question that counts when search looks for a record.
@@ -135,7 +139,9 @@ for a **grouped** page instead (`groupedShape`).
 
 Each type that passes the gate runs as its own statement, under its own savepoint in one read
 transaction (`groupedHits`). The statement caps the type at `N + 1` rows. The last row is
-dropped and reported in `types_with_more`, and the page takes no cursor or limit.
+dropped and reported in `types_with_more`, and the page takes no cursor or limit. When the matched
+types at `N` rows each would pass the largest ranked page, `fittingPerType` lowers `N`.
+The types it cuts go in `types_with_more`.
 
 To page through the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per_type=3`, and with
 `per_type=8` once one type is picked in its bar. The full results screen with no type set asks with
@@ -176,7 +182,7 @@ That table means one row per entity search can find, to the vector lane, the pla
 AST gates. The employer arm is a second way to reach the contact type. The arm:
 
 - **starts from the companies the company branch finds**: the same match, `archived_at`,
-  `NOT is_anchor` and company row scope, capped to the top `maxPerType` (16) matches. Every
+  `NOT is_anchor` and company row scope, capped to the top `maxPerType` (20) matches. Every
   company a grouped page can show adds the contacts who work there. But a two-letter prefix, or a
   word for a line of business, cannot fan out to every contact at every company in the workspace.
   The installation's own company adds no one, because all its contacts work there;
@@ -441,7 +447,7 @@ projection, which has its own rules for how it stays current; see
 
 | Part | Where |
 |---|---|
-| Lexical index | generated `search_tsv` columns on `contact`, `company`, `deal`, `lead`, `project`, `tag`, and `product` + `offer_template`, with the functions that remove accents and apostrophes (`backend/migrations/core/0001_baseline.up.sql`) |
+| Lexical index | generated `search_tsv` columns on `contact`, `company`, `deal`, `lead`, `project`, `tag`, and `product`, `offer_template` and `deal_room`, with the functions that remove accents and apostrophes (`backend/migrations/core/0001_baseline.up.sql`) |
 | Lexical index of activities | `activity.search_tsv`, kept by the trigger function `activity_keeps_search_tsv` from `activity_search_tsv` (`backend/migrations/core/1795596207_mail_search_holds_the_senders_own_text.up.sql`); the boundary rule is `backend/internal/shared/kernel/mailquote/owntext.go` |
 | Vector store | `embedding` (`backend/migrations/core/0001_baseline.up.sql`: identity mark + a `vector` with no fixed length). **Not a tenant table**: no `workspace_id`, no RLS |
 | Binding marker | `embed_store_binding` (`backend/migrations/core/0001_baseline.up.sql`: run, identity and the pending set of workspaces). **Not a tenant table**: no `workspace_id`, no RLS |

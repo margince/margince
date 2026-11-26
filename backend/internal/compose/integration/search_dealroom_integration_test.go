@@ -7,12 +7,14 @@ package integration
 
 import (
 	"context"
+	"math"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -167,5 +169,46 @@ func TestABuyerSearchingForARoomGetsTheAnswerOfAQueryThatMatchesNothing(t *testi
 	}
 	if len(hit.Hits) != 0 || len(miss.Hits) != 0 {
 		t.Errorf("a buyer found %+v (miss: %+v), want nothing", hit.Hits, miss.Hits)
+	}
+}
+
+// A room hit names its deal, the record a client opens to reach the room.
+func TestARoomHitNamesItsDeal(t *testing.T) {
+	e := SetupSearch(t)
+	f := seedRooms(t, e)
+	ctx := e.asSeat(e.Rep1, e.Team1, principal.RowScopeTeam, roomSeats(true))
+	page, err := e.Store.Search(ctx, search.Input{Query: "renewal", Types: []string{"deal_room"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Hits) != 1 || page.Hits[0].ID != f.first {
+		t.Fatalf("searching the room title found %+v, want the first room", page.Hits)
+	}
+	var want ids.UUID
+	if err := e.Owner.QueryRow(context.Background(), `SELECT deal_id FROM deal_room WHERE id = $1`, f.first).Scan(&want); err != nil {
+		t.Fatal(err)
+	}
+	if page.Hits[0].DealID == nil || *page.Hits[0].DealID != want {
+		t.Errorf("the room hit names deal %v, want %v", page.Hits[0].DealID, want)
+	}
+}
+
+// per_type at its contract maximum, with every type matching, still answers and
+// stays within the largest ranked page.
+func TestAGroupedSearchAtThePerTypeCapAnswersWithinTheRankedPageLimit(t *testing.T) {
+	e := SetupSearch(t)
+	seedRooms(t, e)
+	perType := 20
+	page, err := e.Store.Search(e.asSeat(e.Rep1, e.Team1, principal.RowScopeAll, roomSeats(true)),
+		search.Input{Query: "harbour", PerType: &perType})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasType(page.Hits, "deal_room") || !hasType(page.Hits, "deal") {
+		t.Errorf("a grouped page answered %+v, want rooms and deals", page.Hits)
+	}
+	unbounded := math.MaxInt
+	if largest := storekit.ClampLimit(&unbounded); len(page.Hits) > largest {
+		t.Errorf("a grouped page holds %d hits, past the ranked page limit of %d", len(page.Hits), largest)
 	}
 }

@@ -68,16 +68,27 @@ func TestAGroupedSearchRefusesAPageOrACapItCannotAnswer(t *testing.T) {
 	}
 }
 
-// Every union element at the per-type cap — each branch and the employer arm —
-// must still fit the largest ranked page, or a grouped request becomes the
-// cheapest way to ask for more than a ranked one is allowed. A branch added to
-// the table counts here on its own.
+// Every union element at the per-type cap, the employer arm included, can hold
+// more rows than the largest ranked page. The page lowers each type's share so
+// the answer never costs more than a ranked one, and names the trimmed types.
 func TestAGroupedPageFitsInTheLargestRankedPage(t *testing.T) {
 	unbounded := math.MaxInt
-	elements := len(searchBranches) + 1
-	if largest := storekit.ClampLimit(&unbounded); elements*maxPerType > largest {
-		t.Fatalf("%d union elements at %d per type is %d hits, past the largest ranked page of %d",
-			elements, maxPerType, elements*maxPerType, largest)
+	largest := storekit.ClampLimit(&unbounded)
+	var hits []Hit
+	for _, branch := range searchBranches {
+		for range maxPerType + 1 {
+			hits = append(hits, Hit{Type: branch.entity, ID: ids.NewV7()})
+		}
+	}
+	for range maxPerType + 1 {
+		hits = append(hits, Hit{Type: "contact", ID: ids.NewV7()})
+	}
+	page := groupedShape{perType: maxPerType}.page(hits)
+	if len(page.Hits) > largest {
+		t.Fatalf("a grouped page of %d hits is past the largest ranked page of %d", len(page.Hits), largest)
+	}
+	if len(page.Hits) == 0 || len(page.TypesWithMore) != len(searchBranches) {
+		t.Errorf("page holds %d hits and says %v has more, want every type present and trimmed", len(page.Hits), page.TypesWithMore)
 	}
 }
 

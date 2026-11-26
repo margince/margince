@@ -14001,7 +14001,7 @@ paths:
             Record ids, of any type, to leave out of the answer. They are dropped before ranking, so a page is full and `types_with_more` counts only the records that remain. Use it to keep a record's own author out of the matches suggested for that record.
         - name: per_type
           in: query
-          schema: {type: integer, minimum: 1, maximum: 16}
+          schema: {type: integer, minimum: 1, maximum: 20}
           description: >-
             Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. A type the time budget stopped is left out of `data` and named in `types_timed_out`.
         - name: with_employees
@@ -51936,6 +51936,12 @@ components:
           nullable: true
           description: >-
             On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included.
+        deal_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            Absent on every other hit type.
         logo_url:
           type: [string, 'null']
           readOnly: true
