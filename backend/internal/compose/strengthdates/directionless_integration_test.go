@@ -35,7 +35,7 @@ func TestTheDirectionlessSenderTaskRefoldsTheContactsItMoves(t *testing.T) {
 			args []any
 		}{
 			{`INSERT INTO activity (id, kind, subject, occurred_at, source_system, source_id, source, captured_by)
-			  VALUES ($1, 'email', 'Re: Hallo', $2, 'gmail', $1::text, 'gmail:seed', 'connector:gmail')`, []any{mail, replied}},
+			  VALUES ($1, 'email', 'Re: Hallo', $2, 'gmail', $3, 'gmail:seed', 'connector:gmail')`, []any{mail, replied, mail.String()}},
 			{`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, []any{mail, ann}},
 			{`INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'from', $2)`, []any{mail, ann}},
 			// The dates the earlier rule folded: the reply was not Ann writing.

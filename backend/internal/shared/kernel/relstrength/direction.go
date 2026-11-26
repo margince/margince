@@ -61,7 +61,7 @@ func TheyWroteSQL(contact, activity string) string {
 
 // directionlessSenderSQL: a message with no direction has one `from` row, it
 // is no member's, and it names this contact by ParticipantNamesSQL. An address
-// another live contact also holds names nobody, because either could have sent it.
+// another contact holds now has moved, so it cannot say which of the two wrote.
 const directionlessSenderSQL = `(%[2]s.direction IS NULL AND %[2]s.kind IN ('email','message') AND EXISTS (
 		SELECT 1 FROM activity_participant df
 		 WHERE df.activity_id = %[2]s.id AND df.role = 'from' AND df.user_id IS NULL AND %[3]s

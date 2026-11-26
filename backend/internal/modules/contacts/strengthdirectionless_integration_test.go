@@ -82,11 +82,12 @@ func TestADirectionlessMailWithNoUnambiguousContactSenderIsNotTheirs(t *testing.
 	e := setupDedupe(t)
 	now := present()
 	sent, wrote := now.AddDate(0, 0, -6), now.AddDate(0, 0, -2)
-	bea := e.seedVisibleContact(t, "Bea Shared")
-	cy := e.seedVisibleContact(t, "Cy Shared")
+	bea := e.seedVisibleContact(t, "Bea Moved")
+	cy := e.seedVisibleContact(t, "Cy Holder")
 	dan := e.seedVisibleContact(t, "Dan Twice")
 	eve := e.seedVisibleContact(t, "Eve Member")
 	e.seedContactAddress(t, bea, "desk@shared.test")
+	e.execTx(e.as(), t, `UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, bea)
 	e.seedContactAddress(t, cy, "desk@shared.test")
 	e.seedContactAddress(t, eve, "eve@member.test")
 	rep := e.rep
@@ -95,7 +96,7 @@ func TestADirectionlessMailWithNoUnambiguousContactSenderIsNotTheirs(t *testing.
 		contact ids.ContactID
 		senders []directionlessSender
 	}{
-		{"an address two live contacts hold", bea, []directionlessSender{{contact: &bea, address: "desk@shared.test"}}},
+		{"an address that moved to another contact", bea, []directionlessSender{{contact: &bea, address: "desk@shared.test"}}},
 		{"two sender rows", dan, []directionlessSender{{contact: &dan}, {contact: &cy}}},
 		{"a member's own sender row", eve, []directionlessSender{{user: &rep, address: "eve@member.test"}}},
 	}

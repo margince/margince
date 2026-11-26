@@ -149,8 +149,8 @@ func UnfoldedContactsTx(ctx context.Context, tx pgx.Tx, limit int) ([]ids.UUID, 
 }
 
 // DirectionlessSendersPageTx reads the next limit contacts after `after`, in
-// id order. It answers every id it inspected, for the cursor, and the live ones
-// that wrote a message stored with no direction, whose dates that rule moves.
+// id order. It answers every id it inspected, for the cursor. It also answers
+// the live ones who wrote a message stored with no direction.
 func DirectionlessSendersPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (inspected, selected []ids.UUID, err error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, nil, err
