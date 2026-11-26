@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/chatsync"
 	"github.com/margince/margince/backend/internal/compose/evidencereread"
 	"github.com/margince/margince/backend/internal/compose/whatsappedge"
+	"github.com/margince/margince/backend/internal/compose/zaloedge"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -219,8 +220,12 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 			})
 		},
 		WhatsAppIngestArgs{}.Kind(): func(ctx context.Context) error {
-			worker := &whatsappedge.Worker[WhatsAppIngestArgs]{Bind: workspaceJobCtx}
+			worker := whatsappedge.NewWorker[WhatsAppIngestArgs](workspaceJobCtx, nil, nil, principal.Principal{}, nil)
 			return worker.Work(ctx, &river.Job[WhatsAppIngestArgs]{})
+		},
+		ZaloOAIngestArgs{}.Kind(): func(ctx context.Context) error {
+			worker := zaloedge.NewWorker[ZaloOAIngestArgs](workspaceJobCtx, nil, nil, principal.Principal{}, nil)
+			return worker.Work(ctx, &river.Job[ZaloOAIngestArgs]{})
 		},
 		TelegramPollArgs{}.Kind(): func(ctx context.Context) error {
 			return (&telegramPollWorker{}).Work(ctx, &river.Job[TelegramPollArgs]{

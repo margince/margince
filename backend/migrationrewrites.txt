@@ -303,3 +303,4 @@
 1795657801_the_google_docs_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795657803_a_source_id_is_bounded.up.sql | * | replaces the two text-length guards on knowledge_document with ones that also name external_id; it creates triggers and reads or rewrites no row
 1795657803_a_source_id_is_bounded.down.sql | * | runs only on a rollback; restores the earlier guards without external_id and changes no row
+1795665583_a_zalo_message_can_name_its_channel.down.sql | * | the down migration is a single SELECT 1; the provider remains available to historical foreign keys and no row changes

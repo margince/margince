@@ -126,7 +126,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [set-up-outbound-mail.md](how-to/set-up-outbound-mail.md): which mail goes out through which server.
 - [connect-telegram.md](how-to/connect-telegram.md): set up the Telegram bot, and read what each error means.
 - [connect-dispact.md](how-to/connect-dispact.md): connect the Dispact bot, and read what each error means.
-- [connect-whatsapp.md](how-to/connect-whatsapp.md): connect a WhatsApp Business number, and set up its webhook.
+- [connect-whatsapp.md](how-to/connect-whatsapp.md): connect a WhatsApp Business number, and set up its webhook. Zalo is [connect-zalo-oa.md](how-to/connect-zalo-oa.md).
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md): import a CSV file of
   companies over MCP or REST.
 - [run-import-jobs.md](how-to/run-import-jobs.md): run the import worker, and read an import that

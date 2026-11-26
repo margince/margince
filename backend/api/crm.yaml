@@ -18192,6 +18192,132 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  # ------------------- /channel-connections/zalo-oa -------------------
+  # One Zalo Official Account, connected by an admin with the credentials of the Zalo app that
+  # serves it. The admin is the approver, so a connection is `connected` as soon as it exists.
+  # All three operations are admin-only and human-only: they decide whose chats are captured and
+  # they take secrets.
+  /channel-connections/zalo-oa:
+    get:
+      tags: [Connectors]
+      operationId: listZaloOAConnections
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: List the Zalo Official Accounts connected to the workspace.
+      description: Newest first. No secret is returned.
+      responses:
+        '200':
+          description: Zalo Official Account connections.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ZaloOAConnectionListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    post:
+      tags: [Connectors]
+      operationId: createZaloOAConnection
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Connect a Zalo Official Account to the workspace.
+      description: |
+        Seals the access and refresh tokens, the app secret and the OA secret key in the credential
+        store and makes a live connection for the Official Account, with a team seat that the team in
+        `readerTeamId` reads. The seat starts `held`. No call to Zalo is made. Set the webhook URL of
+        the Zalo app to `<public_base_url>/v1/channel-events/zalo-oa`. A background job replaces the
+        token pair before the access token expires.
+
+        One live connection exists per Official Account: connecting one that is already connected
+        is a `409`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateZaloOAConnectionRequest' }
+      responses:
+        '201':
+          description: The connection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ZaloOAConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal the secrets in (`code: channel_credentials_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /channel-connections/zalo-oa/{id}/visibility:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Connectors]
+      operationId: updateZaloOAConnectionVisibility
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Change who may read a Zalo Official Account's messages.
+      description: |
+        Sets the mail visibility of the account's seat, as `PATCH /shared-mailboxes/{id}` does for a
+        shared mailbox and the WhatsApp route does for its numbers: the next message follows it.
+        `shared` needs `capture.shared_posture_allowed` and `classified` is refused, both with `422`.
+        The request must carry `confirm: true`. Admin only, in a signed-in session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTelegramBusinessConnectionVisibilityRequest' }
+      responses:
+        '200':
+          description: The connection as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ZaloOAConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /channel-connections/zalo-oa/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Connectors]
+      operationId: disconnectZaloOAConnection
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Disconnect a Zalo Official Account from the workspace.
+      description: |
+        Archives the connection and destroys the sealed secrets. From then on the webhook route
+        stores nothing for the Official Account. What its chats already filed stays.
+      responses:
+        '204': { description: Disconnected. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured (`code: channel_credentials_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # --------------------------- /channel-links -------------------------------
   # A deal or a project linked to one channel of the team chat (Dispact). Margince
   # keeps a card in the channel and posts what happens on the record; what the
@@ -18591,6 +18717,58 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '503':
           description: 'This deployment takes no WhatsApp events, or could not store the delivery (`code: channel_events_unavailable`); Meta retries.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  # ----------------------- /channel-events/zalo-oa -------------------------
+  # Zalo's webhook for an Official Account. It is anonymous: the X-ZEvent-Signature MAC with the
+  # OA secret key sealed on a connected Official Account is the credential.
+  /channel-events/zalo-oa:
+    post:
+      tags: [Connectors]
+      operationId: receiveZaloOAWebhook
+      security: []   # anonymous: the X-ZEvent-Signature MAC with a connected Official Account's secret key is the authentication
+      x-agent-access: human-only
+      summary: Take a signed Zalo Official Account webhook event (anonymous).
+      description: |
+        Zalo posts one event per call, signed in `X-ZEvent-Signature` (`mac=<hex SHA-256 of app_id,
+        raw body, timestamp and the OA secret key>`). The signature is checked against every
+        connected Official Account's secret key before any field but the two it covers is read.
+        A message event for an Official Account whose own secret verified, and that is still live, is
+        stored once and queued for filing, in one transaction. Follow, unfollow, seen and reaction events, a message for
+        an Official Account that is not connected, and a message of an erased customer are
+        acknowledged with `200` and stored nowhere, so Zalo does not retry them. A retried
+        delivery is stored once. The call makes no request to Zalo, because Zalo expects the
+        answer within two seconds.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ZaloWebhookEvent' }
+      responses:
+        '200':
+          description: The event was taken.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ZaloWebhookReceipt' }
+        '403':
+          description: 'The body is signed by no connected Official Account (`code: channel_event_rejected`). The answer is the same for each cause.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '413':
+          description: 'The body is larger than an event can be (`code: channel_event_too_large`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: Rate-limited; Zalo retries.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: 'This deployment takes no Zalo events, or could not store the event (`code: channel_events_unavailable`); Zalo retries.'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -48372,6 +48550,76 @@ components:
         version: { type: integer, format: int64 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    ZaloOAConnection:
+      type: object
+      description: One Zalo Official Account connected to the workspace. No secret is part of it.
+      required: [id, oaId, appId, displayName, status, connectedAt]
+      properties:
+        id: { type: string, format: uuid }
+        oaId: { type: string, description: 'Zalo''s id of the Official Account, the key a webhook event is matched to its connection by.' }
+        appId: { type: string, description: The Zalo app that serves the Official Account. }
+        displayName: { type: string }
+        status:
+          type: string
+          description: '`reauth_required` when Zalo refused the refresh token, so the Official Account must be disconnected and connected again with fresh tokens.'
+          enum: [connected, reauth_required, disconnected]
+          x-extensible-enum: true
+        connectedAt: { type: string, format: date-time }
+        seatId: { type: [string, 'null'], format: uuid, description: The seat the account's messages file through. }
+        readerTeamId: { type: [string, 'null'], format: uuid, description: The team that reads the account's messages. }
+        mailVisibility:
+          type: [string, 'null']
+          enum: [held, shared, null]
+          x-extensible-enum: true
+          description: What the seat asks of the account's messages. Changed with `PATCH /channel-connections/zalo-oa/{id}/visibility`.
+    ZaloOAConnectionListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/ZaloOAConnection' } }
+    CreateZaloOAConnectionRequest:
+      type: object
+      required: [oaId, appId, displayName, appSecret, oaSecretKey, accessToken, refreshToken, readerTeamId]
+      properties:
+        readerTeamId: { type: string, format: uuid, description: 'The team that reads the account''s messages. The account''s seat starts `held`: only this team reads them until an admin shares them.' }
+        oaId: { type: string, minLength: 1, maxLength: 64, pattern: '^[0-9]+$' }
+        appId: { type: string, minLength: 1, maxLength: 64, pattern: '^[0-9]+$' }
+        displayName: { type: string, minLength: 1, maxLength: 200 }
+        appSecret:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: The Zalo app's secret key, used to renew the tokens. Sealed into the credential store on arrival and never echoed back.
+        oaSecretKey:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: The OA secret key that signs each webhook event. Sealed into the credential store on arrival and never echoed back.
+        accessToken:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: The Official Account's access token. Sealed into the credential store on arrival and never echoed back.
+        refreshToken:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: The Official Account's refresh token. It is single use; the renewal job replaces it. Sealed into the credential store on arrival and never echoed back.
+    ZaloWebhookEvent:
+      type: object
+      description: One event from Zalo, as the signature covers it. The route reads the raw body and the server decodes it, so only the fields every event carries are named here.
+      required: [event_name, timestamp]
+      additionalProperties: false
+      properties:
+        app_id: { type: string }
+        event_name: { type: string, description: 'For example `user_send_text` or `oa_send_text`.' }
+        timestamp: { type: string, description: 'Milliseconds since the epoch, as the text the signature covers.' }
+    ZaloWebhookReceipt:
+      type: object
+      required: [stored, skipped]
+      properties:
+        stored: { type: integer, minimum: 0, description: 'Messages kept and queued for filing. A retried delivery counts again and is stored once.' }
+        skipped: { type: integer, minimum: 0, description: 'Events not kept: a follow, unfollow, seen or reaction event, an Official Account that is not connected, an erased customer, or an event that could not be decoded.' }
     TelegramBusinessConnection:
       type: object
       description: >-
