@@ -88,7 +88,7 @@ func mapKeys(literal string) []string {
 // migrations to the contract's kinds.
 func checkKindsCheckConstraint(t *testing.T, root string) {
 	t.Helper()
-	files, err := filepath.Glob(filepath.Join(root, "migrations", "core", "*.up.sql"))
+	files, err := gatekit.Glob(filepath.Join(root, "migrations", "core", "*.up.sql"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func checkVocabularyMessages(t *testing.T, root string) {
 		"PartnerStageMeaning": regexp.MustCompile(`"[^"\n]*candidate, signed[^"\n]*"`),
 	}
 	for _, dir := range []string{"internal/modules/contacts", "internal/modules/agents", "internal/compose"} {
-		files, err := filepath.Glob(filepath.Join(root, dir, "*.go"))
+		files, err := gatekit.Glob(filepath.Join(root, dir, "*.go"))
 		if err != nil {
 			t.Fatal(err)
 		}

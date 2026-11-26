@@ -165,7 +165,7 @@ var callerConcerns = []string{
 // a green.
 func TestNoLaneWorkflowDecidesItsOwnScope(t *testing.T) {
 	t.Parallel()
-	lanes, err := filepath.Glob(filepath.Join(workflowDir, "_lane-*.yml"))
+	lanes, err := gatekit.Glob(filepath.Join(workflowDir, "_lane-*.yml"))
 	if err != nil {
 		t.Fatalf("listing lane workflows: %v", err)
 	}

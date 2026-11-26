@@ -75,6 +75,7 @@ package gates
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -150,17 +151,12 @@ const registerPath = "uniquenessclaims.txt"
 // lines and the header.
 func readRegister(t *testing.T) []string {
 	t.Helper()
-	file, err := os.Open(registerPath)
+	body, err := gatekit.ReadFile(registerPath)
 	if err != nil {
-		t.Fatalf("opening %s: %v", registerPath, err)
+		t.Fatalf("reading %s: %v", registerPath, err)
 	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil {
-			t.Errorf("closing %s: %v", registerPath, closeErr)
-		}
-	}()
 	var keys []string
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(bytes.NewReader(body))
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())

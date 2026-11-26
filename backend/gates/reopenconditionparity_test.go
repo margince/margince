@@ -80,7 +80,7 @@ func reopenCheckValues(t *testing.T, table string) []string {
 	clause := regexp.MustCompile(`CONSTRAINT\s+` + regexp.QuoteMeta(constraint) +
 		`\s+CHECK\s*\(reopen_on IS NULL OR reopen_on IN \(([^)]*)\)\)`)
 
-	files, err := filepath.Glob(filepath.Join("migrations", "core", "*.up.sql"))
+	files, err := gatekit.Glob(filepath.Join("migrations", "core", "*.up.sql"))
 	if err != nil {
 		t.Fatalf("listing the migrations: %v", err)
 	}
