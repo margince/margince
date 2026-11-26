@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Sparkles, X } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { IconAction } from "./iconaction";
 import {
   CheckCircleFilled,
@@ -81,6 +81,7 @@ export function Callout({
   live,
   dismiss,
   id,
+  ref,
   children,
 }: Readonly<{
   tone?: CalloutTone;
@@ -106,12 +107,15 @@ export function Callout({
   dismiss?: Readonly<{ label: string; onDismiss: () => void }>;
   /** For a control's `aria-describedby`, when the notice explains that control. */
   id?: string;
+  /** For a caller that moves the notice into view when it arrives. */
+  ref?: Ref<HTMLDivElement>;
   /** Whatever the heading does not already say, where there is more to say. */
   children?: ReactNode;
 }>) {
   return (
     <div
       id={id}
+      ref={ref}
       className={`callout callout-${tone}`}
       role={live ?? announcementFor(kind, tone)}
     >
