@@ -187,7 +187,7 @@ func judge(t reporter, r Register, lang textlang.Lang, name, text, english strin
 		if waived(t, rule, text, english) {
 			continue
 		}
-		t.Errorf("%s %s %s (%s, %s): %q\nRewrite the sentence; %s only shrinks.",
+		t.Errorf("%s %s %s (%s, %s): %q\nRewrite the sentence. A line added to %s by hand is an exception that review must accept.",
 			lang, name, rule.advice, rule.id, r.name, text, baselinePath)
 	}
 }

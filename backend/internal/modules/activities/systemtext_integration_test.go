@@ -70,7 +70,7 @@ func TestSchedulingDefaultOriginSurvivesOtherEditsButNeverReclassifiesLegacyTitl
 	}
 	german := systemtext.WithLocale(ctx, textlang.German)
 	read, err := store.SchedulingProfile(german)
-	if err != nil || read.Title != systemtext.Copy("booking.lets_meet", textlang.German) {
+	if err != nil || read.Title != systemtext.Copy("booking.meeting", textlang.German) {
 		t.Fatalf("default did not localize: %+v %v", read, err)
 	}
 	read.BufferMinutes++
@@ -79,7 +79,7 @@ func TestSchedulingDefaultOriginSurvivesOtherEditsButNeverReclassifiesLegacyTitl
 	}
 	var title string
 	var origin bool
-	if err := e.owner.QueryRow(ctx, `SELECT scheduling_policy->>'title',coalesce((scheduling_policy->>'_default_title')::boolean,false) FROM booking_page WHERE slug=@slug`, pgx.StrictNamedArgs{"slug": *first.Slug}).Scan(&title, &origin); err != nil || title != systemtext.Literal("booking.lets_meet") || !origin {
+	if err := e.owner.QueryRow(ctx, `SELECT scheduling_policy->>'title',coalesce((scheduling_policy->>'_default_title')::boolean,false) FROM booking_page WHERE slug=@slug`, pgx.StrictNamedArgs{"slug": *first.Slug}).Scan(&title, &origin); err != nil || title != systemtext.Literal("booking.meeting") || !origin {
 		t.Fatalf("presentation was saved over the default: %s %v %v", title, origin, err)
 	}
 	read.Title = "My meeting"
@@ -91,11 +91,11 @@ func TestSchedulingDefaultOriginSurvivesOtherEditsButNeverReclassifiesLegacyTitl
 	if err != nil || read.Title != "My meeting" {
 		t.Fatalf("human title changed language: %+v %v", read, err)
 	}
-	if _, err := e.owner.Exec(ctx, `UPDATE booking_page SET scheduling_policy=jsonb_set(scheduling_policy-'_default_title','{title}',to_jsonb(@title::text)) WHERE slug=@slug`, pgx.StrictNamedArgs{"title": systemtext.Literal("booking.lets_meet"), "slug": *first.Slug}); err != nil {
+	if _, err := e.owner.Exec(ctx, `UPDATE booking_page SET scheduling_policy=jsonb_set(scheduling_policy-'_default_title','{title}',to_jsonb(@title::text)) WHERE slug=@slug`, pgx.StrictNamedArgs{"title": systemtext.Literal("booking.meeting"), "slug": *first.Slug}); err != nil {
 		t.Fatal(err)
 	}
 	legacy, err := store.SchedulingProfile(german)
-	if err != nil || legacy.Title != systemtext.Literal("booking.lets_meet") {
+	if err != nil || legacy.Title != systemtext.Literal("booking.meeting") {
 		t.Fatalf("English equality reclassified legacy title: %+v %v", legacy, err)
 	}
 }
@@ -119,7 +119,7 @@ func TestABookingPageStoredUnderAnEarlierDefaultWordingStaysOnTheDefault(t *test
 		t.Helper()
 		for _, language := range textlang.Shipped {
 			read, err := store.SchedulingProfile(systemtext.WithLocale(ctx, language))
-			if err != nil || read.Title != systemtext.Copy("booking.lets_meet", language) || read.UseDefaultTitle == nil || !*read.UseDefaultTitle {
+			if err != nil || read.Title != systemtext.Copy("booking.meeting", language) || read.UseDefaultTitle == nil || !*read.UseDefaultTitle {
 				t.Fatalf("%s: a %s reader lost the default title: %+v %v", stage, language, read, err)
 			}
 		}
@@ -132,19 +132,36 @@ func TestABookingPageStoredUnderAnEarlierDefaultWordingStaysOnTheDefault(t *test
 		}
 		return title
 	}
+	auditedTitles := func() (string, string) {
+		t.Helper()
+		var before, after string
+		if err := e.owner.QueryRow(ctx, `SELECT a.before->>'title', a.after->>'title' FROM audit_log a JOIN booking_page p ON p.id = a.entity_id
+ WHERE a.entity_type = 'booking_page' AND a.action = 'update' AND p.slug=@slug ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1`, pgx.StrictNamedArgs{"slug": *first.Slug}).Scan(&before, &after); err != nil {
+			t.Fatalf("reading the page's audit: %v", err)
+		}
+		return before, after
+	}
 
-	stored("Let's meet", true)
-	onDefault("English earlier wording")
-	read, err := store.SchedulingProfile(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	read.BufferMinutes++
-	if _, err := store.SaveSchedulingProfile(ctx, read); err != nil {
-		t.Fatal(err)
-	}
-	if title := storedTitle(); title != systemtext.Copy("booking.lets_meet", textlang.English) {
-		t.Fatalf("an edit kept the earlier wording or changed its language: %q", title)
+	shippedDefaults := map[textlang.Lang]string{textlang.English: "Let's meet", textlang.German: "Treffen wir uns", textlang.Vietnamese: "Hãy gặp nhau"}
+	for _, language := range textlang.Shipped {
+		earlier := shippedDefaults[language]
+		stored(earlier, true)
+		onDefault(earlier)
+		reader := systemtext.WithLocale(ctx, language)
+		read, err := store.SchedulingProfile(reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		read.BufferMinutes++
+		if _, err := store.SaveSchedulingProfile(reader, read); err != nil {
+			t.Fatal(err)
+		}
+		if title := storedTitle(); title != earlier {
+			t.Fatalf("an edit of another field rewrote the stored default %q as %q", earlier, title)
+		}
+		if before, after := auditedTitles(); before != earlier || after != earlier {
+			t.Fatalf("the audit of that edit shows the title %q -> %q, not the stored %q", before, after, earlier)
+		}
 	}
 
 	stale, err := store.SchedulingProfile(ctx)
@@ -156,6 +173,19 @@ func TestABookingPageStoredUnderAnEarlierDefaultWordingStaysOnTheDefault(t *test
 		t.Fatal(err)
 	}
 	onDefault("an English reader sent the earlier wording back")
+
+	stored("Let's meet", true)
+	custom, err := store.SchedulingProfile(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	custom.Title, custom.UseDefaultTitle = "Intro call", new(false)
+	if _, err := store.SaveSchedulingProfile(ctx, custom); err != nil {
+		t.Fatal(err)
+	}
+	if before, after := auditedTitles(); before != "Let's meet" || after != "Intro call" {
+		t.Fatalf("the audit of a title edit shows %q -> %q, not the stored wording to the new title", before, after)
+	}
 
 	stored("Let's meet", false)
 	legacy, err := store.SchedulingProfile(ctx)

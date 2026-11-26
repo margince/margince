@@ -64,7 +64,7 @@ func teamRequestStandingTx(ctx context.Context, tx pgx.Tx, page ids.UUID, member
 		return standing, nil
 	}
 	state := memberState(members[at])
-	standing.Request.HostName, standing.Request.Title = schedulingDisplayName(name), stored.Title
+	standing.Request.HostName, standing.Request.Title = schedulingDisplayName(name), stored.shownTitle()
 	standing.Pending = state == crmcontracts.SchedulingTeamMemberStatePending
 	words := strings.Join([]string{page.String(), string(state), standing.Request.HostName, standing.Request.Title}, "\x00")
 	standing.Fingerprint = int64(maphash.String(teamRequestSeed, words) >> 1)

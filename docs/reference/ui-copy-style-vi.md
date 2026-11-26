@@ -393,8 +393,8 @@ address and retired vocabulary, and they also fail "nhé", "nha" and "ạ". Each
 Vocabulary table and the patterns from `copy-style-vi.census.ts`; formal address is a hand port pinned to its census
 pattern. A table is member copy unless its test names another register with a reason. Agent allows tôi. Outsider
 allows quý khách and vui lòng and fails bạn. Controller also allows chúng tôi. Own voice keeps only NFC, tone marks,
-dashes and !, and Verbatim only NFC. Findings that wait for a rewrite sit in `langcopytest/stylebaseline.txt`, which
-the command in [ui-copy-style.md](ui-copy-style.md#copy-the-server-writes) only shortens. The check does not reach the
+dashes and !, and Verbatim only NFC. Findings that wait for a rewrite sit in `langcopytest/stylebaseline.txt`. Its
+[recut](ui-copy-style.md#copy-the-server-writes) adds no line; a line added by hand needs review. The check does not reach the
 voice of a draft the member sends as themselves (`draftfloor`, intro notes), the demo mail of `capture/offlinedemo`,
 or the word lists of `draftcheck`, `salutation` and `searchplan`. Nor does it reach text returned from a `switch`, or
 strings outside a table: problem details, `crm.yaml` and MCP tool copy (#13561, #13562).

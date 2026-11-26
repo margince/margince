@@ -12,13 +12,13 @@ import (
 )
 
 func TestAStoredEarlierWordingReadsAsThePhraseInItsOwnLanguage(t *testing.T) {
-	code := "booking.lets_meet"
+	code := "booking.meeting"
 	definition, _ := definitionOf(code)
-	if len(definition.Retired[textlang.English]) == 0 {
-		t.Fatalf("%s keeps no earlier English wording to read", code)
-	}
-	for language, retired := range definition.Retired {
-		for _, stored := range retired {
+	for _, language := range textlang.Shipped {
+		if len(definition.Retired[language]) == 0 {
+			t.Errorf("%s keeps no earlier %s wording to read", code, language)
+		}
+		for _, stored := range definition.Retired[language] {
 			if !Says(code, language, stored) || Reworded(code, stored) != Copy(code, language) {
 				t.Errorf("%s %q did not read as today's %q", language, stored, Copy(code, language))
 			}
@@ -74,6 +74,47 @@ func TestTextStoredInAnEarlierEnglishWordingRecoversToItsCodeAndShowsTodaysWords
 	}
 	if kept == 0 {
 		t.Fatal("no code keeps an earlier English wording, so this test reads nothing")
+	}
+}
+
+// Codes are reworded in different releases, so one stored sentence can hold a
+// part in today's words beside a part in an earlier wording.
+func TestEachPartOfAStoredSentenceBindsInTheWordingItWasStoredIn(t *testing.T) {
+	var reworded []string
+	for code, definition := range catalog {
+		if len(definition.Arguments) == 0 && len(definition.Retired[textlang.English]) > 0 {
+			reworded = append(reworded, code)
+		}
+	}
+	slices.Sort(reworded)
+	english := func(code string) []string {
+		definition, _ := definitionOf(code)
+		return storedWordings(definition, textlang.English)
+	}
+	why, finding := english("assurance.why"), english("assurance.finding.amount_vs_offer")
+	if len(reworded) < 2 || len(why) < 2 || len(finding) < 2 {
+		t.Fatal("too few codes keep an earlier English wording to mix them")
+	}
+	first, second := english(reworded[0]), english(reworded[1])
+	sequence := Sequence(Sentence(reworded[0]), Sentence(reworded[1]))
+	nested := Sentence("assurance.why", MessageArgument("assurance.finding.amount_vs_offer"))
+	for _, mixed := range []struct {
+		component *Component
+		stored    string
+	}{
+		{sequence, first[0] + " " + second[1]},
+		{sequence, first[1] + " " + second[0]},
+		{nested, fmt.Sprintf(why[0], finding[1])},
+		{nested, fmt.Sprintf(why[1], finding[0])},
+	} {
+		bound, err := Bind(&Message{Subject: mixed.component}, mixed.stored, "")
+		if err != nil || bound == nil || bound.Subject == nil {
+			t.Errorf("%q does not bind: %v", mixed.stored, err)
+			continue
+		}
+		if shown := bound.Subject.Display(mixed.stored, textlang.English); shown == nil || *shown != Canonical(mixed.component, textlang.English) {
+			t.Errorf("%q shows %v, not today's words", mixed.stored, shown)
+		}
 	}
 }
 

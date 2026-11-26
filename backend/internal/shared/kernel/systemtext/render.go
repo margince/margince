@@ -6,6 +6,8 @@ package systemtext
 import (
 	"errors"
 	"fmt"
+	"iter"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -13,33 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
-
-// spelling is a form of a template that stored rows may hold. It quotes with
-// Go's %q or not, and earlier counts back through retired wordings, 0 being today's.
-type spelling struct {
-	goQuoted bool
-	earlier  int
-}
-
-var (
-	ownMarks = spelling{}
-	goQuoted = spelling{goQuoted: true}
-)
-
-// storedSpellings are the spellings a stored row may hold, today's first.
-var storedSpellings = func() []spelling {
-	deepest := 0
-	for _, definition := range catalog {
-		for _, words := range definition.Retired {
-			deepest = max(deepest, len(words))
-		}
-	}
-	spellings := make([]spelling, 0, 2*(deepest+1))
-	for earlier := range deepest + 1 {
-		spellings = append(spellings, spelling{earlier: earlier}, spelling{goQuoted: true, earlier: earlier})
-	}
-	return spellings
-}()
 
 // goQuotedCodes are the templates that wrote %q before they took each
 // language's own marks. Text stored then still binds to them; no other
@@ -61,90 +36,164 @@ var goQuoting = func() *strings.Replacer {
 }()
 
 func (c Component) renderBounded(lang textlang.Lang, original string, bounded bool) (string, error) {
-	return c.renderSpelled(lang, 0, original, bounded, ownMarks)
+	rendered, err := c.renderings(reading{lang: lang, original: original, bounded: bounded}, 0)
+	if err != nil {
+		return "", err
+	}
+	return rendered[0], nil
 }
 
-// wordsIn is the template in one language, in the spelling asked for.
-func wordsIn(code string, definition Definition, lang textlang.Lang, spell spelling) string {
-	words := definition.Words.In(lang)
-	if retired := definition.Retired[lang]; spell.earlier > 0 && spell.earlier <= len(retired) {
-		words = retired[spell.earlier-1]
+// reading is a way to write a sentence: in today's words, or asStored in every
+// stored wording that original holds. A part stands verbatim in its parent, so
+// a part absent from original cannot make it up.
+type reading struct {
+	lang     textlang.Lang
+	original string
+	bounded  bool
+	asStored bool
+}
+
+// storedWordings are the words in lang a stored row may hold, today's first.
+func storedWordings(definition Definition, lang textlang.Lang) []string {
+	return append([]string{definition.Words.In(lang)}, definition.Retired[lang]...)
+}
+
+// wordings are the templates code is written in. Each component reads its own,
+// since codes are reworded in different releases.
+func (r reading) wordings(code string, definition Definition) []string {
+	if !r.asStored {
+		return []string{definition.Words.In(r.lang)}
 	}
-	if spell.goQuoted && goQuotedCodes[code] {
-		return goQuoting.Replace(words)
+	words := storedWordings(definition, r.lang)
+	if goQuotedCodes[code] {
+		for _, plain := range words {
+			words = append(words, goQuoting.Replace(plain))
+		}
 	}
 	return words
 }
 
-// renderSpelled writes the sentence in the spelling asked for, so text stored
-// with Go's quoting or an earlier wording still binds.
-func (c Component) renderSpelled(lang textlang.Lang, depth int, original string, bounded bool, spell spelling) (string, error) {
+func (r reading) keep(kept []string, rendered string) []string {
+	if r.asStored && (!strings.Contains(r.original, rendered) || slices.Contains(kept, rendered)) {
+		return kept
+	}
+	return append(kept, rendered)
+}
+
+// renderings writes the sentence in each wording the reading allows, and in
+// one when reading today's words.
+func (c Component) renderings(r reading, depth int) ([]string, error) {
 	if len(c.Following) > 8 || depth > 4 || len(c.Args) > 16 {
-		return "", errors.New("system text: sentence sequence exceeds limit")
+		return nil, errors.New("system text: sentence sequence exceeds limit")
 	}
 
 	definition, ok := definitionOf(c.Code)
 	if !ok || c.Origin != Template || len(c.Args) != len(definition.Arguments) {
-		return "", errors.New("system text: invalid definition")
+		return nil, errors.New("system text: invalid definition")
 	}
-	values := make([]any, len(c.Args))
+	values := make([][]any, len(c.Args))
 	for i, arg := range c.Args {
 		if !argumentKindMatches(arg.Kind, definition.Arguments[i]) {
-			return "", errors.New("system text: invalid argument")
+			return nil, errors.New("system text: invalid argument")
 		}
 		if arg.Kind == argumentCount {
-			values[i] = arg.Count
+			values[i] = []any{arg.Count}
 			continue
 		}
-		value, err := arg.renderText(lang, depth, original, bounded, spell)
+		texts, err := arg.renderings(r, depth)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		values[i] = value
+		for _, text := range texts {
+			values[i] = append(values[i], text)
+		}
 	}
 
-	sentence := wordsIn(c.Code, definition, lang, spell)
-	if len(values) > 0 {
-		sentence = fmt.Sprintf(sentence, values...)
-	}
-	lines := []string{sentence}
-	for _, part := range c.Following {
-		line, err := part.renderSpelled(lang, depth+1, original, bounded, spell)
-		if err != nil {
-			return "", err
+	var sentences []string
+	for _, words := range r.wordings(c.Code, definition) {
+		for chosen := range combinations(values) {
+			sentence := words
+			if len(chosen) > 0 {
+				sentence = fmt.Sprintf(words, chosen...)
+			}
+			sentences = r.keep(sentences, sentence)
 		}
-		lines = append(lines, line)
+	}
+	lines := [][]string{sentences}
+	for _, part := range c.Following {
+		rendered, err := part.renderings(r, depth+1)
+		if err != nil {
+			return nil, err
+		}
+		lines = append(lines, rendered)
 	}
 	separator, err := layoutSeparator(c.Layout)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return strings.Join(lines, separator), nil
+	var out []string
+	for chosen := range combinations(lines) {
+		out = r.keep(out, strings.Join(chosen, separator))
+	}
+	return out, nil
 }
 
-func (arg Argument) renderText(lang textlang.Lang, depth int, original string, bounded bool, spell spelling) (string, error) {
-	if bounded && (arg.Kind == argumentText || arg.Kind == argumentLabel) && utf8.RuneCountInString(arg.Text) > 512 {
-		return "", ErrDisplayLimit
+// combinations yields each way of taking one option from every list, reusing
+// the slice it yields.
+func combinations[T any](options [][]T) iter.Seq[[]T] {
+	return func(yield func([]T) bool) {
+		chosen := make([]T, len(options))
+		var fill func(int) bool
+		fill = func(at int) bool {
+			if at == len(options) {
+				return yield(chosen)
+			}
+			for _, option := range options[at] {
+				chosen[at] = option
+				if !fill(at + 1) {
+					return false
+				}
+			}
+			return true
+		}
+		fill(0)
+	}
+}
+
+func (arg Argument) renderings(r reading, depth int) ([]string, error) {
+	if r.bounded && (arg.Kind == argumentText || arg.Kind == argumentLabel) && utf8.RuneCountInString(arg.Text) > 512 {
+		return nil, ErrDisplayLimit
 	}
 	switch arg.Kind {
 	case argumentComponent:
 		if arg.Component == nil {
-			return "", errors.New("system text: missing nested component")
+			return nil, errors.New("system text: missing nested component")
 		}
-		return arg.Component.renderSpelled(lang, depth+1, original, bounded, spell)
+		return arg.Component.renderings(r, depth+1)
 	case argumentSourceSpan:
-		return arg.sourceSpan(original)
+		return single(arg.sourceSpan(r.original))
 	case argumentMessage:
 		nested, ok := definitionOf(arg.Text)
 		if !ok || len(nested.Arguments) != 0 {
-			return "", errors.New("system text: invalid nested message")
+			return nil, errors.New("system text: invalid nested message")
 		}
-		return nested.Words.In(lang), nil
+		var kept []string
+		for _, words := range r.wordings(arg.Text, nested) {
+			kept = r.keep(kept, words)
+		}
+		return kept, nil
 	case argumentDate:
-		return calendarText(arg.Text)
+		return single(calendarText(arg.Text))
 	case argumentText, argumentLabel:
-		return credentialmask.MaskText(arg.Text), nil
+		return []string{credentialmask.MaskText(arg.Text)}, nil
 	default:
-		return "", errors.New("system text: invalid argument kind")
+		return nil, errors.New("system text: invalid argument kind")
 	}
+}
+
+func single(text string, err error) ([]string, error) {
+	if err != nil {
+		return nil, err
+	}
+	return []string{text}, nil
 }

@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
@@ -191,13 +192,11 @@ func bindComponent(component Component, text string) (Component, bool, error) {
 	case Template:
 		matches := false
 		for _, language := range textlang.Shipped {
-			for _, spell := range storedSpellings {
-				rendered, err := component.renderSpelled(language, 0, text, true, spell)
-				if err != nil {
-					return component, false, err
-				}
-				matches = matches || rendered == text
+			rendered, err := component.renderings(reading{lang: language, original: text, bounded: true, asStored: true}, 0)
+			if err != nil {
+				return component, false, err
 			}
+			matches = matches || slices.Contains(rendered, text)
 		}
 		if !matches {
 			return component, false, nil

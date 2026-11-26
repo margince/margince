@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -22,11 +23,11 @@ func RecoverCanonicalText(value string) (*Component, error) {
 	var recovered *Component
 	best, ambiguous := 0, false
 	for code, definition := range catalog {
-		candidate, literal, err := recoverCode(code, definition, value)
+		candidate, literal, err := recoverCode(code, definition, value, best)
 		if err != nil {
 			return nil, err
 		}
-		if candidate == nil || literal < best {
+		if candidate == nil {
 			continue
 		}
 		bound, err := Bind(&Message{Subject: candidate}, value, "")
@@ -52,19 +53,15 @@ func RecoverCanonicalText(value string) (*Component, error) {
 	return recovered, nil
 }
 
-// recoverCode matches value against each English wording of code, today's
-// first, and reports how many literal bytes the matching wording holds.
-func recoverCode(code string, definition Definition, value string) (*Component, int, error) {
-	for _, spell := range storedSpellings {
-		if spell.goQuoted {
-			continue // Recovery reads %s and %d, so a template quoting with %q never matches.
-		}
-		template := wordsIn(code, definition, textlang.English, spell)
+// recoverCode matches value against code's English wordings that hold no fewer
+// literal bytes than best, today's first, and reports the match's literal bytes.
+func recoverCode(code string, definition Definition, value string, best int) (*Component, int, error) {
+	for _, template := range storedWordings(definition, textlang.English) {
 		literal := len(strings.TrimSpace(recoveryVerb.ReplaceAllString(template, "")))
-		if literal == 0 {
+		if literal == 0 || literal < best {
 			continue
 		}
-		candidate, err := recoverCanonicalComponent(code, definition, template, spell, value)
+		candidate, err := recoverCanonicalComponent(code, definition, template, value)
 		if err != nil || candidate != nil {
 			return candidate, literal, err
 		}
@@ -73,7 +70,7 @@ func recoverCode(code string, definition Definition, value string) (*Component, 
 }
 
 //nolint:nilnil // Pattern mismatches are expected nonmatches.
-func recoverCanonicalComponent(code string, definition Definition, template string, spell spelling, value string) (*Component, error) {
+func recoverCanonicalComponent(code string, definition Definition, template, value string) (*Component, error) {
 	verbs := recoveryVerb.FindAllStringSubmatchIndex(template, -1)
 	if len(verbs) == 0 && template != value {
 		return nil, nil
@@ -121,11 +118,11 @@ func recoverCanonicalComponent(code string, definition Definition, template stri
 		return nil, nil
 	}
 	component := Sentence(code, arguments...)
-	rendered, err := component.renderSpelled(textlang.English, 0, "", false, spell)
+	rendered, err := component.renderings(reading{lang: textlang.English, original: value, asStored: true}, 0)
 	if err != nil {
 		return nil, err
 	}
-	if rendered != value || strings.Contains(template[last:], "%") {
+	if !slices.Contains(rendered, value) || strings.Contains(template[last:], "%") {
 		return nil, nil
 	}
 	return component, nil

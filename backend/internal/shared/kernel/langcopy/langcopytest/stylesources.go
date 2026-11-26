@@ -72,7 +72,8 @@ var vietnamesePatternLeads = map[string]string{
 }
 
 // vietnamesePins are census code whose lookaround Go cannot read, ported by
-// hand in stylerules.go. A change to one fails until its port follows.
+// hand in stylerules.go. A change to one fails until its pin here is updated,
+// which is the moment to update the port too.
 var vietnamesePins = map[string]struct{ lead, code string }{
 	"word": {`export function word(alternation: string, flags = "iu"): RegExp {`,
 		"return new RegExp(`(?<![\\\\p{L}])(?:${alternation})(?![\\\\p{L}])`, flags);"},

@@ -61,18 +61,12 @@ const (
 	memberDraft  = "a draft the member sends as themselves, which no style page governs"
 )
 
-// languageTableFloor sits below the tables the tree holds today, so a sweep
-// that stopped reading the tree fails here instead of passing over nothing.
-const languageTableFloor = 45
-
-// languageLiteral is what a text scan reads as a language-keyed literal. It
-// holds the syntax arm to every file a plain grep would flag.
-var languageLiteral = regexp.MustCompile(`(?:[=:]|return)\s*map\[textlang\.Lang\]`)
+var languageMapType = regexp.MustCompile(`type\s+(\w+)\s+map\[textlang\.Lang\]`)
 
 func TestEveryLanguageKeyedCopyTableIsHeldToTheStylePages(t *testing.T) {
 	t.Parallel()
 	packages := languagePackages(t, ".")
-	tables, flagged := 0, 0
+	tables, read := 0, map[string]bool{}
 	for _, dir := range slices.Sorted(maps.Keys(packages)) {
 		pkg := packages[dir]
 		held := pkg.held()
@@ -95,27 +89,71 @@ func TestEveryLanguageKeyedCopyTableIsHeldToTheStylePages(t *testing.T) {
 				t.Errorf("unstyledLanguageTables names %s in %s, which holds no such language-keyed table; delete it", name, dir)
 			}
 		}
-		for _, path := range pkg.grepped {
-			flagged++
-			if !pkg.literalIn[path] {
-				t.Errorf("%s spells a language-keyed literal that the syntax scan did not read as a table", path)
-			}
-		}
+		maps.Copy(read, pkg.literalIn)
 	}
 	for dir := range unstyledLanguageTables {
 		if _, exists := packages[dir]; !exists {
 			t.Errorf("unstyledLanguageTables names %s, which holds no language-keyed table; delete it", dir)
 		}
 	}
-	t.Logf("%d language-keyed tables, %d files a grep flags", tables, flagged)
-	if tables < languageTableFloor || flagged == 0 {
-		t.Fatalf("found %d language-keyed tables in %d grepped files, and the tree holds at least %d; the sweep "+
-			"is reading a smaller tree than the one it judges", tables, flagged, languageTableFloor)
+	flagged := languageLiteralFiles(t, ".")
+	for _, path := range flagged {
+		if !read[path] {
+			t.Errorf("%s spells a language-keyed literal that the syntax scan did not read as a table", path)
+		}
 	}
+	t.Logf("%d language-keyed tables, %d files the text census flags", tables, len(flagged))
+	if len(flagged) == 0 {
+		t.Fatal("the text census flags no file, so it is reading a tree that holds no copy table")
+	}
+}
+
+// languageLiteralFiles is the census the syntax arm answers to: each non-test
+// Go file under root that spells a language-keyed literal. It reads plain text
+// and skips no directory, so a directory the arm stops reading fails.
+func languageLiteralFiles(t *testing.T, root string) []string {
+	t.Helper()
+	texts, mapTypes := map[string][]byte{}, map[string][]string{}
+	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return walkErr
+		}
+		text, err := gatekit.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		path = filepath.ToSlash(path)
+		texts[path] = text
+		for _, declared := range languageMapType.FindAllSubmatch(text, -1) {
+			mapTypes[filepath.Dir(path)] = append(mapTypes[filepath.Dir(path)], string(declared[1]))
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("reading the module as text for language-keyed literals: %v", err)
+	}
+	literals := map[string]*regexp.Regexp{}
+	var flagged []string
+	for path, text := range texts {
+		dir := filepath.Dir(path)
+		if literals[dir] == nil {
+			spelled := []string{`map\[textlang\.Lang\]`}
+			for _, name := range mapTypes[dir] {
+				spelled = append(spelled, name+`\{`)
+			}
+			literals[dir] = regexp.MustCompile(`(?:[=:]|return)\s*(?:` + strings.Join(spelled, "|") + `)`)
+		}
+		if literals[dir].Match(text) {
+			flagged = append(flagged, path)
+		}
+	}
+	slices.Sort(flagged)
+	return flagged
 }
 
 // TestTheLanguageTableArmSeesATableAndItsWalk is the vacuity check: shown three
 // tables, one of a named map type, the arm finds all three and the two walked.
+// A style test's local named like a table does not hold it.
 func TestTheLanguageTableArmSeesATableAndItsWalk(t *testing.T) {
 	t.Parallel()
 	source := `package copy
@@ -131,6 +169,7 @@ import "github.com/margince/margince/backend/internal/shared/kernel/langcopy/lan
 func check(t langcopytest.T) { langcopytest.EnglishText(t, "x", "y") }
 func TestWalked(t *testing.T) { check(t); _ = walked; _ = shown }
 func TestUnwalked(t *testing.T) { _ = unwalked }
+func TestShadowed(t *testing.T) { check(t); unwalked := struct{ unwalked int }{unwalked: 1}; _ = unwalked.unwalked }
 `
 	pkg := &languagePackage{tables: map[string]string{}, literalIn: map[string]bool{}}
 	for name, text := range map[string]string{"copy.go": source, "copy_test.go": walk} {
@@ -138,7 +177,7 @@ func TestUnwalked(t *testing.T) { _ = unwalked }
 		if err != nil {
 			t.Fatal(err)
 		}
-		pkg.add(name, file, []byte(text))
+		pkg.add(name, file)
 	}
 	pkg.resolve()
 	if got := slices.Sorted(maps.Keys(pkg.tables)); !slices.Equal(got, []string{"buildShown", "unwalked", "walked"}) {
@@ -157,7 +196,6 @@ type languagePackage struct {
 	// tables maps a top-level name to where its language-keyed literal stands.
 	tables    map[string]string
 	literalIn map[string]bool
-	grepped   []string
 	mapTypes  map[string]bool
 }
 
@@ -182,15 +220,11 @@ func languagePackages(t *testing.T, root string) map[string]*languagePackage {
 		if err != nil {
 			return err
 		}
-		text, err := gatekit.ReadFile(path)
-		if err != nil {
-			return err
-		}
 		dir := filepath.ToSlash(filepath.Dir(path))
 		if packages[dir] == nil {
 			packages[dir] = &languagePackage{tables: map[string]string{}, literalIn: map[string]bool{}}
 		}
-		packages[dir].add(path, file, text)
+		packages[dir].add(path, file)
 		return nil
 	})
 	if err != nil {
@@ -198,22 +232,19 @@ func languagePackages(t *testing.T, root string) map[string]*languagePackage {
 	}
 	for dir, pkg := range packages {
 		pkg.resolve()
-		if len(pkg.tables) == 0 && len(pkg.grepped) == 0 {
+		if len(pkg.tables) == 0 {
 			delete(packages, dir)
 		}
 	}
 	return packages
 }
 
-func (p *languagePackage) add(path string, file *ast.File, text []byte) {
+func (p *languagePackage) add(path string, file *ast.File) {
 	if strings.HasSuffix(path, "_test.go") {
 		p.tests = append(p.tests, file)
 		return
 	}
 	p.files, p.paths = append(p.files, file), append(p.paths, path)
-	if languageLiteral.Match(text) {
-		p.grepped = append(p.grepped, path)
-	}
 }
 
 // resolve finds the tables once every file of the directory is in, since a
@@ -257,7 +288,7 @@ func (p *languagePackage) held() map[string]bool {
 		for _, decl := range file.Decls {
 			for name, part := range declParts(decl) {
 				_, funcs[name] = part.(*ast.FuncDecl)
-				built[name] = append(built[name], spelledNames(part)...)
+				built[name] = append(built[name], packageNames(part)...)
 			}
 		}
 	}
@@ -302,10 +333,68 @@ func declParts(decl ast.Decl) map[string]ast.Node {
 	return parts
 }
 
-func spelledNames(node ast.Node) []string {
+// packageNames answers the names node spells that can mean a top-level
+// declaration: not a field it selects or keys, nor a name it declares itself.
+// A name declared anywhere in node is dropped throughout, even outside its scope.
+func packageNames(node ast.Node) []string {
+	local, field := map[string]bool{}, map[*ast.Ident]bool{}
+	declare := func(exprs ...ast.Expr) {
+		for _, expr := range exprs {
+			if ident, ok := expr.(*ast.Ident); ok {
+				local[ident.Name] = true
+			}
+		}
+	}
+	parameters := func(lists ...*ast.FieldList) {
+		for _, list := range lists {
+			if list == nil {
+				continue
+			}
+			for _, parameter := range list.List {
+				for _, name := range parameter.Names {
+					declare(name)
+				}
+			}
+		}
+	}
+	ast.Inspect(node, func(n ast.Node) bool {
+		switch n := n.(type) {
+		case *ast.SelectorExpr:
+			field[n.Sel] = true
+		case *ast.KeyValueExpr:
+			if key, ok := n.Key.(*ast.Ident); ok {
+				field[key] = true
+			}
+		case *ast.FuncDecl:
+			parameters(n.Recv)
+		case *ast.FuncType:
+			parameters(n.TypeParams, n.Params, n.Results)
+		case *ast.AssignStmt:
+			if n.Tok == token.DEFINE {
+				declare(n.Lhs...)
+			}
+		case *ast.RangeStmt:
+			if n.Tok == token.DEFINE {
+				declare(n.Key, n.Value)
+			}
+		case *ast.DeclStmt:
+			ast.Inspect(n, func(inner ast.Node) bool {
+				switch spec := inner.(type) {
+				case *ast.ValueSpec:
+					for _, name := range spec.Names {
+						declare(name)
+					}
+				case *ast.TypeSpec:
+					declare(spec.Name)
+				}
+				return true
+			})
+		}
+		return true
+	})
 	var names []string
 	ast.Inspect(node, func(n ast.Node) bool {
-		if ident, ok := n.(*ast.Ident); ok {
+		if ident, ok := n.(*ast.Ident); ok && !field[ident] && !local[ident.Name] {
 			names = append(names, ident.Name)
 		}
 		return true
@@ -346,7 +435,7 @@ func namedByStyleTests(tests []*ast.File) []string {
 			if !ok || fn.Body == nil {
 				continue
 			}
-			names[fn.Name.Name] = append(names[fn.Name.Name], spelledNames(fn.Body)...)
+			names[fn.Name.Name] = append(names[fn.Name.Name], packageNames(fn)...)
 			ast.Inspect(fn.Body, func(node ast.Node) bool {
 				switch n := node.(type) {
 				case *ast.SelectorExpr:

@@ -243,8 +243,8 @@ stands, keeps none of them.
 Findings that wait for a rewrite are listed in `stylebaseline.txt` in that
 folder, one rule and sentence a line. A test fails a line whose sentence now
 passes, or that no Go string spells. The command below drops every line nothing
-reports, and fails on a finding the list does not hold, so the list only gets
-shorter. Run it from `backend/`:
+reports and never adds one, so it fails on a finding the list does not hold. A
+line added by hand is an exception that review must accept. Run it from `backend/`:
 
 ```sh
 go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut -timeout 30m
