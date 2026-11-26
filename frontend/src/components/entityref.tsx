@@ -3,13 +3,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { AppLink } from "../design-system/applink";
+import { Badge } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { recordEnabled, useHiddenCoreFeatures } from "../lib/corefeatures";
 import { ENTITY, type EntityKind } from "../lib/entity";
 import { useMemberName } from "../lib/membernames";
 import { routeHash } from "../lib/router";
 import {
-  entityNameObserverQuery,
+  entityLabelObserverQuery,
   type NameReading,
   readingOf,
   usableName,
@@ -262,15 +263,24 @@ function RecordRef({
   // blank is the caller saying it has nothing rather than saying the record is
   // nameless. `usableName` is what decides that, once, so the value that
   // switches the read off is the same value that gets rendered.
+  const t = useT();
   const available = recordEnabled(kind, useHiddenCoreFeatures());
   const supplied = usableName(name);
   const query = useQuery({
-    ...entityNameObserverQuery(kind, id),
+    ...entityLabelObserverQuery(kind, id),
     enabled: available && supplied == null,
   });
   // Only a resolved name is a safe link target; a reference with no name —
   // still loading, refused, or a record that carries none — never becomes one.
-  const resolved = supplied ?? usableName(query.data);
+  const resolved = supplied ?? usableName(query.data?.name);
+  // An archived company says so wherever it is named, a deal's company line
+  // first among them: the deal stays open on an account that is gone.
+  const archived = kind === "company" && query.data?.archived === true && (
+    <>
+      {" "}
+      <Badge tone="warning">{t("record.archived")}</Badge>
+    </>
+  );
   if (!available) {
     return supplied ? <span>{supplied}</span> : null;
   }
@@ -278,18 +288,26 @@ function RecordRef({
     return <UnnamedRef id={id} reading={readingOf(query)} />;
   }
   if (asText) {
-    return <span>{resolved}</span>;
+    return (
+      <span>
+        {resolved}
+        {archived}
+      </span>
+    );
   }
   // Native destinations support copying and new tabs; ordinary clicks use the router.
   return (
-    <AppLink
-      className="entity-link"
-      href={routeHash(ENTITY[kind].route(id))}
-      onClick={(event) => event.stopPropagation()}
-      {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-    >
-      {resolved}
-    </AppLink>
+    <>
+      <AppLink
+        className="entity-link"
+        href={routeHash(ENTITY[kind].route(id))}
+        onClick={(event) => event.stopPropagation()}
+        {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      >
+        {resolved}
+      </AppLink>
+      {archived}
+    </>
   );
 }
 

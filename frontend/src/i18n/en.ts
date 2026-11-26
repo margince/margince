@@ -3096,6 +3096,18 @@ export const en = {
   "record.disqualify": "Disqualify",
   "record.archiveConfirm":
     "Archive this record? You can bring it back from its history.",
+  "co.archiveConfirm.ask": "Archive {name}?",
+  "co.archiveConfirm.contacts_one":
+    "Its {count} contact stays, but no longer shows this company as employer.",
+  "co.archiveConfirm.contacts_other":
+    "Its {count} contacts stay, but no longer show this company as employer.",
+  "co.archiveConfirm.deals_one":
+    "Its {count} open deal stays open in the pipeline.",
+  "co.archiveConfirm.deals_other":
+    "Its {count} open deals stay open in the pipeline.",
+  "co.archiveConfirm.unknown":
+    "Its contacts stay, but no longer show this company as employer. Its open deals stay open.",
+  "co.archiveConfirm.restore": "You can bring it back from its history.",
   "record.archived": "Archived",
   "record.archivedReadOnly": "This company is archived and takes no changes.",
   "record.notYoursToChange":

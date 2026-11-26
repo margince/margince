@@ -3186,6 +3186,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
     "Diesen Datensatz archivieren? Über den Verlauf kannst du den Datensatz zurückholen.",
+  "co.archiveConfirm.ask": "{name} archivieren?",
+  "co.archiveConfirm.contacts_one":
+    "{count} Kontakt bleibt erhalten, zeigt dieses Unternehmen aber nicht mehr als Arbeitgeber.",
+  "co.archiveConfirm.contacts_other":
+    "{count} Kontakte bleiben erhalten, zeigen dieses Unternehmen aber nicht mehr als Arbeitgeber.",
+  "co.archiveConfirm.deals_one":
+    "{count} offener Deal bleibt in der Pipeline offen.",
+  "co.archiveConfirm.deals_other":
+    "{count} offene Deals bleiben in der Pipeline offen.",
+  "co.archiveConfirm.unknown":
+    "Die Kontakte bleiben erhalten, zeigen dieses Unternehmen aber nicht mehr als Arbeitgeber. Offene Deals bleiben offen.",
+  "co.archiveConfirm.restore":
+    "Über den Verlauf kannst du das Unternehmen zurückholen.",
   "record.archived": "Archiviert",
   "record.archivedReadOnly":
     "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",

@@ -119,6 +119,27 @@ export function entityNameObserverQuery(
   };
 }
 
+/** A reference as a label shows it: its name, and whether it is archived. */
+export type ReferenceLabel = Readonly<{
+  name: string | null;
+  archived: boolean;
+}>;
+
+// A name written straight into the cache carries no archive state, so it reads
+// as live until the reference read answers.
+export function entityLabelObserverQuery(
+  kind: EntityKind,
+  id: string,
+): UseQueryOptions<EntityReference | string | null, Error, ReferenceLabel> {
+  return {
+    ...nameReadQuery(kind, id),
+    select: (value) => ({
+      name: answerOf(value).name,
+      archived: typeof value === "object" && value !== null && value.archived,
+    }),
+  };
+}
+
 // Shared with mutation invalidation so renames refresh every mounted label.
 export const ENTITY_NAME_KEY = "ref";
 

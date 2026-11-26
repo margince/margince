@@ -3088,6 +3088,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.disqualify": "Loại lead",
   "record.archiveConfirm":
     "Chuyển hồ sơ này vào kho lưu trữ? Có thể khôi phục từ lịch sử của hồ sơ.",
+  "co.archiveConfirm.ask": "Chuyển {name} vào kho lưu trữ?",
+  "co.archiveConfirm.contacts_one":
+    "{count} liên hệ vẫn được giữ, nhưng không còn hiện công ty này là nơi làm việc.",
+  "co.archiveConfirm.contacts_other":
+    "{count} liên hệ vẫn được giữ, nhưng không còn hiện công ty này là nơi làm việc.",
+  "co.archiveConfirm.deals_one":
+    "{count} giao dịch đang mở vẫn mở trong pipeline.",
+  "co.archiveConfirm.deals_other":
+    "{count} giao dịch đang mở vẫn mở trong pipeline.",
+  "co.archiveConfirm.unknown":
+    "Các liên hệ vẫn được giữ, nhưng không còn hiện công ty này là nơi làm việc. Các giao dịch đang mở vẫn mở.",
+  "co.archiveConfirm.restore": "Có thể khôi phục công ty từ lịch sử của nó.",
   "record.archived": "Trong kho lưu trữ",
   "record.archivedReadOnly":
     "Công ty này đang trong kho lưu trữ và không thể thay đổi.",

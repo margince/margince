@@ -227,6 +227,7 @@ export function CompanyPage({
             leads the row. */}
           <CompanyActionBadges
             company={company}
+            view={view}
             archivedReasonId={archivedReasonId}
             activity={activity}
             onAddTask={() => setActivityDrawer("task")}
