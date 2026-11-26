@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/compose/languages"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
@@ -49,9 +50,9 @@ func (s extensionSignals) Create(ctx context.Context, kind string, subject exten
 }
 
 // preflightExtensionKinds refuses a set whose company types, record kinds,
-// reports or signal types are malformed, before anything is registered.
+// reports, signal types or languages are malformed, before anything is registered.
 func preflightExtensionKinds(exts []extension.Extension) error {
-	for _, preflight := range []func([]extension.Extension) error{preflightCompanyTypes, preflightKindsLinksSignals, preflightReports} {
+	for _, preflight := range []func([]extension.Extension) error{preflightCompanyTypes, preflightKindsLinksSignals, preflightReports, languages.Preflight} {
 		if err := preflight(exts); err != nil {
 			return err
 		}

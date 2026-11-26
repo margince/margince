@@ -93,3 +93,11 @@ func TestATemplateLocaleGivesItsLanguageOrTheDefault(t *testing.T) {
 		}
 	}
 }
+
+func TestATemplateLocaleKeepsItsRegion(t *testing.T) {
+	for locale, want := range map[string]bool{"de-DE": true, "de-AT": true, "de": true, "deutsch": false, "de-at": false, "DE": false, "": false} {
+		if got := templateLocaleShape.MatchString(locale); got != want {
+			t.Errorf("locale %q matches = %v, want %v", locale, got, want)
+		}
+	}
+}

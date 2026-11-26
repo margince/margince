@@ -948,6 +948,9 @@ public.lead.source_system document
 public.lead.status document
 public.lead.status_set_by document
 public.lead.title label
+public.language.code exempt bounded by a two-letter shape CHECK
+public.language.label label
+public.language.source document
 public.lead_disqualify_reason.label label
 public.lead_disqualify_reason.label_key exempt generated from independently checked source columns
 public.lead_disqualify_reason.shipped_label label
