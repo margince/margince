@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // channelSubjectSuppressed asks every key the subject can have been erased by.
@@ -29,4 +30,13 @@ func (s *Store) channelSubjectSuppressed(ctx context.Context, tx pgx.Tx, in Ensu
 		return false, nil
 	}
 	return storekit.EmailSuppressed(ctx, tx, in.CorroboratingEmail)
+}
+
+// channelKeysOf names the identity and its aliases as the suppression list keys them.
+func channelKeysOf(ci connector.ChannelIdentity) []storekit.ChannelIdentityKey {
+	var keys []storekit.ChannelIdentityKey
+	for _, each := range ci.All() {
+		keys = append(keys, storekit.ChannelIdentityKey{Provider: each.Provider, ChannelUserID: storekit.ChannelSuppressionAccount(each.AccountScope, each.ChannelUserID)})
+	}
+	return keys
 }

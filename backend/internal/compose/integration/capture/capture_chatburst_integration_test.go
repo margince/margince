@@ -221,13 +221,10 @@ func TestAMessageJoinsTheBurstWhenTheGapIsUnderFifteenMinutes(t *testing.T) {
 	if f.burstOf(late) == f.burstOf(ten) {
 		t.Fatal("a message 20 minutes after the last one joined its burst")
 	}
-	if got := f.burstOf(one); got != one {
-		t.Fatalf("a burst is named by its first message %s, got %s", one, got)
-	}
 
 	f.file("1", 0, "Hallo")
 	f.file("3", 30*time.Minute, "Wieder da, 20 Minuten spaeter.")
-	if f.burstOf(one) != one || f.burstOf(late) != late {
+	if f.burstOf(ten) != f.burstOf(one) || f.burstOf(late) == f.burstOf(one) {
 		t.Fatal("a redelivered message moved to another burst")
 	}
 	if got := f.ledgerRows(one, late); got != 2 {
@@ -317,8 +314,8 @@ func TestAMessageTheVerdictDidNotReadMovesToItsOwnBurst(t *testing.T) {
 	if len(moved) != 1 || moved[0] != two {
 		t.Fatalf("moved %v, want only the message the verdict did not read (%s)", moved, two)
 	}
-	if f.burstOf(two) != two || f.burstOf(one) != one {
-		t.Fatalf("bursts are %s and %s, want each message its own", f.burstOf(one), f.burstOf(two))
+	if f.burstOf(two) == f.burstOf(one) {
+		t.Fatalf("both messages are still in burst %s", f.burstOf(one))
 	}
 	if got := f.ledgerRows(two); got != 1 {
 		t.Fatalf("the unread message has %d questions of its own, want 1", got)
@@ -388,5 +385,54 @@ func TestAMailThreadRootedAtABurstIdLeavesTheBurstVerdictAlone(t *testing.T) {
 			`SELECT status FROM capture_thread_verdict WHERE first_activity_id = $1`, one).Scan(&status)
 	}); err != nil || status != capturemod.VerdictCleared {
 		t.Fatalf("the burst's verdict is %q (err %v) after a mail rooted at its id, want cleared", status, err)
+	}
+}
+
+// edit changes the text of one filed message, later than the filing.
+func (f burstFiling) edit(key, body string) {
+	f.t.Helper()
+	sink := compose.NewCaptureSink(f.fx.e.Pool, compose.CaptureConfig{})
+	outcome, err := capturemod.ChangeChatMessage(f.fx.ctx, sink, f.fx.binding, connector.ChatChange{
+		Kind: connector.ChatEdited, ConversationID: "990100", IdempotencyKey: key,
+		Body: body, Revision: clocktest.Now(f.t),
+	})
+	if err != nil || outcome != connector.ChatChangeApplied {
+		f.t.Fatalf("editing message %s: outcome %q, err %v", key, outcome, err)
+	}
+}
+
+// A verdict covers the text the model read. An edit after it takes the message
+// out of the burst, so the old answer cannot open the new text.
+func TestAnEditedMessageOfAJudgedBurstIsNotOpenedOnItsOldText(t *testing.T) {
+	f := newBurstFiling(t, "classified", false)
+	one := f.file("1", 0, "Danke fuer das Angebot.")
+	two := f.file("2", time.Minute, "Passt der Liefertermin?")
+	f.share()
+	brain := &burstBrain{}
+	f.judge(brain)
+	f.wantReaders("a judged ordinary burst", two, 2)
+
+	f.edit("2", "Ich habe die diagnosis vom Arzt bekommen.")
+	if f.burstOf(two) == f.burstOf(one) {
+		t.Fatal("an edited message stayed in the burst judged on its old text")
+	}
+	f.wantReaders("the edited message before its own verdict", two, 1)
+	f.wantReaders("the unedited message of the same burst", one, 2)
+	if got := f.ledgerRows(two); got != 1 {
+		t.Fatalf("the edited message has %d questions of its own, want 1", got)
+	}
+
+	f.judge(brain)
+	f.wantReaders("the edited message judged personal", two, 1)
+	f.wantReaders("the unedited message after the edit was judged", one, 2)
+}
+
+func TestAnEditBeforeTheVerdictKeepsTheBurst(t *testing.T) {
+	f := newBurstFiling(t, "classified", false)
+	one := f.file("1", 0, "Danke fuer das Angebot.")
+	two := f.file("2", time.Minute, "Passt der Liefertermin?")
+	f.edit("2", "Passt der Liefertermin im Dezember?")
+	if f.burstOf(two) != f.burstOf(one) {
+		t.Fatal("an edit of a message in a burst nobody judged moved it out")
 	}
 }

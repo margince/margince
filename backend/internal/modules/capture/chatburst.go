@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -269,10 +270,14 @@ func (s *ThreadVerdictStore) recordOutcomeOnBurstTx(
 	if !ok {
 		return ThreadOutcome{}, fmt.Errorf("capture: a chat burst question is keyed by %q", row.ThreadKey)
 	}
-	if err := stampSiblingsTx(ctx, tx, row.UserID, row.BurstMembers, status, kind, siblingStatusesTaken(status)); err != nil {
+	read, err := stillInBurstTx(ctx, tx, row.UserID, burst, row.BurstMembers)
+	if err != nil {
 		return ThreadOutcome{}, err
 	}
-	out := ThreadOutcome{Stamped: row.BurstMembers}
+	if err := stampSiblingsTx(ctx, tx, row.UserID, read, status, kind, siblingStatusesTaken(status)); err != nil {
+		return ThreadOutcome{}, err
+	}
+	out := ThreadOutcome{Stamped: read}
 	rows, err := tx.Query(ctx, `
 		SELECT i.activity_id
 		  FROM capture_import i JOIN activity a ON a.id = i.activity_id
@@ -293,13 +298,13 @@ func (s *ThreadVerdictStore) recordOutcomeOnBurstTx(
 		return out, err
 	}
 	rows.Close()
-	next := out.Moved[0]
+	next := ids.NewV7()
 	if _, err := tx.Exec(ctx, `
 		UPDATE capture_import SET burst_id = $3 WHERE user_id = $1 AND activity_id = ANY($2)`,
 		row.UserID, out.Moved, next); err != nil {
 		return ThreadOutcome{}, fmt.Errorf("capture: moving unread chat messages to their own burst: %w", err)
 	}
-	return out, openBurstQuestionTx(ctx, tx, row.UserID, next, next)
+	return out, openBurstQuestionTx(ctx, tx, row.UserID, next, out.Moved[0])
 }
 
 // readBursts fills in the chat bursts among the claimed questions. A burst that
@@ -337,4 +342,65 @@ func (s *ThreadVerdictStore) readBursts(ctx context.Context, claimed []PendingTh
 		return nil, fmt.Errorf("capture: reading the chat bursts awaiting a confidentiality verdict: %w", err)
 	}
 	return ready, nil
+}
+
+// stillInBurstTx keeps the claimed messages that are still in the burst. An
+// edit that landed after the claim moved its message out, and the answer says
+// nothing about the new text.
+func stillInBurstTx(ctx context.Context, tx pgx.Tx, user, burst ids.UUID, members []ids.UUID) ([]ids.UUID, error) {
+	var kept []ids.UUID
+	rows, err := tx.Query(ctx, `
+		SELECT activity_id FROM capture_import WHERE user_id = $1 AND burst_id = $2 AND activity_id = ANY($3)`,
+		user, burst, members)
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading which claimed chat messages are still in their burst: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("capture: reading a claimed chat message: %w", err)
+		}
+		kept = append(kept, id)
+	}
+	return kept, rows.Err()
+}
+
+// reopenEditedChatTx takes an edited chat message out of a burst whose verdict
+// was about the old text. That is a burst already cleared, or one the engine
+// claimed and is reading. The message goes into a burst of its own, born held
+// and with its own question, and its audience is derived again.
+func (s *Sink) reopenEditedChatTx(ctx context.Context, tx pgx.Tx, key connector.NaturalKey, user ids.UUID) error {
+	var activity, burst ids.UUID
+	var thread string
+	err := tx.QueryRow(ctx, `
+		SELECT a.id, i.burst_id, a.thread_key
+		  FROM activity a
+		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $3 AND i.burst_id IS NOT NULL
+		  JOIN capture_thread_verdict v ON v.user_id = i.user_id AND v.thread_key = `+threadverdict.BurstKeySQL("i.burst_id")+`
+		 WHERE a.source_system = $1 AND a.source_id = $2 AND a.restricted_at IS NULL
+		   AND (v.status = $4 OR (v.status = $5 AND v.claimed_by IS NOT NULL))`,
+		key.SourceSystem, key.SourceID, user, VerdictCleared, VerdictPending).Scan(&activity, &burst, &thread)
+	if err == pgx.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("capture: reading the burst of an edited chat message: %w", err)
+	}
+	if err := LockThreadHoldTx(ctx, tx, thread); err != nil {
+		return err
+	}
+	moved := ids.NewV7()
+	if _, err := tx.Exec(ctx, `
+		UPDATE capture_import SET burst_id = $3, verdict_status = NULL, verdict_reason = NULL
+		 WHERE activity_id = $1 AND user_id = $2`, activity, user, moved); err != nil {
+		return fmt.Errorf("capture: moving an edited chat message to a burst of its own: %w", err)
+	}
+	if err := openBurstQuestionTx(ctx, tx, user, moved, activity); err != nil {
+		return err
+	}
+	if s.recomputeAudience == nil {
+		return nil
+	}
+	return s.recomputeAudience(ctx, tx, ids.From[ids.ActivityKind](activity))
 }

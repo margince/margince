@@ -203,15 +203,6 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 	return res, nil
 }
 
-// channelKeysOf names the identity and its aliases as the suppression list keys them.
-func channelKeysOf(ci connector.ChannelIdentity) []storekit.ChannelIdentityKey {
-	var keys []storekit.ChannelIdentityKey
-	for _, each := range ci.All() {
-		keys = append(keys, storekit.ChannelIdentityKey{Provider: each.Provider, ChannelUserID: storekit.ChannelSuppressionAccount(each.AccountScope, each.ChannelUserID)})
-	}
-	return keys
-}
-
 // resolveChannelContact runs PO-F-1 over the channel identity and, when nothing
 // resolves, offers a new contact — speculatively, because the bind is the
 // arbiter of the identity race, not this lookup.
