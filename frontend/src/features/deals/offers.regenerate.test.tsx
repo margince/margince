@@ -78,8 +78,11 @@ async function regenerate() {
   );
   await screen.findByText("ANG-2026-0007");
   await userEvent.setup().click(screen.getByTestId("regenerate-offer"));
-  await waitFor(() => expect(globalThis.location.hash).toBe("#/offers/o-2"));
 }
+
+// The toast is shown by the same success handler that moves to the copy, and
+// leaves on a timer. Read in the wait that sees the move, it is read as it lands.
+const movedToCopy = () => expect(globalThis.location.hash).toBe("#/offers/o-2");
 
 // The revision asked for was made either way. When no AI line came with it,
 // the reader is told the copy is plain.
@@ -92,7 +95,10 @@ describe("regenerating a sent offer", () => {
       ai_generated: false,
     });
     await regenerate();
-    expect(await screen.findByText("Copied without AI changes.")).toBeTruthy();
+    await waitFor(() => {
+      movedToCopy();
+      expect(screen.getByText("Copied without AI changes.")).toBeTruthy();
+    });
   });
 
   it("says nothing of the kind when AI lines were added", async () => {
@@ -105,6 +111,7 @@ describe("regenerating a sent offer", () => {
       diff_from_previous: { added: [], removed: [], changed: [] },
     });
     await regenerate();
+    await waitFor(movedToCopy);
     expect(screen.queryByText("Copied without AI changes.")).toBeNull();
   });
 });
