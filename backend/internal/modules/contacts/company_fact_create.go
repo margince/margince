@@ -99,7 +99,7 @@ func (s *Store) CreateCompanyFact(
 	factKey := in.Field + ":" + valueKey
 
 	return writeEvidence(ctx, s, companyID, evidenceWrite[crmcontracts.CompanyFact]{
-		table:      tableCompanyFact,
+		entity:     tableCompanyFact,
 		archived:   storekit.NoArchiveColumn,
 		changedKey: factKey,
 		value:      &value,
@@ -141,7 +141,7 @@ func (s *Store) DeleteCompanyFact(
 	ctx context.Context, companyID ids.CompanyID, factKey string, in FactWriteInput,
 ) error {
 	_, err := writeEvidence(ctx, s, companyID, evidenceWrite[crmcontracts.CompanyFact]{
-		table:      tableCompanyFact,
+		entity:     tableCompanyFact,
 		archived:   storekit.NoArchiveColumn,
 		changedKey: factKey,
 		ifVersion:  in.IfVersion,
@@ -177,19 +177,18 @@ func insertHumanCompanyFact(
 	}
 	var id ids.UUID
 	err = tx.QueryRow(ctx, `
-		INSERT INTO company_fact
-		       (company_id, category, field, value, value_key,
-		        evidence_snippet, source_url, confidence, source, captured_by, site_read_id)
-		VALUES ($1, $2, $3, $4, $5, '', '', 1, 'human', $6, NULL)
+		INSERT INTO field_provenance
+		       (object_type, object_id, field_name, value, value_key,
+		        evidence_snippet, evidence_ref, confidence, source, captured_by, site_read_id)
+		VALUES ('company', $1, $2, $3, $4, '', '', 1, 'human', $5, NULL)
 		RETURNING id`,
-		companyID, category, field, value, valueKey, capturedBy,
+		companyID, field, value, valueKey, capturedBy,
 	).Scan(&id)
 	// The probe above and this insert are two statements, so a second caller
-	// can land the same fact between them. uq_company_fact is what actually
-	// prevents the duplicate; without translating its violation the loser of
-	// that race gets a 500 where the contract promises a 409, and the answer
-	// would depend on timing rather than on what is true.
-	if constraint, dup := storekit.UniqueViolation(err); dup && constraint == "uq_company_fact" {
+	// can land the same fact between them. The evidence key prevents the
+	// duplicate. Untranslated, its violation hands the loser of that race a 500
+	// where the contract promises a 409.
+	if constraint, dup := storekit.UniqueViolation(err); dup && constraint == uniqueEvidenceKey {
 		return ids.UUID{}, fmt.Errorf(
 			"this company already states %s:%s; confirm or correct it instead: %w",
 			field, valueKey, apperrors.ErrConflict)

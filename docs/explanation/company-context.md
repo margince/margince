@@ -32,6 +32,12 @@ four separate parts, all with workspace scope and all with provenance:
 1. **Identity**: the standard `company` columns and the domain of the company's site.
 2. **Business profile**: statements that a human can confirm, of one value each. They sit in `company_profile_field` (offer summary, ICP, value proposition, USP, buyer roles, …). Each has evidence, a confidence, a source and a capture actor.
 3. **Evidence facts**: findings that can show up more than once, each grounded in a source. They sit in `company_fact` (locations, services, products, certifications, named customers, technologies, …). Each links back to its `site_read`.
+
+Both are views. The rows are stored in `field_provenance`, the one table for evidence about a company or a
+contact: a row with a value is evidence, a row without one records who wrote a record column. A fact's
+category follows from its field (`company_fact_category`). Rows written before that move there through the
+data task `core/1795661270_evidence_rows_move_to_field_provenance`, and the views read them from the
+`_legacy` tables until they have moved.
 4. **Operational dossier**: the record of the read itself (`site_read`: progress, pages read or skipped, the reason it stopped). It is never prompt context on its own.
 
 The standing rule across all of them: a human edit wins over a machine refresh. A website read run again

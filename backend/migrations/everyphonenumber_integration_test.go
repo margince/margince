@@ -23,14 +23,34 @@ import (
 const (
 	phoneKeyMigration      = "1790488392_phone_evidence_is_keyed_by_number"
 	phoneKeyCheckMigration = "1790488393_phone_evidence_key_check_is_validated"
+	// evidenceViewMigration made contact_profile_field a view over
+	// field_provenance; rewinding it gives the keying migrations their table.
+	evidenceViewMigration = "1795661269_the_typed_evidence_tables_read_field_provenance"
 )
 
 // rewindPhoneKey puts the table back where the keying migration found it:
 // value_key present and empty, one row per field.
 func rewindPhoneKey(t *testing.T, conn *pgx.Conn) {
 	t.Helper()
+	rewindEvidenceView(t, conn)
 	replayDown(t, conn, phoneKeyCheckMigration)
 	replayDown(t, conn, phoneKeyMigration)
+}
+
+// rewindEvidenceView puts contact_profile_field back as a table, once, and the
+// view back over it when the test is done.
+func rewindEvidenceView(t *testing.T, conn *pgx.Conn) {
+	t.Helper()
+	var kind string
+	if err := conn.QueryRow(context.Background(),
+		`SELECT relkind::text FROM pg_class WHERE oid = 'contact_profile_field'::regclass`).Scan(&kind); err != nil {
+		t.Fatalf("reading what contact_profile_field is: %v", err)
+	}
+	if kind != "v" {
+		return
+	}
+	replayDown(t, conn, evidenceViewMigration)
+	t.Cleanup(func() { replayMigration(t, conn, evidenceViewMigration+".up.sql") })
 }
 
 func replayPhoneKey(t *testing.T, conn *pgx.Conn) {
@@ -85,6 +105,7 @@ func TestTheRollbackKeepsTheNewestNumber(t *testing.T) {
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
 	seedEveryNumberContact(t, conn)
+	rewindEvidenceView(t, conn)
 	if _, err := conn.Exec(context.Background(), `
 		INSERT INTO contact_profile_field
 		  (contact_id, field, value_key, value, evidence_snippet, source_ref, source, captured_by, observed_at)

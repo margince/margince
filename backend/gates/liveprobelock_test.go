@@ -61,12 +61,31 @@ const (
 	seatLock = "holdLiveSeat"
 )
 
+// companyEvidenceRace is why a company's evidence writer holds the company and
+// not a contact. Erasure clears a contact's field_provenance rows, and the
+// company facts that repeat a subject's address or number.
+const companyEvidenceRace = "it writes a company's evidence, never a contact's, under the company it probes. An erasure " +
+	"deletes the company facts that repeat the subject's address or number, and a site read racing it can write " +
+	"such a fact back, as a feed can an offer. That row is the site's own current statement about the company, " +
+	"and the subject's next erasure or a user's correction removes it"
+
 // unlockedLiveWrites records exceptions to holding an erasure-cleared subject.
 var unlockedLiveWrites = gatekit.Waive(map[string]string{
 	"internal/modules/dealrooms:Store.OpenThread": "the SELLER side of a deal-room thread: it builds threadAuthor{userID: &userID}, so every comment it writes carries author_user_id and a NULL author_participant_id. The erasure's delete is keyed on author_participant_id, so no row this function writes is one an erasure clears, and there is no row for a racing erasure to restore. The buyer's own reply path writes the participant author instead, and reaches this census through a different probe helper than the one it walks, so its own race is not answered by this declaration",
 	"internal/modules/dealrooms:Store.Reply":      "the same seller-side author on the reply rather than the opening comment, threadAuthor{userID: &userID} at thread_write.go:382, so the same reasoning holds: author_participant_id is NULL and the erasure's delete cannot name the row",
 
-	"internal/modules/contacts:Store.RecordOfferedValues": "the erasure of an employee deletes a company's offered values by the employment edge, and a feed call racing it can write an offer back. That offer is the feed's own current value for the company and names no subject the erasure was clearing; the company row is the one locked live, and the next feed run would write the same offer",
+	"internal/modules/contacts:ApplyMeetingProfileTx":               companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyColdStartProfile":         companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyColdStartProfileTx":       companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyDeepRead":                 companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyDeepReadTx":               companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyEnrichment":               companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyEnrichmentTx":             companyEvidenceRace,
+	"internal/modules/contacts:Store.ResolveDomainTriage":           companyEvidenceRace,
+	"internal/modules/contacts:Store.ResolveUnreadableDomainTriage": companyEvidenceRace,
+	"internal/modules/contacts:Store.resolveDomainTriageTx":         companyEvidenceRace,
+	"internal/modules/contacts:applyColdStartTx":                    companyEvidenceRace,
+	"internal/modules/contacts:Store.RecordOfferedValues":           "the erasure of an employee deletes a company's offered values by the employment edge, and a feed call racing it can write an offer back. That offer is the feed's own current value for the company and names no subject the erasure was clearing; the company row is the one locked live, and the next feed run would write the same offer",
 })
 
 func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {

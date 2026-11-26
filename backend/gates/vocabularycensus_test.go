@@ -133,6 +133,11 @@ var catalogVocabularies = sync.OnceValues(func() (map[string][]string, error) {
 			out[col] = values
 		}
 	}
+	evidence, err := readEvidenceVocabularies()
+	if err != nil {
+		return nil, err
+	}
+	maps.Copy(out, evidence)
 	if len(out) == 0 {
 		return nil, fmt.Errorf("%s yielded no CHECK vocabulary: the catalog format moved", vocabularyCatalog)
 	}
@@ -488,7 +493,7 @@ const repeatedVocabulariesCeiling = 9
 // list this census does not read as a column's vocabulary. Each states a
 // condition inside a wider rule, such as finance_invoice_credit_note_status.
 // The ceiling rises only for such a rule.
-const unreadArrayCheckCeiling = 30
+const unreadArrayCheckCeiling = 29
 
 // TestNoVocabularyCheckHidesFromTheCensus fails when a CHECK with a value
 // list stops being read, so a catalog format change cannot shrink the census.
@@ -501,7 +506,7 @@ func TestNoVocabularyCheckHidesFromTheCensus(t *testing.T) {
 	var unread []string
 	for line := range strings.SplitSeq(string(raw), "\n") {
 		m := catalogCheckLine.FindStringSubmatch(line)
-		if m == nil || !strings.Contains(m[2], " = ANY (ARRAY[") {
+		if m == nil || !strings.Contains(m[2], " = ANY (ARRAY[") || isEvidenceVocabularyLine(line) {
 			continue
 		}
 		if v := readWholeVocabulary(m[2]); v == nil || (v[1] != "" && v[1] != v[2]) {
