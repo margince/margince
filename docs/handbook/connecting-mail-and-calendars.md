@@ -182,8 +182,8 @@ Reconnecting the same account does not bring back mail. Import it again instead.
 2. Choose **Start a new import** and pick a window that reaches back to the first missing date.
 3. Press **Start import**.
 Mail already on record is not added twice. Mail you excluded and threads held as private stay as they were.
-When the import reaches back over the dates, **Mail missing** goes away, and Home stops asking for a follow-up you sent.
-Also called: re-import mail, missing sent email, recover email, resync mailbox.
+When the import reaches back over the dates, **Mail missing** goes away. Home then stops asking for a follow-up you sent.
+Also called: re-import mail, missing sent email, recover email, sync mailbox again.
 
 ### Why did my Gmail or Outlook connection stop working?
 When emails stop coming into Margince, open **Settings → Connections** and read the badge on the account and the word on its **New mail** row.
