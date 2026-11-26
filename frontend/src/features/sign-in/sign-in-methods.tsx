@@ -81,6 +81,7 @@ export function SignInMethodsCard({
   // settings but must not be able to grant itself a role through the directory.
   // Gated separately so the switches stay usable for them while the map does not.
   const canManageGrants = useCanWrite("authentication_policy", "update");
+  const canReadPolicy = useCan("authentication_policy", "read");
   // Reading a vendor app takes capture settings, which a custom role may lack.
   const canReadApps = useCan("capture_settings", "read");
   const settings = useAuthenticationPolicy();
@@ -117,6 +118,7 @@ export function SignInMethodsCard({
           lock={lockFor(locks, "identity.oidc_group_role_map", t)}
         />
         <GoogleDirectoryPanel
+          canRead={canReadPolicy}
           canManage={canManageGrants}
           lock={lockFor(locks, "identity.google_directory_credential", t)}
         />

@@ -66,9 +66,8 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"internal/modules/ai/openaicompat.go:func postFor":          "carries the customer's own provider key, which is the identity that provider bills and throttles",
 	"internal/modules/ai/decisionwire.go:func Decide":           "carries the customer's own provider key to a decision endpoint, or reaches a decision runner the operator runs on a host they configured — either way the other end already knows what is calling it",
 	"internal/modules/ai/decisionprobe.go:func wireProbe":       "the key test's empty decision request: the same caller as Decide, carrying the customer's own key to the endpoint they bound, or reaching a runner they configured",
-	"internal/platform/googlejwt/exchange.go:func AccessToken":  "presents an assertion signed by the customer's own service account, which is the identity Google checks",
+	"internal/platform/googlejwt/exchange.go:func Exchange":     "presents an assertion signed by the customer's own service account, which is the identity Google checks",
 	"internal/modules/identity/googlegroups.go:func groupsPage": "carries a token minted for the customer's own service account, which names the caller to Google more precisely than an agent could",
-	"internal/modules/ai/vertexcredential.go:func exchange":     "presents an assertion signed by the customer's own service account, which is the identity Google checks",
 	// One builder for all five vendors' model-list endpoint, on the same ground
 	// as their completion calls above: the request that asks a vendor what it
 	// serves carries the same credential as the request that then calls it.

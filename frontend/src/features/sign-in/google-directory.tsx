@@ -28,11 +28,12 @@ type DirectoryStatus = components["schemas"]["GoogleDirectoryStatus"];
  * whether one is stored and how the newest lookup went, never the key.
  */
 export function GoogleDirectoryPanel({
+  canRead,
   canManage,
   lock,
-}: Readonly<{ canManage: boolean; lock: FieldLock }>) {
+}: Readonly<{ canRead: boolean; canManage: boolean; lock: FieldLock }>) {
   const t = useT();
-  const status = useGoogleDirectory(canManage);
+  const status = useGoogleDirectory(canRead);
   const { store, remove } = useChangeGoogleDirectory();
   const [key, setKey] = useState("");
   const [admin, setAdmin] = useState("");

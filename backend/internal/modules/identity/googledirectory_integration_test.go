@@ -27,7 +27,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-const directoryGroup = "crm-users@example.test"
+const (
+	directoryGroup  = "crm-users@example.test"
+	workspaceDomain = "example.test"
+)
+
+// googleClaims is a Google token for a Workspace member: the domain that
+// vouches for it, and the subject and address signIn fills in.
+func googleClaims() OIDCClaims { return OIDCClaims{HostedDomain: workspaceDomain} }
 
 // memorySealer stands in for the key vault. It keeps what was sealed under a
 // ref and forgets it when the setting retires the ref.
@@ -84,6 +91,7 @@ func setupDirectoryEnv(t *testing.T, slug string) *directoryEnv {
 	e.google = newFakeGoogle(t, []string{directoryGroup})
 	e.vault = &memorySealer{sealed: map[string]string{}}
 	e.cred = testDirectoryCredential(t)
+	e.google.known = []string{e.cred.AdminSubject, "sub-" + e.slug}
 	e.svc.installation.Store(&e.ws)
 	e.svc.WithGoogleDirectory(unlockedConfig(t, e.pool).WithSealer(e.vault.sealer()))
 	e.svc.directory.reader = e.google.reader(t)
@@ -104,7 +112,9 @@ func (e *directoryEnv) storeCredential(t *testing.T) {
 
 func (e *directoryEnv) signIn(t *testing.T, provider string, claims OIDCClaims) (string, error) {
 	t.Helper()
-	claims.Email = e.member.Email
+	if claims.Email == "" {
+		claims.Email = e.member.Email
+	}
 	if claims.Subject == "" {
 		claims.Subject = "sub-" + e.slug
 	}
@@ -131,7 +141,7 @@ func TestAGoogleMemberInAMappedGroupHoldsTheMappedRole(t *testing.T) {
 	e.storeCredential(t)
 	e.google.userKeys = nil
 
-	token, err := e.signIn(t, "google", OIDCClaims{})
+	token, err := e.signIn(t, "google", googleClaims())
 	if err != nil || token == "" {
 		t.Fatalf("sign-in: token=%q err=%v", token, err)
 	}
@@ -141,15 +151,15 @@ func TestAGoogleMemberInAMappedGroupHoldsTheMappedRole(t *testing.T) {
 	if n := roleAssignAuditCount(t, e.owner, e.member.UserID); n != 1 {
 		t.Fatalf("assign audit rows = %d, want the one row the claim path writes", n)
 	}
-	if len(e.google.userKeys) != 1 || e.google.userKeys[0] != e.member.Email {
-		t.Fatalf("directory asked for %v, want the signed-in member once", e.google.userKeys)
+	if len(e.google.userKeys) != 1 || e.google.userKeys[0] != "sub-"+e.slug {
+		t.Fatalf("directory asked for %v, want the signed-in member's subject once", e.google.userKeys)
 	}
 }
 
 func TestAGoogleSignInWithoutACredentialMakesNoLookupAndGrantsNothing(t *testing.T) {
 	e := setupDirectoryEnv(t, "gdir-nocred")
 
-	if _, err := e.signIn(t, "google", OIDCClaims{}); err != nil {
+	if _, err := e.signIn(t, "google", googleClaims()); err != nil {
 		t.Fatalf("sign-in: %v", err)
 	}
 	if len(e.google.userKeys) != 0 || len(e.google.assertions) != 0 {
@@ -166,7 +176,7 @@ func TestAGoogleSignInWithAnEmptyMapMakesNoLookup(t *testing.T) {
 	e.google.userKeys = nil
 	e.svc.WithGroupRoleMap(func(context.Context, pgx.Tx) (map[string]string, error) { return map[string]string{}, nil })
 
-	if _, err := e.signIn(t, "google", OIDCClaims{}); err != nil {
+	if _, err := e.signIn(t, "google", googleClaims()); err != nil {
 		t.Fatalf("sign-in: %v", err)
 	}
 	if len(e.google.userKeys) != 0 {
@@ -178,7 +188,7 @@ func TestAFailedLookupSignsTheMemberInWithNothingNewAndTakesNothingAway(t *testi
 	e := setupDirectoryEnv(t, "gdir-fail")
 	e.storeCredential(t)
 	// A role the member already holds from an earlier sign-in whose token carried it.
-	if _, err := e.signIn(t, "google", OIDCClaims{Groups: []string{directoryGroup}}); err != nil {
+	if _, err := e.signIn(t, "google", OIDCClaims{HostedDomain: workspaceDomain, Groups: []string{directoryGroup}}); err != nil {
 		t.Fatalf("first sign-in: %v", err)
 	}
 	if _, err := e.owner.Exec(context.Background(),
@@ -191,7 +201,7 @@ func TestAFailedLookupSignsTheMemberInWithNothingNewAndTakesNothingAway(t *testi
 	}
 	e.google.groupsStatus = http.StatusServiceUnavailable
 
-	token, err := e.signIn(t, "google", OIDCClaims{})
+	token, err := e.signIn(t, "google", googleClaims())
 	if err != nil || token == "" {
 		t.Fatalf("a failed lookup must not fail the sign-in: token=%q err=%v", token, err)
 	}
@@ -211,12 +221,12 @@ func TestARecoveredLookupWritesOneRowAndABusyDirectoryWritesNoMore(t *testing.T)
 	e := setupDirectoryEnv(t, "gdir-recover")
 	e.storeCredential(t)
 	e.google.groupsStatus = http.StatusForbidden
-	if _, err := e.signIn(t, "google", OIDCClaims{}); err != nil {
+	if _, err := e.signIn(t, "google", googleClaims()); err != nil {
 		t.Fatal(err)
 	}
 	e.google.groupsStatus = http.StatusOK
 	for range 3 {
-		if _, err := e.signIn(t, "google", OIDCClaims{}); err != nil {
+		if _, err := e.signIn(t, "google", googleClaims()); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -244,7 +254,7 @@ func TestATokenThatCarriesGroupsWinsAndNoLookupRuns(t *testing.T) {
 	e.storeCredential(t)
 	e.google.userKeys = nil
 
-	if _, err := e.signIn(t, "google", OIDCClaims{Groups: []string{directoryGroup}}); err != nil {
+	if _, err := e.signIn(t, "google", OIDCClaims{HostedDomain: workspaceDomain, Groups: []string{directoryGroup}}); err != nil {
 		t.Fatalf("sign-in: %v", err)
 	}
 	if len(e.google.userKeys) != 0 {
@@ -338,7 +348,73 @@ func TestACredentialGoogleRefusesIsNeverSealed(t *testing.T) {
 	if e.vault.held() != 0 {
 		t.Fatal("a credential Google refused was sealed")
 	}
-	if rows := e.directoryLog(t); len(rows) != 1 || rows[0] != "failed:delegation_refused" {
-		t.Fatalf("directory log = %v, want the refused check", rows)
+	if rows := e.directoryLog(t); len(rows) != 0 {
+		t.Fatalf("directory log = %v, want no row: a refused candidate leaves the status alone", rows)
 	}
+}
+
+func TestAGoogleTokenTheDirectoryDoesNotVouchForGetsNoGroupsAndNoRoles(t *testing.T) {
+	cases := []struct {
+		name   string
+		claims OIDCClaims
+		asked  bool
+	}{
+		{"no hosted domain", OIDCClaims{}, false},
+		{"a foreign hosted domain", OIDCClaims{HostedDomain: "other.test"}, false},
+		{"a subject the directory does not know", OIDCClaims{HostedDomain: workspaceDomain, Subject: "someone-else"}, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupDirectoryEnv(t, "gdir-vouch")
+			e.storeCredential(t)
+			e.google.userKeys = nil
+
+			if token, err := e.signIn(t, "google", tc.claims); err != nil || token == "" {
+				t.Fatalf("sign-in: token=%q err=%v", token, err)
+			}
+			if got := heldRoleKeys(t, e.owner, e.member.UserID); len(got) != 0 {
+				t.Fatalf("held roles = %v, want none", got)
+			}
+			if asked := len(e.google.userKeys) > 0; asked != tc.asked {
+				t.Fatalf("directory asked = %v (%v), want %v", asked, e.google.userKeys, tc.asked)
+			}
+		})
+	}
+}
+
+func TestAStatusBelongsToTheCredentialThatEarnedIt(t *testing.T) {
+	e := setupDirectoryEnv(t, "gdir-fingerprint")
+	e.storeCredential(t)
+	ctx := e.wsCtx(e.admin)
+
+	// A refused replacement answers by its error alone and leaves the working
+	// credential's status as it was.
+	e.google.groupsStatus = http.StatusForbidden
+	rotated := testDirectoryCredential(t)
+	if _, err := e.svc.SetGoogleDirectory(ctx, DirectoryInput{
+		ServiceAccountJSON: rotated.ServiceAccountKey, AdminSubject: rotated.AdminSubject,
+	}); err == nil {
+		t.Fatal("a refused replacement was accepted")
+	}
+	status, err := e.svc.GoogleDirectoryStatus(ctx)
+	if err != nil || !status.Configured || status.LastResult != directoryOK {
+		t.Fatalf("status after a refused replacement = %+v err=%v, want the working credential's ok", status, err)
+	}
+
+	// A credential nobody has checked yet is not the old one's ok.
+	e.google.groupsStatus = http.StatusOK
+	e.svc.directory.cfg = identityConfig(t, environConfig(t,
+		"MARGINCE_IDENTITY_GOOGLE_DIRECTORY_CREDENTIAL="+bootBundle(t, rotated)), e.pool).WithSealer(e.vault.sealer())
+	if status, err = e.svc.GoogleDirectoryStatus(ctx); err != nil || !status.Configured || status.LastResult != "" {
+		t.Fatalf("status of an unchecked boot credential = %+v err=%v, want configured and not checked", status, err)
+	}
+}
+
+func bootBundle(t *testing.T, cred directoryCredential) string {
+	t.Helper()
+	raw, err := json.Marshal(cred)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
 }

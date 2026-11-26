@@ -29,6 +29,7 @@ function jsonResponse(body: unknown, status = 200) {
 function mount(
   status: Record<string, unknown>,
   put: () => Response = () => jsonResponse(status),
+  canManage = true,
 ) {
   const writes: { method: string; body: unknown }[] = [];
   vi.stubGlobal(
@@ -53,9 +54,14 @@ function mount(
       <LocaleProvider initial="en">{children}</LocaleProvider>
     </QueryClientProvider>
   );
-  render(<GoogleDirectoryPanel canManage lock={{ disabled: false }} />, {
-    wrapper: Wrap,
-  });
+  render(
+    <GoogleDirectoryPanel
+      canRead
+      canManage={canManage}
+      lock={{ disabled: false }}
+    />,
+    { wrapper: Wrap },
+  );
   return { writes };
 }
 
@@ -124,7 +130,7 @@ describe("the Google group lookup panel", () => {
           type: "about:blank",
           title: "Unprocessable",
           status: 422,
-          code: "setting_invalid",
+          code: "validation_error",
           detail: "Google refused the delegation.",
         },
         422,
@@ -158,5 +164,26 @@ describe("the Google group lookup panel", () => {
     await waitFor(() =>
       expect(writes).toEqual([{ method: "DELETE", body: null }]),
     );
+  });
+
+  it("shows the status and no form to a reader who may not change it", async () => {
+    mount(
+      {
+        configured: true,
+        last_result: "ok",
+        last_checked_at: "2026-11-20T10:00:00Z",
+      },
+      undefined,
+      false,
+    );
+    expect(
+      await screen.findByText(/Connected\. The last lookup worked/),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Check and store" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Remove connection" }),
+    ).toBeNull();
   });
 });

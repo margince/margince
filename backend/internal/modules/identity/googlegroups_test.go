@@ -53,9 +53,11 @@ type fakeGoogle struct {
 	userKeys     []string
 	tokenStatus  int
 	groupsStatus int
-	pages        [][]string
-	hang         bool
-	srv          *httptest.Server
+	// known, when set, is who the Directory answers for. Anyone else is a 404.
+	known []string
+	pages [][]string
+	hang  bool
+	srv   *httptest.Server
 }
 
 func newFakeGoogle(t *testing.T, pages ...[]string) *fakeGoogle {
@@ -104,6 +106,9 @@ func (f *fakeGoogle) groups(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	f.userKeys = append(f.userKeys, r.URL.Query().Get("userKey"))
 	status, hang, pages := f.groupsStatus, f.hang, f.pages
+	if len(f.known) > 0 && !slices.Contains(f.known, r.URL.Query().Get("userKey")) {
+		status = http.StatusNotFound
+	}
 	f.mu.Unlock()
 	if hang {
 		<-r.Context().Done()

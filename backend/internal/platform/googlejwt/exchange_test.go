@@ -9,9 +9,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
-func TestAccessTokenPostsTheAssertionUnderTheJWTBearerGrant(t *testing.T) {
+func TestExchangePostsTheAssertionUnderTheJWTBearerGrant(t *testing.T) {
 	var grant, assertion string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseForm(); err != nil {
@@ -22,16 +23,16 @@ func TestAccessTokenPostsTheAssertionUnderTheJWTBearerGrant(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	got, err := AccessToken(context.Background(), srv.Client(), srv.URL, "signed.assertion")
+	got, err := Exchange(context.Background(), srv.Client(), srv.URL, "signed.assertion")
 	if err != nil {
 		t.Fatalf("AccessToken: %v", err)
 	}
-	if got != "tok-1" || grant != JWTBearerGrant || assertion != "signed.assertion" {
+	if got.AccessToken != "tok-1" || got.ExpiresIn != 3599*time.Second || grant != JWTBearerGrant || assertion != "signed.assertion" {
 		t.Fatalf("token=%q grant=%q assertion=%q", got, grant, assertion)
 	}
 }
 
-func TestAccessTokenKeepsOnlyTheStatusAndTheOAuthCodeOfARefusal(t *testing.T) {
+func TestExchangeKeepsOnlyTheStatusAndTheOAuthCodeOfARefusal(t *testing.T) {
 	cases := []struct {
 		name      string
 		status    int
@@ -51,7 +52,7 @@ func TestAccessTokenKeepsOnlyTheStatusAndTheOAuthCodeOfARefusal(t *testing.T) {
 				_, _ = w.Write([]byte(tc.body))
 			}))
 			defer srv.Close()
-			_, err := AccessToken(context.Background(), srv.Client(), srv.URL, "a")
+			_, err := Exchange(context.Background(), srv.Client(), srv.URL, "a")
 			var refused ErrExchangeRefused
 			if !errors.As(err, &refused) {
 				t.Fatalf("err = %v, want ErrExchangeRefused", err)
@@ -63,10 +64,10 @@ func TestAccessTokenKeepsOnlyTheStatusAndTheOAuthCodeOfARefusal(t *testing.T) {
 	}
 }
 
-func TestAccessTokenRefusesAnAnswerWithNoToken(t *testing.T) {
+func TestExchangeRefusesAnAnswerWithNoToken(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{}`)) }))
 	defer srv.Close()
-	if _, err := AccessToken(context.Background(), srv.Client(), srv.URL, "a"); err == nil {
+	if _, err := Exchange(context.Background(), srv.Client(), srv.URL, "a"); err == nil {
 		t.Fatal("an answer without an access token must fail")
 	}
 }

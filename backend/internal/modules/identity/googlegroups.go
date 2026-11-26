@@ -17,6 +17,7 @@ import (
 	"net/mail"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/googlejwt"
@@ -99,6 +100,14 @@ func (c directoryCredential) validate() error {
 	return nil
 }
 
+// covers reports whether a token's hosted domain is the admin's own domain. A
+// token with no hosted domain is a personal account, which no Workspace
+// directory vouches for.
+func (c directoryCredential) covers(hostedDomain string) bool {
+	_, domain, ok := strings.Cut(c.AdminSubject, "@")
+	return ok && hostedDomain != "" && strings.EqualFold(domain, hostedDomain)
+}
+
 // GoogleGroupsReader lists the groups one address belongs to.
 type GoogleGroupsReader struct {
 	http     *http.Client
@@ -157,11 +166,11 @@ func (r *GoogleGroupsReader) accessToken(ctx context.Context, cred directoryCred
 	if err != nil {
 		return "", DirectoryError{DirectoryKeyInvalid}
 	}
-	token, err := googlejwt.AccessToken(ctx, r.http, r.tokenURL, assertion)
+	token, err := googlejwt.Exchange(ctx, r.http, r.tokenURL, assertion)
 	var refused googlejwt.ErrExchangeRefused
 	switch {
 	case err == nil:
-		return token, nil
+		return token.AccessToken, nil
 	case errors.As(err, &refused) && refused.Permanent():
 		return "", DirectoryError{DirectoryDelegationRefused}
 	default:

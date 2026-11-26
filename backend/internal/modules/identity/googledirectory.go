@@ -10,6 +10,8 @@ package identity
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -91,7 +93,8 @@ type DirectoryStatus struct {
 }
 
 // GoogleDirectoryStatus reports whether a credential is held and how the last
-// check went.
+// check of that credential went. A check of any other credential does not count,
+// so a rotated credential reads as not yet checked.
 func (s *Service) GoogleDirectoryStatus(ctx context.Context) (DirectoryStatus, error) {
 	if err := auth.Require(ctx, authenticationPolicyObject, principal.ActionRead); err != nil {
 		return DirectoryStatus{}, err
@@ -108,12 +111,17 @@ func (s *Service) GoogleDirectoryStatus(ctx context.Context) (DirectoryStatus, e
 	if !status.Configured {
 		return status, nil
 	}
+	sealed, err := config.StoredVal(ctx, s.directory.cfg, GoogleDirectoryCredential)
+	if err != nil {
+		return DirectoryStatus{}, err
+	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var at time.Time
 		var result, reason *string
 		scanErr := tx.QueryRow(ctx,
 			`SELECT occurred_at, detail->>'outcome', detail->>'reason' FROM system_log
-			 WHERE action = $1 ORDER BY occurred_at DESC LIMIT 1`, directoryLogAction).Scan(&at, &result, &reason)
+			 WHERE action = $1 AND detail->>'credential' = $2 ORDER BY occurred_at DESC LIMIT 1`,
+			directoryLogAction, credentialFingerprint(sealed)).Scan(&at, &result, &reason)
 		if errors.Is(scanErr, pgx.ErrNoRows) {
 			return nil
 		}
@@ -127,6 +135,13 @@ func (s *Service) GoogleDirectoryStatus(ctx context.Context) (DirectoryStatus, e
 	return status, err
 }
 
+// credentialFingerprint names a credential in the log without revealing it: a
+// short hash of the whole sealed bundle, so a rotated credential is another one.
+func credentialFingerprint(sealed string) string {
+	sum := sha256.Sum256([]byte(sealed))
+	return hex.EncodeToString(sum[:8])
+}
+
 func deref(s *string) string {
 	if s == nil {
 		return ""
@@ -135,7 +150,8 @@ func deref(s *string) string {
 }
 
 // SetGoogleDirectory checks the credential against Google and, only if Google
-// accepts it, seals it, replacing any earlier one. The check reads the admin's
+// accepts it, seals it, replacing any earlier one. A refused candidate is
+// answered by the error alone: it leaves the stored credential's status as it was. The check reads the admin's
 // own groups, which proves the key, the delegation, the scope and the admin
 // address in one call.
 func (s *Service) SetGoogleDirectory(ctx context.Context, in DirectoryInput) (DirectoryStatus, error) {
@@ -155,9 +171,7 @@ func (s *Service) SetGoogleDirectory(ctx context.Context, in DirectoryInput) (Di
 		return DirectoryStatus{}, directoryRefused(err.Error())
 	}
 	if _, err := s.directory.reader.Groups(ctx, cred, cred.AdminSubject); err != nil {
-		reason := directoryReason(err)
-		s.recordDirectoryCheck(ctx, directoryFailed, reason, true)
-		return DirectoryStatus{}, directoryRefused(directoryAdvice[reason])
+		return DirectoryStatus{}, directoryRefused(directoryAdvice[directoryReason(err)])
 	}
 	sealed, err := json.Marshal(cred)
 	if err != nil {
@@ -166,7 +180,7 @@ func (s *Service) SetGoogleDirectory(ctx context.Context, in DirectoryInput) (Di
 	if err := config.Save(ctx, s.directory.cfg, GoogleDirectoryCredential, string(sealed)); err != nil {
 		return DirectoryStatus{}, err
 	}
-	s.recordDirectoryCheck(ctx, directoryOK, "", true)
+	s.recordDirectoryCheck(ctx, credentialFingerprint(string(sealed)), directoryOK, "", true)
 	return s.GoogleDirectoryStatus(ctx)
 }
 
@@ -204,7 +218,10 @@ var directoryAdvice = map[DirectoryFailure]string{
 // groupsFor is the groups a federated sign-in grants from. A token that carries
 // groups wins and no lookup runs. A Google member's groups otherwise come from
 // the directory, but only when a lookup could change something. That means the
-// member is already invited, the map has an entry and a credential is stored.
+// member is already invited, the map has an entry, a credential is stored and
+// the token's hosted domain is the credential's own. The lookup asks for the
+// token's immutable subject, which for a Workspace user is the Directory user
+// id, so an address Google has handed to someone else reads nobody's groups.
 // It runs before the login transaction opens, so no network call waits inside
 // the transaction that holds the authorization lock.
 //
@@ -218,16 +235,16 @@ func (s *Service) groupsFor(ctx context.Context, provider string, claims OIDCCla
 	if !s.directoryLookupWanted(ctx, provider, claims) {
 		return nil
 	}
-	cred, ok := s.directoryCredential(ctx)
-	if !ok {
+	cred, fingerprint, ok := s.directoryCredential(ctx)
+	if !ok || !cred.covers(claims.HostedDomain) {
 		return nil
 	}
-	groups, err := s.directory.reader.Groups(ctx, cred, claims.Email)
+	groups, err := s.directory.reader.Groups(ctx, cred, claims.Subject)
 	if err != nil {
-		s.recordDirectoryCheck(ctx, directoryFailed, directoryReason(err), false)
+		s.recordDirectoryCheck(ctx, fingerprint, directoryFailed, directoryReason(err), false)
 		return nil
 	}
-	s.recordDirectoryCheck(ctx, directoryOK, "", false)
+	s.recordDirectoryCheck(ctx, fingerprint, directoryOK, "", false)
 	return groups
 }
 
@@ -259,37 +276,38 @@ func (s *Service) directoryLookupWanted(ctx context.Context, provider string, cl
 
 // directoryCredential opens the stored credential, read as the installation: the
 // anonymous sign-in has no workspace bound yet. ok is false when none is stored.
-func (s *Service) directoryCredential(ctx context.Context) (directoryCredential, bool) {
+func (s *Service) directoryCredential(ctx context.Context) (cred directoryCredential, fingerprint string, ok bool) {
 	ws, err := s.InstallationWorkspace(ctx)
 	if err != nil {
 		slog.WarnContext(ctx, "resolving the installation for the Google directory", "err", err)
-		return directoryCredential{}, false
+		return directoryCredential{}, "", false
 	}
 	readCtx := principal.WithWorkspaceID(principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: directoryActor,
 	}), ws.UUID)
 	sealed, err := config.StoredVal(readCtx, s.directory.cfg, GoogleDirectoryCredential)
 	if err != nil {
-		s.recordDirectoryCheck(ctx, directoryFailed, DirectoryKeyInvalid, false)
-		return directoryCredential{}, false
+		slog.WarnContext(ctx, "opening the Google directory credential", "err", err)
+		return directoryCredential{}, "", false
 	}
 	if sealed == "" {
-		return directoryCredential{}, false
+		return directoryCredential{}, "", false
 	}
-	cred, err := parseDirectoryCredential(sealed)
+	fingerprint = credentialFingerprint(sealed)
+	cred, err = parseDirectoryCredential(sealed)
 	if err != nil {
-		s.recordDirectoryCheck(ctx, directoryFailed, DirectoryKeyInvalid, false)
-		return directoryCredential{}, false
+		s.recordDirectoryCheck(ctx, fingerprint, directoryFailed, DirectoryKeyInvalid, false)
+		return directoryCredential{}, "", false
 	}
-	return cred, true
+	return cred, fingerprint, true
 }
 
 // recordDirectoryCheck writes one system_log row for the status read and the
-// operator. A failure always writes one. A success writes one only when it ends
+// operator, tagged with the fingerprint of the credential that was checked. A failure always writes one. A success writes one only when it ends
 // a run of failures or force is set, for a credential just stored. A busy
 // directory therefore adds no row per sign-in. The reason is a closed class with
 // no key material.
-func (s *Service) recordDirectoryCheck(ctx context.Context, outcome string, reason DirectoryFailure, force bool) {
+func (s *Service) recordDirectoryCheck(ctx context.Context, fingerprint, outcome string, reason DirectoryFailure, force bool) {
 	if outcome == directoryFailed {
 		slog.WarnContext(ctx, "a Google directory check failed; a failed sign-in lookup grants nothing", "reason", reason)
 	}
@@ -300,8 +318,9 @@ func (s *Service) recordDirectoryCheck(ctx context.Context, outcome string, reas
 		if outcome == directoryOK && !force {
 			var newest *string
 			err := tx.QueryRow(writeCtx,
-				`SELECT detail->>'outcome' FROM system_log WHERE action = $1 ORDER BY occurred_at DESC LIMIT 1`,
-				directoryLogAction).Scan(&newest)
+				`SELECT detail->>'outcome' FROM system_log WHERE action = $1 AND detail->>'credential' = $2
+				 ORDER BY occurred_at DESC LIMIT 1`,
+				directoryLogAction, fingerprint).Scan(&newest)
 			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 				return err
 			}
@@ -310,7 +329,7 @@ func (s *Service) recordDirectoryCheck(ctx context.Context, outcome string, reas
 			}
 		}
 		_, err := storekit.LogSystem(writeCtx, tx, directoryLogAction,
-			map[string]any{"outcome": outcome, "reason": string(reason)})
+			map[string]any{"outcome": outcome, "reason": string(reason), "credential": fingerprint})
 		return err
 	}); err != nil {
 		slog.ErrorContext(ctx, "recording a Google directory check", "err", err)

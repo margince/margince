@@ -12,6 +12,9 @@ Without the connection the map still works for Microsoft, and a Google member ge
 - The lookup runs at a Google sign-in, only for a member who was already invited, and only while the map has at least
   one entry and a key is stored.
 - A token that carries groups wins, and no lookup runs.
+- Only a Workspace account whose token names the admin's own domain (`hd`) is looked up. A personal Google account,
+  or one from another domain, gets no groups. The lookup asks for the account's Google subject, which for a Workspace
+  user is the Directory user id, so a reused address never reads another person's groups.
 - A failed or slow lookup (five seconds at most) signs the member in with no new roles. The map only adds roles, so a
   failure takes nothing away. Nothing is retried inside the sign-in.
 - Each failure writes one `system_log` row with the action `google_directory` and a reason class. Settings →
@@ -47,7 +50,7 @@ reason, and nothing is sealed. A stored key is sealed in the key vault, so the i
 `MARGINCE_KEYVAULT_ROOT_KEY`. Nothing returns the key afterwards.
 
 The same call is `PUT /v1/installation/authentication-policy/google-directory` with `service_account_json` and
-`admin_subject`. `GET` on that path says whether a key is stored and how the newest check went, and `DELETE` removes
+`admin_subject`. `GET` on that path says whether a key is stored and how the newest check of that key went, and `DELETE` removes
 it.
 
 | Reason | What to check |
