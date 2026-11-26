@@ -55,7 +55,12 @@ var (
 // changes reports whether body sends a statement that changes the fact. A SET
 // list the literal leaves open for a concatenated column counts as changing it.
 func (f captureFact) changes(body string) bool {
-	write := regexp.MustCompile(`(?i)\b(INSERT INTO|UPDATE|DELETE FROM)\s+` + f.table + `\b`)
+	// Under (?i) only the long s and the Kelvin sign fold onto an ASCII letter, and
+	// ToLower maps the Kelvin sign. Text that folds to no copy of the table never writes it.
+	if !strings.Contains(strings.ReplaceAll(strings.ToLower(body), "\u017f", "s"), f.table) {
+		return false
+	}
+	write := compiledPattern(`(?i)\b(INSERT INTO|UPDATE|DELETE FROM)\s+` + f.table + `\b`)
 	for _, at := range write.FindAllStringSubmatchIndex(body, -1) {
 		verb := strings.ToUpper(body[at[2]:at[3]])
 		if verb != "UPDATE" || f.columns == nil {
@@ -73,7 +78,7 @@ func (f captureFact) changes(body string) bool {
 			return true
 		}
 		for _, column := range f.columns {
-			if regexp.MustCompile(`(?i)\b` + column + `\s*=`).MatchString(statement) {
+			if compiledPattern(`(?i)\b` + column + `\s*=`).MatchString(statement) {
 				return true
 			}
 		}
@@ -189,7 +194,7 @@ func packageFactShapes(files []factSource) map[string][]string {
 
 func namesShapeOf(body string, names []string) bool {
 	for _, name := range names {
-		if regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\b`).MatchString(body) {
+		if compiledPattern(`\b` + regexp.QuoteMeta(name) + `\b`).MatchString(body) {
 			return true
 		}
 	}

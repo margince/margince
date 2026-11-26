@@ -156,6 +156,12 @@ func windowedLedgers(t *testing.T) map[string]bool {
 			if readErr != nil {
 				return readErr
 			}
+			// No letter of "delete" or "from" folds to a non-ASCII rune under (?i),
+			// so a file missing either holds no windowed DELETE.
+			folded := strings.ToLower(string(raw))
+			if !strings.Contains(folded, "delete") || !strings.Contains(folded, "from") {
+				return nil
+			}
 			for _, m := range windowedDelete.FindAllStringSubmatch(string(raw), -1) {
 				if timeBound.MatchString(m[2]) {
 					bounded[m[1]] = true
