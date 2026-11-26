@@ -126,11 +126,12 @@ func (d systemDeals) ResponsibleAs(ctx context.Context, actAs extension.UserID, 
 	return responsible, err
 }
 
-// opensDeal answers ErrNotFound unless the seat may open the deal in the app.
-// So a deal outside its scope cannot be told from one that does not exist.
+// opensDeal admits the seat only to a deal it may open in the app. A seat with
+// no deal read is refused as the app refuses it; a deal outside its scope
+// answers ErrNotFound, so it cannot be told from one that does not exist.
 func (s systemSeat) opensDeal(seatCtx context.Context, deal ids.UUID) error {
 	if err := auth.Require(seatCtx, fieldmask.Deal, principal.ActionRead); err != nil {
-		return extension.ErrNotFound
+		return fmt.Errorf("%w: the seat may not read deals", extension.ErrForbidden)
 	}
 	var visible bool
 	err := database.WithWorkspaceTx(seatCtx, s.rt.deps.pool, func(tx pgx.Tx) error {

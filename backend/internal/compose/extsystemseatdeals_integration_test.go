@@ -56,8 +56,8 @@ func TestASeatBoundDealReadAnswersOnlyWhatTheSeatMayOpen(t *testing.T) {
 		t.Errorf("the system actor's Get = %+v, want the deal", old)
 	}
 	for read, err := range map[string]error{"GetAs": getAs, "ResponsibleAs": responsibleAs} {
-		if !errors.Is(err, extension.ErrNotFound) {
-			t.Errorf("%s by a seat with no deal read: err = %v, want ErrNotFound", read, err)
+		if !errors.Is(err, extension.ErrForbidden) {
+			t.Errorf("%s by a seat with no deal read: err = %v, want ErrForbidden", read, err)
 		}
 	}
 }
@@ -100,8 +100,8 @@ func TestResponsibleAsAnswersForTheSurvivorOfAMerge(t *testing.T) {
 	if len(viaSource) == 0 || !slices.Equal(viaSource, ofSurvivor) {
 		t.Errorf("ResponsibleAs of the merged-away deal = %+v, want the survivor's %+v", viaSource, ofSurvivor)
 	}
-	if !errors.Is(refused, extension.ErrNotFound) {
-		t.Errorf("ResponsibleAs through a merge by a seat with no deal read: err = %v, want ErrNotFound", refused)
+	if !errors.Is(refused, extension.ErrForbidden) {
+		t.Errorf("ResponsibleAs through a merge by a seat with no deal read: err = %v, want ErrForbidden", refused)
 	}
 }
 
