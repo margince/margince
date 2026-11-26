@@ -1367,6 +1367,7 @@
   "systemJob.stage_evidence": "Deal stage evidence",
   "systemJob.stage_evidence_read": "Deal stage evidence read",
   "systemJob.stage_evidence_reread": "Deal stage evidence reread",
+  "systemJob.standing_line": "How it stands check",
   "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
