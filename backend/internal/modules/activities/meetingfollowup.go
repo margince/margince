@@ -176,10 +176,16 @@ func meetingAttendeesSQL(addressable string) string {
 	                       SELECT p.contact_id, 1 FROM activity_participant p
 	                        WHERE p.activity_id = candidate.id AND p.contact_id IS NOT NULL AND p.user_id IS NULL
 	                          AND p.role IN ('organizer', 'attendee', 'to', 'cc')) src
-	                 JOIN contact named ON named.id = src.contact_id
-	                 JOIN contact rc ON rc.id = COALESCE(named.merged_into_id, named.id)
+	                 CROSS JOIN LATERAL (SELECT rc.* FROM contact rc
+	                        WHERE rc.id = (`+contactSurvivorSQL("src.contact_id")+`) LIMIT 1) rc
 	                WHERE rc.archived_at IS NULL
 	                GROUP BY rc.id) met) attendees`, addressable) + ")"
+}
+
+// contactSurvivorSQL reads the contact a merge kept for ref by its key. A contact table
+// analyzed while empty then cannot turn into a scan of every contact per meeting.
+func contactSurvivorSQL(ref string) string {
+	return `SELECT COALESCE(named.merged_into_id, named.id) AS id FROM contact named WHERE named.id = ` + ref + ` LIMIT 1`
 }
 
 // laterActivityColumns are the columns the "nothing sent since" tests read from
@@ -268,12 +274,12 @@ func meetingCandidatesSQL(asOf, window, reader, held, narrowed string) string {
 func meetingNeedSQL() string {
 	return threadNeedSQL(followUpCandidates) + `
 	 UNION SELECT later.id FROM (
-	        SELECT COALESCE(named.merged_into_id, named.id) AS contact_id, min(c.follow_from) AS since
+	        SELECT survivor.id AS contact_id, min(c.follow_from) AS since
 	          FROM ` + followUpCandidates + ` c
 	          CROSS JOIN LATERAL (SELECT l.contact_id FROM activity_link l WHERE l.activity_id = c.id AND l.contact_id IS NOT NULL
 	                UNION ALL SELECT p.contact_id FROM activity_participant p
 	                 WHERE p.activity_id = c.id AND p.contact_id IS NOT NULL AND p.user_id IS NULL) met
-	          JOIN contact named ON named.id = met.contact_id
+	          CROSS JOIN LATERAL (` + contactSurvivorSQL("met.contact_id") + `) survivor
 	         GROUP BY 1) recipient
 	   JOIN (SELECT heard.activity_id, heard.contact_id FROM activity_link heard WHERE heard.contact_id IS NOT NULL
 	         UNION ALL SELECT reached.activity_id, reached.contact_id FROM activity_participant reached

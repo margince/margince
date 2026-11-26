@@ -45,7 +45,7 @@ func TestTheDealFollowUpBatchReadsEachMeetingOnceWhateverTheStatisticsSay(t *tes
 	}()
 	asOf := clocktest.Now(t)
 	analyzeAnEarlierTestsMail(ctx, t, tx)
-	deals := seedDealMeetingsAmongOtherMail(ctx, t, tx, e.rep)
+	deals := seedDealMeetingsAmongOtherMail(ctx, t, tx, e.rep, planOtherMail, planLinkedMail)
 	if _, err := tx.Exec(ctx, "SET LOCAL jit = off"); err != nil {
 		t.Fatal(err)
 	}
@@ -80,6 +80,70 @@ func TestTheDealFollowUpBatchReadsEachMeetingOnceWhateverTheStatisticsSay(t *tes
 	}
 	if answered != planDeals {
 		t.Fatalf("the batch answered for %d deals, want all %d", answered, planDeals)
+	}
+}
+
+func TestTheDealFollowUpBatchReadsEachAttendeeByKeyWhenContactsLookEmpty(t *testing.T) {
+	e := setupPromises(t)
+	ctx := context.Background()
+	tx, err := e.owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Errorf("rolling back the seeded meetings: %v", err)
+		}
+	}()
+	deals := seedDealMeetingsAmongOtherMail(ctx, t, tx, e.rep, 0, 0)
+	if _, err := tx.Exec(ctx, "SET LOCAL jit = off"); err != nil {
+		t.Fatal(err)
+	}
+	pinNeverAnalyzed(ctx, t, tx)
+	pinAnalyzedEmpty(ctx, t, tx)
+	statement, args, err := meetingFollowUpsByDealStatement(e.as(), clocktest.Now(t), 3, deals)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw string
+	if err := tx.QueryRow(ctx, "EXPLAIN (ANALYZE, FORMAT JSON) "+statement, args...).Scan(&raw); err != nil {
+		t.Fatalf("running the deal follow-up batch: %v", err)
+	}
+	plan := decodePlan(t, raw)
+	if plan.ActualRows != planDeals {
+		t.Fatalf("the batch answered for %.0f deals, want all %d", plan.ActualRows, planDeals)
+	}
+	assertAttendeesReadByKey(t, plan)
+}
+
+// assertAttendeesReadByKey holds each read of a link, participant or contact to a
+// few runs per meeting; a contact scan inside the per-meeting loop multiplies them.
+func assertAttendeesReadByKey(t *testing.T, plan planNode) {
+	t.Helper()
+	reads := 0
+	plan.walk(func(n planNode) {
+		switch n.RelationName {
+		case "contact", "activity_link", "activity_participant":
+			reads++
+			if n.ActualLoops > perMeetingSteps*planMeetings {
+				t.Errorf("%s on %s %s ran %.0f times for %d meetings, once per meeting and contact",
+					n.NodeType, n.RelationName, n.Alias, n.ActualLoops, planMeetings)
+			}
+		}
+	})
+	if reads == 0 {
+		t.Fatal("the plan reads no link, participant or contact, so this test checks nothing")
+	}
+}
+
+// pinAnalyzedEmpty leaves contacts, links and participants as an analyze right after
+// a reset leaves them. They hold pages but no rows, so the planner sees none.
+func pinAnalyzedEmpty(ctx context.Context, t *testing.T, tx pgx.Tx) {
+	t.Helper()
+	if _, err := tx.Exec(ctx, `UPDATE pg_class SET reltuples = 0,
+	  relpages = greatest(1, pg_relation_size(oid) / current_setting('block_size')::int)
+	 WHERE relnamespace = 'public'::regnamespace AND relname IN ('contact', 'activity_link', 'activity_participant')`); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -212,9 +276,9 @@ func forgetAllButLinkStatistics(ctx context.Context, t *testing.T, tx pgx.Tx) {
 const otherMailBatch = 1000
 
 // seedOtherMailInBatches writes plan_other: linked mail first, then the rest.
-func seedOtherMailInBatches(ctx context.Context, t *testing.T, tx pgx.Tx) {
+func seedOtherMailInBatches(ctx context.Context, t *testing.T, tx pgx.Tx, otherMail int) {
 	t.Helper()
-	for from := 1; from <= planOtherMail; from += otherMailBatch {
+	for from := 1; from <= otherMail; from += otherMailBatch {
 		batch := pgx.NamedArgs{"from": from, "to": from + otherMailBatch - 1}
 		if _, err := tx.Exec(ctx, `
 		INSERT INTO contact (id, full_name, source, captured_by)
@@ -237,12 +301,12 @@ func seedOtherMailInBatches(ctx context.Context, t *testing.T, tx pgx.Tx) {
 	}
 }
 
-func seedDealMeetingsAmongOtherMail(ctx context.Context, t *testing.T, tx pgx.Tx, rep ids.UUID) []ids.UUID {
+func seedDealMeetingsAmongOtherMail(ctx context.Context, t *testing.T, tx pgx.Tx, rep ids.UUID, otherMail, linkedMail int) []ids.UUID {
 	t.Helper()
 	if _, err := tx.Exec(ctx, `CREATE TEMP TABLE plan_seed AS
 	  SELECT $1::uuid rep, $2::timestamptz at, gen_random_uuid() pipeline, $3::int meetings, $4::int deals,
 	         $5::int other_mail, $6::int linked_mail`,
-		rep, clocktest.Now(t), planMeetings, planDeals, planOtherMail, planLinkedMail); err != nil {
+		rep, clocktest.Now(t), planMeetings, planDeals, otherMail, linkedMail); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := tx.Exec(ctx, `
@@ -268,7 +332,7 @@ func seedDealMeetingsAmongOtherMail(ctx context.Context, t *testing.T, tx pgx.Tx
 	  SELECT gen_random_uuid() mail, gen_random_uuid() contact, g FROM plan_seed s, generate_series(1, s.other_mail) g`); err != nil {
 		t.Fatalf("seeding the meetings: %v", err)
 	}
-	seedOtherMailInBatches(ctx, t, tx)
+	seedOtherMailInBatches(ctx, t, tx, otherMail)
 	rows, err := tx.Query(ctx, `SELECT id FROM plan_deal ORDER BY n`)
 	if err != nil {
 		t.Fatal(err)
