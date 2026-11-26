@@ -81,7 +81,7 @@ describe("Home before the first Morning brief", () => {
   it("is gone once a brief has been prepared", async () => {
     stubApi({ "GET /brief": () => jsonResponse(quietRun) });
     render(<BriefScreen />);
-    await screen.findByText(/^Briefed by Margince at/);
+    await screen.findByText(/^Prepared by Margince at/);
     expect(
       screen.queryByRole("region", { name: en["brief.firstDay.title"] }),
     ).toBeNull();
