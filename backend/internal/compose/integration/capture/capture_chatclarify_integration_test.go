@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -190,9 +191,8 @@ func clarifyNetworks(t *testing.T, e *integration.SearchEnv) []clarifyNetwork {
 			},
 			questionText: "Who wrote this? Reply with their contact card or phone number.",
 			sweep: func(e *integration.SearchEnv, v keyvault.Vault) chatclarify.Sweep {
-				sweep := chatclarify.Sweep{Pool: e.Pool, Vault: v, Now: now, Log: slog.Default()}
-				sweep.WhatsApp = whatsapp.NewClient(whatsappServer.server.Client(), whatsappServer.server.URL, "v27.0", whatsapp.WithoutDialGuardForTest())
-				return sweep
+				client := whatsapp.NewClient(whatsappServer.server.Client(), whatsappServer.server.URL, "v27.0", whatsapp.WithoutDialGuardForTest())
+				return sweepWith(e, v, now, func(cs *capturemod.ChatSenders) { cs.WhatsApp = whatsapp.NewSender(client) })
 			},
 		},
 		{
@@ -205,9 +205,8 @@ func clarifyNetworks(t *testing.T, e *integration.SearchEnv) []clarifyNetwork {
 			},
 			questionText: "Who wrote this? Reply with their contact card.",
 			sweep: func(e *integration.SearchEnv, v keyvault.Vault) chatclarify.Sweep {
-				sweep := chatclarify.Sweep{Pool: e.Pool, Vault: v, Now: now, Log: slog.Default()}
-				sweep.Telegram = telegram.NewAPI(telegramServer.server.Client(), telegramServer.server.URL)
-				return sweep
+				api := telegram.NewAPI(telegramServer.server.Client(), telegramServer.server.URL)
+				return sweepWith(e, v, now, func(cs *capturemod.ChatSenders) { cs.TelegramBusiness = telegram.New(api) })
 			},
 		},
 		{
@@ -220,9 +219,8 @@ func clarifyNetworks(t *testing.T, e *integration.SearchEnv) []clarifyNetwork {
 			},
 			questionText: "Who wrote this? Reply with their contact card.",
 			sweep: func(e *integration.SearchEnv, v keyvault.Vault) chatclarify.Sweep {
-				sweep := chatclarify.Sweep{Pool: e.Pool, Vault: v, Now: now, Log: slog.Default()}
-				sweep.Zalo = zalo.NewClient(zaloServer.server.Client(), "", zaloServer.server.URL)
-				return sweep
+				client := zalo.NewClient(zaloServer.server.Client(), "", zaloServer.server.URL)
+				return sweepWith(e, v, now, func(cs *capturemod.ChatSenders) { cs.Zalo = zalo.NewSender(client) })
 			},
 		},
 	}
@@ -230,6 +228,18 @@ func clarifyNetworks(t *testing.T, e *integration.SearchEnv) []clarifyNetwork {
 		networks[i].vault = vault
 	}
 	return networks
+}
+
+// sweepWith is the production sweep with one network's sender pointed at a fake.
+func sweepWith(e *integration.SearchEnv, vault keyvault.Vault, now func() time.Time, point func(*capturemod.ChatSenders)) chatclarify.Sweep {
+	return chatclarify.Sweep{
+		Pool: e.Pool, Now: now, Log: slog.Default(),
+		Senders: func(db *database.DB) capturemod.ChatSenders {
+			senders := capturemod.NewChatSenders(db, vault, nil)
+			point(&senders)
+			return senders
+		},
+	}
 }
 
 func insertConnection(t *testing.T, e *integration.SearchEnv, provider, channel, account, credential string, parent *ids.UUID) ids.UUID {
@@ -617,4 +627,52 @@ func TestACustomerConversationIsStillRefusedAndOnlyAVerifiedColleagueIsAsked(t *
 	if err := connector.AllowChannelSend(connector.PurposeClarification, "whatsapp", thread, true); err != nil {
 		t.Fatalf("a question to a verified colleague was refused: %v", err)
 	}
+}
+
+func TestAColleaguesOwnMessageToTheAccountIsNeverCustomerCorrespondence(t *testing.T) {
+	eachClarifyNetwork(t, func(t *testing.T, c *clarifyCase) {
+		if err := c.reply("t1", "", "thanks!", nil); !errors.Is(err, capturemod.ErrChatMessageConsumed) {
+			t.Fatalf("filing a colleague's plain text = %v, want it consumed", err)
+		}
+		c.sweep()
+		if n := wsCount(t, c.e, `SELECT count(*) FROM activity WHERE kind = 'message'`); n != 0 {
+			t.Fatalf("History holds %d messages, want none", n)
+		}
+		c.requireNoColleagueContact()
+		if n := wsCount(t, c.e, `SELECT count(*) FROM raw_capture WHERE source_id = $1`, c.n.name+"-t1"); n != 0 {
+			t.Fatal("the colleague's message kept its raw row")
+		}
+		if n := len(c.n.provider2.messages()); n != 0 {
+			t.Fatalf("a colleague with no batch waiting got %d messages", n)
+		}
+	})
+}
+
+func TestAColleagueWhoAnswersWithNothingUsableIsHintedOncePerBatchAndNothingIsFiled(t *testing.T) {
+	eachClarifyNetwork(t, func(t *testing.T, c *clarifyCase) {
+		a := c.forward("f1", "price?")
+		c.settle(a)
+		c.sweep()
+		unusable := &connector.ChatSharedContact{DisplayName: "No Account"}
+		for i, answer := range []struct {
+			body string
+			card *connector.ChatSharedContact
+		}{{"thanks", nil}, {"[contacts]", unusable}, {"ok", nil}} {
+			if err := c.reply(fmt.Sprintf("u%d", i), c.n.askID(1), answer.body, answer.card); !errors.Is(err, capturemod.ErrChatMessageConsumed) {
+				t.Fatalf("answer %d = %v, want it consumed", i, err)
+			}
+			c.sweep()
+		}
+		sent := c.n.provider2.messages()
+		if len(sent) != 2 || !strings.HasPrefix(sent[1].text, "Please reply with the customer's contact card") {
+			t.Fatalf("messages sent = %+v, want the question and one hint", sent)
+		}
+		if !c.held(a) {
+			t.Fatal("the forward was filed on a guess")
+		}
+		c.requireNoColleagueContact()
+		if n := wsCount(t, c.e, `SELECT count(*) FROM activity WHERE kind = 'message'`); n != 1 {
+			t.Fatalf("History holds %d messages, want the one forward", n)
+		}
+	})
 }

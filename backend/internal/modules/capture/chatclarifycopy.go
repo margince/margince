@@ -24,6 +24,9 @@ type clarifyWords struct {
 	// pickHead opens the question that lists the batches, and pickLine is one of
 	// them: its place, when it was forwarded, how many and an excerpt.
 	pickHead, pickLine string
+	// hint and hintCard tell a colleague who wrote something that is no answer
+	// how to answer.
+	hint, hintCard string
 }
 
 var clarifyCatalog = map[string]clarifyWords{
@@ -32,18 +35,24 @@ var clarifyCatalog = map[string]clarifyWords{
 		askCard:  "Who wrote this? Reply with their contact card.",
 		pickHead: "Several sets of forwarded messages are waiting for an author. Reply to the question about the set you mean, with the contact card of who wrote it:",
 		pickLine: "%d. %s, %d message(s): \"%s\"",
+		hint:     "Please reply with the customer's contact card or phone number, so I can file the messages you forwarded.",
+		hintCard: "Please reply with the customer's contact card, so I can file the messages you forwarded.",
 	},
 	"de": {
 		ask:      "Von wem ist das? Antworte mit der Kontaktkarte oder der Telefonnummer.",
 		askCard:  "Von wem ist das? Antworte mit der Kontaktkarte.",
 		pickHead: "Es warten mehrere Gruppen weitergeleiteter Nachrichten darauf, dass du sagst, von wem sie sind. Antworte auf die Frage zur gemeinten Gruppe mit der Kontaktkarte des Kunden, von dem sie stammen:",
 		pickLine: "%d. %s, %d Nachricht(en): \"%s\"",
+		hint:     "Bitte antworte mit der Kontaktkarte oder der Telefonnummer des Kunden, damit ich die weitergeleiteten Nachrichten ablegen kann.",
+		hintCard: "Bitte antworte mit der Kontaktkarte des Kunden, damit ich die weitergeleiteten Nachrichten ablegen kann.",
 	},
 	"vi": {
 		ask:      "Ai đã viết tin này? Hãy trả lời bằng danh thiếp hoặc số điện thoại của họ.",
 		askCard:  "Ai đã viết tin này? Hãy trả lời bằng danh thiếp của họ.",
 		pickHead: "Có nhiều nhóm tin nhắn chuyển tiếp đang chờ người viết. Hãy trả lời câu hỏi về nhóm bạn muốn nói, kèm danh thiếp của người viết:",
 		pickLine: "%d. %s, %d tin nhắn: \"%s\"",
+		hint:     "Hãy trả lời bằng danh thiếp hoặc số điện thoại của khách hàng để tôi lưu các tin nhắn bạn đã chuyển tiếp.",
+		hintCard: "Hãy trả lời bằng danh thiếp của khách hàng để tôi lưu các tin nhắn bạn đã chuyển tiếp.",
 	},
 }
 
@@ -66,6 +75,16 @@ func clarifyQuestion(locale, provider string) string {
 		return words.ask
 	}
 	return words.askCard
+}
+
+// hintQuestion is the one hint a colleague gets when they wrote something that
+// answers nothing.
+func hintQuestion(locale, provider string) string {
+	words := wordsFor(locale)
+	if phoneAnswers(provider) {
+		return words.hint
+	}
+	return words.hintCard
 }
 
 // pickItem is one batch the colleague is asked to choose between.

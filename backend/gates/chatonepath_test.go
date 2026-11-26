@@ -51,7 +51,25 @@ const (
 	captureDir        = "internal/modules/capture"
 	activitiesDir     = "internal/modules/activities"
 	chatSendResolver  = "internal/compose/commschannel.go"
+	// senderResolver holds ChatSenders.For, which resolves a provider's
+	// connector.MessageSender and credential.
+	// Held by: TestChatNetworksShareOneReceiveFileChangeAndSendPath (backend/gates/chatonepath_test.go)
+	senderResolver = "internal/modules/capture/chatsenders.go"
 )
+
+// isSenderResolveSeam reports a file besides the resolver that may return a
+// connector.MessageSender. Each hands on what the resolver answered, or answers
+// for a transport no core provider owns.
+func isSenderResolveSeam(file string) bool {
+	switch file {
+	case "internal/modules/capture/channelsend.go": // the workspace bot's lookup, which the resolver calls, and the registry's entry to the resolver
+	case "internal/compose/commschannel.go": // the comms send path's entry, which calls the resolver
+	case "internal/compose/extchannelsend.go": // the transport an extension unit declares
+	default:
+		return false
+	}
+	return true
+}
 
 var activityWriterPrefixes = []string{"Create", "Insert", "Update", "Delete", "Archive", "Edit", "Remove", "Set"}
 
@@ -140,6 +158,15 @@ func TestChatOnePathGateFailsOnAForkedPath(t *testing.T) {
 				"fork.go": "package signal\nfunc (c *C) Fork() { _, _ = c.do(nil) }\n",
 			},
 		},
+		{
+			name: "a second function that resolves a MessageSender", want: "resolves a connector.MessageSender", path: modulePath + "/internal/compose/forkresolver",
+			files: map[string]string{"a.go": "package forkresolver\n" + imp + "func pick() connector.MessageSender { return nil }\n"},
+		},
+		{
+			name: "a provider's sender built outside the resolver", want: "constructs a provider's sender", path: modulePath + "/internal/compose/forkbuilder",
+			files: map[string]string{"a.go": "package forkbuilder\nimport \"" + modulePath + "/internal/modules/capture/whatsapp\"\n" +
+				"func build() { _ = whatsapp.NewSender(nil) }\n"},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -153,6 +180,9 @@ func TestChatOnePathGateFailsOnAForkedPath(t *testing.T) {
 		})
 	}
 	clean := map[string]map[string]string{
+		"a caller of the one resolver": {"a.go": "package cleanresolve\n" +
+			"import \"" + modulePath + "/internal/modules/capture\"\n" +
+			"func f(c capture.ChatSenders) { _, _, _ = c.For(nil, \"whatsapp\", [16]byte{}) }\n"},
 		"a file that files through FileChatMessage": {"a.go": "package cleanentry\n" + imp +
 			"import \"" + modulePath + "/internal/modules/capture\"\n" +
 			"func f(s connector.Sink, b connector.ChatBinding, m connector.ChatMessage) { _, _ = capture.FileChatMessage(nil, s, b, m) }\n"},
@@ -576,6 +606,7 @@ func (c *chatPackages) findings() []string {
 			out = append(out, c.activityFindings(p, f)...)
 			out = append(out, c.sendFindings(p, f)...)
 		}
+		out = append(out, c.resolverFindings(p)...)
 	}
 	sort.Strings(out)
 	return slices.Compact(out)
@@ -723,4 +754,76 @@ func chatLiterals(p typedPackage, f *ast.File) []string {
 		return true
 	})
 	return out
+}
+
+// isMessageSender reports the connector's MessageSender interface.
+func isMessageSender(t types.Type) bool {
+	n, ok := types.Unalias(t).(*types.Named)
+	return ok && n.Obj().Name() == "MessageSender" && n.Obj().Pkg() != nil && n.Obj().Pkg().Path() == modulePath+"/"+connectorDir
+}
+
+// resolverFindings fails a second place that resolves a connector.MessageSender.
+// A function that returns one is a second resolver, unless it sits in the
+// resolver, a listed seam or a provider package. So is a call to a provider's
+// sender constructor from anywhere but the resolver.
+func (c *chatPackages) resolverFindings(p typedPackage) []string {
+	if _, provider := c.providers[pkgDir(p)]; provider {
+		return nil
+	}
+	var out []string
+	for _, f := range p.files {
+		name := c.file(f)
+		if name == senderResolver {
+			continue
+		}
+		seam := isSenderResolveSeam(name)
+		for _, d := range f.Decls {
+			fd, ok := d.(*ast.FuncDecl)
+			if !ok {
+				continue
+			}
+			if !seam && c.returnsMessageSender(p, fd) {
+				out = append(out, name+": "+fd.Name.Name+" resolves a connector.MessageSender; resolve it through capture.ChatSenders.For")
+			}
+			ast.Inspect(fd, func(n ast.Node) bool {
+				if id, ok := n.(*ast.Ident); ok && c.isSenderConstructor(funcOf(p.info.Uses[id])) {
+					out = append(out, name+": "+fd.Name.Name+" constructs a provider's sender, which only capture.ChatSenders.For may do")
+				}
+				return true
+			})
+		}
+	}
+	return out
+}
+
+func (c *chatPackages) returnsMessageSender(p typedPackage, fd *ast.FuncDecl) bool {
+	obj, ok := p.info.Defs[fd.Name].(*types.Func)
+	if !ok {
+		return false
+	}
+	results := obj.Type().(*types.Signature).Results()
+	for i := 0; i < results.Len(); i++ {
+		if isMessageSender(results.At(i).Type()) {
+			return true
+		}
+	}
+	return false
+}
+
+// isSenderConstructor reports a provider package's NewSender, which returns a
+// type with a SendMessage method. Telegram's sender is its registered connector,
+// which compose registers and the resolver reaches through the registry.
+func (c *chatPackages) isSenderConstructor(fn *types.Func) bool {
+	if fn == nil || fn.Pkg() == nil || fn.Name() != "NewSender" {
+		return false
+	}
+	if _, provider := c.providers[strings.TrimPrefix(fn.Pkg().Path(), modulePath+"/")]; !provider {
+		return false
+	}
+	sig := fn.Type().(*types.Signature)
+	if sig.Recv() != nil || sig.Results().Len() == 0 {
+		return false
+	}
+	method, _, _ := types.LookupFieldOrMethod(sig.Results().At(0).Type(), true, fn.Pkg(), "SendMessage")
+	return method != nil
 }

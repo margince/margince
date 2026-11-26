@@ -939,7 +939,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## raw_capture
 
-19 columns · primary key `(id)` · referenced by 2 foreign keys
+21 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -948,6 +948,8 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `ask_batch_id` | `uuid` |  |  |
 | `ask_claimed_at` | `timestamp with time zone` |  |  |
 | `ask_followup_at` | `timestamp with time zone` |  |  |
+| `ask_hint_due_at` | `timestamp with time zone` |  |  |
+| `ask_hinted_at` | `timestamp with time zone` |  |  |
 | `ask_message_ids` | `text[]`, default `'{}'::text[]` | yes |  |
 | `ask_next_at` | `timestamp with time zone` |  |  |
 | `ask_sent_at` | `timestamp with time zone` |  |  |

@@ -228,7 +228,8 @@ the handbook page. This section is for the operator.
   `confirm: true` makes the next message follow the sharing of its contact. It needs the workspace setting
   `capture.shared_posture_allowed`. Messages filed before the change keep their audience.
 - A thread is capture-only. A reply from Margince into it answers `422` with `conversation_capture_only`, so the
-  team answers in Telegram. The staging check of an agent refuses it in the same way. The account sends one kind of message into a thread: a question to a confirmed
+  team answers in Telegram. The staging check of an agent refuses it in the same way.
+- The account sends one kind of message into a thread: a question to a confirmed
   member about what they forwarded. It asks who wrote the messages, through the bot and the link's `business_connection_id`. The link must let the bot reply.
   `connector.AllowChannelSend` allows that and nothing else.
 - An edit changes the text of the filed message. A delete in Telegram removes nothing on a company account, because

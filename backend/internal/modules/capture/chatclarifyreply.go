@@ -56,14 +56,40 @@ func (s *Sink) HandleClarification(ctx context.Context, binding connector.ChatBi
 	if msg.Direction == connector.DirectionOutbound {
 		return s.consumeEcho(ctx, binding, msg)
 	}
-	if msg.Forward != nil || s.members == nil || s.channelEnsurer == nil {
+	if msg.Forward != nil || s.members == nil || binding.Ownership != connector.ChatOwnedByWorkspace {
 		return false, nil
 	}
-	identity, name, named := customerNamedBy(binding, msg)
-	if !named {
-		return false, nil
+	if identity, name, named := customerNamedBy(binding, msg); named && s.channelEnsurer != nil {
+		if answered, err := s.consumeAnswer(ctx, binding, msg, identity, name); err != nil || answered {
+			return answered, err
+		}
 	}
-	return s.consumeAnswer(ctx, binding, msg, identity, name)
+	return s.consumeOwnMessage(ctx, binding, msg)
+}
+
+// consumeOwnMessage uses up a verified colleague's message that is no code, no
+// forward and no usable answer. It is the colleague's talk with the account and
+// no customer's correspondence, so it files nothing and makes no contact. A
+// colleague with a batch waiting is owed one hint about how to answer.
+func (s *Sink) consumeOwnMessage(ctx context.Context, binding connector.ChatBinding, msg connector.ChatMessage) (bool, error) {
+	var member bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		who, isMember, err := s.members.MemberOf(ctx, tx, binding.Provider, binding.AccountScope, msg.Counterparty.UserID)
+		if err != nil || !isMember {
+			return err
+		}
+		member = true
+		if _, err := tx.Exec(ctx, `
+			UPDATE raw_capture r SET ask_hint_due_at = now()
+			  FROM activity a
+			 WHERE a.raw_capture_id = r.id AND r.held_by = $1 AND r.held_connection IS NOT DISTINCT FROM $2
+			   AND r.ask_sent_at IS NOT NULL AND r.ask_hinted_at IS NULL AND `+pendingforward.Predicate("a"),
+			who, nullable(binding.Connection)); err != nil {
+			return fmt.Errorf("capture: noting that a hint is owed: %w", err)
+		}
+		return deleteReply(ctx, tx, msg.StoredOriginal)
+	})
+	return member, err
 }
 
 // consumeEcho uses up the provider's copy of a question this system sent.

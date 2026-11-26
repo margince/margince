@@ -8954,6 +8954,8 @@ public.raw_capture.ask_attempts smallint NOT NULL gen=- def=0
 public.raw_capture.ask_batch_id uuid gen=- def=-
 public.raw_capture.ask_claimed_at timestamp with time zone gen=- def=-
 public.raw_capture.ask_followup_at timestamp with time zone gen=- def=-
+public.raw_capture.ask_hint_due_at timestamp with time zone gen=- def=-
+public.raw_capture.ask_hinted_at timestamp with time zone gen=- def=-
 public.raw_capture.ask_message_ids text[] NOT NULL gen=- def='{}'::text[]
 public.raw_capture.ask_next_at timestamp with time zone gen=- def=-
 public.raw_capture.ask_sent_at timestamp with time zone gen=- def=-

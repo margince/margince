@@ -51,7 +51,35 @@ var ErrChannelConnectionAmbiguous = errors.New("capture: more than one live chan
 // is that it resolved a moment too early.
 var ErrChannelBindingReplaced = errors.New("capture: the channel binding was replaced after this send resolved its credential")
 
-// ChannelSenderFor resolves the WORKSPACE's transmitting channel binding for one
+// ChannelSenderFor resolves a provider's sender for the comms send path, through
+// the one resolver, ChatSenders.For. With no connection it lands in BotSender.
+//
+//nolint:ireturn // see BotSender
+func (r *Registry) ChannelSenderFor(ctx context.Context, provider string) (connector.MessageSender, connector.Auth, error) {
+	return r.ChatSenders().For(ctx, provider, ids.Nil)
+}
+
+// ChatSenders is the registry's resolver of company chat accounts' senders.
+func (r *Registry) ChatSenders() ChatSenders {
+	r.mu.RLock()
+	senders, set := r.chatSenders, r.chatSendersSet
+	r.mu.RUnlock()
+	if set {
+		return senders
+	}
+	return NewChatSenders(r.db, r.vault, r.BotSender)
+}
+
+// WithChatSenders replaces the resolver, so a test points the networks' senders
+// at local servers.
+func (r *Registry) WithChatSenders(senders ChatSenders) *Registry {
+	r.mu.Lock()
+	r.chatSenders, r.chatSendersSet = senders, true
+	r.mu.Unlock()
+	return r
+}
+
+// BotSender resolves the WORKSPACE's transmitting channel binding for one
 // provider: the connector's MessageSender seam and its unsealed credential.
 //
 // It reports the same three deployment facts SenderFor does, so the send path
@@ -68,7 +96,7 @@ var ErrChannelBindingReplaced = errors.New("capture: the channel binding was rep
 // row no longer stands behind, on a channel nobody has been told is broken.
 //
 //nolint:ireturn // returns the optional connector.MessageSender seam by design, the posture SenderFor takes for connector.EmailSender
-func (r *Registry) ChannelSenderFor(ctx context.Context, provider string) (connector.MessageSender, connector.Auth, error) {
+func (r *Registry) BotSender(ctx context.Context, provider string) (connector.MessageSender, connector.Auth, error) {
 	binding, err := r.liveChannelBinding(ctx, provider)
 	if err != nil {
 		return nil, nil, err

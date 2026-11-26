@@ -206,8 +206,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// that composed capture at all must expire it.
 	addDeclaredWorker[CaptureTraceSweepArgs](reg, &captureTraceSweepWorker{pool: pool, purger: NewCapturePurger(pool, NewRetentionServiceFor(InstallationDB(pool), cfg.Blobstore, log))})
 	addDeclaredWorker[ChatClarificationSweepArgs](reg, &chatClarificationSweepWorker{sweep: chatclarify.Sweep{
-		Pool: pool, Vault: cfg.ChannelVault, WhatsApp: cfg.ChatMedia.WhatsApp, Zalo: cfg.ChatMedia.Zalo,
-		Bot: chatclarify.BotOf(cfg.SendRegistry), Now: time.Now, Log: log,
+		Pool: pool, Senders: chatclarify.SendersOf(cfg.SendRegistry, cfg.ChannelVault), Now: time.Now, Log: log,
 	}})
 }
 

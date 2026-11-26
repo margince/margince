@@ -18,6 +18,9 @@ SET LOCAL lock_timeout = '3s';
 --   ask_sent_at        when the provider accepted the clarification.
 --   ask_attempts and ask_next_at pace the retry of a send the provider refused
 --                      without delivering.
+--   ask_hint_due_at    a message from the colleague was neither an answer nor a forward, and
+--                      the colleague is owed one hint; ask_hinted_at says it was sent, so a
+--                      batch is hinted at most once.
 --   ask_followup_at    a reply that named no batch could not be bound, and the
 --                      colleague is owed one question that lists the batches.
 ALTER TABLE raw_capture
@@ -29,4 +32,6 @@ ALTER TABLE raw_capture
     ADD COLUMN ask_sent_at timestamptz,
     ADD COLUMN ask_attempts smallint NOT NULL DEFAULT 0,
     ADD COLUMN ask_next_at timestamptz,
-    ADD COLUMN ask_followup_at timestamptz;
+    ADD COLUMN ask_followup_at timestamptz,
+    ADD COLUMN ask_hint_due_at timestamptz,
+    ADD COLUMN ask_hinted_at timestamptz;

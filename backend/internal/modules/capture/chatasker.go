@@ -87,7 +87,7 @@ func (a *ChatAsker) Sweep(ctx context.Context) error {
 			failed = errors.Join(failed, err)
 		}
 	}
-	return errors.Join(failed, a.sendFollowUps(ctx))
+	return errors.Join(failed, a.sendFollowUps(ctx), a.sendHints(ctx))
 }
 
 // recipient is the member's verified account, read at the moment of sending.

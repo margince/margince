@@ -33,6 +33,8 @@ The question, your reply and any copy of them that the network sends back are no
 
 If you have passed on several sets and answer without replying to a question, Margince files nothing. It sends you one message that lists the sets, each with the time and the start of its first message. Then reply to the question you mean. If only one set is waiting, your reply goes to that one.
 
+A confirmed colleague's own messages to a company account are never filed as customer messages, and they never make a contact. This covers a "thanks" and a card that names no customer. It covers anything else that is not a code, a forward or an answer. Margince deletes the stored copy. If a set is waiting for you to say who wrote it, it sends you one short reminder to reply with the customer's contact card. It sends at most one reminder for each set.
+
 If you file the messages by hand in Margince first, the set is closed. A later reply to its question is used up and changes nothing.
 
 WhatsApp lets a company account write to you for 24 hours after you last wrote to it, and Zalo for 48 hours. After that Margince cannot ask, and the messages wait until they expire. If the network refuses the question for another reason, such as a limit, Margince tries again after a pause. It never sends the same question twice when it does not know whether the first one arrived.

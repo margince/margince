@@ -27,15 +27,29 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// ChatSenders resolves what a send from one connected account needs.
+// ChatSenders is the one place that resolves a connector.MessageSender and its
+// credential for a provider. The comms send path, through the registry, and the
+// question to a colleague both call For. TestChatNetworksShareOneReceiveFileChangeAndSendPath
+// fails a second resolver.
 type ChatSenders struct {
 	DB    *database.DB
 	Vault keyvault.Vault
 	// WhatsApp, Zalo and TelegramBusiness are the networks' own senders.
 	WhatsApp, Zalo, TelegramBusiness connector.MessageSender
-	// Bot resolves the workspace's own Telegram bot, which a colleague writes to
-	// directly. It is the same resolve a reply to a customer's bot chat uses.
-	Bot func(ctx context.Context) (connector.MessageSender, connector.Auth, error)
+	// Bot resolves a provider's one workspace-level binding, such as the
+	// workspace's Telegram bot, which has no connection row of its own to name.
+	Bot func(ctx context.Context, provider string) (connector.MessageSender, connector.Auth, error)
+}
+
+// NewChatSenders builds the resolver over the networks' own API hosts. Compose
+// and tests replace a sender field to point one at another host.
+func NewChatSenders(db *database.DB, vault keyvault.Vault, bot func(ctx context.Context, provider string) (connector.MessageSender, connector.Auth, error)) ChatSenders {
+	return ChatSenders{
+		DB: db, Vault: vault, Bot: bot,
+		WhatsApp:         whatsapp.NewSender(whatsapp.NewClient(nil, "", "")),
+		Zalo:             zalo.NewSender(zalo.NewClient(nil, "", "")),
+		TelegramBusiness: telegram.New(telegram.NewAPI(nil, "")),
+	}
 }
 
 // sendAccount is the connection row a send resolves from.
@@ -51,10 +65,10 @@ type sendAccount struct {
 //nolint:ireturn // returns the network's MessageSender, the optional seam a connector implements
 func (c ChatSenders) For(ctx context.Context, provider string, connection ids.UUID) (connector.MessageSender, connector.Auth, error) {
 	if connection.IsZero() {
-		if provider != telegram.Provider || c.Bot == nil {
+		if c.Bot == nil {
 			return nil, nil, fmt.Errorf("capture: no chat account to send from: %w", ErrNoConnection)
 		}
-		return c.Bot(ctx)
+		return c.Bot(ctx, provider)
 	}
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok || c.Vault == nil {
