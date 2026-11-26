@@ -32,6 +32,9 @@ type directedSendHandlers struct {
 	// route answers not-implemented like every other unwired surface rather
 	// than panicking on a message nobody can send.
 	directed *directedSendService
+	// bounceResendHandlers rides here because it is the same send path wired
+	// from the same place, and Server embeds this struct.
+	bounceResendHandlers
 }
 
 func (h directedSendHandlers) CorrectCommunicationWording(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {

@@ -65,9 +65,9 @@ export function useAutomationRetry(invalidateKeys: readonly QueryKey[]) {
  * Sending a bounced message again to a corrected address.
  *
  * The server replaces the bounced address on the contact and sends the same
- * message through the one send, so a refusal (consent withdrawn, a suppression,
- * a seat that may not send) throws with the server's own sentence. The reader
- * sees it on the address field and can correct it.
+ * message through the one send. A refusal throws with the server's own
+ * sentence: consent withdrawn, a suppression, or a seat that may not send. The
+ * reader sees it on the address field.
  */
 export function useBounceSendAgain(invalidateKeys: readonly QueryKey[]) {
   const t = useT();

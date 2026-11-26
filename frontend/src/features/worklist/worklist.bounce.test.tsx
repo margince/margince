@@ -85,8 +85,8 @@ describe("a bounced message is reachable", () => {
 });
 
 // "Send again" is the one verb a bounce row draws itself. The server offers it
-// only on a bounce that may be sent once more, so the row draws it exactly
-// then, and the reader's typed address is all the dialog asks for.
+// only on a bounce that may be sent once more. The reader's typed address is
+// all the dialog asks for.
 describe("a bounced message can be sent again", () => {
   const bounce = (actions: ("open" | "send_again")[]) =>
     row({
@@ -98,8 +98,8 @@ describe("a bounced message can be sent again", () => {
       subject: { type: "contact", id: "p-1", label: "Kirsten Bauer" },
     });
 
-  // The queue as the server draws it before and after the send: the row
-  // leaves once the repeat is accepted, as it would on the refetch.
+  // The queue before and after the send. The row leaves once the repeat is
+  // accepted, as it does on the refetch.
   function stubSendAgain(answer: Response) {
     let sent: { url: string; body: unknown } | undefined;
     vi.stubGlobal(

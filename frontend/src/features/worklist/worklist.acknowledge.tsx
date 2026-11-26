@@ -21,9 +21,9 @@ import { invalidateApprovalViews } from "../../lib/approvals.queries";
 import { unwrap } from "../../lib/problem";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
-// The rows the reader answers where they stand: a notice and an approved
-// change that did not run are taken off the list by saying they were seen, and
-// a bounced message is sent again to a corrected address.
+// The rows the reader answers where they stand. A notice and an approved change
+// that did not run leave the list once seen. A bounced message is sent again to
+// a corrected address.
 
 /**
  * Saying the failure has been seen, so it leaves this reader's list. It names

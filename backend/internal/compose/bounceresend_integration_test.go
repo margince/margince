@@ -300,8 +300,8 @@ func TestSendAgainRefusesAnAddressThatCannotReplaceTheBouncedOne(t *testing.T) {
 }
 
 // linkSecondContact files the bounced send under another contact the rep can
-// see, whose id sorts before the bounced contact's, so a read that took "the
-// first linked contact" would pick it.
+// see. Its id sorts before the bounced contact's, so a read that took the
+// first linked contact would pick it.
 func (f bounceFixture) linkSecondContact(t *testing.T, address string) ids.UUID {
 	t.Helper()
 	other := ids.MustParse("00000000-0000-7000-8000-000000000001")

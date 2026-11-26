@@ -141,7 +141,7 @@ func aiWorkItem(run TroubledRun) crmcontracts.AttentionItem {
 // the name the reader knows the send by — and the receiving side's own reason
 // the supporting line. `open` is offered exactly when the send is filed under
 // a contact, because that page is where fixing the address by hand lives.
-// `send_again` is offered exactly when the store says this bounce may be sent
+// `send_again` is offered when the store says this bounce may be sent
 // again, so a bounce that was already repeated keeps `open` alone.
 func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 	kind := "hard"

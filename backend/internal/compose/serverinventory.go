@@ -68,7 +68,6 @@ type Server struct {
 	searchHandlers
 	consentHandlers
 	directedSendHandlers
-	bounceResendHandlers
 	collectionsHandlers
 	signalsHandlers
 	privacyHandlers

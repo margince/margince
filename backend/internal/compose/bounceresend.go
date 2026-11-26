@@ -5,10 +5,10 @@ package compose
 
 // "Send again" on a bounced message: the same message goes to the address the
 // rep corrected. It is the one send, not a second one. This file reads the
-// bounced delivery, puts the corrected address on the contact and hands the
-// author's own message to activities.Store.SendEmail, so the authorization,
-// the consent gate on the original purpose, deliverability and the write shape
-// are the ones every other send runs.
+// bounced delivery and puts the corrected address on the contact. It then
+// hands the author's own message to activities.Store.SendEmail. The
+// authorization, the consent gate and the write shape are the ones every other
+// send runs.
 
 import (
 	"context"
@@ -53,6 +53,11 @@ func newBounceResendService(pool *pgxpool.Pool, delivery DeliveryMachinery, send
 	}
 }
 
+func newBounceResendHandlers(pool *pgxpool.Pool, send SendPath) bounceResendHandlers {
+	resend := newBounceResendService(pool, send.Delivery, send)
+	return bounceResendHandlers{resend: &resend}
+}
+
 // bounceAddressFault refuses an address that cannot stand in for the one that
 // refused, naming the request field the rep can change.
 type bounceAddressFault struct{ code, message string }
@@ -80,7 +85,7 @@ func (s bounceResendService) SendAgain(ctx context.Context, bounceID ids.UUID, a
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	// BEFORE the contact is touched: a caller who may change the contact and
+	// Before the contact is touched. A caller who may change the contact and
 	// not send would otherwise leave the address changed behind a refusal.
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return crmcontracts.Activity{}, err
@@ -109,9 +114,9 @@ func usableAddress(typed, bounced string) (string, error) {
 
 // putAddressOnContact replaces the bounced address on the contact with the
 // corrected one, keeping its type, place and primary mark. A contact that
-// already holds the corrected address is left as it is, which is what makes a
-// second press after a refused send write nothing twice. A contact that no
-// longer holds the bounced address gains the corrected one.
+// already holds the corrected address is left as it is, so a second press
+// after a refused send writes nothing twice. A contact that no longer holds
+// the bounced address gains the corrected one.
 func (s bounceResendService) putAddressOnContact(ctx context.Context, source comms.ResendSource, corrected string) error {
 	contactID := ids.From[ids.ContactKind](source.ContactID)
 	contact, err := s.contacts.GetContact(ctx, contactID, storekit.LiveOnly)

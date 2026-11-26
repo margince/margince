@@ -147,8 +147,7 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 	if send.Delivery != nil {
 		directed := newDirectedSendService(pool, send.Delivery, send)
 		s.directedSendHandlers = directedSendHandlers{directed: &directed}
-		resend := newBounceResendService(pool, send.Delivery, send)
-		s.bounceResendHandlers = bounceResendHandlers{resend: &resend}
+		s.directedSendHandlers.bounceResendHandlers = newBounceResendHandlers(pool, send)
 	}
 	s.activitiesHandlers = s.activitiesHandlers.
 		WithPublicBaseURL(send.PublicBaseURL).

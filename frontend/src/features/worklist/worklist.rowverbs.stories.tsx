@@ -466,8 +466,8 @@ function bounceRow(actions: WorklistItem["actions"]): WorklistItem {
   };
 }
 
-// The line with the row's own answer, so the story shows what the server's
-// verbs make of a bounce and not a button handed in by hand.
+// The line with the row's own answer. The story shows what the server's verbs
+// make of a bounce, not a button handed in by hand.
 function BounceLine({ item }: Readonly<{ item: WorklistItem }>) {
   const brief = useBriefAnswer(item);
   return (

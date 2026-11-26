@@ -224,10 +224,10 @@ type DeliveryRequest struct {
 	// field being non-empty rather than carried alongside it — two fields
 	// could drift apart, one cannot.
 	ListUnsubscribe string
-	// AuthoredBodyLen and AuthoredHTMLLen say how many characters at the front of
-	// Body and HTMLBody are the author's own words, before the sign-off,
-	// disclosures and footer this send added. A send that repeats this one
-	// starts from those characters, so it does not add the three parts twice.
+	// AuthoredBodyLen and AuthoredHTMLLen count the characters at the front of
+	// Body and HTMLBody that are the author's own words. The sign-off,
+	// disclosures and footer follow them. A send that repeats this one starts
+	// from those characters, so it does not add the three parts twice.
 	AuthoredBodyLen int
 	AuthoredHTMLLen int
 	// ResentFrom is the bounced delivery this message repeats, zero otherwise.

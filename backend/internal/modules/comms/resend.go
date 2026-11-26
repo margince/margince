@@ -22,10 +22,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// resendable holds when a bounce may be sent again: the caller's own user send
-// that bounced hard, named the address that refused, kept its author's text,
-// is not itself a repeat and has not been repeated. The first placeholder is
-// the caller's user id.
+// resendable holds when a bounce may be sent again. It is the caller's own user
+// send that bounced hard and named the address that refused. It kept its
+// author's text, is not itself a repeat and has not been repeated. The first
+// placeholder is the caller's user id.
 //
 // A repeat that bounces is not offered a third send, so the person page, where
 // the address is fixed by hand, stays the way on.
@@ -38,9 +38,9 @@ const resendable = `o.user_id = $1
    AND o.resent_from IS NULL
    AND NOT EXISTS (SELECT 1 FROM comms_outbound r WHERE r.resent_from = o.id)`
 
-// ResendSource is a bounced delivery as its author wrote it: the text without
-// the sign-off and footer the send added, the addressees, the files and the
-// consent purpose the original send went out under.
+// ResendSource is a bounced delivery as its author wrote it. It holds the text
+// without the sign-off and footer the send added, the addressees and the files.
+// It also holds the consent purpose the original send went out under.
 type ResendSource struct {
 	ID         ids.UUID
 	ActivityID ids.UUID
@@ -61,10 +61,9 @@ type ResendSource struct {
 }
 
 // ResendSource answers the caller's own bounced send that may be sent again.
-// Anything else — another user's send, a soft bounce, a send already repeated,
-// a repeat itself, one filed under no contact the caller can read — answers
-// not-found, so a row the caller may not act on looks the same as one that does
-// not exist.
+// Anything else answers not-found. That covers another user's send, a soft
+// bounce, a send already repeated and a repeat itself. It also covers one
+// filed under no contact the caller can read.
 func (s *Store) ResendSource(ctx context.Context, id ids.UUID) (ResendSource, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
@@ -128,12 +127,11 @@ func decodeResendSource(source *ResendSource, to, cc, bcc, files []byte) error {
 }
 
 // resendContactLateral joins a bounced send to the contact whose address
-// refused it: a contact the activity is filed under, that the caller may read,
-// and that holds the bounced address. The address picks the contact. An
-// activity filed under several contacts would otherwise hand the corrected
-// address, and the consent question, to whichever contact sorted first.
-// Archived addresses count, so a second press after a refused send still finds
-// the contact whose address was already replaced.
+// refused it. That contact is filed on the activity, readable by the caller,
+// and holds the bounced address. The address picks the contact. Otherwise an
+// activity filed under several contacts would hand the corrected address and
+// the consent question to whichever contact sorted first. Archived addresses
+// count, so a second press after a refused send still finds the contact.
 func resendContactLateral(ctx context.Context, args *[]any) (string, error) {
 	arg := func(v any) int { *args = append(*args, v); return len(*args) }
 	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)

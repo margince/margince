@@ -49,8 +49,8 @@ type scheduledPayload struct {
 	// leaves the choice to the fire, as an unchosen send does.
 	FromConnection string `json:"from_connection,omitempty"`
 	// ResentFrom is the bounced delivery this message repeats. A repeat that a
-	// gate holds and a person later releases is still that bounce's one repeat,
-	// so the release stamps it and the bounce cannot be sent again beside it.
+	// gate holds and a person later releases is still that bounce's one repeat.
+	// The release stamps it, so the bounce cannot be sent again beside it.
 	ResentFrom string `json:"resent_from,omitempty"`
 }
 

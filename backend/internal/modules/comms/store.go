@@ -176,9 +176,9 @@ type StageInput struct {
 	// ThreadKey then names a new conversation; zero on every other delivery.
 	AnswersActivity ids.UUID
 	ListUnsubscribe string // the Post header is derived from this, never stored
-	// AuthoredBodyLen and AuthoredHTMLLen are how many characters at the front of
-	// Body and HTMLBody the author wrote, so a send that repeats this one can
-	// start from them. See activities.DeliveryRequest.
+	// AuthoredBodyLen and AuthoredHTMLLen count the characters at the front of
+	// Body and HTMLBody that the author wrote. A send that repeats this one
+	// starts from them. See activities.DeliveryRequest.
 	AuthoredBodyLen int
 	AuthoredHTMLLen int
 	// ResentFrom is the bounced delivery this one repeats, zero on any other.
