@@ -111,6 +111,9 @@ type writtenActorID struct {
 	// a prefix constant and a vendor name that strict folding cannot settle.
 	// Nothing that waits for a whole string can see it.
 	kind string
+	// binder names the function that bound the principal from a call
+	// argument, such as principal.SystemActing; empty for a literal.
+	binder string
 }
 
 // packageSource parses one directory's non-test Go and indexes every string
@@ -336,39 +339,29 @@ var actorKinds = map[string]string{
 	"system:":            "PrincipalSystem",
 }
 
-// agentJobsStillSystemTyped are the AI jobs that still bind PrincipalSystem
-// under their `agent:` id, keyed by file. auth.Require admits PrincipalSystem
-// without reading grants. A job converted to PrincipalAgent answers to the
-// grants it is given, and stops with no sound when they fall short. So each
-// converts on its own with a test through the real gate. A converted file that
-// keeps its entry fails AssertAllMatched.
+// agentJobsStillSystemTyped are the AI jobs that act for no one and still bind
+// PrincipalSystem under their `agent:` id, keyed by file. Every job that acts
+// for a named colleague runs as an agent under that colleague's grants. A
+// converted file that keeps its entry fails AssertAllMatched.
 var agentJobsStillSystemTyped = gatekit.Waive(map[string]string{
-	"internal/compose/approvalpreviewcommitment.go":   forAColleague,
-	"internal/compose/chatcapturefile.go":             forAColleague,
-	"internal/compose/coldstartaccept.go":             forAColleague,
-	"internal/compose/companynamepromotion.go":        forAColleague,
-	"internal/compose/deepreadaccept.go":              forAColleague,
-	"internal/compose/deepreadprincipal.go":           forAColleague,
-	"internal/compose/extractionaccept.go":            forAColleague,
-	"internal/compose/fxrefresh.go":                   forAColleague,
-	"internal/compose/jobs_documentextract.go":        forAColleague,
-	"internal/compose/jobs_transcript.go":             forAColleague,
-	"internal/compose/offerdraft.go":                  forAColleague,
-	"internal/compose/onboardingsitereadtransport.go": forAColleague,
-	"internal/compose/rateproposals.go":               forAColleague,
-	"internal/compose/reconcile.go":                   forAColleague,
-	"internal/compose/scrapeaccept.go":                forAColleague,
-	"internal/compose/signalproposals.go":             forAColleague,
-	"internal/compose/voicebuild.go":                  forAColleague,
-	"internal/compose/commitmenttask.go":              forNoOne,
-	"internal/compose/jobs_knowledgeingest.go":        forNoOne,
+	"internal/compose/approvalpreviewcommitment.go": forNoOne,
+	"internal/compose/captureenrich.go":             forNoOne,
+	"internal/compose/captureenrichpending.go":      forNoOne,
+	"internal/compose/captureenrichrequests.go":     forNoOne,
+	"internal/compose/captureverdict.go":            forNoOne,
+	"internal/compose/commitmentparties.go":         forNoOne,
+	"internal/compose/commitmentrestatement.go":     forNoOne,
+	"internal/compose/commitmenttask.go":            forNoOne,
+	"internal/compose/confidentialityverdict.go":    forNoOne,
+	"internal/compose/heldcontactrelease.go":        forNoOne,
+	"internal/compose/jobs_knowledgeingest.go":      forNoOne,
+	"internal/compose/jobs_signals.go":              forNoOne,
+	"internal/compose/signalextractcommitment.go":   forNoOne,
 })
 
 const (
-	forAColleague = "acts for a named colleague; until it runs as an agent under that colleague's live grants, " +
-		"audit_log records it as a system act and no grant bounds what it writes"
-	forNoOne = "acts for no one; it needs a fixed grant set of its own before it can run as an agent, " +
-		"and until then audit_log records it as a system act"
+	forNoOne = "an AI job that acts for no one; an AI job keeps its agent: id, and it needs a fixed grant set " +
+		"of its own before it can run as an agent, so until then audit_log records it as a system act"
 )
 
 // TestAnActorIDIsCarriedOnlyByItsKindsPrincipal holds both directions of one
@@ -380,13 +373,21 @@ const (
 // disagreement seen from the other side.
 func TestAnActorIDIsCarriedOnlyByItsKindsPrincipal(t *testing.T) {
 	t.Parallel()
-	read := 0
+	binders := actorBinders(t)
+	if _, ok := binders[systemActing]; !ok {
+		t.Fatalf("the binder census did not find %s, which binds every scheduled pass: the reader has stopped matching", systemActing)
+	}
+	read, viaSystemActing := 0, 0
 	err := gatekit.WalkDir("internal", func(dir string, d fs.DirEntry, err error) error {
 		if err != nil || !d.IsDir() {
 			return err
 		}
 		files, constants := packageSource(t, dir)
-		for _, named := range principalActorIDs(t, files, constants) {
+		all := append(principalActorIDs(t, files, constants), binderCalls(dir, files, constants, boundKinds(files, constants), binders)...)
+		for _, named := range all {
+			if named.binder == systemActing && modulePath+"/"+dir != principalImportPath {
+				viaSystemActing++
+			}
 			if named.typ == "" || named.kind == "" {
 				continue
 			}
@@ -410,6 +411,10 @@ func TestAnActorIDIsCarriedOnlyByItsKindsPrincipal(t *testing.T) {
 	if read == 0 {
 		t.Fatal("this census read no principal that names both a type and a written id, and this tree has many: " +
 			"the reader has stopped matching rather than the tree having changed")
+	}
+	if want := systemActingCallsInText(t); viaSystemActing != want {
+		t.Fatalf("read %d calls to principal.SystemActing, and a text search finds %d: the binder reader is "+
+			"missing calls, so the census reads a smaller tree than there is", viaSystemActing, want)
 	}
 	agentJobsStillSystemTyped.AssertAllMatched(t)
 }

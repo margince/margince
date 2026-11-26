@@ -112,9 +112,11 @@ func writeCommitmentTask(
 	ctx context.Context, tx pgx.Tx, tasks *activities.Store, claims *contacts.Store, t commitmentTask,
 ) (ids.UUID, error) {
 	// The reader's own pass files for the assignee; a human accepting a
-	// proposal writes as themselves, so the audit row names nobody else.
+	// proposal writes as themselves, so the audit row names nobody else. A
+	// pass already acting for someone keeps them: a meeting reading files a
+	// colleague's promise on behalf of the person whose meeting it read.
 	execCtx := extractorContext(ctx, t.Extractor)
-	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalSystem {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalSystem && actor.OnBehalfOf.IsZero() {
 		execCtx = onBehalfOf(execCtx, t.Assignee)
 	}
 	sourceSystem, sourceID := activities.CommitmentTaskSource, t.Locator

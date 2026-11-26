@@ -123,6 +123,8 @@ func TestAFollowUpFollowsTheDealToItsNewOwner(t *testing.T) {
 	if _, err := e.svc.Decide(previous, id, true, nil); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("the previous owner deciding → %v, want ErrNotFound: the card is no longer theirs", err)
 	}
+	// The effect writes under the new owner's live grants.
+	e.grantOwner(t, e.Rep2, reconcileOwnerPolicy)
 	current := e.As(e.Rep2, []ids.UUID{e.Team1}, reconcilePerms)
 	if _, err := e.svc.Decide(current, id, true, nil); err != nil {
 		t.Fatalf("the new owner deciding: %v", err)
@@ -566,7 +568,7 @@ func TestADraftComposedForAnOwnerWhoLeftIsDroppedAndRedraftedNextSweep(t *testin
 		pool:  e.Pool,
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:overnight")
+	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:overnight")
 	if err := deals.NewFollowUpReconciler(e.DB(), stager, quiet).ReconcileWorkspace(sweep); err != nil {
 		t.Fatal(err)
 	}
@@ -703,7 +705,7 @@ func TestADraftingFailureStagesNothingInsteadOfATask(t *testing.T) {
 		pool:  e.Pool,
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:overnight")
+	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:overnight")
 	if err := deals.NewFollowUpReconciler(e.DB(), stager, quiet).ReconcileWorkspace(sweep); err == nil {
 		t.Fatal("the pass reported success while the drafter was down")
 	}

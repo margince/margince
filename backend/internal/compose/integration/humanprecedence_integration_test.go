@@ -12,9 +12,12 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -22,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 func TestAnAgentOnAColleaguesPassportOverwritesAHumanTypedField(t *testing.T) {
@@ -192,7 +196,7 @@ func TestAutomaticWorkOverwritesAHumanTypedFieldWithoutApproval(t *testing.T) {
 }
 
 // automaticWork is an agent with no passport behind it, acting for the
-// signed-in colleague. It is refused a confirm-first call.
+// signed-in colleague. It stages a confirm-first call for that colleague.
 func automaticWork(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
 	var ws ids.UUID
@@ -205,7 +209,7 @@ func automaticWork(t *testing.T, e *apptest.AppEnv) context.Context {
 	}
 	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), ws), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:automatic", OnBehalfOf: colleague,
+		Type: principal.PrincipalAgent, ID: "agent:automatic", UserID: colleague, OnBehalfOf: colleague,
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),
 	})
 }
@@ -235,9 +239,23 @@ func countApprovals(t *testing.T, e *apptest.AppEnv) int {
 	return n
 }
 
-// isPassportlessStagingRefusal reports the staging engine's refusal of an agent
-// with no passport. The engine answers it with a plain error, so its words are
-// matched.
-func isPassportlessStagingRefusal(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "an agent stages on its passport")
+// stagedForTheColleague asserts that automatic work staged its confirm-first
+// call instead of doing it. The approval names the colleague it acts for and
+// no passport, so that colleague answers it.
+func stagedForTheColleague(t *testing.T, owner *pgx.Conn, err error) {
+	t.Helper()
+	staged, ok := errors.AsType[*workflow.StagedApprovalError](err)
+	if !ok {
+		t.Fatalf("automatic work answered %v, want its call staged for the colleague it acts for", err)
+	}
+	var forAColleague, onAPassport bool
+	if err := owner.QueryRow(t.Context(),
+		`SELECT on_behalf_of IS NOT NULL, passport_id IS NOT NULL FROM approval WHERE id = $1`,
+		staged.ApprovalID).Scan(&forAColleague, &onAPassport); err != nil {
+		t.Fatalf("reading the staged approval: %v", err)
+	}
+	if !forAColleague || onAPassport {
+		t.Errorf("the staged approval names a colleague: %t, carries a passport: %t; want a colleague and no passport",
+			forAColleague, onAPassport)
+	}
 }

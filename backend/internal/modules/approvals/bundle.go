@@ -265,6 +265,9 @@ func (s *Service) releaseDecidedMembers(ctx context.Context, members []BundleMem
 	if !approve {
 		return // a rejection releases nothing
 	}
+	if p, ok := principal.Actor(ctx); ok {
+		ctx = withReleasedBy(ctx, p.UserID)
+	}
 	for i := range members {
 		if members[i].Outcome != BundleDecided {
 			continue

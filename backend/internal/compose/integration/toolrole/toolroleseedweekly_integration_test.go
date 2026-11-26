@@ -73,7 +73,7 @@ func finishedSiteRead(s sweepSeed, withLogo bool) string {
 	admin := ids.MustParse(apptest.SessionUserID(s.t, s.e))
 	ws := apptest.InstallationWorkspaceUUID(context.Background(), s.t, s.e.Pool)
 	ctx := principal.WithCorrelationID(principal.WithActor(principal.WithWorkspaceID(context.Background(), ws), principal.Principal{
-		Type: principal.PrincipalSystem, ID: "agent:deepread", UserID: admin, OnBehalfOf: admin,
+		Type: principal.PrincipalSystem, ID: "system:deep_read", UserID: admin, OnBehalfOf: admin,
 	}), ids.MustParse(read))
 	store := contacts.NewStore(compose.InstallationDB(s.e.Pool))
 	claim, err := store.BeginSiteRead(ctx, ids.MustParse(read), 10*time.Minute)

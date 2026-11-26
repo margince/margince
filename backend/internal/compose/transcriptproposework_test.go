@@ -198,7 +198,7 @@ func TestALiveReadingIsTheOneQuestionThePollAsks(t *testing.T) {
 	}
 }
 
-func TestAReadingIsAttributedToTheReaderNotToANeighbouringAgent(t *testing.T) {
+func TestAReadingsRunRowIsKeptByItsOwnSystemNameForTheRequester(t *testing.T) {
 	requester := ids.NewV7()
 	ctx := withTranscriptReader(context.Background(), "human:"+requester.String(), ids.NewV7())
 
@@ -206,8 +206,8 @@ func TestAReadingIsAttributedToTheReaderNotToANeighbouringAgent(t *testing.T) {
 	if !ok {
 		t.Fatal("the reading must run as a named principal, or its writes are unattributable")
 	}
-	if actor.ID != transcriptProposalActor {
-		t.Errorf("a transcript proposal must say the transcript reader read it, got %q — the inbox shows this to the contact deciding", actor.ID)
+	if actor.ID != transcriptReadSystemID {
+		t.Errorf("the reading's run row is kept by %q, got %q, never by a neighbouring reader", transcriptReadSystemID, actor.ID)
 	}
 	if actor.OnBehalfOf != requester {
 		t.Errorf("what the reading produces is owned by the human who asked; got %s, want %s", actor.OnBehalfOf, requester)

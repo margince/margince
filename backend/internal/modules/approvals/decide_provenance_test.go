@@ -14,8 +14,11 @@ package approvals
 // distinction is actually made.
 
 import (
+	"context"
+	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -35,13 +38,14 @@ func TestServerProposedTurnsOnThePassport(t *testing.T) {
 
 // The other end of the same distinction: what makes a NULL passport_id TRUE.
 //
-// serverProposed reads the column and answers "the server made this". That is
-// only sound while nothing else can write NULL there — and an agent principal
-// with a zero PassportID does exactly that, laundering its own proposal into the
-// server-proposed case. The self-approval refusal compares the two passports, so
-// against a NULL it never fires and the credential releases the call it made.
-func TestAnAgentCannotStageWithoutItsPassport(t *testing.T) {
+// serverProposed reads the column and answers "the server made this". An agent
+// with no passport and no person it acts for would write NULL there too. Its
+// proposal would then read as the server's. The self-approval refusal compares
+// the two passports, so against a NULL it never fires. The credential would
+// release the call it made.
+func TestAnAgentStagesOnItsPassportOrForANamedPerson(t *testing.T) {
 	minted := ids.From[ids.PassportKind](ids.NewV7())
+	person := ids.NewV7()
 	for name, tc := range map[string]struct {
 		actor   principal.Principal
 		refused bool
@@ -51,9 +55,28 @@ func TestAnAgentCannotStageWithoutItsPassport(t *testing.T) {
 				Type: principal.PrincipalAgent, ID: "agent:x", OnBehalfOf: ids.NewV7(), PassportID: minted.UUID,
 			},
 		},
-		"an agent presenting none": {
+		"an agent presenting none, acting for no one": {
+			actor:   principal.Principal{Type: principal.PrincipalAgent, ID: "agent:x"},
+			refused: true,
+		},
+		// The product's own job acting for a named person: the row carries
+		// that person in on_behalf_of, and no credential exists to release it.
+		"an agent presenting none, acting for a named person": {
 			actor: principal.Principal{
-				Type: principal.PrincipalAgent, ID: "agent:x", OnBehalfOf: ids.NewV7(),
+				Type: principal.PrincipalAgent, ID: "agent:x", UserID: person, OnBehalfOf: person,
+			},
+		},
+		// Two independent ids name nobody in particular: whose job is it?
+		"an agent presenting none, its user and its principal two people": {
+			actor: principal.Principal{
+				Type: principal.PrincipalAgent, ID: "agent:x", UserID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
+			},
+			refused: true,
+		},
+		"an agent presenting none, with grants and a user but acting for no one": {
+			actor: principal.Principal{
+				Type: principal.PrincipalAgent, ID: "agent:x", UserID: person,
+				Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 			},
 			refused: true,
 		},
@@ -77,5 +100,26 @@ func TestAnAgentCannotStageWithoutItsPassport(t *testing.T) {
 				t.Errorf("refused a legitimate stager: %v", err)
 			}
 		})
+	}
+}
+
+// The product's own job stages with no passport, so the passport comparison
+// cannot see it approving its own row. It is refused by the id it staged
+// under, and the person it acts for, or another job for them, still decides.
+func TestAJobDoesNotApproveTheRowItStaged(t *testing.T) {
+	person := ids.NewV7()
+	on := ids.From[ids.UserKind](person)
+	staged := row{Kind: "advance_deal", ProposedBy: "agent:rate-refresh", OnBehalfOf: &on}
+	job := principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:rate-refresh", UserID: person, OnBehalfOf: person,
+		Scopes: principal.NewScopeSet(principal.ScopeWrite),
+	}
+	if err := agentMayDecide(context.Background(), job, staged, true, ownReleaseAllowed); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("the job that staged the row approved it (%v), want a permission denial", err)
+	}
+	other := job
+	other.ID = "agent:auto-apply"
+	if err := agentMayDecide(context.Background(), other, staged, true, ownReleaseAllowed); err != nil {
+		t.Fatalf("another job acting for the same person was refused: %v", err)
 	}
 }
