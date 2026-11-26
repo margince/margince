@@ -65,6 +65,7 @@ function thread(overrides: Partial<DealRoomThread> = {}): DealRoomThread {
   return {
     id,
     room_id: "room-1",
+    visible_to_buyer: true,
     document_id: null,
     required_change: false,
     state: "open",

@@ -122,7 +122,7 @@ describe("disabled main-menu features", () => {
 });
 
 describe("destinations the reader may not read", () => {
-  const COMPOSITE = ["home", "filters"];
+  const COMPOSITE = ["home", "worklist", "filters"];
   const named = (screen: string) =>
     READ_REQUIREMENTS.some(([withheld]) =>
       NAV.some(

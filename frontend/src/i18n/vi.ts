@@ -2773,6 +2773,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "autonomy.confirm": "Duyệt trước",
 
   "nav.brief": "Trang chủ",
+  "nav.worklist": "Danh sách công việc",
   "nav.contacts": "Liên hệ",
   "nav.companies": "Công ty",
   "nav.leads": "Lead",
@@ -14171,7 +14172,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "room.docs.group.delivery_operations": "Triển khai và vận hành",
   "buyer.docs.title": "Tài liệu",
   "buyer.docs.empty": "Chưa có tài liệu nào.",
-  "buyer.threads.hiddenOwn": "Một cuộc trao đổi về một tệp không còn được chia sẻ.",
+  "buyer.threads.hiddenOwn":
+    "Một cuộc trao đổi về một tệp không còn được chia sẻ.",
   "buyer.docs.download": "Tải xuống {title}",
   "buyer.docs.downloadFailed":
     "Tải xuống không thành công. Vui lòng thử lại hoặc trao đổi với người liên hệ.",
@@ -14224,7 +14226,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "threads.unanswered_other": "{count} chưa trả lời",
   "threads.cancel": "Hủy",
   "threads.empty": "Chưa có tin nhắn nào.",
-  "threads.hiddenFromBuyer": "Người mua không còn thấy cuộc trao đổi này",
+  "threads.hiddenFromBuyer": "Bên mua không còn thấy cuộc trao đổi này",
   "threads.requiredChange": "Cần thay đổi",
   "threads.resolved": "Đã giải quyết",
   "threads.sideBuyer": "bên mua",

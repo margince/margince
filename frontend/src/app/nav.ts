@@ -6,6 +6,7 @@ import {
   Handshake,
   Home,
   Layers2,
+  ListChecks,
   type LucideIcon,
   Target,
   UserPlus,
@@ -23,6 +24,8 @@ import {
 import { EXTENSION_SCREEN } from "../lib/extensions";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import type { Route, Screen } from "../lib/router";
+import { NO_URL_PARAMS, type UrlParams } from "../lib/urlstate";
+import { drawerOpen } from "../lib/worklistrouting";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
 import { appItems } from "./navapps";
 import {
@@ -104,7 +107,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         screen: "home",
         labelKey: "nav.brief",
         icon: Home,
-        aliases: ["worklist", "today"],
+        aliases: ["today"],
       },
     ],
   },
@@ -141,13 +144,9 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     headingKey: "nav.group.work",
     items: [
-      // The day's own surface, and the only door to the work that waits on a
-      // contact: decisions to answer, tasks to finish and duplicates to merge are
-      // lanes inside it. It leads the group because it is what a reader opens
-      // when the question is "what needs me?".
-      // A checklist rather than a sunrise: what this surface holds is the work
-      // that waits on a contact, and `Sun` says "morning" — which is the Brief's
-      // claim, not this one.
+      // Opens the Worklist panel on Home (`#/worklist` redirects there). A
+      // checklist glyph: `Sun` would claim the Brief's morning.
+      { screen: "worklist", labelKey: "nav.worklist", icon: ListChecks },
       // The body of work a deal is about. It starts during the deal and
       // outlives close-won, so what it belongs to is the work rather than the
       // record of the sale: a project in delivery has no deal column to stand
@@ -383,13 +382,24 @@ function opensAPageBelow(route: Route): boolean {
   );
 }
 
+/**
+ * Whether the address is Home with the Worklist panel open. The panel is not a
+ * route of its own, so the rail, the breadcrumb and the tab title all ask here.
+ */
+export function opensWorklistPanel(route: Route, params: UrlParams): boolean {
+  return route.screen === "home" && drawerOpen(params);
+}
+
 // Which primary row a route makes current. It is the route's screen for every
 // destination the product owns, and `settings` for a unit's — a unit screen
 // routes as `{screen: "ext", id: "<unit>"}` and has no row of its own. Nothing
 // in the sidebar renders that id today, so a unit route marks no row. The
 // mapping stays because a unit is reached from Settings, and the level machinery
 // asks it for every route.
-function activeRowFor(route: Route): string {
+function activeRowFor(route: Route, params: UrlParams): string {
+  if (opensWorklistPanel(route, params)) {
+    return "worklist";
+  }
   if (route.screen === EXTENSION_SCREEN) {
     return "settings";
   }
@@ -418,7 +428,7 @@ function activeRowFor(route: Route): string {
 
 /** Whether the page is one of Settings', which the account menu leads to. */
 export function underSettings(route: Route): boolean {
-  return activeRowFor(route) === "settings";
+  return activeRowFor(route, NO_URL_PARAMS) === "settings";
 }
 
 // The levels the sidebar shows for a route: the destinations, then whatever the
@@ -429,11 +439,12 @@ export function railTrail(
   disabled: readonly Withheld[] = [],
   readsTeam = false,
   apps: readonly UnitApp[] = [],
+  params: UrlParams = NO_URL_PARAMS,
 ): readonly NavTrailLevel[] {
   return navTrail(
     primaryLevel(route, disabled, readsTeam, apps),
     route,
-    activeRowFor(route),
+    activeRowFor(route, params),
     section,
   );
 }
