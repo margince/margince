@@ -3,10 +3,10 @@
 
 package capture
 
-// A provider tombstone can name nothing but the mailbox's own event id. When a
-// colleague's calendar filed the meeting first, no row carries that id. The
-// tombstone holds no iCal UID to find the shared meeting by either. The seat's
-// import row records each id its own connection delivered the meeting under.
+// A calendar event this seat's calendar matched onto a row another door filed
+// is stored under no key of this calendar. A tombstone names only the event id,
+// and a moved one-off states a new identity, so neither finds that row. The
+// seat's import row records each id its own connection delivered the meeting under.
 
 import (
 	"context"
@@ -20,11 +20,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// meetingOfOwnEventID finds the meeting this seat's own calendar connection
-// delivered under the tombstone's event id. Event ids are only unique within
-// one mailbox, so an id another mailbox delivered reaches nothing here.
-func (s *Sink) meetingOfOwnEventID(ctx context.Context, tx pgx.Tx, key connector.NaturalKey) (ids.ActivityID, bool, error) {
-	if may, err := s.identityMayCancel(ctx, tx, key); err != nil || !may {
+// meetingOfOwnDelivery finds the meeting this seat's own calendar connection
+// delivered under the key's event id, locked, and whether the seat holds it.
+// Event ids are only unique within one mailbox, so an id another mailbox
+// delivered reaches nothing here.
+func (s *Sink) meetingOfOwnDelivery(ctx context.Context, tx pgx.Tx, key connector.NaturalKey) (ids.ActivityID, bool, error) {
+	if may, err := s.mayLookPastNaturalKey(ctx, tx, key); err != nil || !may {
 		return ids.ActivityID{}, false, err
 	}
 	keys := storekit.ProviderMessageKeysSQL("$1", "$2", "$4", "$3")
@@ -37,7 +38,7 @@ func (s *Sink) meetingOfOwnEventID(ctx context.Context, tx pgx.Tx, key connector
 		return ids.ActivityID{}, false, nil
 	}
 	if err != nil {
-		return ids.ActivityID{}, false, fmt.Errorf("capture: finding the meeting a removed calendar event was delivered as: %w", err)
+		return ids.ActivityID{}, false, fmt.Errorf("capture: finding the meeting a calendar event was delivered as: %w", err)
 	}
 	return lockedMeetingForSeat(ctx, tx, own)
 }

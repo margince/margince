@@ -50,6 +50,9 @@ type Decoded struct {
 	Change  connector.ChatChange
 	// Binding states what the live connection says about the item.
 	Binding func(connector.ChatLink) connector.ChatBinding
+	// Media lists the files a File message carried. The worker downloads them
+	// into the message's Parts.
+	Media []MediaRef
 }
 
 // Worker files one stored item through capture.FileChatMessage while its
@@ -69,7 +72,8 @@ type Worker[T IngestJob] struct {
 
 // Work implements River's worker for the ingest job. A failure other than a
 // refusal is returned, and River's retry is the recovery, because the webhook
-// delivered the item once.
+// delivered the item once. A file that stays unreachable through the last
+// attempt is dropped, so the message files without it.
 func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 	bound, err := w.Bind(ctx, job.Args)
 	if err != nil {
@@ -98,13 +102,21 @@ func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 	case Change:
 		return jobs.FaultContext(ctx, w.change(bound, job.Args.Connection(), rawID, decoded))
 	}
-	return jobs.FaultContext(ctx, w.file(bound, job.Args.Connection(), rawID, decoded))
+	return jobs.FaultContext(ctx, w.file(bound, job.Args.Connection(), rawID, decoded, job.Attempt >= job.MaxAttempts))
 }
 
 // file files the message while its connection is live. It destroys the stored item
 // when the connection is not live or the customer has been erased.
-func (w *Worker[T]) file(ctx context.Context, connection, rawID ids.UUID, decoded Decoded) error {
+func (w *Worker[T]) file(ctx context.Context, connection, rawID ids.UUID, decoded Decoded, lastAttempt bool) error {
 	decoded.Message.StoredOriginal = rawID
+	// The files come before the transaction, so no database transaction waits on
+	// a provider's server.
+	if err := attach(ctx, connection, decoded.Media, lastAttempt, &decoded.Message); err != nil {
+		return fmt.Errorf("%s: downloading a message's file: %w", w.Name, err)
+	}
+	for _, drop := range decoded.Message.PartDrops {
+		w.Log.InfoContext(ctx, w.Name+": files of a message were not kept", "reason", drop.Reason, "count", drop.Count)
+	}
 	actorCtx := principal.WithCorrelationID(principal.WithActor(ctx, w.Actor), ids.NewV7())
 	live, err := capture.FileThroughLiveChatLink(actorCtx, w.Pool, connection.String(), rawID, func(link connector.ChatLink) error {
 		if _, err := capture.FileChatMessage(actorCtx, w.Sink, decoded.Binding(link), decoded.Message); err != nil {
