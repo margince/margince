@@ -15666,9 +15666,9 @@ export interface paths {
         /**
          * The calling user's morning digest — what capture did overnight.
          * @deprecated
-         * @description Retired. The behaviour behind this operation is gone. Every call answers
-         *     `410 endpoint_retired`, whatever it sends. The operation stays declared
-         *     until the notice window allows its removal.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getMorningDigest"];
         put?: never;
@@ -27267,9 +27267,9 @@ export interface paths {
         /**
          * Take back a stage move the product made by itself.
          * @deprecated
-         * @description Retired. The behaviour behind this operation is gone. Every call answers
-         *     `410 endpoint_retired`, whatever it sends. The operation stays declared
-         *     until the notice window allows its removal.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["revertStageProgression"];
         delete?: never;
@@ -27288,9 +27288,9 @@ export interface paths {
         /**
          * What each stage transition has earned.
          * @deprecated
-         * @description Retired. The behaviour behind this operation is gone. Every call answers
-         *     `410 endpoint_retired`, whatever it sends. The operation stays declared
-         *     until the notice window allows its removal.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getStageAutomationReport"];
         put?: never;
@@ -27314,17 +27314,17 @@ export interface paths {
         /**
          * What each transition in this pipeline is allowed to do.
          * @deprecated
-         * @description Retired. The behaviour behind this operation is gone. Every call answers
-         *     `410 endpoint_retired`, whatever it sends. The operation stays declared
-         *     until the notice window allows its removal.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["listTransitionPolicies"];
         /**
          * Decide what one transition may do.
          * @deprecated
-         * @description Retired. The behaviour behind this operation is gone. Every call answers
-         *     `410 endpoint_retired`, whatever it sends. The operation stays declared
-         *     until the notice window allows its removal.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         put: operations["setTransitionPolicy"];
         post?: never;
@@ -27349,9 +27349,9 @@ export interface paths {
         /**
          * Lift a suspension the product put on a transition.
          * @deprecated
-         * @description Retired. The behaviour behind this operation is gone. Every call answers
-         *     `410 endpoint_retired`, whatever it sends. The operation stays declared
-         *     until the notice window allows its removal.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["resumeTransitionPolicy"];
         delete?: never;
@@ -27370,17 +27370,17 @@ export interface paths {
         /**
          * Whether the qualified forecast applies the viability reviews.
          * @deprecated
-         * @description Retired. The behaviour behind this operation is gone. Every call answers
-         *     `410 endpoint_retired`, whatever it sends. The operation stays declared
-         *     until the notice window allows its removal.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getForecastAssuranceEnforcement"];
         /**
          * Switch the qualified forecast's enforcement on or off.
          * @deprecated
-         * @description Retired. The behaviour behind this operation is gone. Every call answers
-         *     `410 endpoint_retired`, whatever it sends. The operation stays declared
-         *     until the notice window allows its removal.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         put: operations["setForecastAssuranceEnforcement"];
         post?: never;
@@ -27402,9 +27402,9 @@ export interface paths {
         /**
          * Answer a customer review with the day the customer asked you to wait until.
          * @deprecated
-         * @description Retired. The behaviour behind this operation is gone. Every call answers
-         *     `410 endpoint_retired`, whatever it sends. The operation stays declared
-         *     until the notice window allows its removal.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["waitInputCheck"];
         delete?: never;
@@ -27425,9 +27425,9 @@ export interface paths {
         /**
          * Answer a customer review by closing its deal as lost.
          * @deprecated
-         * @description Retired. The behaviour behind this operation is gone. Every call answers
-         *     `410 endpoint_retired`, whatever it sends. The operation stays declared
-         *     until the notice window allows its removal.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["closeLostInputCheck"];
         delete?: never;
@@ -27449,9 +27449,9 @@ export interface paths {
         /**
          * Whether the customer still supports this deal, and the review behind the answer.
          * @deprecated
-         * @description Retired. The behaviour behind this operation is gone. Every call answers
-         *     `410 endpoint_retired`, whatever it sends. The operation stays declared
-         *     until the notice window allows its removal.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getDealViability"];
         put?: never;
@@ -65530,7 +65530,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description The operation is retired and its behaviour is gone (`code: endpoint_retired`). It answers so on every call, whatever the request holds, until the notice window allows its removal. */
+        /** @description The operation is retired and its behaviour is gone (`code: endpoint_retired`). A call that passes the route's authentication and parameter checks answers 410 with that code, until the notice window allows its removal. */
         Retired: {
             headers: {
                 [name: string]: unknown;

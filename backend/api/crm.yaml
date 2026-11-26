@@ -23473,9 +23473,9 @@ paths:
       x-human-only-reason: security
       summary: The calling user's morning digest — what capture did overnight.
       description: |
-        Retired. The behaviour behind this operation is gone. Every call answers
-        `410 endpoint_retired`, whatever it sends. The operation stays declared
-        until the notice window allows its removal.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       responses:
         '200':
           description: The digest.
@@ -39835,9 +39835,9 @@ paths:
       security: [ { cookieAuth: [] } ]
       summary: Take back a stage move the product made by itself.
       description: |
-        Retired. The behaviour behind this operation is gone. Every call answers
-        `410 endpoint_retired`, whatever it sends. The operation stays declared
-        until the notice window allows its removal.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       parameters:
       responses:
         '200':
@@ -39878,9 +39878,9 @@ paths:
       x-human-only-reason: covered
       summary: What each stage transition has earned.
       description: |
-        Retired. The behaviour behind this operation is gone. Every call answers
-        `410 endpoint_retired`, whatever it sends. The operation stays declared
-        until the notice window allows its removal.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       responses:
         '200':
           description: The pipeline's transitions and their record.
@@ -39907,9 +39907,9 @@ paths:
       x-human-only-reason: covered
       summary: What each transition in this pipeline is allowed to do.
       description: |
-        Retired. The behaviour behind this operation is gone. Every call answers
-        `410 endpoint_retired`, whatever it sends. The operation stays declared
-        until the notice window allows its removal.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       responses:
         '200':
           description: The pipeline's transition rules.
@@ -39934,9 +39934,9 @@ paths:
       # governance decision about the product's own autonomy, and an agent
       # granting itself that is the thing the whole mechanism guards against.
       description: |
-        Retired. The behaviour behind this operation is gone. Every call answers
-        `410 endpoint_retired`, whatever it sends. The operation stays declared
-        until the notice window allows its removal.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       parameters:
       requestBody:
         required: true
@@ -39973,9 +39973,9 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Lift a suspension the product put on a transition.
       description: |
-        Retired. The behaviour behind this operation is gone. Every call answers
-        `410 endpoint_retired`, whatever it sends. The operation stays declared
-        until the notice window allows its removal.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       requestBody:
         required: true
         content:
@@ -40005,9 +40005,9 @@ paths:
       security: [ { cookieAuth: [] } ]
       summary: Whether the qualified forecast applies the viability reviews.
       description: |
-        Retired. The behaviour behind this operation is gone. Every call answers
-        `410 endpoint_retired`, whatever it sends. The operation stays declared
-        until the notice window allows its removal.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       responses:
         '200':
           description: The installation's enforcement state.
@@ -40028,9 +40028,9 @@ paths:
       security: [ { cookieAuth: [] } ]
       summary: Switch the qualified forecast's enforcement on or off.
       description: |
-        Retired. The behaviour behind this operation is gone. Every call answers
-        `410 endpoint_retired`, whatever it sends. The operation stays declared
-        until the notice window allows its removal.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       requestBody:
         required: true
         content:
@@ -40067,9 +40067,9 @@ paths:
       security: [ { cookieAuth: [] } ]
       summary: Answer a customer review with the day the customer asked you to wait until.
       description: |
-        Retired. The behaviour behind this operation is gone. Every call answers
-        `410 endpoint_retired`, whatever it sends. The operation stays declared
-        until the notice window allows its removal.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       parameters:
         - name: id
           in: path
@@ -40105,9 +40105,9 @@ paths:
       security: [ { cookieAuth: [] } ]
       summary: Answer a customer review by closing its deal as lost.
       description: |
-        Retired. The behaviour behind this operation is gone. Every call answers
-        `410 endpoint_retired`, whatever it sends. The operation stays declared
-        until the notice window allows its removal.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       parameters:
         - name: id
           in: path
@@ -40146,9 +40146,9 @@ paths:
       security: [ { cookieAuth: [] } ]
       summary: Whether the customer still supports this deal, and the review behind the answer.
       description: |
-        Retired. The behaviour behind this operation is gone. Every call answers
-        `410 endpoint_retired`, whatever it sends. The operation stays declared
-        until the notice window allows its removal.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       responses:
         '200':
           description: The deal's viability.
@@ -40621,7 +40621,7 @@ components:
             notFound:
               value: { type: 'https://errors.gradion.com/not_found', title: Not found, status: 404, code: not_found, detail: Resource not found. }
     Retired:
-      description: 'The operation is retired and its behaviour is gone (`code: endpoint_retired`). It answers so on every call, whatever the request holds, until the notice window allows its removal.'
+      description: 'The operation is retired and its behaviour is gone (`code: endpoint_retired`). A call that passes the route''s authentication and parameter checks answers 410 with that code, until the notice window allows its removal.'
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
