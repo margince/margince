@@ -35,7 +35,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `approvaltargettypes_test.go` | H3 | enumsync\_test.go holds the CHECK on approval.target\_entity\_type equal to targettype.Type. |
 | `appviewfixtures_test.go` | H2 | Each MCP App view's test fixture has the member names of the Go result its tool returns. |
 | `attachmenttypes_test.go` | H3 | The file picker offers the kinds of file the server keeps, no more and no fewer, by ending and by declared media type. |
-| `auditcoherence_test.go` | H3 | The audit\_log action and actor\_type vocabularies in crm.yaml match the table's CHECK constraints. |
+| `auditcoherence_test.go` | H3 | The audit\_log actor\_type vocabulary in crm.yaml matches the table's CHECK constraint. |
 | `authgrantobjects_test.go` | H2 | The objects platform/auth asks for by name are objects a role can hold. |
 | `authwaitparity_test.go` | H3 | How long an in-flight authentication may be held waiting on somebody else's server. |
 | `authzcategories_test.go` | H2 | The outbound category vocabulary is spelled twice (once in Go, once as a CHECK constraint on communication\_decision), and the two must agree. |
