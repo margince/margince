@@ -142,7 +142,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"component_kind":               "Komponentenart",
 		"tax_category":                 "Steuerkategorie",
 		"body":                         "Notizen",
-		"buyer_company_id":             "Käufer",
+		"buyer_company_id":             "Käuferunternehmen",
 		"candidate_company_key":        "Zugeordnetes Unternehmen",
 		"origin":                       "Herkunft",
 		"origin_detail":                "Notiz zur Herkunft",
