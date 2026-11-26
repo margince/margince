@@ -388,7 +388,9 @@ public.activity_link_suggestion.activity_id uuid NOT NULL gen=- def=-
 public.activity_link_suggestion.activity_link_suggestion_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.activity_link_suggestion.activity_link_suggestion_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL) AND (decided_by IS NULL)) OR ((status <> 'pending'::text) AND (decided_at IS NOT NULL) AND (decided_by IS NOT NULL))))
 public.activity_link_suggestion.activity_link_suggestion_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'project'::text])))
+public.activity_link_suggestion.activity_link_suggestion_for_user_fkey FOREIGN KEY (for_user) REFERENCES app_user(id) ON DELETE CASCADE
 public.activity_link_suggestion.activity_link_suggestion_pkey PRIMARY KEY (id)
+public.activity_link_suggestion.activity_link_suggestion_producer CHECK (((unit IS NULL) = (for_user IS NOT NULL)))
 public.activity_link_suggestion.activity_link_suggestion_reason_check CHECK (((char_length(reason) >= 1) AND (char_length(reason) <= 200)))
 public.activity_link_suggestion.activity_link_suggestion_score_check CHECK (((score >= (0)::numeric) AND (score <= (1)::numeric)))
 public.activity_link_suggestion.activity_link_suggestion_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text])))
@@ -400,13 +402,14 @@ public.activity_link_suggestion.decided_at timestamp with time zone gen=- def=-
 public.activity_link_suggestion.decided_by text gen=- def=-
 public.activity_link_suggestion.entity_id uuid NOT NULL gen=- def=-
 public.activity_link_suggestion.entity_type text NOT NULL gen=- def=-
+public.activity_link_suggestion.for_user uuid gen=- def=-
 public.activity_link_suggestion.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_link_suggestion.reason text NOT NULL gen=- def=-
 public.activity_link_suggestion.score numeric(5,4) NOT NULL gen=- def=-
 public.activity_link_suggestion.status text NOT NULL gen=- def='pending'::text
 public.activity_link_suggestion.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_link_suggestion FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"unit": 20000, "reason": 500, "status": 20000, "decided_by": 20000, "captured_by": 20000, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"decided_by":20000,"entity_type":20000,"reason":500,"status":20000,"unit":20000}')
 public.activity_link_suggestion.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_link_suggestion FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000, "reason": 500, "status": 20000, "decided_by": 20000, "captured_by": 20000, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"decided_by":20000,"entity_type":20000,"reason":500,"status":20000,"unit":20000}')
-public.activity_link_suggestion.unit text NOT NULL gen=- def=-
+public.activity_link_suggestion.unit text gen=- def=-
 public.activity_link_suggestion.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_link_suggestion.version bigint NOT NULL gen=- def=1
 public.activity_link_suggestion_pkey CREATE UNIQUE INDEX activity_link_suggestion_pkey ON public.activity_link_suggestion USING btree (id)
@@ -6326,6 +6329,7 @@ public.idx_activity_counterparty_email CREATE INDEX idx_activity_counterparty_em
 public.idx_activity_direction_page CREATE INDEX idx_activity_direction_page ON public.activity USING btree (direction, occurred_at DESC, id DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))
 public.idx_activity_kind CREATE INDEX idx_activity_kind ON public.activity USING btree (kind, occurred_at DESC) WHERE (archived_at IS NULL)
 public.idx_activity_labeled CREATE INDEX idx_activity_labeled ON public.activity USING btree (capture_labeled_at) WHERE (capture_labeled_at IS NOT NULL)
+public.idx_activity_link_suggestion_for_user CREATE INDEX idx_activity_link_suggestion_for_user ON public.activity_link_suggestion USING btree (for_user) WHERE (for_user IS NOT NULL)
 public.idx_activity_link_suggestion_pending CREATE INDEX idx_activity_link_suggestion_pending ON public.activity_link_suggestion USING btree (created_at, id) WHERE (status = 'pending'::text)
 public.idx_activity_meeting_host CREATE INDEX idx_activity_meeting_host ON public.activity USING btree (host_user_id, occurred_at) WHERE ((kind = 'meeting'::text) AND (archived_at IS NULL))
 public.idx_activity_occurred_live CREATE INDEX idx_activity_occurred_live ON public.activity USING btree (occurred_at DESC) WHERE (archived_at IS NULL)

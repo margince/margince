@@ -7878,9 +7878,6 @@ export const en = {
   "task.next.reviewProject": "Review project",
   "task.next.reviewContact": "Review contact",
   "task.next.reviewCompany": "Review company",
-  "tasks.whichDeal.legend": "Which deal is the email about?",
-  "tasks.whichDeal.file": "Link email thread to deal",
-  "tasks.whichDeal.filed": "Email thread linked to the deal",
   "today.withheld": "Not included: {sections}. You do not have access to them.",
   "today.source.moments": "Margince findings",
   "today.source.nextSteps": "open tasks",
@@ -8929,8 +8926,6 @@ export const en = {
   "tasks.origin.email_request": "Created from a request in an email.",
   "tasks.origin.which_deal":
     "Created because a captured email fits more than one open deal. Choose the deal it belongs to, or choose “None of these deals”.",
-  "tasks.whichDeal.none": "None of these deals",
-  "tasks.whichDeal.noneDone": "Email kept off these deals",
   "tasks.origin.system": "Created by an automation, not typed by a colleague.",
 
   "analytics.sub":
@@ -19293,6 +19288,7 @@ export const en = {
     "Someone links a deal, company or contact to another record, or removes a link.",
   "linkSuggestions.title": "Suggested links",
   "linkSuggestions.reason": "{unit}: {reason}",
+  "linkSuggestions.byMargince": "Margince",
   "linkSuggestions.target": "{subject} to {record} ({kind})",
   "linkSuggestions.noSubject": "A message with no subject",
   "linkSuggestions.kind.contact": "contact",

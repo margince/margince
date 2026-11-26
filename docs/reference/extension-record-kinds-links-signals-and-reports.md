@@ -327,8 +327,9 @@ What it leaves out:
 ## Suggested-link resolver
 
 An extension can suggest which deal, company, contact or project a message belongs to. A suggestion waits in a review
-queue and attaches nothing. A reader accepts or rejects each one. Core makes no suggestion of its own, so the queue
-holds only what an extension proposed.
+queue and attaches nothing. A reader accepts or rejects each one. Core's only suggestions are its own "Which deal is
+this about?" questions. Each names the one colleague it asks instead of a unit, and the queue shows it to nobody
+else.
 
 ```mermaid
 flowchart LR
@@ -346,7 +347,7 @@ flowchart LR
 | Rate | A unit may propose 120 times a minute. Past that the call answers `ErrRateLimited`. |
 | Queue | `GET /v1/link-suggestions` answers the pending suggestions the caller may decide, oldest first, at most 50: the caller may update messages, may change this one, and may read its target. Deciding runs the same check. A caller who may decide none gets an empty queue. |
 | Decision | `POST /v1/link-suggestions/{id}/accept` files the message through the ordinary relink and closes the suggestion in one transaction. `POST /v1/link-suggestions/{id}/reject` closes it and attaches nothing. Deciding the same way twice is the same success. The opposite decision is a `409`. Both routes are for a signed-in reader, not an agent. |
-| Record | Each proposal and decision writes an audit row on the message and the event `activity.link_suggestion_changed`. The table is `activity_link_suggestion`. It holds the message, the target, the unit, the reason and the score, and nothing about a user. |
+| Record | Each proposal and decision writes an audit row on the message and the event `activity.link_suggestion_changed`. The table is `activity_link_suggestion`. It holds the message, the target, the unit, the reason and the score. A row core wrote holds no unit and names the one colleague it asks instead. |
 | Frontend | The Worklist draws a **Suggested links** panel when the queue is not empty. |
 
 What it leaves out:

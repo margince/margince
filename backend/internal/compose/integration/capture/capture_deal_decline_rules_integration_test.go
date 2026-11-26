@@ -5,7 +5,7 @@
 
 package capture
 
-// The rules a decline keeps. It answers only a question the caller can read,
+// The rules a decline keeps. It answers only a question the caller was asked,
 // and declines the deals that question offered. The latest decision about a
 // deal counts, and only a project the deal filed comes off.
 
@@ -40,10 +40,10 @@ func ambiguousThread(t *testing.T, env captureEnv, key string) string {
 	return reply
 }
 
-// The colleague asked limits their question to themselves. Another colleague
-// may change the shared mail but cannot read that question, so "none of them"
-// is refused and declines nothing.
-func TestNoneOfThemAnswersOnlyAQuestionTheCallerCanRead(t *testing.T) {
+// The question is the asked colleague's alone. Another colleague may change
+// the shared mail but was not asked, so "none of them" is refused and
+// declines nothing.
+func TestNoneOfThemAnswersOnlyAQuestionTheCallerWasAsked(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	shareMailbox(t, env)
@@ -52,26 +52,15 @@ func TestNoneOfThemAnswersOnlyAQuestionTheCallerCanRead(t *testing.T) {
 	w.deal(t, "Acme operations")
 	w.deal(t, "Acme reporting")
 	reply := ambiguousThread(t, env, "priv")
-	var question ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE source_system = 'which_deal'`).Scan(&question)
-	}); err != nil {
-		t.Fatalf("reading the deal question: %v", err)
-	}
-	if _, err := activities.NewStore(e.DB()).SetAudience(w.ctx, ids.From[ids.ActivityKind](question), activities.SetAudienceInput{
-		Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: e.Rep1}},
-	}); err != nil {
-		t.Fatalf("limiting the question to the colleague asked: %v", err)
-	}
 
 	actor, _ := principal.Actor(w.ctx)
 	actor.ID, actor.UserID = "human:"+e.Rep3.String(), e.Rep3
 	status, out := decline(principal.WithActor(w.ctx, actor), t, e, activityOf(t, e, reply), `{}`)
 	if status != http.StatusUnprocessableEntity {
-		t.Fatalf("none of them over a question the caller cannot read answered %d %+v, want 422", status, out)
+		t.Fatalf("none of them over a question the caller was not asked answered %d %+v, want 422", status, out)
 	}
 	if n := countRows(t, e, `SELECT count(*) FROM audit_log WHERE after->>'declined' = 'true'`); n != 0 {
-		t.Fatalf("%d declines written for a question the caller cannot read, want none", n)
+		t.Fatalf("%d declines written for a question the caller was not asked, want none", n)
 	}
 	if n := openQuestions(t, e); n != 1 {
 		t.Fatalf("%d open deal questions, want the question left open", n)

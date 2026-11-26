@@ -4,9 +4,10 @@
 package activities
 
 // Suggested links: an extension proposes which record a message belongs to, and
-// a reader decides. Core never guesses, so the queue holds only what a unit
-// supplied. A proposal writes no activity_link; only an accept does, through the
-// same relink every other filing uses, in the transaction that closes the
+// a reader decides. Core's only proposals are its "which deal" questions
+// (whichdealanswer.go), each asked of one colleague and hidden from the rest. A
+// proposal writes no activity_link; only an accept does, through the same
+// relink every other filing uses, in the transaction that closes the
 // suggestion.
 
 import (
@@ -71,12 +72,14 @@ const (
 	SuggestionExcluded LinkSuggestionOutcome = "excluded"
 )
 
-// LinkSuggestionInput is one proposal.
+// LinkSuggestionInput is one proposal. A unit's proposal names its Unit. Core's
+// own question names instead the one colleague it is ForUser.
 type LinkSuggestionInput struct {
 	ActivityID ids.ActivityID
 	EntityType string
 	EntityID   ids.UUID
 	Unit       string
+	ForUser    ids.UUID
 	Reason     string
 	Score      float64
 }
@@ -112,12 +115,18 @@ func ProposeLinkSuggestionTx(ctx context.Context, tx pgx.Tx, in LinkSuggestionIn
 		}
 	}
 	var id ids.UUID
+	var unit, forUser any
+	if in.Unit != "" {
+		unit = in.Unit
+	} else {
+		forUser = in.ForUser
+	}
 	err = tx.QueryRow(ctx, `
-		INSERT INTO activity_link_suggestion (activity_id, entity_type, entity_id, unit, reason, score, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO activity_link_suggestion (activity_id, entity_type, entity_id, unit, for_user, reason, score, captured_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (activity_id, entity_type, entity_id) DO NOTHING
 		RETURNING id`,
-		in.ActivityID, in.EntityType, in.EntityID, in.Unit, in.Reason, in.Score, capturedBy).Scan(&id)
+		in.ActivityID, in.EntityType, in.EntityID, unit, forUser, in.Reason, in.Score, capturedBy).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return SuggestionExisting, nil
 	}
@@ -128,6 +137,9 @@ func ProposeLinkSuggestionTx(ctx context.Context, tx pgx.Tx, in LinkSuggestionIn
 }
 
 func validateLinkSuggestion(in *LinkSuggestionInput) error {
+	if (in.Unit == "") == in.ForUser.IsZero() {
+		return fmt.Errorf("activities: a link suggestion names either its unit or the one colleague it asks: %w", apperrors.ErrInvalidArgument)
+	}
 	if !slices.Contains(linkSuggestionTargets, in.EntityType) {
 		return &values.ParseError{
 			Field: fieldEntityType, Code: "unknown_link_target",
@@ -339,15 +351,16 @@ func pendingSuggestions(ctx context.Context, tx pgx.Tx, after *crmcontracts.Link
 		scope = scopeUnbounded
 	}
 	keyset := scopeUnbounded
+	asked := askedOfCaller(ctx, "s", arg)
 	if after != nil {
 		keyset = fmt.Sprintf("(s.created_at, s.id) > ($%d, $%d)", arg(after.CreatedAt), arg(ids.UUID(after.Id)))
 	}
 	status, limit := arg(suggestionPending), arg(suggestionQueueScan)
 	query := storekit.SQLf(`
 		SELECT %s FROM activity_link_suggestion s JOIN activity a ON a.id = s.activity_id
-		 WHERE s.status = $%d AND a.archived_at IS NULL AND %s AND %s
+		 WHERE s.status = $%d AND a.archived_at IS NULL AND %s AND %s AND %s
 		 ORDER BY s.created_at, s.id LIMIT $%d`,
-		suggestionColumns, status, scope, keyset, limit)
+		suggestionColumns, status, scope, asked, keyset, limit)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the link suggestions: %w", err)
@@ -391,9 +404,11 @@ func (s *Store) decideLinkSuggestion(ctx context.Context, id ids.UUID, decision 
 	}
 	var out crmcontracts.LinkSuggestion
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		args := []any{id}
+		asked := askedOfCaller(ctx, "s", func(v any) int { args = append(args, v); return len(args) })
 		out, err = scanSuggestion(tx.QueryRow(ctx, storekit.SQLf(`
 			SELECT %s FROM activity_link_suggestion s JOIN activity a ON a.id = s.activity_id
-			 WHERE s.id = $1 FOR UPDATE OF s`, suggestionColumns), id))
+			 WHERE s.id = $1 AND %s FOR UPDATE OF s`, suggestionColumns, asked), args...))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -410,10 +425,8 @@ func (s *Store) decideLinkSuggestion(ctx context.Context, id ids.UUID, decision 
 		if string(out.Status) != suggestionPending {
 			return fmt.Errorf("%w: the suggestion was already %s", apperrors.ErrConflict, out.Status)
 		}
-		if decision == suggestionAccepted {
-			if err := s.fileUnderSuggestion(ctx, tx, activity, out); err != nil {
-				return err
-			}
+		if err := s.applyDecision(ctx, tx, activity, out, decision); err != nil {
+			return err
 		}
 		if _, err := tx.Exec(ctx, `
 			UPDATE activity_link_suggestion SET status = $2, decided_by = $3, decided_at = now() WHERE id = $1`,
@@ -426,17 +439,35 @@ func (s *Store) decideLinkSuggestion(ctx context.Context, id ids.UUID, decision 
 	return out, err
 }
 
-// fileUnderSuggestion is the relink an accept performs. A deal also answers the
-// question a questioned mail raised, as the single relink does.
-func (s *Store) fileUnderSuggestion(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, suggestion crmcontracts.LinkSuggestion) error {
+// applyDecision is what a decision does besides closing the row. An accept is
+// the relink, and a deal also answers the question a questioned mail raised,
+// as the single relink does. A reject of Margince's own deal question declines
+// that deal, as "none of them" does. A unit's reject changes nothing else.
+func (s *Store) applyDecision(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, suggestion crmcontracts.LinkSuggestion, decision string) error {
+	deal := ids.UUID(suggestion.EntityId)
+	if decision == suggestionRejected {
+		if suggestion.Unit != nil || suggestion.EntityType != linkEntityDeal {
+			return nil
+		}
+		if err := lockForFilingChange(ctx, tx, activity); err != nil {
+			return err
+		}
+		return declineAcrossConversation(ctx, tx, activity, []ids.UUID{deal}, &crmcontracts.ActivityDealDecline{})
+	}
 	wrote, err := RelinkActivityInTx(ctx, tx, activity, RelinkActivityInput{
-		EntityType: string(suggestion.EntityType), EntityID: ids.UUID(suggestion.EntityId),
+		EntityType: string(suggestion.EntityType), EntityID: deal,
 	})
 	if err != nil {
 		return err
 	}
-	if wrote && suggestion.EntityType == linkEntityDeal {
-		return s.answerWhichDealTx(ctx, tx, activity, ids.UUID(suggestion.EntityId))
+	if !wrote || suggestion.EntityType != linkEntityDeal {
+		return nil
 	}
-	return nil
+	// A core question being accepted is itself an open question of the
+	// conversation; a unit's suggestion answers only the ones already open.
+	answered := ids.Nil
+	if suggestion.Unit == nil {
+		answered = ids.UUID(suggestion.Id)
+	}
+	return s.answerWhichDealTx(ctx, tx, activity, deal, answered)
 }

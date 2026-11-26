@@ -34163,7 +34163,7 @@ type ActivityDealDecline struct {
 	// ProjectUnfiled The project link that came from a declined deal came off the message.
 	ProjectUnfiled bool `json:"project_unfiled"`
 
-	// QuestionsClosed The open deal questions of the conversation this call marked done.
+	// QuestionsClosed The messages of the conversation whose open deal question this call closed.
 	QuestionsClosed int `json:"questions_closed" minimum:"0"`
 
 	// Unlinked Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
@@ -58079,13 +58079,13 @@ type LinkSuggestion struct {
 	EntityType LinkSuggestionEntityType `json:"entity_type"`
 	Id         openapi_types.UUID       `json:"id"`
 
-	// Reason One short sentence from the extension on why.
+	// Reason One short sentence from the extension on why, or Margince's own question.
 	Reason string               `json:"reason"`
 	Score  float32              `json:"score" maximum:"1" minimum:"0"`
 	Status LinkSuggestionStatus `json:"status"`
 
-	// Unit The extension that proposed it.
-	Unit string `json:"unit"`
+	// Unit The extension that proposed it. Null when Margince itself asks which deal a mail is about.
+	Unit *string `json:"unit"`
 }
 
 // LinkSuggestionEntityType defines model for LinkSuggestion.EntityType.
@@ -103932,7 +103932,7 @@ type ServerInterface interface {
 	// Take back an open request.
 	// (POST /legal-reviews/{id}/withdraw)
 	WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id)
-	// The records an extension suggests messages belong to, waiting for a reader to decide.
+	// The records a message may belong to, waiting for a reader to decide.
 	// (GET /link-suggestions)
 	ListLinkSuggestions(w http.ResponseWriter, r *http.Request)
 	// Accept a suggestion, which files the message under the record it names.
@@ -109602,7 +109602,7 @@ func (_ Unimplemented) WithdrawLegalReview(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The records an extension suggests messages belong to, waiting for a reader to decide.
+// The records a message may belong to, waiting for a reader to decide.
 // (GET /link-suggestions)
 func (_ Unimplemented) ListLinkSuggestions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)

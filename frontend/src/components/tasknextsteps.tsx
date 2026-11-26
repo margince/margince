@@ -25,7 +25,6 @@ import {
   RecordDraftStep,
   refusalOf,
 } from "./tasknextsteps.verbs";
-import { asksWhichDeal, WhichDealChoice } from "./whichdealchoice";
 
 // The one step a task's type asks for. Nothing here writes the task, so a
 // done or read-only task still offers it.
@@ -172,11 +171,6 @@ function typedSteps(ways: Ways): TypedStep {
         ? { steps: <ReviewStep record={record} />, fills: true }
         : NO_STEP;
     }
-    case "decide":
-      return {
-        steps: <WhichDealChoice task={task} />,
-        fills: asksWhichDeal(task),
-      };
     default:
       return NO_STEP;
   }

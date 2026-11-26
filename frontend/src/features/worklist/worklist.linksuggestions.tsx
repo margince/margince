@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The review queue for links an extension suggests: which record a message
-// belongs to. Nothing is filed until a reader accepts it. The panel draws
-// nothing while the queue is empty, so a workspace with no suggesting
-// extension never sees it.
+// belongs to. Margince's own "which deal" question waits here too, for the one
+// colleague it asks, and names no unit. Nothing is filed until a reader
+// accepts it. The panel draws nothing while the queue is empty.
 
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -66,7 +66,9 @@ function LinkSuggestionRow({
         </p>
         <p className="t-caption">
           {t("linkSuggestions.reason", {
-            unit: extensionTitle(suggestion.unit, locale),
+            unit: suggestion.unit
+              ? extensionTitle(suggestion.unit, locale)
+              : t("linkSuggestions.byMargince"),
             reason: suggestion.reason,
           })}
         </p>

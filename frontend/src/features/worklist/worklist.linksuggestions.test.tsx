@@ -80,6 +80,15 @@ describe("LinkSuggestionsPanel", () => {
     expect(screen.queryByText(/finance-demo:/)).toBeNull();
   });
 
+  it("names Margince as the asker of its own deal question", async () => {
+    mount([{ ...suggestion, unit: null, reason: "Which deal is this about?" }]);
+    expect(
+      await screen.findByText(
+        `${en["linkSuggestions.byMargince"]}: Which deal is this about?`,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("tells a reader without access apart from a failed read", async () => {
     mount([], 403);
     expect(

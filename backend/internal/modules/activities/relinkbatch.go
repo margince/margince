@@ -90,7 +90,7 @@ func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in Relink
 		}
 		// A colleague filing a questioned mail on a deal answers the question.
 		if wrote && in.EntityType == linkEntityDeal {
-			if err := s.answerWhichDealTx(ctx, tx, id, in.EntityID); err != nil {
+			if err := s.answerWhichDealTx(ctx, tx, id, in.EntityID, ids.Nil); err != nil {
 				return err
 			}
 		}
