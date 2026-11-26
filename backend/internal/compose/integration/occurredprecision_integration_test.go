@@ -254,8 +254,10 @@ func TestADealSaysWhetherItsLastActivityIsADay(t *testing.T) {
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Day Deals GmbH", "source": "manual"})
 	newDeal := func(name string) string {
-		return createdID(t, e, "/v1/deals", AnyMap{"name": name, "pipeline_id": stages.PipelineID,
-			"stage_id": stages.Open, "company_id": company, "source": "manual"})
+		return createdID(t, e, "/v1/deals", AnyMap{
+			"name": name, "pipeline_id": stages.PipelineID,
+			"stage_id": stages.Open, "company_id": company, "source": "manual",
+		})
 	}
 	cases := map[string]AnyMap{
 		"day":     {"occurred_at": "2025-03-09T12:00:00Z", "occurred_precision": "day"},
@@ -263,8 +265,10 @@ func TestADealSaysWhetherItsLastActivityIsADay(t *testing.T) {
 	}
 	for want, when := range cases {
 		dealID := newDeal("Deal read as " + want)
-		note := AnyMap{"kind": "note", "subject": "Met at the fair", "source": "manual",
-			"links": []AnyMap{{"entity_type": "deal", "entity_id": dealID}}}
+		note := AnyMap{
+			"kind": "note", "subject": "Met at the fair", "source": "manual",
+			"links": []AnyMap{{"entity_type": "deal", "entity_id": dealID}},
+		}
 		maps.Copy(note, when)
 		mustCall(t, e, "POST", "/v1/activities", note, http.StatusCreated, nil)
 		var deal struct {
@@ -304,8 +308,10 @@ func TestAProjectSaysWhetherItsLastActivityIsADay(t *testing.T) {
 	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Day Projects GmbH", "source": "manual"})
 	for _, want := range []string{"day", "instant"} {
 		project := createdID(t, e, "/v1/projects", AnyMap{"name": "Rollout " + want, "company_id": company, "source": "manual"})
-		note := AnyMap{"kind": "note", "subject": "Met at the fair", "source": "manual",
-			"occurred_at": "2025-03-09T12:00:00Z", "links": []AnyMap{{"entity_type": "project", "entity_id": project}}}
+		note := AnyMap{
+			"kind": "note", "subject": "Met at the fair", "source": "manual",
+			"occurred_at": "2025-03-09T12:00:00Z", "links": []AnyMap{{"entity_type": "project", "entity_id": project}},
+		}
 		if want == "day" {
 			note["occurred_precision"] = "day"
 		}
