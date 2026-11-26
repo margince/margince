@@ -104,7 +104,7 @@ func TestWalkDirVisitsWhatFilepathWalkDirVisits(t *testing.T) {
 func TestGlobMatchesWhatFilepathGlobMatches(t *testing.T) {
 	t.Parallel()
 	root := plantTree(t)
-	patterns := []string{"*.go", "../*/tree*.go", "[", "absent/*", "tree.go", "absent.go"}
+	patterns := []string{"*.go", "../*/tree*.go", "[", "absent/*", "tree.go", "absent.go", "/[eu]s*", "*/[/*"}
 	for _, pattern := range []string{"*", "*/*.go", "a/*/*.go", "?/f*.go", "link/*", "top.go", "absent", "b/[", "*/absent/*"} {
 		patterns = append(patterns, filepath.Join(root, pattern))
 	}
