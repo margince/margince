@@ -475,6 +475,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `activity_link_suggestion_pkey`: `unique, btree (id)`
+- `idx_activity_link_suggestion_activity`: `btree (activity_id)`
 - `idx_activity_link_suggestion_for_user`: `btree (for_user) WHERE (for_user IS NOT NULL)`
 - `idx_activity_link_suggestion_pending`: `btree (created_at, id) WHERE (status = 'pending')`
 - `uq_activity_link_suggestion_question`: `unique, btree (activity_id, entity_type, entity_id, for_user) WHERE (for_user IS NOT NULL)`

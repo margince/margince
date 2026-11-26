@@ -35963,9 +35963,12 @@ type AiFlowStep struct {
 	// Switched Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
 	Switched int64 `json:"switched"`
 
-	// SwitchedTo The model the provider named most often on those calls; absent when switched is 0.
+	// SwitchedTo The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step's own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read.
 	SwitchedTo *string `json:"switched_to,omitempty"`
-	Tier       string  `json:"tier"`
+
+	// SwitchedToCertification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
+	SwitchedToCertification *AiRouteCertification `json:"switched_to_certification,omitempty"`
+	Tier                    string                `json:"tier"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -36863,6 +36866,7 @@ type AnalyticsAnswer struct {
 	RateDate *time.Time `json:"rate_date,omitempty"`
 
 	// Rows One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
+	// A number past ±(2^53−1) is null, and `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the row is answered.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// RunId Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
@@ -56960,8 +56964,10 @@ type KnowledgeClaimSection struct {
 
 // KnowledgeCorpus defines model for KnowledgeCorpus.
 type KnowledgeCorpus struct {
-	Coverage  KnowledgeCoverage `json:"coverage"`
-	CreatedAt time.Time         `json:"created_at"`
+	// ArchivedAt When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set, and it takes the `knowledge_corpus` delete grant that archives and restores one.
+	ArchivedAt *time.Time        `json:"archived_at,omitempty"`
+	Coverage   KnowledgeCoverage `json:"coverage"`
+	CreatedAt  time.Time         `json:"created_at"`
 
 	// DefaultAsk The corpus the command palette's ask lands on. At most one per workspace.
 	DefaultAsk  bool               `json:"default_ask"`
@@ -65178,7 +65184,7 @@ type ReportCell2 = interface{}
 // the exact filter+group+aggregate plus the underlying source rows, which reconcile
 // exactly to the explained aggregate (AC-X1).
 type ReportDerivation struct {
-	// Aggregates The requested aggregates recomputed over exactly these source rows — equals the explained cell.
+	// Aggregates The requested aggregates recomputed over exactly these source rows — equals the explained cell. A total past ±(2^53−1) is null and named in `_out_of_range`, as on the report row.
 	Aggregates *map[string]interface{} `json:"aggregates,omitempty"`
 
 	// AsOf The instant these figures were computed at — the moment any currency conversion read the
@@ -65300,7 +65306,7 @@ type ReportResult struct {
 	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
 	Report             string              `json:"report"`
 
-	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
+	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. A total past ±(2^53−1) is null, and the row's `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the report is answered.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
@@ -82675,6 +82681,12 @@ type ListAgentClientsParams struct {
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+}
+
+// ListCorporaParams defines parameters for ListCorpora.
+type ListCorporaParams struct {
+	// IncludeArchived Include soft-deleted (archived) rows. Default false.
+	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
 }
 
 // CreateCorpusJSONBody defines parameters for CreateCorpus.
@@ -104275,7 +104287,7 @@ type ServerInterface interface {
 	ReplaceIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
 	// The document corpora this workspace has defined.
 	// (GET /knowledge/corpora)
-	ListCorpora(w http.ResponseWriter, r *http.Request)
+	ListCorpora(w http.ResponseWriter, r *http.Request, params ListCorporaParams)
 	// Define a document corpus.
 	// (POST /knowledge/corpora)
 	CreateCorpus(w http.ResponseWriter, r *http.Request)
@@ -104297,6 +104309,9 @@ type ServerInterface interface {
 	// Add a document to this corpus.
 	// (POST /knowledge/corpora/{id}/documents)
 	UploadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Bring an archived corpus back with everything filed in it.
+	// (POST /knowledge/corpora/{id}/restore)
+	RestoreCorpus(w http.ResponseWriter, r *http.Request, id Id)
 	// Delete a document, its chunks, its vectors and its stored file.
 	// (DELETE /knowledge/documents/{id})
 	DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
@@ -109807,7 +109822,7 @@ func (_ Unimplemented) ReplaceIntroRequest(w http.ResponseWriter, r *http.Reques
 
 // The document corpora this workspace has defined.
 // (GET /knowledge/corpora)
-func (_ Unimplemented) ListCorpora(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListCorpora(w http.ResponseWriter, r *http.Request, params ListCorporaParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -109850,6 +109865,12 @@ func (_ Unimplemented) ListCorpusDocuments(w http.ResponseWriter, r *http.Reques
 // Add a document to this corpus.
 // (POST /knowledge/corpora/{id}/documents)
 func (_ Unimplemented) UploadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Bring an archived corpus back with everything filed in it.
+// (POST /knowledge/corpora/{id}/restore)
+func (_ Unimplemented) RestoreCorpus(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -142807,6 +142828,9 @@ func (siw *ServerInterfaceWrapper) ReplaceIntroRequest(w http.ResponseWriter, r 
 // ListCorpora operation middleware
 func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -142815,8 +142839,24 @@ func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Re
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCorporaParams
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListCorpora(w, r)
+		siw.Handler.ListCorpora(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -143043,6 +143083,40 @@ func (siw *ServerInterfaceWrapper) UploadCorpusDocument(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UploadCorpusDocument(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreCorpus operation middleware
+func (siw *ServerInterfaceWrapper) RestoreCorpus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreCorpus(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -165776,6 +165850,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/knowledge/corpora/{id}/documents", wrapper.UploadCorpusDocument)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/knowledge/corpora/{id}/restore", wrapper.RestoreCorpus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/knowledge/documents/{id}", wrapper.DeleteCorpusDocument)

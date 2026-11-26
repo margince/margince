@@ -21,6 +21,7 @@ Each kind of record the role sweep hands a call, the function that seeds it, the
 | `anchor_name` | `toolroleseedreports_integration_test.go companySeeders` | `/v1/company` |  |  |
 | `approval` | `toolroleseedwork_integration_test.go workSeeders` |  |  |  |
 | `approval_bundle` | `toolroleseedwork_integration_test.go workSeeders` |  |  |  |
+| `archived_corpus` | `toolrolesetup_integration_test.go setupSeeders` | `/v1/knowledge/corpora/` |  |  |
 | `archived_pipeline` | `toolrolesetup_integration_test.go setupSeeders` | `/v1/pipelines/` |  |  |
 | `archived_tag` | `toolroleseedsales_integration_test.go salesSeeders` | `/v1/tags/` |  |  |
 | `assignable_website_inquiry` | `toolrolesetup_integration_test.go setupSeeders` |  |  |  |

@@ -64,8 +64,8 @@ func knowledgeWithIngestQueue(h knowledgeHandlers, queue knowledge.QueueIngest) 
 
 // Answered by the module.
 
-func (h knowledgeHandlers) ListCorpora(w http.ResponseWriter, r *http.Request) {
-	h.module.ListCorpora(w, r)
+func (h knowledgeHandlers) ListCorpora(w http.ResponseWriter, r *http.Request, params crmcontracts.ListCorporaParams) {
+	h.module.ListCorpora(w, r, params)
 }
 
 func (h knowledgeHandlers) CreateCorpus(w http.ResponseWriter, r *http.Request) {
@@ -82,6 +82,10 @@ func (h knowledgeHandlers) UpdateCorpus(w http.ResponseWriter, r *http.Request, 
 
 func (h knowledgeHandlers) ArchiveCorpus(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	h.module.ArchiveCorpus(w, r, id)
+}
+
+func (h knowledgeHandlers) RestoreCorpus(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	h.module.RestoreCorpus(w, r, id)
 }
 
 func (h knowledgeHandlers) UploadCorpusDocument(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {

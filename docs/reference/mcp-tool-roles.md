@@ -39,7 +39,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
-| [Business operations](#business-operations) | 397 | 395✓ 2✗ | 369✓ 28✗ | 371✓ 26✗ | 368✓ 29✗ | 185✓ 212✗ | 340✓ 57✗ |
+| [Business operations](#business-operations) | 398 | 396✓ 2✗ | 369✓ 29✗ | 371✓ 27✗ | 369✓ 29✗ | 185✓ 213✗ | 340✓ 58✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 47 | 47✓ 0✗ | 27✓ 20✗ | 27✓ 20✗ | 32✓ 15✗ | 11✓ 36✗ | 26✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 44 | 44✓ 0✗ | 38✓ 6✗ | 38✓ 6✗ | 44✓ 0✗ | 28✓ 16✗ | 37✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 40 | 40✓ 0✗ | 40✓ 0✗ | 40✓ 0✗ | 40✓ 0✗ | 35✓ 5✗ | 40✓ 0✗ |
@@ -517,6 +517,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 |---|---|---|---|---|---|---|
 | `change_capture.archive_corpus` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_capture.create_corpus` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
+| `change_capture.restore_corpus` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_capture.update_corpus` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_capture.upload_corpus_document` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `read_details.knowledge_document` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -1453,6 +1454,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Imports | `read_workspace.import_runs` | `list_import_runs` | `import_run.read` |
 | Knowledge library | `change_capture.archive_corpus` | `archive_corpus` | `knowledge_corpus.delete` |
 | Knowledge library | `change_capture.create_corpus` | `create_corpus` | `knowledge_corpus.create` |
+| Knowledge library | `change_capture.restore_corpus` | `restore_corpus` | `knowledge_corpus.delete` |
 | Knowledge library | `change_capture.update_corpus` | `update_corpus` | `knowledge_corpus.update` |
 | Knowledge library | `change_capture.upload_corpus_document` | `upload_corpus_document` | `knowledge_document.create` |
 | Knowledge library | `read_details.knowledge_document` | `download_corpus_document` | `knowledge_document.read` |

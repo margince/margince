@@ -730,6 +730,7 @@
     "POST /v1/knowledge/corpora": "create_corpus",
     "POST /v1/knowledge/corpora/{id}/ask": "ask_knowledge_corpus",
     "POST /v1/knowledge/corpora/{id}/documents": "upload_corpus_document",
+    "POST /v1/knowledge/corpora/{id}/restore": "restore_corpus",
     "POST /v1/lead-disqualify-reasons": "create_lead_disqualify_reason",
     "POST /v1/lead-origins": "create_lead_origin",
     "POST /v1/lead-sources": "create_lead_source",
@@ -2332,7 +2333,9 @@
     "list_contact_stops": [
       "id"
     ],
-    "list_corpora": [],
+    "list_corpora": [
+      "include_archived"
+    ],
     "list_corpus_documents": [
       "id"
     ],
@@ -3256,6 +3259,9 @@
       "field",
       "id",
       "value_key"
+    ],
+    "restore_corpus": [
+      "id"
     ],
     "restore_deal_move": [
       "fingerprint",

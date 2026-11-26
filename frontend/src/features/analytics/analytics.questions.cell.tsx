@@ -10,6 +10,7 @@ import {
 } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import { coverageOfMeasure, hasGap } from "../../lib/moneycoverage";
+import { beyondExactRange } from "./analytics.cells";
 import { CoverageFootnote } from "./analytics.moneygap";
 import { type MoneyFields, measureReading } from "./analytics.questions.money";
 import {
@@ -31,6 +32,9 @@ export function measureCell(
   locale: Locale,
   t: Translate,
 ): ReactNode {
+  if (beyondExactRange(row, column)) {
+    return t("format.tooLargeExact");
+  }
   const coverage = coverageOfMeasure(row, column);
   const figure = measureFigure(
     query,

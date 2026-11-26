@@ -6,6 +6,7 @@ import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { PanelBody, PanelRow } from "../../design-system/panel";
 import { formatDate, formatMoney, formatNumber } from "../../format/format";
+import { addMinor } from "../../format/minorsum";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { routeHash } from "../../lib/router";
@@ -66,7 +67,10 @@ export function ClosedDeals({
   const { locale } = useLocale();
   const recordZone = useCompanyZone();
   const pipeline = review.pipeline;
-  const total = pipeline ? pipeline.won_minor + pipeline.lost_minor : 0;
+  // Past the exact range the split is not drawn; the won and lost figures still are.
+  const total = pipeline
+    ? (addMinor(pipeline.won_minor, pipeline.lost_minor) ?? 0)
+    : 0;
   return (
     <>
       {/* The share won against lost, which the total beside the label states

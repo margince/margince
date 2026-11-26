@@ -21,7 +21,11 @@ import { zoneLabelAt } from "../../format/timezone";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { scopeDealDials } from "../../lib/dealsaddress";
-import type { ReportRow, Stage } from "./analytics.cells";
+import {
+  anyBeyondExactRange,
+  type ReportRow,
+  type Stage,
+} from "./analytics.cells";
 import { CloseMonthTable } from "./analytics.closemonth";
 import { CompanyTable } from "./analytics.company";
 import type { AnalyticsScope } from "./analytics.context";
@@ -146,6 +150,9 @@ function ReportRemainder({
       detail={{ remaining }}
     >
       {children(!capped)}
+      {anyBeyondExactRange(run.rows) && (
+        <p className="t-caption">{t("format.someTooLargeExact")}</p>
+      )}
     </SurfaceState>
   );
 }

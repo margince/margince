@@ -789,6 +789,7 @@
     "restoreCompanySuggestion": "business",
     "restoreContactMoment": "business",
     "restoreContactProfileField": "business",
+    "restoreCorpus": "business",
     "restoreDealMove": "business",
     "restoreList": "business",
     "restorePipeline": "admin_settings",
@@ -1887,6 +1888,7 @@
     "restoreCompanySuggestion": "companies",
     "restoreContactMoment": "contacts",
     "restoreContactProfileField": "contacts",
+    "restoreCorpus": "knowledge",
     "restoreDealMove": "deals",
     "restoreList": "lists",
     "restoreListMember": "lists",
@@ -3856,6 +3858,9 @@
     ],
     "restore_contact_profile_field": [
       "contacts"
+    ],
+    "restore_corpus": [
+      "knowledge"
     ],
     "restore_deal_move": [
       "deals"
@@ -5976,6 +5981,9 @@
       "business"
     ],
     "restore_contact_profile_field": [
+      "business"
+    ],
+    "restore_corpus": [
       "business"
     ],
     "restore_deal_move": [
