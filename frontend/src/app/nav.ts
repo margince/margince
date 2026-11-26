@@ -382,6 +382,14 @@ function opensAPageBelow(route: Route): boolean {
   );
 }
 
+/**
+ * Whether the address is Home with the Worklist panel open. The panel is not a
+ * route of its own, so the rail, the breadcrumb and the tab title all ask here.
+ */
+export function opensWorklistPanel(route: Route, params: UrlParams): boolean {
+  return route.screen === "home" && drawerOpen(params);
+}
+
 // Which primary row a route makes current. It is the route's screen for every
 // destination the product owns, and `settings` for a unit's — a unit screen
 // routes as `{screen: "ext", id: "<unit>"}` and has no row of its own. Nothing
@@ -389,9 +397,7 @@ function opensAPageBelow(route: Route): boolean {
 // mapping stays because a unit is reached from Settings, and the level machinery
 // asks it for every route.
 function activeRowFor(route: Route, params: UrlParams): string {
-  // The Worklist is a panel over Home, so Home is the route and the panel's
-  // own row is the one the address marks.
-  if (route.screen === "home" && drawerOpen(params)) {
+  if (opensWorklistPanel(route, params)) {
     return "worklist";
   }
   if (route.screen === EXTENSION_SCREEN) {

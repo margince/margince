@@ -22,6 +22,7 @@ vi.mock("@composition/extensions", async (importOriginal) => ({
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.location.hash = "";
 });
 
 // A contact id in the form the server reads.
@@ -38,6 +39,16 @@ describe("the browser tab title", () => {
       />,
     );
     expect(document.title).toBe("Account · Settings · Margince");
+  });
+
+  it("names Home with the Worklist panel closed, and the Worklist when it is open", () => {
+    window.location.hash = "#/home";
+    render(<PageTitle route={{ screen: "home" }} />);
+    expect(document.title).toBe("Home · Margince");
+    cleanup();
+    window.location.hash = "#/home?queue=1";
+    render(<PageTitle route={{ screen: "home" }} />);
+    expect(document.title).toBe("Worklist · Margince");
   });
 
   it("names a record by its name once it has been read", () => {

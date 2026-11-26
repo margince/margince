@@ -11,12 +11,13 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Suspense } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { screenOfAddress } from "../App.views";
 import {
   armHoverIntent,
   takeHoverClock,
 } from "../design-system/hoverintent-testing";
-import { WorklistRedirect } from "../features/brief/brief.queue";
 import { navigate, parseHash, type Route } from "../lib/router";
 import {
   fixtureSection,
@@ -446,7 +447,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     render(
       <>
         <WorkspaceRail route={{ screen: "home" }} />
-        <WorklistRedirect />
+        <Suspense fallback={null}>{screenOfAddress("#/worklist")}</Suspense>
       </>,
     );
     const row = screen.getByRole("link", { name: "Worklist" });
