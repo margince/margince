@@ -132,11 +132,11 @@
   display: none;
 }
 
-/* Sales won leads the opening page: the figure in display type, and the
-   running total that reached it in the room beside it. */
+/* The rep's outcome in display type, and the weeks that reached it given
+   most of the room beside it. */
 .analytics-hero-body {
   display: grid;
-  grid-template-columns: minmax(15rem, 2fr) minmax(0, 3fr);
+  grid-template-columns: minmax(15rem, 1fr) minmax(0, 2fr);
   align-items: start;
   gap: var(--space-6);
 }
@@ -276,4 +276,62 @@
 .filter-bar[data-labels="inside"] .analytics-scope-control {
   flex: none;
   min-width: 0;
+}
+
+/* The quarter's chart under its tabs: what it shows, the plot, its key. */
+.analytics-hero-plot {
+  display: grid;
+  padding: var(--space-4) var(--padPanel) 0;
+}
+.analytics-hero-plot-title {
+  margin: 0 0 var(--space-2);
+}
+.analytics-sales-tabs .trajectory-chart {
+  padding: 0;
+}
+.analytics-hero-plot-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--padPanel) var(--space-4);
+}
+.analytics-hero-plot .analytics-hero-plot-foot {
+  margin-inline: calc(-1 * var(--padPanel));
+  border-top: 1px solid var(--borderSubtle);
+}
+.analytics-hero-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+}
+.analytics-hero-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.analytics-hero-key li::before {
+  content: "";
+  inline-size: 14px;
+}
+.analytics-hero-key [data-mark="line"]::before {
+  block-size: 2px;
+  background: var(--accent);
+}
+.analytics-hero-key [data-mark="pace"]::before {
+  border-top: 1.5px dashed var(--textSecondary);
+}
+.analytics-hero-key [data-mark="target"]::before {
+  border-top: 1.5px dotted var(--textPrimary);
+}
+.analytics-hero-key [data-mark="range"]::before {
+  block-size: 8px;
+  border-radius: var(--r-xs);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
 }

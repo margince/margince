@@ -2178,6 +2178,19 @@ span.error-line {
   font: var(--fontPlateLeadFigure);
   font-variant-numeric: tabular-nums;
 }
+/* A plate of chart tabs heads its chart, so every figure is set large and
+   the shown one stands out by its ink, not its size (statstrip.css). */
+.stat-strip[data-density="plate"]:has(.stat-card-open[aria-pressed])
+.stat-card-value {
+  font: var(--fontHeadingXLarge);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textSecondary);
+}
+.stat-strip[data-density="plate"]
+  > :is(.stat-card, * > .stat-card):has([aria-pressed="true"])
+  .stat-card-value {
+  color: var(--textPrimary);
+}
 /* A reading that is a word, such as a status, is set as words: it is an
    answer about the figure, not a figure. */
 .stat-strip[data-density="plate"] .stat-card-value[data-word] {

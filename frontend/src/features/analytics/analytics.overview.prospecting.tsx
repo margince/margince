@@ -196,39 +196,41 @@ export function MyProspecting({
       <AnalyticsBoard
         railLabel={t("analytics.board.rail")}
         main={
-          <AnalyticsSheet>
-            {validDates ? (
-              <QueryGate
-                query={query}
-                pendingLabel={t("analytics.overview.prospecting")}
-              >
-                {(evaluation) => (
-                  <>
-                    <ProspectingResults
-                      evaluation={evaluation}
-                      outcome={outcome}
-                      workflowState={known ? "known" : workflow}
-                      weeks={weeks}
-                      onEvidence={openFrom}
-                      onRetryWorkflow={retryWorkflow}
-                      aside={
-                        <MonthlyTargets
-                          evaluation={evaluation}
-                          ownScope={scopeKey(self)}
-                        />
-                      }
-                    />
-                    <ProspectingReadings
-                      evaluation={evaluation}
-                      summary={summary}
-                      onEvidence={openFrom}
-                    />
-                  </>
-                )}
-              </QueryGate>
-            ) : (
-              <EmptyState>{t("reporting.chooseDates")}</EmptyState>
-            )}
+          <>
+            <AnalyticsSheet>
+              {validDates ? (
+                <QueryGate
+                  query={query}
+                  pendingLabel={t("analytics.overview.prospecting")}
+                >
+                  {(evaluation) => (
+                    <>
+                      <ProspectingReadings
+                        evaluation={evaluation}
+                        summary={summary}
+                        onEvidence={openFrom}
+                      />
+                      <ProspectingResults
+                        evaluation={evaluation}
+                        outcome={outcome}
+                        workflowState={known ? "known" : workflow}
+                        weeks={weeks}
+                        onEvidence={openFrom}
+                        onRetryWorkflow={retryWorkflow}
+                        aside={
+                          <MonthlyTargets
+                            evaluation={evaluation}
+                            ownScope={scopeKey(self)}
+                          />
+                        }
+                      />
+                    </>
+                  )}
+                </QueryGate>
+              ) : (
+                <EmptyState>{t("reporting.chooseDates")}</EmptyState>
+              )}
+            </AnalyticsSheet>
             <ProspectingWork
               self={self.id}
               workflow={workflow}
@@ -237,7 +239,7 @@ export function MyProspecting({
               weeks={weeks}
               onEvidence={openFrom}
             />
-          </AnalyticsSheet>
+          </>
         }
         rail={
           <>
@@ -269,8 +271,9 @@ export function MyProspecting({
   );
 }
 
-// The work around the outcome, each a section of the sheet: what waits on
-// others, the meetings ahead, then how the outcome developed.
+// The work around the outcome, each a panel of its own: what waits on others,
+// what became of the handoffs, the meetings ahead, then how the outcome
+// developed.
 function ProspectingWork({
   self,
   workflow,
@@ -290,6 +293,11 @@ function ProspectingWork({
   return (
     <>
       {workflow === "handoff" && <Waiting self={self} summary={summary} />}
+      {workflow === "handoff" && week && (
+        <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+          <HandoffCohort self={self} evaluation={week} />
+        </Suspense>
+      )}
       <Suspense fallback={<PendingBody label={t("common.loading")} />}>
         <UpcomingMeetings
           self={self}
@@ -301,18 +309,15 @@ function ProspectingWork({
           )}
         />
       </Suspense>
-      {workflow === "handoff" && week && (
-        <Suspense fallback={<PendingBody label={t("common.loading")} />}>
-          <HandoffCohort self={self} evaluation={week} />
-        </Suspense>
-      )}
       {workflow === "qualification" && <QualificationNote />}
       {week && (
-        <Disclosure summary={t("analytics.prospect.historyTitle")}>
-          <Suspense fallback={<PendingBody label={t("common.loading")} />}>
-            <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
-          </Suspense>
-        </Disclosure>
+        <AnalyticsSheet>
+          <Disclosure summary={t("analytics.prospect.historyTitle")}>
+            <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+              <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
+            </Suspense>
+          </Disclosure>
+        </AnalyticsSheet>
       )}
     </>
   );

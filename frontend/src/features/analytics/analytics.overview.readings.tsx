@@ -36,6 +36,16 @@ export function metricOf(
   return evaluation.metrics.find((metric) => metric.id === id);
 }
 
+/**
+ * The running sales trend the quarter's chart is drawn from, when it can be:
+ * a quarter with nothing won yet still draws its line at zero.
+ */
+export function drawableTrend(charts: ReportingEvaluation) {
+  const trend = charts.charts.find((chart) => chart.kind === "bookings_trend");
+  const status = trend?.coverage.status;
+  return status === "ok" || status === "no_data" ? trend : undefined;
+}
+
 // A count or a sum over no records is a measured zero. A median over none is
 // no figure at all, and says so.
 function measuredZero(metric: Metric, currency: string): boolean {
@@ -72,6 +82,7 @@ export function MetricReading({
   detail,
   basis,
   narrow = "row",
+  chart,
   onEvidence,
 }: Readonly<{
   evaluation: ReportingEvaluation;
@@ -81,6 +92,9 @@ export function MetricReading({
   // What the figure rests on, folded behind its receipt.
   basis?: ReactNode;
   narrow?: Parameters<typeof StatCard>[0]["narrow"];
+  // A reading that heads a chart shows itself there; its records open from
+  // the chart's foot instead.
+  chart?: ChartTab;
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const t = useT();
@@ -112,11 +126,21 @@ export function MetricReading({
           )}
         </>
       }
-      opens="records"
-      onOpen={metric ? () => onEvidence(metric.evidence) : undefined}
+      opens={chart ? "chart" : "records"}
+      pressed={chart?.pressed}
+      onOpen={
+        chart
+          ? chart.onShow
+          : metric
+            ? () => onEvidence(metric.evidence)
+            : undefined
+      }
     />
   );
 }
+
+/** A reading in a row that heads a chart: whether it is shown, and the press. */
+export type ChartTab = Readonly<{ pressed: boolean; onShow: () => void }>;
 
 /**
  * Save view and Report templates, the same pair on every view. Saving keeps
