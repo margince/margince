@@ -84,9 +84,9 @@ test("the settle waits for an animation already in flight to land", async ({
   await settleAnimations(page);
 });
 
-test("AC-shell-1: the rail renders the primary destinations in order", async ({
-  page,
-}) => {
+test("AC-shell-1: the rail renders the primary destinations in order", {
+  tag: "@smoke",
+}, async ({ page }) => {
   await page.goto("/#/home");
   // evaluateAll never waits. Anchor on the rendered count first, or the read
   // races the auth splash and sees an empty rail.
