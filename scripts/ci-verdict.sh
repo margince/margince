@@ -18,13 +18,18 @@
 # both events would mean every docs PR booting twelve Postgres shards, which is
 # the cost that produced the classifier in the first place.
 #
-# Reads CI_VERDICT_NEEDS (a `toJSON(needs)` object) and CI_VERDICT_EVENT
-# (github.event_name). Env rather than argv: the JSON is multi-line, and quoting
-# it through a shell argument is how a gate ends up judging an empty string.
+# One skip passes on `merge_group`: a job named in CI_VERDICT_PROVEN, which an
+# earlier run passed on this same tree (scripts/ci-integration-proven.sh).
+#
+# Reads CI_VERDICT_NEEDS (a `toJSON(needs)` object), CI_VERDICT_EVENT
+# (github.event_name) and CI_VERDICT_PROVEN (job names, space-separated). Env
+# rather than argv: the JSON is multi-line, and quoting it through a shell
+# argument is how a gate ends up judging an empty string.
 set -euo pipefail
 
 needs_json="${CI_VERDICT_NEEDS:-}"
 event="${CI_VERDICT_EVENT:-}"
+proven="${CI_VERDICT_PROVEN:-}"
 
 if [[ -z "$event" ]]; then
 	echo "FAIL: CI_VERDICT_EVENT is empty, so the verdict cannot tell whether a skip is admissible. Pass \${{ github.event_name }}." >&2
@@ -57,6 +62,10 @@ while IFS=$'\t' read -r job result; do
 	case " $admissible " in
 	*" $result "*) continue ;;
 	esac
+	if [[ "$result" == "skipped" && " $proven " == *" $job "* ]]; then
+		echo "OK: $job was skipped because an earlier run passed it on this tree."
+		continue
+	fi
 	if [[ "$result" == "skipped" ]]; then
 		echo "FAIL: $job was SKIPPED, and on $event every job must run. A skipped gate is indistinguishable from a passing one — run it, or take it out of the aggregate's needs: list." >&2
 	else
