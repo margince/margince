@@ -257,7 +257,7 @@ func (h Handlers) WithTaskOrder(order func(Task) []Tier) Handlers {
 // WithRoutingSettings grades the model a provider switched a step to against
 // the stored routing settings.
 func (h Handlers) WithRoutingSettings(cfg *config.Config) Handlers {
-	h.routing = cfg
+	h.routing = func(ctx context.Context) (RoutingConfig, error) { return config.StoredVal(ctx, cfg, Routing) }
 	return h
 }
 

@@ -31101,7 +31101,7 @@ components:
         p50_ms: {type: integer, format: int64}
         gave_up: {type: object, additionalProperties: {type: integer, format: int64}, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).'}
         switched: {type: integer, format: int64, description: 'Calls this step answered with another model than the one bound, by the provider''s own report; out of `answered`.'}
-        switched_to: {type: string, description: 'The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step''s own binding settings, and is absent on a decision step and when no record measured it.'}
+        switched_to: {type: string, description: 'The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step''s own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read.'}
         switched_to_certification: {$ref: '#/components/schemas/AiRouteCertification'}
     AiDeferredWork:
       type: object
@@ -59547,7 +59547,7 @@ components:
         archived_at:
           type: [string, 'null']
           format: date-time
-          description: When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set.
+          description: When the set was archived; absent or null while it is live.
     KnowledgeCorpusList:
       type: object
       description: >-

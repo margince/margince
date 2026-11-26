@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { addMinor, sumMinor } from "./minorunits";
+import { addMinor, sumMinor } from "./minorsum";
 
 describe("sumMinor", () => {
   it("adds amounts that stay inside the exact range", () => {

@@ -64,7 +64,7 @@ type Handlers struct {
 	ladderOf func(Task) []Tier
 	// routing is the stored routing settings the call flow grades a switched
 	// model against. Nil on a role that composed none, where no step is graded.
-	routing *config.Config
+	routing func(context.Context) (RoutingConfig, error)
 }
 
 // NewHandlers wires the module's stores onto one pool; budget is the

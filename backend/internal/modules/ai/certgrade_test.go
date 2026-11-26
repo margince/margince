@@ -4,11 +4,13 @@
 package ai
 
 import (
+	"context"
 	"maps"
 	"slices"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // withTaskGrades swaps the generated table for one test, so a case states the
@@ -262,5 +264,34 @@ func TestASwitchedModelIsGradedWithTheBindingItAnsweredFor(t *testing.T) {
 	}
 	if got := switchedCertification(cfg, TaskSummarize, Tier("not-on-the-ladder"), "gemini-3.8-flash"); got != nil {
 		t.Errorf("a switch on a tier the task no longer walks = %+v, want no grade", *got)
+	}
+}
+
+// flowSeat binds a human holding ai_diagnostics read, and the routing grant
+// when routing is true.
+func flowSeat(routing bool) context.Context {
+	objects := map[string]principal.ObjectGrant{"ai_diagnostics": {Read: true}}
+	if routing {
+		objects[routingSettingsObject] = principal.ObjectGrant{Read: true}
+	}
+	return principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:test",
+		Permissions: principal.Permissions{RoleKeys: []string{"fixture"}, Objects: objects},
+	})
+}
+
+// A grade shows which settings a tier is bound with. So the call flow grades a
+// switched model only for a reader of the routing settings.
+func TestTheCallFlowGradesASwitchOnlyForAReaderOfTheRoutingSettings(t *testing.T) {
+	reads := 0
+	h := Handlers{routing: func(context.Context) (RoutingConfig, error) {
+		reads++
+		return RoutingConfig{Profile: ProfileCloudFrontier}, nil
+	}}
+	if got, err := h.storedRouting(flowSeat(false)); err != nil || got != nil || reads != 0 {
+		t.Errorf("a diagnostics-only seat got %+v (%v) after %d reads, want no settings and no read", got, err, reads)
+	}
+	if got, err := h.storedRouting(flowSeat(true)); err != nil || got == nil || got.Profile != ProfileCloudFrontier {
+		t.Errorf("a seat with routing read got %+v (%v), want the stored settings", got, err)
 	}
 }

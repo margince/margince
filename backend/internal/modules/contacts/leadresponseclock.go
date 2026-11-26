@@ -90,9 +90,18 @@ func firstResponseStamp(now, created time.Time) time.Time {
 // reassignment therefore keeps the lead's arrival with its first owner.
 const arrivalOwnerColumn = "arrival_owner_id"
 
-// arrivalOriginColumn is the origin a lead arrived with. Both lead inserts set
-// it and the origin repair fills it; an edit of the origin never touches it.
-const arrivalOriginColumn = "arrival_origin"
+// arrivedWithNoOrigin is lead.arrival_origin for a lead that arrived without an
+// origin. NULL means the arrival was never recorded, and only NULL falls back to
+// the origin the lead has now. This value keeps the lead in no source.
+const arrivedWithNoOrigin = ""
+
+// storedArrivalOrigin is the arrival_origin a lead inserted with origin records.
+func storedArrivalOrigin(origin *string) string {
+	if origin == nil {
+		return arrivedWithNoOrigin
+	}
+	return *origin
+}
 
 // stampArrival starts the response clock for a lead's first owner. It records
 // that owner as the one the lead arrived with.

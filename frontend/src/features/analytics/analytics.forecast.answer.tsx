@@ -11,7 +11,7 @@ import {
   formatDateAbbrev,
   formatPercent,
 } from "../../format/format";
-import { addMinor } from "../../format/minorunits";
+import { addMinor } from "../../format/minorsum";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, useT } from "../../i18n";
 import {

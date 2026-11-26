@@ -15,10 +15,10 @@ import (
 
 // arrivedOriginSQL is the origin each lead in $1 arrived with. That is the
 // value the first audited change of its origin replaced. A lead whose origin
-// never changed arrived with the one it has now. A first change away from no
-// origin yields NULL, because the lead arrived without one.
+// never changed arrived with the one it has now. A lead that arrived without
+// one gets arrivedWithNoOrigin, so the report does not credit a later origin.
 const arrivedOriginSQL = `
-	SELECT p.id, CASE WHEN first_change.found THEN first_change.origin ELSE p.origin END AS origin
+	SELECT p.id, COALESCE(CASE WHEN first_change.found THEN first_change.origin ELSE p.origin END, '` + arrivedWithNoOrigin + `') AS origin
 	  FROM lead p
 	  LEFT JOIN LATERAL (
 	        SELECT true AS found, a.before ->> '` + leadOriginField + `' AS origin
@@ -31,15 +31,14 @@ const arrivedOriginSQL = `
 
 // BackfillArrivalOriginTx records the arrival origin of leads stored before it
 // was kept. It takes up to limit leads after the cursor and returns those it
-// inspected.
-// The value comes from the audit trail or the lead itself. So the write is not
-// audited, the same as the insert that fills it. A lead that arrived with
-// no origin stays NULL, so a replay inspects it again and changes nothing.
+// inspected. The value comes from the audit trail or the lead itself. So the
+// write is not audited, like the insert that fills it. Every lead it inspects
+// is recorded, so a second run finds nothing left to do.
 func BackfillArrivalOriginTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, int, error) {
 	if err := requireLeadRepair(ctx); err != nil {
 		return nil, 0, err
 	}
-	rows, err := tx.Query(ctx, `SELECT id FROM lead WHERE `+arrivalOriginColumn+` IS NULL AND id > $1
+	rows, err := tx.Query(ctx, `SELECT id FROM lead WHERE arrival_origin IS NULL AND id > $1
 		 ORDER BY id LIMIT $2 FOR UPDATE`, after, limit)
 	if err != nil {
 		return nil, 0, fmt.Errorf("contacts: reading leads with no arrival origin: %w", err)
@@ -52,9 +51,9 @@ func BackfillArrivalOriginTx(ctx context.Context, tx pgx.Tx, after ids.UUID, lim
 		return inspected, 0, nil
 	}
 	tag, err := tx.Exec(ctx, `
-		UPDATE lead l SET `+arrivalOriginColumn+` = arrived.origin
+		UPDATE lead l SET arrival_origin = arrived.origin
 		  FROM (`+arrivedOriginSQL+`) arrived
-		 WHERE l.id = arrived.id AND l.`+arrivalOriginColumn+` IS NULL AND arrived.origin IS NOT NULL`, inspected)
+		 WHERE l.id = arrived.id AND l.arrival_origin IS NULL`, inspected)
 	if err != nil {
 		return nil, 0, fmt.Errorf("contacts: storing the arrival origin of leads: %w", err)
 	}
@@ -65,7 +64,7 @@ func BackfillArrivalOriginTx(ctx context.Context, tx pgx.Tx, after ids.UUID, lim
 // inspect, reading at most maximum+1.
 func CountArrivalOriginBackfills(ctx context.Context, q datatask.Querier, maximum int64) (int64, error) {
 	var n int64
-	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM lead WHERE `+arrivalOriginColumn+` IS NULL LIMIT $1) pending`,
+	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM lead WHERE arrival_origin IS NULL LIMIT $1) pending`,
 		maximum+1).Scan(&n)
 	if err != nil {
 		return 0, fmt.Errorf("contacts: counting leads with no arrival origin: %w", err)

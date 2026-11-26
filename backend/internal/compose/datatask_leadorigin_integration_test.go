@@ -122,7 +122,7 @@ func originScoreOf(intent contacts.SourceIntent) int {
 
 // Leads stored before the arrival origin was kept get the origin their first
 // audited origin change replaced, or the one they have now. A lead that arrived
-// with no origin keeps none, and a second run changes nothing.
+// with no origin is recorded as such, so a later origin is never credited.
 func TestTheArrivalOriginTaskReadsTheOriginALeadArrivedWith(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -149,7 +149,7 @@ func TestTheArrivalOriginTaskReadsTheOriginALeadArrivedWith(t *testing.T) {
 	runMachineAddressTask(ctx, t, e, task)
 	settled := arrivals()
 	for name, want := range map[string]string{"A edited": "referral", "B kept": "event", "C given later": "", "D none": ""} {
-		if got := e.WsScalar(t, `SELECT coalesce(arrival_origin, '') FROM lead WHERE full_name = $1`, name); got != want {
+		if got := e.WsScalar(t, `SELECT coalesce(arrival_origin, 'not recorded') FROM lead WHERE full_name = $1`, name); got != want {
 			t.Errorf("%s arrived with %q, want %q", name, got, want)
 		}
 	}

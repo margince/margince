@@ -10,7 +10,7 @@ import { Row, Stack } from "../../design-system/stack";
 import { StatStrip } from "../../design-system/statstrip";
 import { stable } from "../../format/collate";
 import { formatDate, formatMoney, formatNumber } from "../../format/format";
-import { addMinor } from "../../format/minorunits";
+import { addMinor } from "../../format/minorsum";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";

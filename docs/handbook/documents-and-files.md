@@ -318,9 +318,9 @@ and is not answered from part of the set.
 **Archive set**, in the same menu: "Archive {name}? The set and its documents are no longer
 searchable. Nothing is deleted, and Show archived sets brings it back."
 
-To bring an archived set back, turn on **Show archived sets** in the **Document sets** head. The
-archived set shows the **Archived** badge. Choose **Restore set** in its **…** menu. Its documents
-are searchable again. A set that was the one **Ask your documents** opens on stays an ordinary set.
+To bring an archived set back, turn on **Show archived sets** in the **Document sets** head. Only
+a role that may archive sets sees it. The archived set shows the **Archived** badge. Choose
+**Restore set** in its **…** menu. Its documents are searchable again. A set that was the one **Ask your documents** opens on stays an ordinary set.
 
 **Delete**, in a document's **…** (**Actions**) menu: "Delete {name}? The file, its extracted
 text and its search index are permanently deleted."

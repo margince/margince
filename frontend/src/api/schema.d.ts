@@ -33508,7 +33508,7 @@ export interface components {
              * @description Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
              */
             switched: number;
-            /** @description The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step's own binding settings, and is absent on a decision step and when no record measured it. */
+            /** @description The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step's own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read. */
             switched_to?: string;
             switched_to_certification?: components["schemas"]["AiRouteCertification"];
         };
@@ -65718,7 +65718,7 @@ export interface components {
             created_at: string;
             /**
              * Format: date-time
-             * @description When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set.
+             * @description When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set, and it takes the `knowledge_corpus` delete grant that archives and restores one.
              */
             archived_at?: string | null;
         };

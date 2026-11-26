@@ -73,8 +73,12 @@ func TestAReaderWhoLeftIsLoggedAtDebugAndACacheFaultAtError(t *testing.T) {
 
 	left, leave := context.WithCancel(ctx)
 	leave()
+	first := worklistReads(t, "first")
 	if err := serveWorklist(left, c, e.Rep1); err != nil {
 		t.Fatalf("serving a reader who left: %v", err)
+	}
+	if got := worklistReads(t, "first") - first; got != 0 {
+		t.Errorf("a read the cache could not look up counted %d first reads, want 0", got)
 	}
 	c.Settle()
 	if n := logs.logged(slog.LevelError, ""); n != 0 {

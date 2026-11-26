@@ -34,20 +34,22 @@ func beyondExactRange(v any) bool {
 	}
 }
 
-// numericBeyondExactRange compares the whole part of n, so an average with a
-// fraction is judged by the integer a reader would round it to.
+// numericBeyondExactRange compares the exact value of n, fraction included.
+// An average just past the limit, such as 9007199254740991.5, is withheld too:
+// a reader would round it to 2^53.
 func numericBeyondExactRange(n pgtype.Numeric) bool {
 	if !n.Valid || n.NaN || n.InfinityModifier != pgtype.Finite || n.Int == nil {
 		return false
 	}
-	whole := new(big.Int).Abs(n.Int)
+	value := new(big.Int).Abs(n.Int)
+	limit := big.NewInt(reportingExactInteger)
 	scale := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(math.Abs(float64(n.Exp)))), nil)
 	if n.Exp >= 0 {
-		whole.Mul(whole, scale)
+		value.Mul(value, scale)
 	} else {
-		whole.Quo(whole, scale)
+		limit.Mul(limit, scale)
 	}
-	return whole.Cmp(big.NewInt(reportingExactInteger)) > 0
+	return value.Cmp(limit) > 0
 }
 
 // withholdBeyondExactRange sets every out-of-range value of row to nil and

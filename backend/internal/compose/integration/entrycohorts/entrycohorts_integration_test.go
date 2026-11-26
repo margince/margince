@@ -413,6 +413,35 @@ func TestASourceKeepsTheLeadsThatArrivedFromIt(t *testing.T) {
 	}
 }
 
+// A lead that arrived without an origin counts under no source, even after an
+// origin is set on it later. A later origin is not where it came from.
+func TestALeadThatArrivedWithoutAnOriginStaysWithoutOne(t *testing.T) {
+	e := integration.Setup(t)
+	w := seedCohort(t, e)
+	_, store := leadsOf(t, e, clocktest.Now(t))
+	name, website := "No origin lead", "website"
+	made, _, err := store.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: &name, Status: "new", Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Contacts.UpdateLead(e.Admin(), ids.From[ids.LeadKind](ids.UUID(made.Id)), contacts.UpdateLeadInput{Origin: &website}); err != nil {
+		t.Fatal(err)
+	}
+	result, err := w.service.Evaluate(readerOf(e), w.selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	website3 := false
+	for _, point := range chartsOf(result)["source_quality"].Points {
+		if point.Label == "Website" {
+			website3 = *point.Observations == 3
+		}
+	}
+	if !website3 {
+		t.Errorf("source points %+v, want Website with its 3 entrants: the lead that arrived without an origin was credited to it", chartsOf(result)["source_quality"].Points)
+	}
+}
+
 // A scheduled edition freezes both new cards. An admin reads them back whole.
 // A rep without company read gets the edition with the company card withheld.
 func TestAnEditionWithTheEntryCohortCardsReadsBack(t *testing.T) {

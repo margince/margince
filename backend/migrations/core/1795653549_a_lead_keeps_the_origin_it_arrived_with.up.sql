@@ -7,4 +7,4 @@
 ALTER TABLE lead ADD COLUMN IF NOT EXISTS arrival_origin text;
 
 COMMENT ON COLUMN lead.arrival_origin IS
-  'The origin when the lead arrived; null when it arrived with none or before this was recorded.';
+  'The origin when the lead arrived; empty when it arrived with none; null before this was recorded.';

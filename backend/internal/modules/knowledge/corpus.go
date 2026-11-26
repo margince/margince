@@ -375,6 +375,13 @@ func (s *Store) ListCorpora(ctx context.Context, archived storekit.ArchivedFilte
 	if err := auth.Require(ctx, "knowledge_corpus", principal.ActionRead); err != nil {
 		return nil, err
 	}
+	// The archived sets are listed for restoring them, so they take the grant
+	// that archives and restores.
+	if archived == storekit.IncludeArchived {
+		if err := auth.Require(ctx, "knowledge_corpus", principal.ActionDelete); err != nil {
+			return nil, err
+		}
+	}
 	out := []crmcontracts.KnowledgeCorpus{}
 	identity := s.embedIdentity()
 	live := ` WHERE archived_at IS NULL`

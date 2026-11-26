@@ -325,6 +325,74 @@ func TestARestoredDefaultCorpusLeavesTheDefaultWhereItMoved(t *testing.T) {
 	}
 }
 
+// Two retries of one restore that race write one audit row between them.
+func TestRacingRestoresOfOneCorpusWriteOneAuditRow(t *testing.T) {
+	e := Setup(t)
+	store := knowledge.NewStore(e.DB())
+	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
+	made, err := store.CreateCorpus(ctx, howTo("How-to"))
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	corpusID := ids.UUID(made.Id)
+	if err := store.ArchiveCorpus(ctx, corpusID); err != nil {
+		t.Fatalf("archive: %v", err)
+	}
+	errs := make(chan error, 2)
+	for range 2 {
+		go func() {
+			_, err := store.RestoreCorpus(ctx, corpusID)
+			errs <- err
+		}()
+	}
+	for range 2 {
+		if err := <-errs; err != nil {
+			t.Fatalf("restore: %v", err)
+		}
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'restore'`, corpusID); n != 1 {
+		t.Fatalf("racing restores wrote %d restore audit rows, want 1", n)
+	}
+}
+
+// A set that ships with Margince keeps its name. A user set archived under the
+// same name cannot come back while the shipped one holds it.
+func TestARestoreIsRefusedTheNameOfTheShippedSet(t *testing.T) {
+	e := Setup(t)
+	store := knowledge.NewStore(e.DB())
+	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
+	mine, err := store.CreateCorpus(ctx, howTo("Handbook"))
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := store.ArchiveCorpus(ctx, ids.UUID(mine.Id)); err != nil {
+		t.Fatalf("archive: %v", err)
+	}
+	shipped, err := store.CreateCorpus(ctx, howTo("Shipped"))
+	if err != nil {
+		t.Fatalf("create the shipped stand-in: %v", err)
+	}
+	e.WsExec(t, `UPDATE knowledge_corpus SET managed_source = 'handbook', name = 'Handbook' WHERE id = $1`, ids.UUID(shipped.Id))
+	var taken *storekit.NameTakenError
+	if _, err := store.RestoreCorpus(ctx, ids.UUID(mine.Id)); !errors.As(err, &taken) {
+		t.Fatalf("restoring a set under the shipped set's name = %v, want NameTakenError", err)
+	}
+}
+
+// Archived sets are listed for restoring them, so a rep who may only ask is
+// refused the archived list and still gets the live one.
+func TestARepMayNotListArchivedCorpora(t *testing.T) {
+	e := Setup(t)
+	store := knowledge.NewStore(e.DB())
+	rep := e.As(e.Rep1, nil, corpusRepPerms)
+	if _, err := store.ListCorpora(rep, storekit.IncludeArchived); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a rep listing archived sets = %v, want ErrPermissionDenied", err)
+	}
+	if _, err := store.ListCorpora(rep, storekit.LiveOnly); err != nil {
+		t.Fatalf("a rep listing live sets: %v", err)
+	}
+}
+
 // Restoring is archiving undone, so it takes the archive permission.
 func TestARepMayNotRestoreACorpus(t *testing.T) {
 	e := Setup(t)

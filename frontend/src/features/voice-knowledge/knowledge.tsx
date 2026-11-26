@@ -101,8 +101,10 @@ export function KnowledgeCard() {
   const t = useT();
   const canSee = useCan("knowledge_corpus", "read");
   const canManage = useCanWrite("knowledge_corpus", "create");
+  // Archived sets are listed for restoring them: the archive grant.
+  const canRestore = useCanWrite("knowledge_corpus", "delete");
   const [showArchived, setShowArchived] = useState(false);
-  const query = useDocumentSets(canSee, showArchived);
+  const query = useDocumentSets(canSee, showArchived && canRestore);
   const titleId = useId();
 
   if (!canSee) {
@@ -126,7 +128,7 @@ export function KnowledgeCard() {
       }
       titleAction={canManage ? <NewDocumentSet /> : undefined}
       actions={
-        canManage && (
+        canRestore && (
           <Switch
             label={t("knowledge.showArchived")}
             checked={showArchived}

@@ -35852,7 +35852,7 @@ type AiFlowStep struct {
 	// Switched Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
 	Switched int64 `json:"switched"`
 
-	// SwitchedTo The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step's own binding settings, and is absent on a decision step and when no record measured it.
+	// SwitchedTo The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step's own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read.
 	SwitchedTo *string `json:"switched_to,omitempty"`
 
 	// SwitchedToCertification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
@@ -56751,7 +56751,7 @@ type KnowledgeClaimSection struct {
 
 // KnowledgeCorpus defines model for KnowledgeCorpus.
 type KnowledgeCorpus struct {
-	// ArchivedAt When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set.
+	// ArchivedAt When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set, and it takes the `knowledge_corpus` delete grant that archives and restores one.
 	ArchivedAt *time.Time        `json:"archived_at,omitempty"`
 	Coverage   KnowledgeCoverage `json:"coverage"`
 	CreatedAt  time.Time         `json:"created_at"`

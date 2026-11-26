@@ -126,7 +126,7 @@ func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read,
 }
 
 // found is what Lookup found under a question: nothing ever kept, an answer
-// that has ended, or one still valid.
+// that has ended or could not be read, or one still valid.
 type found int
 
 const (
@@ -159,8 +159,10 @@ func lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read,
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, Kept{}, foundNone, nil
 	}
+	// A failed read does not know that nothing was kept, so it never counts as
+	// the first read of a question.
 	if err != nil {
-		return out, Kept{}, foundNone, fmt.Errorf("homecache: reading a cached %s: %w", read, err)
+		return out, Kept{}, foundEnded, fmt.Errorf("homecache: reading a cached %s: %w", read, err)
 	}
 	if !valid {
 		return out, Kept{}, foundEnded, nil

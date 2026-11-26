@@ -11,7 +11,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -274,15 +274,15 @@ func (h Handlers) GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params c
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// storedRouting is the routing settings a switched model is graded against, or
-// nil on a role that composed none. The flow shows only the verdicts graded
-// from it, and the committed records already publish those. So the read needs
-// no routing grant beyond the flow's own.
+// storedRouting is the routing settings a switched model is graded against.
+// It is nil on a role that composed none, and for a reader without the routing
+// grant. A grade shows which settings a tier is bound with, and the flow's own
+// grant does not admit that.
 func (h Handlers) storedRouting(ctx context.Context) (*RoutingConfig, error) {
-	if h.routing == nil {
-		return nil, nil //nolint:nilnil // nil says no settings were composed, so no step is graded
+	if h.routing == nil || !auth.Allows(ctx, routingSettingsObject, principal.ActionRead) {
+		return nil, nil //nolint:nilnil // nil says no step is graded for this reader
 	}
-	stored, err := config.StoredVal(ctx, h.routing, Routing)
+	stored, err := h.routing(ctx)
 	if err != nil {
 		return nil, err
 	}

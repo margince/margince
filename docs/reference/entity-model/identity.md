@@ -141,7 +141,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `auth_token_pkey`: `unique, btree (id)`
-- `idx_auth_token_counterpart`: `btree (counterpart_user_id)`
+- `idx_auth_token_counterpart`: `btree (counterpart_user_id) WHERE (counterpart_user_id IS NOT NULL)`
 - `idx_auth_token_hash`: `unique, btree (token_hash)`
 - `idx_auth_token_user`: `btree (user_id, purpose) WHERE (used_at IS NULL)`
 - `idx_auth_token_user_cascade`: `btree (user_id)`

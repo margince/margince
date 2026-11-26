@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -29,6 +30,10 @@ func (s *Store) RestoreCorpus(ctx context.Context, id ids.UUID) (crmcontracts.Kn
 	}
 	var out crmcontracts.KnowledgeCorpus
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		// Held first, so two retries of one restore cannot both see it archived.
+		if _, err := storekit.LockRow(ctx, tx, "knowledge_corpus", id, storekit.IncludeArchived); err != nil {
+			return err
+		}
 		current, err := readCorpus(ctx, tx, id, storekit.IncludeArchived)
 		if err != nil {
 			return err
@@ -37,10 +42,19 @@ func (s *Store) RestoreCorpus(ctx context.Context, id ids.UUID) (crmcontracts.Kn
 			out = current.wire(s.embedIdentity())
 			return nil
 		}
-		if _, err := tx.Exec(ctx,
+		// The unique index sees only the sets users make, so a shipped set's
+		// name is refused here, as an edit refuses it.
+		if err := refuseShippedCorpusName(ctx, tx, id, current.corpus.Shipped, current.corpus.Name); err != nil {
+			return err
+		}
+		tag, err := tx.Exec(ctx,
 			`UPDATE knowledge_corpus SET archived_at = NULL, default_ask = false
-			 WHERE id = $1 AND archived_at IS NOT NULL`, id); err != nil {
+			 WHERE id = $1 AND archived_at IS NOT NULL`, id)
+		if err != nil {
 			return storekit.NameTaken(fmt.Errorf("restore knowledge corpus: %w", err), corpusEntry, current.corpus.Name, corpusNameIndex)
+		}
+		if tag.RowsAffected() == 0 {
+			return fmt.Errorf("restore knowledge corpus: the locked archived row changed: %w", apperrors.ErrConflict)
 		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE knowledge_document SET archived_at = NULL

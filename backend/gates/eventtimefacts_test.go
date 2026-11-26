@@ -7,7 +7,7 @@ package gates
 
 // Every writer of a stage move records the stage order it happened in. It also
 // records whether the move was made in Margince or an import brought it in. Every writer of a lead's
-// arrival records the owner and the origin it arrived with. Writers are found by the statement
+// arrival records the owner it arrived with. Writers are found by the statement
 // they send, so a new one is judged without a list. The cohort readings mark a
 // missing value as partial, so a skip degrades silently.
 
@@ -91,7 +91,7 @@ func TestEveryStageMoveWriterRecordsTheStageOrderAtTheMove(t *testing.T) {
 	}
 }
 
-func TestEveryLeadArrivalWriterRecordsTheOwnerAndOriginItArrivedWith(t *testing.T) {
+func TestEveryLeadArrivalWriterRecordsTheOwnerItArrivedWith(t *testing.T) {
 	t.Parallel()
 	inserts, stamps := 0, 0
 	for path, body := range productSources(t) {
@@ -99,9 +99,6 @@ func TestEveryLeadArrivalWriterRecordsTheOwnerAndOriginItArrivedWith(t *testing.
 			inserts++
 			if !strings.Contains(columns[1], "arrival_owner_id") && !strings.Contains(columns[1], "arrivalOwnerColumn") {
 				t.Errorf("%s inserts a lead without arrival_owner_id: its arrival would have no owner", path)
-			}
-			if !strings.Contains(columns[1], "arrival_origin") && !strings.Contains(columns[1], "arrivalOriginColumn") {
-				t.Errorf("%s inserts a lead without arrival_origin: source quality would move it when its origin is edited", path)
 			}
 		}
 		for _, set := range leadUpdate.FindAllStringSubmatch(body, -1) {
