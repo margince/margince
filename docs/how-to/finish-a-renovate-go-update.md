@@ -17,12 +17,13 @@ branch.
 
    ```sh
    git fetch origin 'renovate/go-dependencies-(non-major)'
-   git switch -c finish-go-update FETCH_HEAD
+   git switch --detach FETCH_HEAD
    make install
    make go-work-sum
    ```
 
-   `make go-work-sum` prints `OK` once `go.work.sum` holds what `make install` leaves behind.
+   `make go-work-sum` prints `OK` once `go.work.sum` holds what `make install` leaves behind. The
+   checkout is detached, so the steps run again for the next update with no branch to clean up.
 3. Commit `go.work.sum` alone. `make install` touches nothing else that belongs in this pull request;
    leave any other change out.
 4. Push it to the Renovate branch:
@@ -38,4 +39,14 @@ branch.
 
 Renovate merges its own pull requests, but it stops rebasing a branch that someone else pushed to. A
 finished Go update that waits falls behind `main` and gets no help from Renovate. If it falls behind
-anyway, merge `main` into the branch, run `make install` again, and commit `go.work.sum` once more.
+anyway, bring it level from the same detached checkout, then go back to step 5:
+
+```sh
+git fetch origin main
+git merge origin/main
+make install
+git commit go.work.sum -m 'Update go.work.sum'
+git push origin 'HEAD:renovate/go-dependencies-(non-major)'
+```
+
+Leave out the commit when `make install` changed nothing.
