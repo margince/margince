@@ -115,6 +115,10 @@ func (s *VoiceStore) updateVoiceSource(ctx context.Context, tx pgx.Tx, profileID
 			Detail: "this sample was left out of the voice, and an agent does not put it back; ask the user to do it in the app",
 		}
 	}
+	if (excluded == nil || *excluded == before.Excluded) && (in.Weight == nil || *in.Weight == before.Weight) {
+		summary, err := corpusSummary(ctx, tx, profile.ID)
+		return before, summary, err
+	}
 	source, err := scanVoiceSource(tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE voice_corpus_source SET
 			  excluded = coalesce($3, excluded),

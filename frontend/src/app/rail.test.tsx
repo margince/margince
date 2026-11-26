@@ -36,7 +36,8 @@ import { Shell, WorkspaceRail } from "./shell";
 // empty registry it would silently be the uncomposed case instead. The
 // descriptor shape is the generator's, the same one App.extscreen.test.tsx hands
 // the same lookup.
-vi.mock("@composition/extensions", () => ({
+vi.mock("@composition/extensions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@composition/extensions")>()),
   extensions: [
     {
       name: "notes",

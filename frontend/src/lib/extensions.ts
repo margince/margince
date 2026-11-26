@@ -3,11 +3,6 @@ import {
   type ExtensionVerbDescriptor,
   extensions,
 } from "@composition/extensions";
-import {
-  extensionApps,
-  extensionPanels,
-  extensionScreens,
-} from "@composition/screens";
 import type { ComponentType } from "react";
 import { readableKey } from "../format/rbacobjects";
 import { type Locale, translate } from "../i18n";
@@ -79,27 +74,14 @@ export const EXTENSION_SCREEN = "ext";
 /** The composed registry itself, for a caller that needs the whole set. */
 export const composedExtensions: readonly ExtensionDescriptor[] = extensions;
 
-/**
- * The composed screen registry, annotated once.
- *
- * The generated file is emitted UNTYPED — it is written to two paths at
- * different depths and must be byte-identical, so it can carry neither a
- * relative type import nor a bare one. The annotation therefore lands at an
- * import site, and there is exactly one: a second copy in another module would
- * be a second place for a unit whose default export is not a component to slip
- * through, and the two would eventually disagree about what the registry holds.
- */
-export const composedScreens: ExtensionScreenRegistry = extensionScreens;
-
 /** What a core page hands a unit's panel: the record the page shows. */
 export type ExtensionPanelProps = Readonly<{
   record: Readonly<{ type: EntityKind; id: string }>;
 }>;
 
 /**
- * The panels an installation composes: by unit, then by slot. Annotated here,
- * at the registry's one import site, for the reason composedScreens is: a
- * unit's export that is not a panel component fails this assignment.
+ * The panels an installation composes: by unit, then by slot. A unit's export
+ * that is not a panel component fails the annotation in extensionscreens.ts.
  */
 export type ExtensionPanelRegistry = Readonly<
   Record<
@@ -107,9 +89,6 @@ export type ExtensionPanelRegistry = Readonly<
     Readonly<Record<string, ComponentType<ExtensionPanelProps> | undefined>>
   >
 >;
-
-/** The composed panel registry, annotated once. */
-export const composedPanels: ExtensionPanelRegistry = extensionPanels;
 
 /**
  * The two secret scopes a unit's settings entry can be placed by.
@@ -223,15 +202,32 @@ export function extensionRbacObject(
   return isExtensionRbacObject(verb.rbacObject) ? verb.rbacObject : null;
 }
 
-/**
- * The components the units' frontend packages export as their app, by unit.
- * Annotated here, at the registry's one import site, so a unit's export that
- * is not a component fails this assignment. It sits in this module, not in
- * extensionapps.ts. Loading the screens loads each unit. A unit imports the
- * app surface, which reads this module while it is still loading.
- */
+/** The components the units' frontend packages export as their app, by unit. */
 export type ExtensionAppRegistry = Readonly<
   Record<string, ComponentType | undefined>
 >;
 
-export const composedApps: ExtensionAppRegistry = extensionApps;
+/**
+ * The copy namespace a unit's translations live in: `crm-hello` is
+ * `extCrmHello.`. Core cannot import the generator's rule, so this restates it,
+ * and the test beside it holds the two together.
+ */
+export function unitCopyPrefix(unit: string): string {
+  const camel = unit
+    .split("-")
+    .filter((part) => part !== "")
+    .map((part) =>
+      /^\d/.test(part)
+        ? `_${part}`
+        : part.charAt(0).toUpperCase() + part.slice(1),
+    )
+    .join("");
+  return `ext${camel}.`;
+}
+
+/** A unit's own wording for a key, or "" when it has none. */
+export function unitWords(locale: Locale, unit: string, key: string): string {
+  const full = `${unitCopyPrefix(unit)}${key}` as `ext${string}`;
+  const words = translate(locale, full);
+  return words === full ? "" : words;
+}

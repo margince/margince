@@ -17,9 +17,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -39,6 +41,8 @@ type ProjectActivityFacts struct {
 	// LastActivityAt is the newest attributed activity that counts as last
 	// activity by asOf; nil when nothing that counts is filed under the project.
 	LastActivityAt *time.Time
+	// LastActivityPrecision says how to read LastActivityAt, nil with it.
+	LastActivityPrecision *crmcontracts.OccurredPrecision
 	// OpenCommitments is every open task filed under the project — the
 	// whole set, where the commitments section carries a page of it.
 	OpenCommitments int
@@ -90,7 +94,9 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 	}
 	current := CurrentTaskClause("a", asOf, identities, arg)
 	counts := relstrength.ExternalActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", arg(asOf)))
+	recency := "f.filed_here AND TRUE" + auth.OriginIsEngagement("a") + " AND " + counts
 	var facts ProjectActivityFacts
+	var precision *string
 	// The candidate set is every activity with ANY link into the project's
 	// neighbourhood; each is then classified once, so an activity linked to
 	// both the project and its deal is one row and counted on one side.
@@ -109,8 +115,7 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 		       -- here IS attributed work, it just is not the other side engaging.
 		       -- TRUE carries the fragment's leading AND, so the one spelling in
 		       -- auth.OriginIsEngagement serves a FILTER as well as a WHERE.
-		       max(a.occurred_at) FILTER (WHERE f.filed_here AND TRUE`+auth.OriginIsEngagement("a")+
-		` AND `+counts+`),
+		       max(a.occurred_at) FILTER (WHERE `+recency+`), `+occurredday.LatestPrecisionSQL("a", recency)+`,
 		       count(*) FILTER (WHERE NOT f.filed_anywhere),
 		       count(*) FILTER (WHERE f.filed_here AND a.kind = 'task' AND NOT a.is_done AND %[5]s)
 		FROM activity a
@@ -122,9 +127,12 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 			               WHERE l.activity_id = a.id AND l.project_id IS NOT NULL) AS filed_anywhere
 		) f
 		WHERE %[2]s`, projectPos, strings.Join(where, " AND "), dealScope, edgeScope, current), args...).
-		Scan(&facts.Attributed, &facts.LastActivityAt, &facts.UnattributedNearby, &facts.OpenCommitments)
+		Scan(&facts.Attributed, &facts.LastActivityAt, &precision, &facts.UnattributedNearby, &facts.OpenCommitments)
 	if err != nil {
 		return ProjectActivityFacts{}, err
+	}
+	if precision != nil {
+		facts.LastActivityPrecision = new(crmcontracts.OccurredPrecision(*precision))
 	}
 	return facts, nil
 }

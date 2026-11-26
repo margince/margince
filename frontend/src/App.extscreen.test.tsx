@@ -24,7 +24,8 @@ import {
 // The screen itself is a stub. A real one lives under extensions/, outside the
 // vanilla TypeScript program, and has its own suite. This test is about the
 // dispatch in App.tsx, and a real screen would add its network calls to it.
-vi.mock("@composition/extensions", () => ({
+vi.mock("@composition/extensions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@composition/extensions")>()),
   extensions: [
     {
       name: "notes",

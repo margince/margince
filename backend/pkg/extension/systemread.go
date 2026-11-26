@@ -3,13 +3,15 @@
 
 package extension
 
-// System reads for a job tick or a bus delivery. Deals, Authority and the
-// directory's Emails have no caller's grants to narrow them, so each answers
-// ErrAttendedRead wherever a user gets the result. The newer reads (Companies,
-// MailContent, ByRole) take actAs and run as the unit's service member.
-// That guards the call, not a unit that stores what it read and serves it
-// later. A unit asks Authority().CanRead before it shows a colleague anything,
-// and CanRead answers a signed-in human about themselves on any call.
+// System reads for a job tick or a bus delivery. Every read has a form that
+// takes actAs and runs as the unit's service member, under that seat's own
+// grants, row scope and field masks. The older Deals.Get, Deals.Responsible,
+// Authority.CanRead, Authority.CanWrite and Directory.Emails take no actAs and
+// answer as the system actor, so they are deprecated. Each answers
+// ErrAttendedRead wherever a user gets the result. That guards the call, not a
+// unit that stores what it read and serves it later. A unit asks
+// Authority().CanReadAs before it shows a colleague anything, and CanRead
+// answers a signed-in human about themselves on any call.
 
 import (
 	"context"
@@ -30,11 +32,11 @@ var ErrUndeclaredRead = errors.New("extension: this unit does not declare the sy
 type SystemRead string
 
 const (
-	// SystemReadDeals admits Deals().Get and Deals().Responsible.
+	// SystemReadDeals admits the reads of Deals().
 	SystemReadDeals SystemRead = "deals"
-	// SystemReadAuthority admits Authority().CanRead and Authority().CanWrite.
+	// SystemReadAuthority admits the reads of Authority().
 	SystemReadAuthority SystemRead = "authority"
-	// SystemReadDirectory admits Directory().Emails and Directory().ByRole.
+	// SystemReadDirectory admits the reads of Directory().
 	SystemReadDirectory SystemRead = "directory"
 	// SystemReadActivities admits Activities().Mail.
 	SystemReadActivities SystemRead = "activities"
@@ -106,14 +108,30 @@ type Responsible struct {
 type Deals interface {
 	// Get reads one deal. A deal that does not exist, or was erased, answers
 	// ErrNotFound; an id that is not a canonical UUID answers ErrInvalid.
+	//
+	// Deprecated: use GetAs. Get answers as the system actor, so no grant,
+	// row scope or field mask narrows it.
 	Get(ctx context.Context, dealID string) (DealSummary, error)
+
+	// GetAs is Get as actAs, the unit's service member, sees the deal in the
+	// app. A deal outside the seat's row scope answers ErrNotFound. A masked
+	// amount leaves AmountMinor, Currency and AmountDisplay empty. Another
+	// member as actAs answers ErrForbidden.
+	GetAs(ctx context.Context, actAs UserID, dealID string) (DealSummary, error)
 
 	// Responsible answers the colleagues a deal names: its owner, the users
 	// assigned to it, and the members of the teams assigned to it. Agents,
 	// members who cannot sign in, archived assignments and archived teams are
 	// left out. The owner comes first, then the rest by email, and the list
 	// stops at MaxResponsible.
+	//
+	// Deprecated: use ResponsibleAs. Responsible answers as the system actor
+	// about any deal.
 	Responsible(ctx context.Context, dealID string) ([]Responsible, error)
+
+	// ResponsibleAs is Responsible for a deal actAs may open. A seat with no
+	// deal read answers ErrForbidden, and a deal outside its scope ErrNotFound.
+	ResponsibleAs(ctx context.Context, actAs UserID, dealID string) ([]Responsible, error)
 }
 
 // Authority answers what one colleague may read, under their own grants.
@@ -131,12 +149,27 @@ type Authority interface {
 	// can check its own caller before serving what the unit stored. An agent's
 	// or a connector's call, or a question about anyone else, answers
 	// ErrAttendedRead.
+	//
+	// Deprecated: on a job tick or a bus delivery use CanReadAs. CanRead
+	// answers there as the system actor about any deal and any colleague.
 	CanRead(ctx context.Context, user UserID, record EntityRef, fields []string) (bool, error)
 
 	// CanWrite reports whether user could change record now. It is live and
 	// they hold a full seat. Their own grants and the row's sharing let them
 	// update it. It answers on the same calls, about the same users, as CanRead.
+	//
+	// Deprecated: on a job tick or a bus delivery use CanWriteAs, for the
+	// reason CanRead gives.
 	CanWrite(ctx context.Context, user UserID, record EntityRef) (bool, error)
+
+	// CanReadAs is CanRead asked by actAs, the unit's service member. A deal
+	// the seat cannot open answers ErrNotFound. A question about a user other
+	// than actAs answers ErrForbidden, unless the seat may read the roster as
+	// an administrator does. Directory.ByRole applies the same rule.
+	CanReadAs(ctx context.Context, actAs, user UserID, record EntityRef, fields []string) (bool, error)
+
+	// CanWriteAs is CanWrite asked by actAs, under the rules of CanReadAs.
+	CanWriteAs(ctx context.Context, actAs, user UserID, record EntityRef) (bool, error)
 }
 
 // Directory reads colleagues' details for a job tick or a bus delivery.
@@ -145,7 +178,14 @@ type Directory interface {
 	// agent seat, or a user who does not exist or cannot sign in, is absent. More than
 	// MaxResponsible users, or an id that is not a canonical UUID, answers
 	// ErrInvalid.
+	//
+	// Deprecated: use EmailsAs. Emails answers as the system actor.
 	Emails(ctx context.Context, users []UserID) (map[UserID]string, error)
+
+	// EmailsAs is Emails as actAs, the unit's service member, reads the
+	// app's member list. A seat that may not open that list answers
+	// ErrForbidden.
+	EmailsAs(ctx context.Context, actAs UserID, users []UserID) (map[UserID]string, error)
 
 	// ByRole answers the active human members who hold at least one of roles,
 	// named by role key. Agent seats and members who cannot sign in are left

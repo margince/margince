@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -311,7 +312,7 @@ func withHookEvidence(evidence map[string]any, changes []HookChange) map[string]
 	}
 	out := make(map[string]any, len(evidence)+1)
 	maps.Copy(out, evidence)
-	out["extension_hooks"] = recorded
+	out[provenance.ExtensionHooksKey] = recorded
 	return out
 }
 
