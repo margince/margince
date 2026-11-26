@@ -159,7 +159,7 @@ func (p dealVerdictPass) apply(
 func (p dealVerdictPass) applyAsOwner(
 	ctx context.Context, c verdictCandidate, read dealVerdictRead, changes []deals.VerdictChange,
 ) ([]string, string, error) {
-	bind := ownersAgentTx(p.users, c.owner, marginceActorID)
+	bind := agentForTx(p.users, c.owner, marginceActorID)
 	var ownerLeft bool
 	var written string
 	result, err := p.deals.ApplyVerdict(ctx, deals.VerdictInput{
