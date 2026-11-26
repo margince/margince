@@ -218,9 +218,7 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 			}
 		}
 	}
-	if err := projectReportingCharts(&out); err != nil {
-		return out, err
-	}
+	projectReportingCharts(&out)
 	if err := explainWithheldOwners(ctx, tx, &out); err != nil {
 		return out, err
 	}

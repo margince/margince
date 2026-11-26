@@ -18700,7 +18700,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WhatsAppWebhookReceipt' }
-        '401':
+        '403':
           description: 'The body is signed by no connected number (`code: channel_event_rejected`). The answer is the same for each cause.'
           content:
             application/problem+json:
@@ -40149,6 +40149,8 @@ paths:
       x-mcp-tool: { verb: list_corpora, router: read_workspace, action: corpora, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: The document corpora this workspace has defined.
+      parameters:
+        - $ref: '#/components/parameters/IncludeArchived'
       responses:
         '200':
           description: The corpora.
@@ -40265,6 +40267,36 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /knowledge/corpora/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Knowledge]
+      operationId: restoreCorpus
+      x-mcp-tool: { verb: restore_corpus, router: change_capture, action: restore_corpus, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Bring an archived corpus back with everything filed in it.
+      description: >-
+        The undo half of `archiveCorpus`. The set, its documents and their passages
+        return in one transaction, and the ask finds the passages again.
+
+        Restoring a set that is not archived succeeds and changes nothing, so a retried
+        call after a lost response answers the same way as the first.
+
+        It does NOT make the set the default again. The default moved elsewhere when the
+        set was archived, and `updateCorpus` says which set the palette asks.
+      responses:
+        '200':
+          description: The restored corpus.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeCorpus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /knowledge/corpora/{id}/documents:
@@ -48172,7 +48204,8 @@ components:
         p50_ms: { type: integer, format: int64 }
         gave_up: { type: object, additionalProperties: { type: integer, format: int64 }, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).' }
         switched: { type: integer, format: int64, description: 'Calls this step answered with another model than the one bound, by the provider''s own report; out of `answered`.' }
-        switched_to: { type: string, description: 'The model the provider named most often on those calls; absent when switched is 0.' }
+        switched_to: { type: string, description: 'The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step''s own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read.' }
+        switched_to_certification: { $ref: '#/components/schemas/AiRouteCertification' }
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]
@@ -51850,6 +51883,10 @@ components:
             A message limited to its participants does NOT move this date, even for a reader who
             may read that message. The value is one number every reader sees, so it can only count
             what every reader may see.
+        last_activity_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
@@ -53210,6 +53247,10 @@ components:
           type: [string, 'null']
           format: date-time
           description: The account's stored last activity the rung is counted from. Null when it has none.
+        last_activity_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         silent_days:
           type: integer
           minimum: 0
@@ -53593,6 +53634,10 @@ components:
         key: { type: [string, 'null'], description: 'The subject-line handle, when the project has one.' }
         phase: { $ref: '#/components/schemas/Company360ProjectPhase' }
         last_activity_at: { type: [string, 'null'], format: date-time }
+        last_activity_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         target_end_date: { type: [string, 'null'], format: date }
         owner_id: { type: [string, 'null'], format: uuid }
         owner_name:
@@ -72940,6 +72985,10 @@ components:
             the keys turned a grouping by identity into a paginated dump of every record's
             identity with only the measures blanked. The row itself stays so the answer's
             row count is not a signal of its own.
+
+            A number past ±(2^53−1) is null, and `_out_of_range` lists the columns it
+            was withheld from: a JSON reader parses every number as a float64, which
+            would turn that total into another number. The rest of the row is answered.
         withheld:
           type: boolean
           description: >-
@@ -75610,6 +75659,7 @@ components:
           description: >-
             Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
             A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
+            A total past ±(2^53−1) is null, and the row's `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the report is answered.
         total_rows:
           type: integer
           description: >-
@@ -75675,7 +75725,7 @@ components:
         aggregates:
           type: object
           additionalProperties: true
-          description: The requested aggregates recomputed over exactly these source rows — equals the explained cell.
+          description: The requested aggregates recomputed over exactly these source rows — equals the explained cell. A total past ±(2^53−1) is null and named in `_out_of_range`, as on the report row.
         total_rows: { type: integer, description: Source rows matched (rows is capped at the report row limit). }
         excluded_by_permission: { type: [integer, 'null'], description: 'Visible rows a field mask withheld — the same exclusion the explained report applied, so the drill-through reconciles exactly.' }
         population_narrowed: { $ref: '#/components/schemas/PopulationNarrowed' }
@@ -88282,6 +88332,10 @@ components:
           description: A re-embed is in flight; every ask answers not_ready until it finishes.
         coverage: { $ref: '#/components/schemas/KnowledgeCoverage' }
         created_at: { type: string, format: date-time }
+        archived_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set, and it takes the `knowledge_corpus` delete grant that archives and restores one.
 
     KnowledgeCorpusList:
       type: object

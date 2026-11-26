@@ -27524,6 +27524,31 @@ export interface paths {
         patch: operations["updateCorpus"];
         trace?: never;
     };
+    "/knowledge/corpora/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bring an archived corpus back with everything filed in it.
+         * @description The undo half of `archiveCorpus`. The set, its documents and their passages return in one transaction, and the ask finds the passages again.
+         *     Restoring a set that is not archived succeeds and changes nothing, so a retried call after a lost response answers the same way as the first.
+         *     It does NOT make the set the default again. The default moved elsewhere when the set was archived, and `updateCorpus` says which set the palette asks.
+         */
+        post: operations["restoreCorpus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/knowledge/corpora/{id}/documents": {
         parameters: {
             query?: never;
@@ -33678,8 +33703,9 @@ export interface components {
              * @description Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
              */
             switched: number;
-            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            /** @description The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step's own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read. */
             switched_to?: string;
+            switched_to_certification?: components["schemas"]["AiRouteCertification"];
         };
         AiDeferredWork: {
             carrier: string;
@@ -36633,6 +36659,8 @@ export interface components {
              *     A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -37706,6 +37734,8 @@ export interface components {
              * @description The account's stored last activity the rung is counted from. Null when it has none.
              */
             last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Calendar days from `last_activity_at` to today in the installation zone. 0 when there is no activity. */
             silent_days: number;
             /** @description True when the account has no activity recorded at all, which is why it reads as `stale`. */
@@ -37954,6 +37984,8 @@ export interface components {
             phase: components["schemas"]["Company360ProjectPhase"];
             /** Format: date-time */
             last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date */
             target_end_date?: string | null;
             /** Format: uuid */
@@ -53219,7 +53251,10 @@ export interface components {
         AnalyticsAnswer: {
             /** @description What each value in a row means, in order. */
             columns: string[];
-            /** @description One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own. */
+            /**
+             * @description One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
+             *     A number past ±(2^53−1) is null, and `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the row is answered.
+             */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -54980,7 +55015,7 @@ export interface components {
                 [key: string]: unknown;
             };
             columns: string[];
-            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. */
+            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. A total past ±(2^53−1) is null, and the row's `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the report is answered. */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -55025,7 +55060,7 @@ export interface components {
             rows: {
                 [key: string]: unknown;
             }[];
-            /** @description The requested aggregates recomputed over exactly these source rows — equals the explained cell. */
+            /** @description The requested aggregates recomputed over exactly these source rows — equals the explained cell. A total past ±(2^53−1) is null and named in `_out_of_range`, as on the report row. */
             aggregates?: {
                 [key: string]: unknown;
             };
@@ -66000,6 +66035,11 @@ export interface components {
             coverage: components["schemas"]["KnowledgeCoverage"];
             /** Format: date-time */
             created_at: string;
+            /**
+             * Format: date-time
+             * @description When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set, and it takes the `knowledge_corpus` delete grant that archives and restores one.
+             */
+            archived_at?: string | null;
         };
         /** @description Every corpus, unpaged. A workspace defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a promise with no producer behind it. */
         KnowledgeCorpusList: {
@@ -87226,7 +87266,7 @@ export interface operations {
                 };
             };
             /** @description The body is signed by no connected number (`code: channel_event_rejected`). The answer is the same for each cause. */
-            401: {
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -108907,7 +108947,10 @@ export interface operations {
     };
     listCorpora: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include soft-deleted (archived) rows. Default false. */
+                include_archived?: components["parameters"]["IncludeArchived"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -109047,6 +109090,34 @@ export interface operations {
         };
         responses: {
             /** @description The corpus. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeCorpus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NameTakenConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreCorpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restored corpus. */
             200: {
                 headers: {
                     [name: string]: unknown;

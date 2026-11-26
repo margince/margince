@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Plug,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { ActionRow } from "../design-system/actionrow";
 import { Badge, Button } from "../design-system/atoms";
 import { translate, useLocale } from "../i18n";
@@ -51,6 +52,15 @@ export const ENTRY_ICONS: Readonly<Record<string, LucideIcon>> = {
 export function entryIcon(name: string): LucideIcon | undefined {
   return Object.hasOwn(ENTRY_ICONS, name) ? ENTRY_ICONS[name] : undefined;
 }
+
+// Each icon is drawn once here, so a button shows an element and no render
+// makes a component of its own.
+const ENTRY_GLYPHS: Readonly<Record<string, ReactNode>> = Object.fromEntries(
+  Object.entries(ENTRY_ICONS).map(([name, Icon]) => [
+    name,
+    <Icon key={name} aria-hidden="true" />,
+  ]),
+);
 
 // A slot with this prefix draws each entry as a note, not a button.
 const MARK_SLOT_PREFIX = "record_mark.";
@@ -143,7 +153,9 @@ function EntryButton({
   label,
   record,
 }: Readonly<{ entry: UnitEntry; label: string; record?: EntryRecord }>) {
-  const Icon = entryIcon(entry.icon);
+  const glyph = Object.hasOwn(ENTRY_GLYPHS, entry.icon)
+    ? ENTRY_GLYPHS[entry.icon]
+    : null;
   return (
     // The span lets a verb bar's narrow tile cut the label at its end; the
     // title still shows all of it.
@@ -152,8 +164,7 @@ function EntryButton({
       title={label}
       onClick={() => navigate(entryRoute(entry), entryParams(record))}
     >
-      {Icon && <Icon aria-hidden="true" />}{" "}
-      <span className="verb-label">{label}</span>
+      {glyph} <span className="verb-label">{label}</span>
     </Button>
   );
 }

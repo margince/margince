@@ -93,6 +93,29 @@ describe("the answer table", () => {
     expect(within(bodyRows()[2]).getByText("Not set")).toBeTruthy();
   });
 
+  // The server withholds a total past 2^53 and names it. The cell says so
+  // rather than drawing a blank or a wrong figure.
+  it("says a total past the exact range is too large to show", async () => {
+    stubServer();
+    const [first, ...rest] = ANSWER.rows;
+    renderAnswer({
+      ...ANSWER,
+      rows: [
+        {
+          ...first,
+          sum_amount_minor: null,
+          _out_of_range: ["sum_amount_minor"],
+        },
+        ...rest,
+      ],
+    });
+    await screen.findByText("Qualified");
+    expect(
+      within(bodyRows()[0]).getByText("Too large to show exactly"),
+    ).toBeTruthy();
+    expect(within(bodyRows()[2]).getByText("US$125,000")).toBeTruthy();
+  });
+
   it("counts every withheld group in one closing row, never as zeros", async () => {
     stubServer();
     renderAnswer(WITHHELD_ANSWER);

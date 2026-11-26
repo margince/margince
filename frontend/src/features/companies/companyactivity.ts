@@ -3,6 +3,7 @@
 
 import type { components } from "../../api/schema";
 import type { ReadingTone } from "../../design-system/readingtone";
+import { activityDay } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
 import { formatDayMonthNearYear } from "../../format/format.dates";
 import type { Locale, Translator } from "../../i18n";
@@ -67,7 +68,13 @@ export function companyActivityVerdict(
       tone,
     };
   }
-  const date = day(reading.last_activity_at);
+  const date = activityDay(
+    reading.last_activity_at,
+    reading.last_activity_precision ?? "instant",
+    locale,
+    zone,
+    (at, locale, zone) => formatDayMonthNearYear(at, locale, zone, asOf),
+  );
   if (reading.rung === "active") {
     return { word, sentence: t("co.verdict.lastExchange", { date }), tone };
   }

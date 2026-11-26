@@ -2735,7 +2735,7 @@ func (stubs) ReplaceIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "ReplaceIntroRequest")
 }
 
-func (stubs) ListCorpora(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ListCorpora(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListCorporaParams) {
 	httperr.NotImplemented(w, r, "ListCorpora")
 }
 
@@ -2765,6 +2765,10 @@ func (stubs) ListCorpusDocuments(w nethttp.ResponseWriter, r *nethttp.Request, i
 
 func (stubs) UploadCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "UploadCorpusDocument")
+}
+
+func (stubs) RestoreCorpus(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestoreCorpus")
 }
 
 func (stubs) DeleteCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

@@ -51,7 +51,7 @@ func ProjectQuietSQL(alias, nowSQL string, daysPos int) string {
 // LastActivityDaySQL says the activity the project's stored clock names is a
 // day entry, so days since it count from its own date.
 func LastActivityDaySQL(project string) string {
-	return occurredday.ClockIsDaySQL(occurredday.LinkedClockRowsSQL("project_id", project+".id"), project+".last_activity_at")
+	return occurredday.ClockIsDaySQL(occurredday.LinkedClockRowsSQL("project_id", project+".id", occurredday.ActivityClockAdmitsSQL), project+".last_activity_at")
 }
 
 // ProjectQuietAnchorSQL is the instant the quiet rule measured from — the

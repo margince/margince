@@ -3095,6 +3095,9 @@ export const en = {
   "record.notShown": "Not shown",
   "reading.restricted": "Restricted",
   "format.notForecast": "Not forecast",
+  "format.tooLargeExact": "Too large to show exactly",
+  "format.someTooLargeExact":
+    "Some totals are too large to show exactly, so they are left out.",
   "record.chronologyLoading": "Loading change history…",
   // The same word the tab strip uses (`tab.timeline`): the heading over the
   // slot and the tab that opens it name one thing, and two words for it read
@@ -15691,7 +15694,7 @@ export const en = {
   "knowledge.archive": "Archive set",
   "knowledge.archiveConfirm.title": "Archive {name}?",
   "knowledge.archiveConfirm.body":
-    "The set and its documents are no longer searchable. Nothing is deleted.",
+    "The set and its documents are no longer searchable. Nothing is deleted, and Show archived sets brings it back.",
   "knowledge.archiveShipped":
     "This set ships with Margince, so it cannot be archived.",
   "knowledge.uploadShipped":
@@ -15723,6 +15726,13 @@ export const en = {
     "One sentence. It is shown to anyone whose question this set does not cover.",
   "knowledge.searchable": "Searchable",
   "knowledge.reindexingBadge": "Reindexing",
+  "knowledge.edit": "Edit set",
+  "knowledge.edit.title": "Edit {name}",
+  "knowledge.edit.save": "Save",
+  "knowledge.edit.description": "Description",
+  "knowledge.showArchived": "Show archived sets",
+  "knowledge.archivedBadge": "Archived",
+  "knowledge.restore": "Restore set",
   "settings.tab.privacy": "Privacy and retention",
   "verdictPass.subject.senders": "Senders",
   "verdictPass.subject.threads": "Threads",
