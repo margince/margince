@@ -266,11 +266,15 @@ func AssembleSARWithExtensions(
 		if err != nil {
 			return err
 		}
+		messages, err := subjectMessages(ctx, tx, contactID, emails, identities)
+		if err != nil {
+			return err
+		}
 		external, err := subjectExternalOriginalsTx(ctx, tx, contactID, emails)
 		if err != nil {
 			return err
 		}
-		sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, authored, external)
+		sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, authored, messages, external)
 		if err != nil {
 			return err
 		}

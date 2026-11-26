@@ -22,6 +22,7 @@ import (
 	"context"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -45,7 +46,7 @@ var fromJoin = regexp.MustCompile(`(?is)\b(?:from|join)\s+([a-z_][a-z0-9_]*)`)
 func tablesTheExportReaches(t *testing.T) map[string]bool {
 	t.Helper()
 	var pkg SARPackage
-	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +120,7 @@ func TestEveryPromisedTableIsActuallyAssembled(t *testing.T) {
 // first and could fail this.
 func TestTheConfirmLinkSectionCarriesNoCredential(t *testing.T) {
 	var pkg SARPackage
-	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,5 +150,35 @@ func TestTheConfirmLinkSectionCarriesNoCredential(t *testing.T) {
 	if probed == 0 {
 		t.Fatal("no assembled section reads confirm_token, so this check examined nothing — " +
 			"either the section was dropped or it was renamed out of reach")
+	}
+}
+
+// The sections that list the subject's mails take the one subjectMessages
+// result. A section that reads an activity_link subquery drops a mail the
+// subject was only copied on. The staged-approval row match keeps the
+// erasure-shared evidence clause, because the cascade destroys what it matches.
+func TestTheMailSectionsReadTheSubjectMessagesSetNotTheLinkTable(t *testing.T) {
+	var pkg SARPackage
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mailSections := []*[]map[string]any{
+		&pkg.Activities, &pkg.Attachments, &pkg.SentMessages, &pkg.StagedMessages,
+		&pkg.MeetingProposals, &pkg.MeetingInvitations, &pkg.ReportingContributions,
+	}
+	seen := 0
+	for _, section := range sections {
+		if !slices.Contains(mailSections, section.dest) {
+			continue
+		}
+		seen++
+		query := strings.ReplaceAll(section.query, evidenceCitesSubjectActivity, "")
+		if strings.Contains(query, "activity_link") {
+			t.Errorf("a mail section reads activity_link instead of the subjectMessages set:\n%s", strings.TrimSpace(section.query))
+		}
+	}
+	if seen != len(mailSections) {
+		t.Fatalf("found %d of the %d mail sections, so the census examined too little", seen, len(mailSections))
 	}
 }

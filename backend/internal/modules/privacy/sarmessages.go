@@ -11,15 +11,13 @@ package privacy
 // sections.
 
 import (
-	"fmt"
-
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // sarMessagingSections gather both directions of the messaging boundary: what
 // capture decided about mail arriving from the subject, and what this
 // installation sent out about or to them.
-func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) []sarSection {
+func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads, messages []ids.UUID) []sarSection {
 	sections := []sarSection{
 		sarPartySourceSection(pkg, emails),
 		{&pkg.CaptureDispositions, `SELECT p.email, p.display_name, p.status, p.disposition_reason, p.created_at, p.resolved_at
@@ -99,11 +97,11 @@ func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 		             SELECT email FROM contact_email WHERE contact_id = $1)
 		           THEN o.bounce_recipient END AS bounce_recipient
 		   FROM comms_outbound o
-		   WHERE o.activity_id IN (SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1)
+		   WHERE o.activity_id = ANY($2)
 		      OR EXISTS (
 		           SELECT 1 FROM jsonb_array_elements_text(
 		                          o.recipients || o.cc || coalesce(o.bcc, '[]'::jsonb)) AS addr
-		           WHERE lower(addr) IN (SELECT email FROM contact_email WHERE contact_id = $1))`, nil},
+		           WHERE lower(addr) IN (SELECT email FROM contact_email WHERE contact_id = $1))`, []any{contactID.UUID, messages}},
 		// The messages nobody has sent yet. They hold the subject's address and
 		// the body BEFORE any activity exists, so none of the three routes the
 		// query above takes can reach them — and a message written to this
@@ -222,17 +220,17 @@ func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 		      (SELECT coalesce(jsonb_agg(item), '[]'::jsonb)
 		         FROM jsonb_array_elements(` + evidenceArray + `) AS item
 		        WHERE item->>'source_id' IN (
-		                SELECT l.activity_id::text FROM activity_link l WHERE l.contact_id = $1)
+		                SELECT m::text FROM unnest($4::uuid[]) AS m)
 		           OR item->>'evidence_snippet' ~* ANY($3::text[])) AS evidence,
 		      created_at, expires_at, decided_at
 		   FROM approval
 		   WHERE (` + subjectApprovalMatch + `)
 		      OR evidence::text ~* ANY($3::text[])
 		      OR ` + evidenceCitesSubjectActivity,
-			[]any{contactID.UUID, leads, addressPatterns(emails)},
+			[]any{contactID.UUID, leads, addressPatterns(emails), messages},
 		},
 	}
-	return append(append(sections, sarMeetingSections(pkg, contactID)...), sarDraftSection(pkg, contactID, emails, leads))
+	return append(append(sections, sarMeetingSections(pkg, messages)...), sarDraftSection(pkg, contactID, emails, leads))
 }
 
 // sarDraftSection exports the drafts subjectDraftMatch names — the same rows
@@ -264,11 +262,11 @@ func sarDraftSection(pkg *SARPackage, contactID ids.ContactID, emails []string, 
 	}
 }
 
-func sarMeetingSections(pkg *SARPackage, contact ids.ContactID) []sarSection {
-	args := []any{contact.UUID}
+func sarMeetingSections(pkg *SARPackage, messages []ids.UUID) []sarSection {
+	args := []any{messages}
 	return []sarSection{
-		{&pkg.MeetingProposals, fmt.Sprintf(`SELECT DISTINCT p.request,p.expires_at,p.used_at,p.created_at FROM meeting_proposal p JOIN activity_link l ON l.activity_id=p.activity_id WHERE l.contact_id=$%d`, len(args)), args},
-		{&pkg.MeetingInvitations, fmt.Sprintf(`SELECT DISTINCT i.appointment-'PassportID'-'RequestID'-'EventID'-'CalendarID' AS appointment,i.status,i.command,i.created_at,i.updated_at FROM meeting_invitation i JOIN activity_link l ON l.activity_id=i.activity_id WHERE l.contact_id=$%d`, len(args)), args},
+		{&pkg.MeetingProposals, `SELECT DISTINCT p.request,p.expires_at,p.used_at,p.created_at FROM meeting_proposal p WHERE p.activity_id = ANY($1)`, args},
+		{&pkg.MeetingInvitations, `SELECT DISTINCT i.appointment-'PassportID'-'RequestID'-'EventID'-'CalendarID' AS appointment,i.status,i.command,i.created_at,i.updated_at FROM meeting_invitation i WHERE i.activity_id = ANY($1)`, args},
 	}
 }
 
