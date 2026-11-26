@@ -437,8 +437,10 @@ func dormancyClause(rung string, ladder dormancy.Ladder, now time.Time, arg func
 	}
 	asOf := fmt.Sprintf("$%d::timestamptz", arg(now))
 	// A date-only last activity sits in the window from the start of its own date,
-	// as the company page's reading counts it.
+	// as the company page's reading counts it. The loosened window on the stored
+	// column is the indexed range; the precision is read only for the rows in it.
+	window := ladder.WindowOf(dormancy.Rung(rung))
 	lastActivity := occurredday.StartAtSQL("company.last_activity_at",
 		"(CASE WHEN "+LastActivityDaySQL("company")+" THEN 'day' ELSE 'instant' END)")
-	return ladder.WindowOf(dormancy.Rung(rung)).SQL(lastActivity, asOf), nil
+	return window.Loosened().SQL("company.last_activity_at", asOf) + " AND " + window.SQL(lastActivity, asOf), nil
 }

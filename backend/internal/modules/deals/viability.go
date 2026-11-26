@@ -63,8 +63,10 @@ func AssessViability(in ViabilityInput, asOf time.Time, zone *time.Location) Via
 	if !in.MailCovered {
 		return Viability{Outcome: viability.OutcomeUnknown, Reasons: []viability.Reason{viability.ReasonCoverageUnknown}}
 	}
+	// A date-only entry is past once its date has begun in zone. Far east of UTC
+	// its stored noon is then still ahead of asOf.
 	progress := in.LastCustomerProgressAt
-	if progress != nil && progress.After(asOf) {
+	if progress != nil && !occurredday.Begun(occurredday.Moment{At: *progress, DateOnly: in.LastCustomerProgressDateOnly}, asOf, zone) {
 		progress = nil
 	}
 	anchor := occurredday.Moment{At: idlebase.Since(in.CreatedAt, progress), DateOnly: progress != nil && in.LastCustomerProgressDateOnly}

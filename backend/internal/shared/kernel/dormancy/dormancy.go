@@ -131,6 +131,20 @@ type Window struct {
 	IncludesNone                 bool
 }
 
+// DateStartLead bounds how many days after its date's start a date-only clock
+// is stored. Far east of UTC its noon UTC is a day and a few hours later.
+const DateStartLead = 2
+
+// Loosened is the window with its later bound moved DateStartLead days later.
+// Every clock the window admits on its date's start is inside it as stored, so
+// it can be an indexed range on the column.
+func (w Window) Loosened() Window {
+	if w.BeforeDaysBack != nil {
+		w.BeforeDaysBack = new(*w.BeforeDaysBack - DateStartLead)
+	}
+	return w
+}
+
 // WindowOf answers the window of rung r. A last activity dated d days before
 // today is silent d days. So a rung that begins on silent day n takes the day
 // n days back and earlier, and stops where day n-1 back starts.

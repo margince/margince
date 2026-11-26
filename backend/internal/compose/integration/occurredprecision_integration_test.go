@@ -365,3 +365,35 @@ func TestACompanySaysWhetherItsLastActivityIsADay(t *testing.T) {
 		}
 	}
 }
+
+// An activity the clock does not count says nothing about its precision, even at
+// the clock's own instant. A called-off meeting tied with a date-only note
+// leaves the company and the project reading the note's date.
+func TestAnUncountedActivityAtTheClocksInstantDecidesNoPrecision(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Tied Clock GmbH", "source": "manual"})
+	project := createdID(t, e, "/v1/projects", AnyMap{"name": "Tied rollout", "company_id": company, "source": "manual"})
+	links := []AnyMap{{"entity_type": "company", "entity_id": company}, {"entity_type": "project", "entity_id": project}}
+	mustCall(t, e, "POST", "/v1/activities", AnyMap{"kind": "note", "subject": "Met at the fair", "source": "manual",
+		"occurred_at": "2025-03-09T12:00:00Z", "occurred_precision": "day", "links": links}, http.StatusCreated, nil)
+	mustCall(t, e, "POST", "/v1/activities", AnyMap{"kind": "meeting", "subject": "Called off", "source": "manual",
+		"occurred_at": "2025-03-09T12:00:00Z", "meeting_status": "canceled", "links": links}, http.StatusCreated, nil)
+	var record, card struct {
+		Precision string `json:"last_activity_precision"`
+	}
+	mustCall(t, e, "GET", "/v1/companies/"+company, nil, http.StatusOK, &record)
+	var page struct {
+		Projects []struct {
+			Precision string `json:"last_activity_precision"`
+		} `json:"projects"`
+	}
+	mustCall(t, e, "GET", "/v1/companies/"+company+"/360", nil, http.StatusOK, &page)
+	if len(page.Projects) == 1 {
+		card.Precision = page.Projects[0].Precision
+	}
+	if record.Precision != "day" || card.Precision != "day" {
+		t.Errorf("with a called-off meeting tied to the note, the company reads %q and its project %q, want day for both",
+			record.Precision, card.Precision)
+	}
+}

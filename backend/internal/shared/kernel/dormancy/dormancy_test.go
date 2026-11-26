@@ -147,3 +147,20 @@ func TestADateOnlyLastActivityCountsFromItsOwnDate(t *testing.T) {
 			day.SilentDays, instant.SilentDays)
 	}
 }
+
+// The loosened window is the indexed pre-filter on the stored clock. A date-only
+// clock is stored up to a day and a half after its date's start. So the later
+// bound moves by DateStartLead days, and the earlier one stays.
+func TestTheLoosenedWindowAdmitsEveryClockTheWindowDoes(t *testing.T) {
+	t.Parallel()
+	for _, rung := range Rungs() {
+		w := Default.WindowOf(rung)
+		got := w.Loosened()
+		if (w.FromDaysBack == nil) != (got.FromDaysBack == nil) || (w.FromDaysBack != nil && *w.FromDaysBack != *got.FromDaysBack) {
+			t.Errorf("%s: the loosened window moved its earlier bound: %v -> %v", rung, w.FromDaysBack, got.FromDaysBack)
+		}
+		if w.BeforeDaysBack != nil && *got.BeforeDaysBack != *w.BeforeDaysBack-DateStartLead {
+			t.Errorf("%s: the later bound is %d days back, want %d", rung, *got.BeforeDaysBack, *w.BeforeDaysBack-DateStartLead)
+		}
+	}
+}

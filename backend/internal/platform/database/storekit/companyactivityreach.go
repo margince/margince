@@ -35,10 +35,12 @@ func CompanyFiledActivityReach(operand string) string {
 
 // CompanyClockRowsSQL is the rows a company's stored activity clock is folded
 // from, aliased clock_row, in the `FROM ... WHERE` shape occurredday's clock
-// helpers take. A held row sets no precision anyone reads.
+// helpers take. Only a row the clock's writer admits counts
+// (last_activity_of_company_activity), and a held row sets no precision.
 func CompanyClockRowsSQL(company string) string {
 	return "FROM (" + CompanyFiledActivityReach(company+".id") + ") clock_link " +
-		"JOIN activity clock_row ON clock_row.id = clock_link.activity_id WHERE clock_row.restricted_at IS NULL"
+		"JOIN activity clock_row ON clock_row.id = clock_link.activity_id WHERE clock_row.restricted_at IS NULL" +
+		" AND last_activity_of_company_activity(clock_row.id, " + company + ".id) IS NOT NULL"
 }
 
 // CompanyActivityReach also follows participants whose employment was in
