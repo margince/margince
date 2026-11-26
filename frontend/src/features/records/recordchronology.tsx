@@ -20,6 +20,7 @@ import {
   TIMELINE_FILTERS,
   type TimelineFilter,
 } from "../../lib/timelinefilter";
+import { useChatNames } from "./chatnames";
 import { extensionTimeline, useExtensionHistory } from "./extensionhistory";
 import { changeTimeline, useFieldHistory } from "./history";
 
@@ -171,6 +172,7 @@ export function useRecordChronology({
   const t = useT();
   const viewerId = useViewerId();
   const channelName = useProviderLabel();
+  const nameChat = useChatNames(activities, t, values.locale);
   // Only the Changes cut reads the change feed. The kind, word and date dials
   // narrow the exchanges, so they never hide a change.
   const wantsChanges =
@@ -198,8 +200,9 @@ export function useRecordChronology({
       locale: values.locale,
       channelName,
     },
-  ).map((entry) => {
-    const activity = byId.get(entry.id);
+  ).map((built) => {
+    const activity = byId.get(built.id);
+    const entry = nameChat(built, activity);
     // Only an email has a drawer to open, and only when the caller has one to
     // open it in.
     const opened =

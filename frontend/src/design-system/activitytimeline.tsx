@@ -261,10 +261,10 @@ function transcriptSlots(
   };
 }
 
-// The channel a message came by. A message a unit landed is named by the
-// unit's capture source, which carries the unit's own name; its channel id is
-// an internal key such as "linkedin_chat". Core's own channels are named by
-// their provider. A mail is a mail whichever mailbox it came through.
+// The channel a message came by. A unit's message is named by the unit's
+// capture source, which carries the unit's own name. Its channel id is only
+// an internal key. Core's own channels are named by their provider. A mail is
+// a mail whichever mailbox it came through.
 function channelOf(
   activity: Activity,
   channelName: (key: string) => string,
