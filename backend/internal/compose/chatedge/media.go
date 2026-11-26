@@ -6,6 +6,7 @@ package chatedge
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/capture/whatsapp"
@@ -59,10 +60,34 @@ type MediaRef struct {
 	Download func(ctx context.Context, connection ids.UUID, limit int64) ([]byte, error)
 }
 
+const (
+	// filingReserve is what a job keeps for filing after its downloads. A
+	// download that runs into it is cut off, so the message still files.
+	filingReserve = 20 * time.Second
+	// downloadCap bounds all of one message's downloads when the job has no deadline.
+	downloadCap = 2 * time.Minute
+)
+
+// downloadContext gives the downloads their own deadline, ahead of the job's by
+// the filing reserve. A job with little time left gives the downloads half of it.
+func downloadContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	budget := downloadCap
+	if deadline, ok := ctx.Deadline(); ok {
+		left := time.Until(deadline)
+		budget = min(budget, max(left-filingReserve, left/2))
+	}
+	return context.WithTimeout(ctx, budget)
+}
+
 // attach downloads each file of the message into its Parts and tallies what was
 // not kept into its PartDrops. A failure that may pass is returned, except on the
 // job's last attempt, where the file is dropped so the message still files.
 func attach(ctx context.Context, connection ids.UUID, refs []MediaRef, lastAttempt bool, msg *connector.ChatMessage) error {
+	if len(refs) == 0 {
+		return nil
+	}
+	fetchCtx, cancel := downloadContext(ctx)
+	defer cancel()
 	drops := map[string]int{}
 	budget := int64(extension.MaxInboundMessageBytes)
 	for i, ref := range refs {
@@ -70,7 +95,7 @@ func attach(ctx context.Context, connection ids.UUID, refs []MediaRef, lastAttem
 			drops[DropTooMany] += len(refs) - i
 			break
 		}
-		body, err := ref.Download(ctx, connection, min(int64(extension.MaxInboundFileBytes), budget))
+		body, err := ref.Download(fetchCtx, connection, min(int64(extension.MaxInboundFileBytes), budget))
 		var refusal *Refusal
 		switch {
 		case errors.As(err, &refusal):

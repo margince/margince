@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -32,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/chatedge"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/whatsapp"
 	"github.com/margince/margince/backend/internal/modules/capture/zalo"
@@ -142,8 +144,8 @@ func (f *mediaFake) serve(w http.ResponseWriter, r *http.Request) {
 
 func (f *mediaFake) clients() chatedge.MediaClients {
 	return chatedge.MediaClients{
-		WhatsApp: whatsapp.NewClient(f.srv.Client(), f.srv.URL, "", whatsapp.WithMediaHosts("127.0.0.1")),
-		Zalo:     zalo.NewClient(f.srv.Client(), "", "", zalo.WithMediaHosts("127.0.0.1")),
+		WhatsApp: whatsapp.NewClient(f.srv.Client(), f.srv.URL, "", whatsapp.WithMediaHosts("127.0.0.1"), whatsapp.WithoutDialGuardForTest()),
+		Zalo:     zalo.NewClient(f.srv.Client(), "", "", zalo.WithMediaHosts("127.0.0.1"), zalo.WithoutDialGuardForTest()),
 	}
 }
 
@@ -347,6 +349,42 @@ func TestErasingAWhatsAppContactRemovesTheFilesOfItsMessages(t *testing.T) {
 	}
 }
 
+func (c *telegramEnv) attachmentID(t *testing.T, system, messageID string) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT id FROM attachment WHERE external_source_id LIKE $1`,
+			system+":%:"+messageID).Scan(&id)
+	}); err != nil {
+		t.Fatalf("finding the file of %s: %v", messageID, err)
+	}
+	return id
+}
+
+// canRead reports whether the principal reaches the file by its own id and by
+// the list of its message. Those are the two routes that read a file.
+func canRead(ctx context.Context, t *testing.T, store *activities.Store, activity, file ids.UUID) (direct, listed bool) {
+	t.Helper()
+	_, errMeta := store.GetAttachmentMeta(ctx, file)
+	size, errOpen := openedSize(ctx, store, file)
+	list, _, errList := store.ListAttachments(ctx, "activity", activity, nil, nil)
+	for _, err := range []error{errMeta, errOpen, errList} {
+		if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
+			t.Fatalf("reading a file failed with %v, want it read or not found", err)
+		}
+	}
+	return errMeta == nil && errOpen == nil && size > 0, errList == nil && len(list) == 1
+}
+
+func openedSize(ctx context.Context, store *activities.Store, file ids.UUID) (int64, error) {
+	_, rc, err := store.OpenAttachment(ctx, file)
+	if err != nil {
+		return 0, err
+	}
+	n, copyErr := io.Copy(io.Discard, rc)
+	return n, errors.Join(copyErr, rc.Close())
+}
+
 func TestAFileFollowsTheAudienceOfItsWhatsAppMessage(t *testing.T) {
 	c := setupWhatsApp(t)
 	f := startMediaFake(t)
@@ -354,23 +392,64 @@ func TestAFileFollowsTheAudienceOfItsWhatsAppMessage(t *testing.T) {
 	blob, sub := mediaWorker(t, c, f)
 	n := c.connectNumber(t, "7601")
 	store := activities.NewStore(c.DB()).WithBlobstore(blob)
-	stranger := c.strangerRepCtx(t, map[string]principal.ObjectGrant{"activity": {Read: true}})
+	grants := map[string]principal.ObjectGrant{"activity": {Read: true}}
+	colleague := c.strangerRepCtx(t, grants)
+	member := c.memberCtx(t, grants)
 	doc := `{"id":"M","mime_type":"application/pdf","filename":"a.pdf"}`
 
 	c.deliverWA(t, n, waMedia(n.phoneID, "wamid.HELD", "document", doc))
 	awaitWA(t, sub())
 	held, _ := c.waFiled(t, "wamid.HELD")
-	if _, _, err := store.ListAttachments(stranger, "activity", mustParse(t, held.id), nil, nil); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("a colleague listing the file of a held message got %v, want not found", err)
+	if files := c.filesOf(t, "whatsapp", "wamid.HELD"); len(files) != 1 || files[0].withheld || files[0].bytes != int64(len(pdfBytes)) {
+		t.Fatalf("a held message kept %+v, want its file stored with its %d bytes", files, len(pdfBytes))
+	}
+	heldFile, heldActivity := c.attachmentID(t, "whatsapp", "wamid.HELD"), mustParse(t, held.id)
+	if direct, listed := canRead(member, t, store, heldActivity, heldFile); !direct || !listed {
+		t.Errorf("the reader team reads the held file directly %v and by list %v, want both", direct, listed)
+	}
+	if direct, listed := canRead(colleague, t, store, heldActivity, heldFile); direct || listed {
+		t.Errorf("a colleague reads the held file directly %v and by list %v, want neither", direct, listed)
 	}
 
 	c.shareConnection(t, "whatsapp", n.id)
 	c.deliverWA(t, n, waMedia(n.phoneID, "wamid.SHARED", "document", doc))
 	awaitWA(t, sub())
 	shared, _ := c.waFiled(t, "wamid.SHARED")
-	if got, _, err := store.ListAttachments(stranger, "activity", mustParse(t, shared.id), nil, nil); err != nil || len(got) != 1 {
-		t.Errorf("a colleague listing the file of a shared message got %d files and %v, want 1", len(got), err)
+	sharedFile := c.attachmentID(t, "whatsapp", "wamid.SHARED")
+	if direct, listed := canRead(colleague, t, store, mustParse(t, shared.id), sharedFile); !direct || !listed {
+		t.Errorf("a colleague reads the shared file directly %v and by list %v, want both", direct, listed)
 	}
+}
+
+func TestAChatFileIsSavedAndNeverRenderedInTheBrowser(t *testing.T) {
+	c := setupWhatsApp(t)
+	f := startMediaFake(t)
+	f.add("M", fakeFile{body: []byte(`<html><script>document.title="xss"</script></html>`)})
+	blob, sub := mediaWorker(t, c, f)
+	n := c.connectNumber(t, "7701")
+	c.shareConnection(t, "whatsapp", n.id)
+	c.deliverWA(t, n, waMedia(n.phoneID, "wamid.HTML", "document", `{"id":"M","mime_type":"image/svg+xml","filename":"x.svg"}`))
+	awaitWA(t, sub())
+
+	rec := httptest.NewRecorder()
+	id := c.attachmentID(t, "whatsapp", "wamid.HTML")
+	activities.NewHandlers(c.DB()).WithBlobstore(blob).DownloadAttachment(rec,
+		httptest.NewRequest(http.MethodGet, "/v1/attachments/"+id.String(), nil).WithContext(c.eraserCtx(t)), crmcontracts.Id(id))
+
+	if got := rec.Header().Get("Content-Disposition"); !strings.HasPrefix(got, "attachment;") {
+		t.Errorf("Content-Disposition = %q, want attachment", got)
+	}
+	if got := rec.Header().Get("Content-Type"); strings.Contains(got, "svg") {
+		t.Errorf("Content-Type = %q, want the sniffed type, never the sender's claim", got)
+	}
+}
+
+func (c *telegramEnv) memberCtx(t *testing.T, objects map[string]principal.ObjectGrant) context.Context {
+	t.Helper()
+	ctx := c.adminCtx(t)
+	actor, _ := principal.Actor(ctx)
+	actor.Permissions = principal.Permissions{RoleKeys: []string{"rep"}, Objects: objects, RowScope: principal.RowScopeTeam}
+	return principal.WithActor(ctx, actor)
 }
 
 func mustParse(t *testing.T, id string) ids.UUID {

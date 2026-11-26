@@ -6,7 +6,9 @@ package chatedge
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -81,5 +83,39 @@ func TestAttachKeepsTheFirstFilesAndCountsTheRest(t *testing.T) {
 	}
 	if len(msg.Parts) != extension.MaxInboundFiles || len(msg.PartDrops) != 1 || msg.PartDrops[0] != (connector.PartDrop{Reason: DropTooMany, Count: 3}) {
 		t.Errorf("%d parts and drops %+v, want %d parts and 3 counted too many", len(msg.Parts), msg.PartDrops, extension.MaxInboundFiles)
+	}
+}
+
+func TestADownloadThatStallsPastItsBudgetDropsAndLeavesTimeToFile(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	stall := MediaRef{Ordinal: 1, Download: func(ctx context.Context, _ ids.UUID, _ int64) ([]byte, error) {
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}}
+	var msg connector.ChatMessage
+	if err := attach(ctx, ids.NewV7(), []MediaRef{stall}, true, &msg); err != nil {
+		t.Fatalf("attach on the last attempt: %v, want the file dropped", err)
+	}
+	if ctx.Err() != nil {
+		t.Error("the downloads used the whole job deadline, so nothing is left to file with")
+	}
+	if len(msg.PartDrops) != 1 || msg.PartDrops[0].Reason != DropUnavailable {
+		t.Errorf("drops = %+v, want one %s", msg.PartDrops, DropUnavailable)
+	}
+}
+
+func TestAChatFilenameCannotNameAPathOrCarryControlCharacters(t *testing.T) {
+	for _, name := range []string{"../../etc/passwd", "a\x00b\x1b[31m.pdf", "x\u202egpj.exe", strings.Repeat("n", 400) + ".pdf", "..", "dir\\evil.pdf"} {
+		ref := body([]byte("%PDF-1.4 x"), nil)
+		ref.Name = name
+		var msg connector.ChatMessage
+		if err := attach(context.Background(), ids.NewV7(), []MediaRef{ref}, false, &msg); err != nil {
+			t.Fatal(err)
+		}
+		got := msg.Parts[0].Filename
+		if got == "" || len(got) > 255 || strings.ContainsAny(got, "/\\\x00\x1b\u202e") || strings.Trim(got, ".") == "" {
+			t.Errorf("name %q became %q, want a plain file name", name, got)
+		}
 	}
 }

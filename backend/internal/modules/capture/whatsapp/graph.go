@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/safedownload"
@@ -40,6 +41,7 @@ type Client struct {
 	version    string
 	mediaHosts []string
 	policy     safedownload.Policy
+	control    func(network, address string, c syscall.RawConn) error
 }
 
 // DefaultMediaHosts are the hosts media may be downloaded from. A pattern
@@ -53,6 +55,11 @@ type Option func(*Client)
 // a local server.
 func WithMediaHosts(patterns ...string) Option {
 	return func(c *Client) { c.mediaHosts = patterns }
+}
+
+// WithoutDialGuardForTest lets the client dial a server on the loopback.
+func WithoutDialGuardForTest() Option {
+	return func(c *Client) { c.control = safedownload.NoDialGuardForTest }
 }
 
 // NewClient builds a Client. A nil client gets one with a bounded timeout;
@@ -78,13 +85,31 @@ func NewClient(hc *http.Client, base, version string, opts ...Option) *Client {
 	if err != nil {
 		graph = &url.URL{}
 	}
-	c.policy = safedownload.Policy{Hosts: c.mediaHosts, RedirectHosts: []string{graph.Host}}
+	c.policy = safedownload.Policy{Hosts: c.mediaHosts, RedirectHosts: []string{graph.Host}, Control: c.control}
 	c.http = c.policy.Client(hc)
 	return c
 }
 
 // allowedMediaURL reports whether raw is an https URL on an allowed host.
 func (c *Client) allowedMediaURL(raw string) bool { return c.policy.Allows(raw) }
+
+// lookasideHost is the one media host Meta's documentation has the access token
+// sent to. Every other media host serves signed URLs and gets no credential.
+const lookasideHost = "lookaside.fbsbx.com"
+
+// bearerHost reports whether the access token may go to raw: the Graph API host
+// or Meta's lookaside host, and no other.
+func (c *Client) bearerHost(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	graph, err := url.Parse(c.base)
+	if err == nil && strings.EqualFold(u.Host, graph.Host) {
+		return true
+	}
+	return strings.EqualFold(u.Hostname(), lookasideHost)
+}
 
 // Download is a fetched attachment.
 type Download struct {
@@ -129,6 +154,9 @@ func (c *Client) DownloadMedia(ctx context.Context, token, mediaID string, maxBy
 func (c *Client) DownloadURL(ctx context.Context, token, mediaURL string, maxBytes int64, sums ...string) (Download, error) {
 	if !c.allowedMediaURL(mediaURL) {
 		return Download{}, fmt.Errorf("whatsapp: media url not allowed: %w", ErrRejected)
+	}
+	if !c.bearerHost(mediaURL) {
+		token = ""
 	}
 	data, err := c.do(ctx, http.MethodGet, mediaURL, token, nil, maxBytes)
 	if err != nil {
@@ -195,7 +223,9 @@ func (c *Client) do(ctx context.Context, method, target, token string, body []by
 	if err != nil {
 		return nil, fmt.Errorf("whatsapp: the request could not be built: %w", ErrRejected)
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

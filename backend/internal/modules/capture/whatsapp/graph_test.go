@@ -60,7 +60,7 @@ func mediaServer(t *testing.T, size int64, sum string, binStatus int, bin []byte
 		}
 	}))
 	t.Cleanup(srv.Close)
-	return NewClient(srv.Client(), srv.URL, "v23.0", WithMediaHosts("127.0.0.1"))
+	return NewClient(srv.Client(), srv.URL, "v23.0", WithMediaHosts("127.0.0.1"), WithoutDialGuardForTest())
 }
 
 func TestDownloadMedia(t *testing.T) {
@@ -111,7 +111,7 @@ func TestDownloadMediaRefusesANonHTTPURL(t *testing.T) {
 				t.Errorf("writing the answer: %v", err)
 			}
 		}))
-		c := NewClient(srv.Client(), srv.URL, "v23.0")
+		c := NewClient(srv.Client(), srv.URL, "v23.0", WithoutDialGuardForTest())
 		if _, err := c.DownloadMedia(context.Background(), testToken, "M", 100, ""); !errors.Is(err, ErrRejected) {
 			t.Errorf("%s: err = %v, want ErrRejected", bad, err)
 		}
@@ -145,7 +145,7 @@ func TestDownloadURLDirectFromEcho(t *testing.T) {
 		}
 	}))
 	t.Cleanup(srv.Close)
-	c := NewClient(srv.Client(), srv.URL, "", WithMediaHosts("127.0.0.1"))
+	c := NewClient(srv.Client(), srv.URL, "", WithMediaHosts("127.0.0.1"), WithoutDialGuardForTest())
 	got, err := c.DownloadURL(context.Background(), testToken, srv.URL+"/m", 100, b64Sum(payload))
 	if err != nil || string(got.Data) != string(payload) {
 		t.Fatalf("DownloadURL = %q, %v", got.Data, err)
@@ -177,7 +177,7 @@ func sendServer(t *testing.T, status int, answer string, header http.Header) (*C
 		}
 	}))
 	t.Cleanup(srv.Close)
-	return NewClient(srv.Client(), srv.URL, "v23.0"), got
+	return NewClient(srv.Client(), srv.URL, "v23.0", WithoutDialGuardForTest()), got
 }
 
 func TestSendText(t *testing.T) {
@@ -267,7 +267,7 @@ func TestErrorsNeverCarryTokenOrText(t *testing.T) {
 
 func TestTransportFailureIsUnreachable(t *testing.T) {
 	srv := httptest.NewServer(http.NotFoundHandler())
-	c := NewClient(srv.Client(), srv.URL, "v23.0")
+	c := NewClient(srv.Client(), srv.URL, "v23.0", WithoutDialGuardForTest())
 	srv.Close()
 	_, err := c.SendText(context.Background(), testToken, "P", "1", "x")
 	if !errors.Is(err, ErrUnreachable) || strings.Contains(err.Error(), srv.URL) {
@@ -280,7 +280,7 @@ func TestDownloadURLRefusesARedirectToAHostOutsideTheAllowlist(t *testing.T) {
 		http.Redirect(w, r, "https://example.com/steal", http.StatusFound)
 	}))
 	t.Cleanup(srv.Close)
-	c := NewClient(srv.Client(), srv.URL, "", WithMediaHosts("127.0.0.1"))
+	c := NewClient(srv.Client(), srv.URL, "", WithMediaHosts("127.0.0.1"), WithoutDialGuardForTest())
 	if _, err := c.DownloadURL(context.Background(), testToken, srv.URL+"/m", 100); !errors.Is(err, ErrRejected) {
 		t.Fatalf("a redirect off the allowlist gave %v, want ErrRejected", err)
 	}
@@ -292,7 +292,7 @@ func TestDownloadURLStopsAfterTooManyRedirects(t *testing.T) {
 		http.Redirect(w, r, srv.URL+"/again", http.StatusFound)
 	}))
 	t.Cleanup(srv.Close)
-	c := NewClient(srv.Client(), srv.URL, "", WithMediaHosts("127.0.0.1"))
+	c := NewClient(srv.Client(), srv.URL, "", WithMediaHosts("127.0.0.1"), WithoutDialGuardForTest())
 	if _, err := c.DownloadURL(context.Background(), testToken, srv.URL+"/m", 100); !errors.Is(err, ErrRejected) {
 		t.Fatalf("an endless redirect gave %v, want ErrRejected", err)
 	}

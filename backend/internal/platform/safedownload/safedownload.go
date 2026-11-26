@@ -16,9 +16,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
+	"syscall"
+	"time"
+
+	"github.com/margince/margince/backend/internal/platform/netguard"
 )
 
 var (
@@ -43,12 +48,20 @@ type Policy struct {
 	// RedirectHosts are further exact hosts a redirect may reach, such as the
 	// API host the first request went to.
 	RedirectHosts []string
+	// Control runs on every connection, after DNS, on the concrete address. Nil
+	// is netguard.RefusePrivate, so an allowed name that resolves or rebinds to
+	// an internal address is never dialled, redirect hops included.
+	Control func(network, address string, c syscall.RawConn) error
 }
+
+// NoDialGuardForTest is a Control that dials anything, so a test can reach a
+// server on the loopback. Nothing outside a test may use it.
+func NoDialGuardForTest(string, string, syscall.RawConn) error { return nil }
 
 // Allows reports whether raw is an https URL on one of the policy's hosts.
 func (p Policy) Allows(raw string) bool {
 	u, err := url.Parse(raw)
-	if err != nil || u.Scheme != "https" {
+	if err != nil || u.Scheme != "https" || u.User != nil {
 		return false
 	}
 	host := strings.ToLower(u.Hostname())
@@ -87,13 +100,44 @@ func (p Policy) Client(hc *http.Client) *http.Client {
 	if hc != nil {
 		own = *hc
 	}
+	own.Transport = p.transport(hc)
 	own.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		if len(via) > maxRedirects || !p.allowsRedirect(req.URL) {
 			return errRedirectRefused
 		}
+		// A credential is for the host the caller named, never for a hop.
+		req.Header.Del("Authorization")
 		return nil
 	}
 	return &own
+}
+
+// transport copies the caller's transport, so its TLS settings stay, and
+// replaces how it connects.
+func (p Policy) transport(hc *http.Client) *http.Transport {
+	base, ok := http.DefaultTransport.(*http.Transport)
+	if hc != nil {
+		if own, isTransport := hc.Transport.(*http.Transport); isTransport {
+			base, ok = own, true
+		}
+	}
+	var t *http.Transport
+	if ok {
+		t = base.Clone()
+	} else {
+		t = &http.Transport{}
+	}
+	control := p.Control
+	if control == nil {
+		control = netguard.RefusePrivate
+	}
+	dialer := &net.Dialer{Timeout: 10 * time.Second, Control: control}
+	t.DialContext = dialer.DialContext
+	t.Proxy = nil
+	// The bytes stored are the bytes sent, and the size bound is on the wire. A
+	// transparent gunzip would let a small body expand to the bound.
+	t.DisableCompression = true
+	return t
 }
 
 // Response is one answer, whatever its status.

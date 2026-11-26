@@ -34,6 +34,7 @@ type Client struct {
 	// redirect policy, so the API calls above keep the caller's own.
 	media *http.Client
 	cdn   safedownload.Policy
+	hosts []string
 }
 
 // Option adjusts a Client.
@@ -42,7 +43,12 @@ type Option func(*Client)
 // WithMediaHosts replaces the hosts an attachment may be downloaded from; tests
 // use it to admit a local server.
 func WithMediaHosts(patterns ...string) Option {
-	return func(c *Client) { c.cdn = safedownload.Policy{Hosts: patterns} }
+	return func(c *Client) { c.hosts = patterns }
+}
+
+// WithoutDialGuardForTest lets the client dial a server on the loopback.
+func WithoutDialGuardForTest() Option {
+	return func(c *Client) { c.cdn.Control = safedownload.NoDialGuardForTest }
 }
 
 // NewClient builds a Client. A nil httpClient gets one with a bounded timeout;
@@ -59,11 +65,12 @@ func NewClient(httpClient *http.Client, oauthBase, openAPIBase string, opts ...O
 	}
 	c := &Client{
 		http: httpClient, oauth: strings.TrimRight(oauthBase, "/"), openapi: strings.TrimRight(openAPIBase, "/"),
-		cdn: safedownload.Policy{Hosts: DefaultMediaHosts},
+		hosts: DefaultMediaHosts,
 	}
 	for _, opt := range opts {
 		opt(c)
 	}
+	c.cdn.Hosts = c.hosts
 	c.media = c.cdn.Client(httpClient)
 	return c
 }

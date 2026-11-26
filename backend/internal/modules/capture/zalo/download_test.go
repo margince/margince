@@ -37,7 +37,7 @@ func TestDownloadFetchesAnAttachmentAndChecksItsDigest(t *testing.T) {
 		}
 	}))
 	defer srv.Close()
-	c := NewClient(srv.Client(), "", "", WithMediaHosts("127.0.0.1"))
+	c := NewClient(srv.Client(), "", "", WithMediaHosts("127.0.0.1"), WithoutDialGuardForTest())
 
 	for _, tc := range []struct {
 		name string
