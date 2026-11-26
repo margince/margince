@@ -100,7 +100,6 @@ const PENDING: readonly string[] = [
   "ob.conv.recap.readTerminal",
   "ob.conv.voice.dimSentenceEvidence",
   "settings.voice.meter",
-  "tagResult.totalVisible",
   "voice.insights.next.addWords",
 ];
 

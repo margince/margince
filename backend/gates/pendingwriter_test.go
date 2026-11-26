@@ -30,37 +30,52 @@ package gates
 // false on the day this gate was written. The column list is what the claim is
 // about, so the column list is what is read.
 //
-// ## Why the set is declared here
+// ## Why the set is read from the classification
 //
 // The classification lives in an integration-tagged file under
-// backend/migrations, which this lane cannot import. Rather than reach across,
-// each lane holds what it can actually see: the entries there cite this gate,
-// and this names the tables. TestEveryPendingWriterTableIsStillClassified is
-// what keeps the two from drifting apart — it fails if a table here has no
-// PENDING WRITER entry left over there.
+// backend/migrations, which this lane cannot import, so it is read as text. A
+// copy kept here drifted one way: a new PENDING WRITER entry over there was
+// never held. TestEveryPendingWriterEntryIsRead fails if an entry is written in
+// a shape the reader cannot parse.
 
 import (
+	"regexp"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// pendingWriterTables are the tables whose FK classification says no writer
-// exists yet. One entry per table, with the column that carries the claim.
-// gatekit:fixture the column each table's PENDING WRITER claim is about — a
-// subject and its column, not a subject and the cost of exempting it
-var pendingWriterTables = map[string]string{
-	// conversation_claim IS inserted into — nine columns, none of them this
-	// one. The claim is about the column, which is why a table-level trigger
-	// would have reported it false on the day this gate was written.
-	"conversation_claim": "task_activity_id",
+// pendingWriterClassification holds the FK classification. It is
+// integration-tagged, so this lane reads its text rather than importing it.
+const pendingWriterClassification = "migrations/schema_fitness_integration_test.go"
+
+// pendingWriterEntry is one "table.column" key classified PENDING WRITER, in an
+// interpreted or a raw string.
+var pendingWriterEntry = regexp.MustCompile("\"(\\w+)\\.(\\w+)\":\\s*[\"`]PENDING WRITER")
+
+// pendingWriterValue is any string that opens with the claim.
+var pendingWriterValue = regexp.MustCompile("[\"`]PENDING WRITER")
+
+// pendingWriterTables maps each table with a PENDING WRITER entry to the
+// columns that carry the claim, read from the classification itself.
+func pendingWriterTables(t *testing.T) (map[string][]string, string) {
+	t.Helper()
+	source, err := gatekit.ReadFile(pendingWriterClassification)
+	if err != nil {
+		t.Fatalf("reading %s: %v", pendingWriterClassification, err)
+	}
+	tables := map[string][]string{}
+	for _, entry := range pendingWriterEntry.FindAllStringSubmatch(string(source), -1) {
+		tables[entry[1]] = append(tables[entry[1]], entry[2])
+	}
+	return tables, string(source)
 }
 
 func TestNoPendingWriterHasAWriter(t *testing.T) {
 	t.Parallel()
 	writes := collectTableWrites(t)
+	pending, _ := pendingWriterTables(t)
 
 	var landed []string
 	inserts, withColumns := 0, 0
@@ -73,20 +88,18 @@ func TestNoPendingWriterHasAWriter(t *testing.T) {
 			if len(w.cols) > 0 {
 				withColumns++
 			}
-			column, pending := pendingWriterTables[w.table]
-			if !pending {
-				continue
-			}
-			// An INSERT whose column list this reader could not extract is
-			// UNKNOWN, not empty — reported, because the alternative is a
-			// claim quietly surviving a statement nobody could read.
-			if len(w.cols) == 0 {
-				landed = append(landed, w.table+"."+column+
-					" — an INSERT whose columns could not be read, "+owner+" at "+w.pos)
-				continue
-			}
-			if slices.Contains(w.cols, column) {
-				landed = append(landed, w.table+"."+column+" — "+owner+" at "+w.pos)
+			for _, column := range pending[w.table] {
+				// An INSERT whose column list this reader could not extract is
+				// unknown, not empty. It is reported, so that no claim survives
+				// a statement nobody could read.
+				if len(w.cols) == 0 {
+					landed = append(landed, w.table+"."+column+
+						" — an INSERT whose columns could not be read, "+owner+" at "+w.pos)
+					continue
+				}
+				if slices.Contains(w.cols, column) {
+					landed = append(landed, w.table+"."+column+" — "+owner+" at "+w.pos)
+				}
 			}
 		}
 	}
@@ -109,47 +122,22 @@ func TestNoPendingWriterHasAWriter(t *testing.T) {
 		t.Errorf("%s is classified PENDING WRITER and now has one.\n"+
 			"\tThe entry in backend/migrations/schema_fitness_integration_test.go "+
 			"states an obligation on whoever writes the first row. Somebody has. "+
-			"Replace it with the gate that covers the write, and drop the table "+
-			"from pendingWriterTables here.", finding)
+			"Replace it with the gate that covers the write.", finding)
 	}
 }
 
-// The two lanes hold two halves of one claim, so each has to be able to fail
-// when the other moves. This is the half that catches an entry retired over
-// there while the table stays listed here — which would leave this gate
-// guarding a claim nobody makes any more.
-func TestEveryPendingWriterTableIsStillClassified(t *testing.T) {
+// The entries are found by one pattern, so an entry written in a shape it does
+// not parse would drop out of the census unseen. Every PENDING WRITER value in
+// the classification has to be one the pattern read.
+func TestEveryPendingWriterEntryIsRead(t *testing.T) {
 	t.Parallel()
-	const classification = "migrations/schema_fitness_integration_test.go"
-	source, err := gatekit.ReadFile(classification)
-	if err != nil {
-		t.Fatalf("reading %s: %v", classification, err)
+	tables, text := pendingWriterTables(t)
+	read := 0
+	for _, columns := range tables {
+		read += len(columns)
 	}
-	text := string(source)
-	if !strings.Contains(text, "PENDING WRITER") {
-		t.Fatalf("%s names no PENDING WRITER at all — either every entry was "+
-			"retired, in which case pendingWriterTables should be empty, or "+
-			"this gate is reading the wrong file", classification)
-	}
-	for table, column := range pendingWriterTables {
-		entry := `"` + table + "." + column + `":`
-		if !strings.Contains(text, entry) {
-			t.Errorf("%s.%s is listed here but %s carries no entry for it",
-				table, column, classification)
-			continue
-		}
-		// The entry exists; it has to still be the PENDING WRITER one. A
-		// classification rewritten to name a real gate is the good outcome,
-		// and it is the moment this table stops belonging here.
-		rest := text[strings.Index(text, entry)+len(entry):]
-		line := rest
-		if before, _, ok := strings.Cut(rest, "\n"); ok {
-			line = before
-		}
-		if !strings.Contains(line, "PENDING WRITER") {
-			t.Errorf("%s.%s is no longer classified PENDING WRITER — drop it "+
-				"from pendingWriterTables, which exists to hold that claim",
-				table, column)
-		}
+	if written := len(pendingWriterValue.FindAllStringIndex(text, -1)); written != read {
+		t.Errorf("%s holds %d PENDING WRITER entries and this gate read %d — write each key as "+
+			"\"table.column\" so the claim is held", pendingWriterClassification, written, read)
 	}
 }

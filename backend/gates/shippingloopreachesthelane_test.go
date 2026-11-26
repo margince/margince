@@ -16,8 +16,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -49,7 +47,7 @@ func TestEveryBackendPullRequestRunsTheIntegrationLane(t *testing.T) {
 		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
 	}
 	var wf scopedWorkflow
-	if err := yaml.Unmarshal(raw, &wf); err != nil {
+	if err := unmarshalYAML(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", aggregateWorkflow, err)
 	}
 	agg, ok := wf.Jobs[aggregateJob]
@@ -88,7 +86,7 @@ func scopeFilters(t *testing.T, wf scopedWorkflow) map[string][]any {
 			t.Fatalf("the %s step of job %q carries no `filters` block", scopeStep, scopeJob)
 		}
 		var filters map[string][]any
-		if err := yaml.Unmarshal([]byte(block), &filters); err != nil {
+		if err := unmarshalYAML([]byte(block), &filters); err != nil {
 			t.Fatalf("the %s step's filters: %v", scopeStep, err)
 		}
 		if _, ok := filters[integrationScope]; !ok {

@@ -16,10 +16,10 @@ import {
   type SettingsPageId,
   visibleSettingsTabs,
 } from "../../lib/settingscatalog";
+import { catalogContext } from "../../lib/settingsreach";
 import { settingsHref } from "../../lib/settingsrouting";
 import { meFixture } from "../../testing/mefixture";
 import * as stories from "./settings.stories";
-import { catalogContext } from "./settingsnav";
 import { COMPANY_CONTEXT_OFF, EVERY_GRANT } from "./settingspages.fixtures";
 import {
   COMPANY_CONTEXT_SECTIONS,

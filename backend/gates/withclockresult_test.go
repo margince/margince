@@ -63,7 +63,9 @@ func TestWithClockReturnsACopyWhoseResultIsUsed(t *testing.T) {
 			}
 			return nil
 		})
-		if err != nil && !os.IsNotExist(err) {
+		// A missing root is a finding. The floor below counts calls, and the
+		// other roots alone can meet it, so a lost root would go unseen.
+		if err != nil {
 			t.Fatalf("walking %s: %v", root, err)
 		}
 	}

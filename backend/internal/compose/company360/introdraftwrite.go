@@ -44,7 +44,7 @@ func writeIntroRequest(
 	if lane == nil {
 		return wireIntroRequest(floor, crmcontracts.WrittenByDeterministic, facts)
 	}
-	written, err := introFromModel(ctx, lane, facts)
+	written, err := introFromModel(ai.WithFloor(ctx), lane, facts)
 	if err != nil {
 		// Degrading to the floor IS the answer: the reader gets a sendable
 		// message rather than an error about a lane they cannot configure.

@@ -175,7 +175,7 @@ func pathItemsIn(t *testing.T, file operationDocument) map[string]map[string]yam
 			Remove bool                 `yaml:"remove"`
 		} `yaml:"actions"`
 	}
-	if err := yaml.Unmarshal(file.raw, &doc); err != nil {
+	if err := unmarshalYAML(file.raw, &doc); err != nil {
 		t.Fatalf("parsing %s: %v", file.path, err)
 	}
 	if len(doc.Paths) > 0 {

@@ -317,7 +317,7 @@ export const RecentChangesDidNotLoad: Story = {
       within(done).getAllByRole("button", { name: en["state.retry"] }),
     ).toHaveLength(1);
     await expect(
-      canvas.queryByRole("region", { name: en["magic.heading.brief"] }),
+      canvas.queryByRole("region", { name: en["magic.heading.firstBrief"] }),
     ).toBeNull();
   },
 };

@@ -3,12 +3,15 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useQuery } from "@tanstack/react-query";
+import { useId, useState } from "react";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import { Button } from "./atoms";
+import { Button, Field, Modal, TextInput } from "./atoms";
+import { Heading } from "./heading";
 import { QueryGate, WriteRefused } from "./querystates";
 
 // The two surfaces `querystates.tsx` renders for every screen. QueryGate is the
@@ -129,4 +132,76 @@ export const RefusedWithRetry: Story = {
       />
     </StoryProviders>
   ),
+};
+
+const signatureFields = [
+  "Display name",
+  "Job title",
+  "Phone",
+  "Mobile",
+  "Office address",
+  "Website",
+  "Booking link",
+  "Sign-off",
+  "Closing line",
+  "Legal notice",
+];
+
+function SignatureDialog() {
+  const titleId = useId();
+  const [refused, setRefused] = useState<string | null>(null);
+  return (
+    <StoryProviders>
+      <Modal open onClose={() => undefined} labelledBy={titleId} intent="form">
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          Edit signature
+        </Heading>
+        <div className="form-stack">
+          {signatureFields.map((label) => (
+            <Field key={label} label={label}>
+              {(control) => <TextInput {...control} />}
+            </Field>
+          ))}
+          <WriteRefused titleKey="settings.saveFailed" message={refused} />
+        </div>
+        <div className="actions">
+          <Button>Cancel</Button>
+          <Button
+            variant="primary"
+            onClick={() =>
+              setRefused(
+                "That signature is longer than the 2000 characters allowed.",
+              )
+            }
+          >
+            Save
+          </Button>
+        </div>
+      </Modal>
+    </StoryProviders>
+  );
+}
+
+/** A refusal that lands below the fold of a dialog scrolls up to stand above
+ *  the pinned action row, so the reader sees it arrive. */
+export const RefusedInADialog: Story = {
+  name: "Refused inside a dialog",
+  render: () => <SignatureDialog />,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async () => {
+    const dialog = await screen.findByRole("dialog", {
+      name: "Edit signature",
+    });
+    const actions = dialog.querySelector<HTMLElement>(":scope > .actions");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    const alert = await within(dialog).findByRole("alert");
+    await waitFor(
+      () =>
+        expect(alert.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+          (actions?.getBoundingClientRect().top ?? 0) + 1,
+        ),
+      { timeout: 3000 },
+    );
+  },
 };

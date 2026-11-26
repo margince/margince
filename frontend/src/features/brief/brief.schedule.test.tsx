@@ -7,7 +7,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateAbbrev, formatTimeOfDay } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
@@ -35,9 +35,28 @@ function taskRow(id: string, title: string): WorklistItem {
 
 // A QueryClient because the next meeting names its records through
 // `EntityRef`, which reads a name it is not handed.
-function draw(node: React.ReactNode) {
+// The mailbox roster says whether this reader may connect a calendar at all,
+// and an unanswered one has not said yet.
+type Roster = "captures" | "refused" | "unanswered";
+
+function draw(node: React.ReactNode, roster: Roster = "captures") {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() =>
+      roster === "unanswered"
+        ? new Promise<Response>(() => {})
+        : Promise.resolve(
+            Response.json({
+              data: [],
+              providers: [],
+              seat_capture: { allowed: roster === "captures" },
+            }),
+          ),
+    ),
+  );
+  const client = new QueryClient();
   return render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{node}</LocaleProvider>
     </QueryClientProvider>,
   );
@@ -55,7 +74,10 @@ const NEXT = {
 // Before the fixtures' default meeting start, 2026-09-03T09:30Z.
 const EARLY = Date.parse("2026-09-03T03:00:00Z");
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("the schedule panel", () => {
   it("lays the day's meetings on the line by start, whatever the rank", () => {
@@ -319,7 +341,7 @@ describe("the schedule panel", () => {
     ["unreadable", "brief.schedule.unreadable", "brief.schedule.reconnect"],
   ] as const)(
     "says a %s calendar counted nothing",
-    (calendar, sentence, verb) => {
+    async (calendar, sentence, verb) => {
       const day = { ...readingsDay({}, []), calendar };
       draw(<SchedulePanel day={day} state="ready" />);
 
@@ -328,11 +350,45 @@ describe("the schedule panel", () => {
       // No meeting row, and no claim about the rest of the day.
       expect(panel.querySelectorAll(".rail-schedule-row")).toHaveLength(0);
       expect(panel.textContent).not.toContain(en["brief.schedule.clearRest"]);
-      expect(
-        within(panel)
-          .getByRole("link", { name: en[verb] })
-          .getAttribute("href"),
-      ).toBe("/#/settings/connections");
+      const link = await within(panel).findByRole("link", { name: en[verb] });
+      expect(link.getAttribute("href")).toBe("/#/settings/connections");
+    },
+  );
+
+  // Before the roster answers, nothing has said this reader may connect. A
+  // member whose capture will be refused is not sent to the setting meanwhile.
+  it.each([
+    ["not_connected", "brief.schedule.notConnected"],
+    ["unreadable", "brief.schedule.unreadable"],
+  ] as const)(
+    "offers no link for a %s calendar before the roster answers",
+    (calendar, sentence) => {
+      const day = { ...readingsDay({}, []), calendar };
+      draw(<SchedulePanel day={day} state="ready" />, "unanswered");
+
+      const panel = screen.getByRole("region");
+      expect(panel.textContent).toContain(en[sentence]);
+      expect(within(panel).queryByRole("link")).toBeNull();
+    },
+  );
+
+  // A seat or role that may not capture (Read-only, say) hears why the panel
+  // is empty. It is not sent to a setting it cannot change.
+  it.each([
+    ["not_connected", "brief.schedule.notConnected"],
+    ["unreadable", "brief.schedule.unreadable"],
+  ] as const)(
+    "offers a reader who may not connect no link for a %s calendar",
+    async (calendar, sentence) => {
+      const day = { ...readingsDay({}, []), calendar };
+      draw(<SchedulePanel day={day} state="ready" />, "refused");
+
+      const panel = screen.getByRole("region");
+      expect(panel.textContent).toContain(en[sentence]);
+      await within(panel).findByText(en["connectors.roleCannotCapture"], {
+        exact: false,
+      });
+      expect(within(panel).queryByRole("link")).toBeNull();
     },
   );
 
@@ -354,7 +410,7 @@ describe("the schedule panel", () => {
 
   // A meeting booked by hand is a fact the CRM holds whatever the calendar
   // says, so it follows the sentence instead of hiding behind it.
-  it("names a hand-booked next meeting under a calendar that cannot count", () => {
+  it("names a hand-booked next meeting under a calendar that cannot count", async () => {
     const day = {
       ...readingsDay({}, []),
       calendar: "not_connected" as const,
@@ -367,7 +423,9 @@ describe("the schedule panel", () => {
     expect(rows[0].textContent).toContain(en["brief.schedule.notConnected"]);
     expect(rows[1].classList.contains("rail-schedule-row")).toBe(true);
     expect(
-      within(panel).getByRole("link", { name: en["brief.schedule.connect"] }),
+      await within(panel).findByRole("link", {
+        name: en["brief.schedule.connect"],
+      }),
     ).toBeTruthy();
     expect(within(panel).getByText("Weber kickoff")).toBeTruthy();
   });

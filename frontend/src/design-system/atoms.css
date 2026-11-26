@@ -211,6 +211,9 @@
 .empty {
   text-align: start;
   padding: var(--space-5) var(--padCard);
+  /* An empty answer often repeats what the reader typed, which may be one
+     unbroken run; it wraps inside the card rather than running past it. */
+  overflow-wrap: anywhere;
 }
 /* The instructional variant: a heading in the primary ink, a measured
    paragraph under it, the one verb below. The measure keeps the explanation
@@ -1352,6 +1355,12 @@ span.error-line {
   min-block-size: var(--inputHeight);
   padding: 0 var(--controlPaddingX);
   font-weight: var(--fontWeightMedium);
+}
+/* The compact face: the same field on the button height, for a view filter in
+   a card head, where it stands beside 32px controls and not in a form column.
+   After `.select-control`, so it wins on source order as that rule does. */
+.select-compact {
+  min-block-size: var(--controlHeight);
 }
 /* Nor is it a well: a face rather than a hole, at the resting depth a button
    takes. Two classes here, for the opposite reason to the rule above — this one
