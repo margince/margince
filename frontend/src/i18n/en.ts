@@ -2352,7 +2352,7 @@ export const en = {
   "systemJob.technical_lookup": "Company technical lookup",
   "systemJob.vatcheck": "VAT number check",
   "systemJob.weekly_review": "Weekly review",
-  "agentJob.agent_task_retention": "Agent task cleanup",
+  "systemJob.agent_task_retention": "Agent task cleanup",
   "agentJob.attachment_extractor": "Attachment reader",
   "agentJob.auto_apply": "Automatic approval",
   "agentJob.margince": "Margince",
@@ -2369,7 +2369,7 @@ export const en = {
   "agentJob.deepread": "Website reader",
   "agentJob.document_extractor": "Document reader",
   "agentJob.enrich": "Signature reader",
-  "agentJob.idempotency_retention": "Request record cleanup",
+  "systemJob.idempotency_retention": "Request record cleanup",
   "agentJob.knowledge_ingest": "Knowledge import",
   "agentJob.lifecycle_change": "Lifecycle update",
   "agentJob.offer_drafting": "Offer drafting",
@@ -3606,6 +3606,10 @@ export const en = {
   "state.staleAsOf": "Last known values, as of {when}",
   "state.partial": "Showing part of the list",
   "state.partialCount": "{count} more not shown",
+  "state.hidden_one": "{count} more you cannot see.",
+  "state.hidden_other": "{count} more you cannot see.",
+  "state.hiddenAsk_one": "{count} more you cannot see. Ask {names}.",
+  "state.hiddenAsk_other": "{count} more you cannot see. Ask {names}.",
   // The opened file. `FilePreview` is a design-system control every surface
   // that draws a file card can open, so its words belong to the control rather
   // than to any one screen â the same three verbs stand over a contract on an
@@ -11440,6 +11444,8 @@ export const en = {
   "jobs.kind.technical_enrich_company": "Company technical lookup",
   "jobs.kind.telegram_ingest": "Telegram message intake",
   "jobs.kind.whatsapp_ingest": "WhatsApp message intake",
+  "jobs.kind.zalo_oa_ingest": "Zalo message intake",
+  "jobs.kind.zalo_token_renew": "Zalo access token renewal",
   "jobs.kind.telegram_poll": "Telegram message fetch",
   "jobs.kind.chat_link_flush": "Chat channel posts",
   "jobs.kind.chat_pull": "Chat channel summaries",

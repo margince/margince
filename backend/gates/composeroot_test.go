@@ -36,9 +36,13 @@ const composeRootDir = "internal/compose"
 const (
 	// Raised by 1 for the history-narrowing fleet worker, which binds each
 	// workspace through this package's unexported job helpers.
+	// Raised by 1 production file for agentfor.go, the one seam that binds the
+	// product acting for a named colleague, split out of the deal-owner seam.
+	// Raised by 1 for the Zalo ingest and token renewal job args, which the
+	// generated job kinds require in this package.
 	// Raised by 1 for reportexactrange.go, which withholds a report number past the
 	// exact range at every scan that puts report numbers on the wire.
-	composeRootProductionFiles = 1386
+	composeRootProductionFiles = 1388
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -49,7 +53,10 @@ const (
 	// the unit tool coverage cases, which read the unexported tool coverage census.
 	// Raised by 2 test files for the row scope cases of an owned extension kind.
 	// They drive unexported readers of the kind.
-	composeRootTestFiles = 1921
+	// Raised by 2 test files for the agent seam's id check and for the billing case.
+	// That case drives the unexported finance billing adapter, so the finance
+	// card and the company page withhold the same billing contacts.
+	composeRootTestFiles = 1922
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -112,10 +119,13 @@ const (
 	// Raised by 76 production and 459 test lines for the row scope of an owned
 	// extension kind and its cases. They drive the unexported report runner,
 	// History query, boot owner check and filter preview handler.
+	// Raised by 44 production and 99 test lines for the agent-for-a-colleague
+	// seam, the finance card's hidden billing count and their cases.
+	// Raised by 94 production lines for the Zalo ingest and token renewal job args.
 	// Raised by 98 production and 113 test lines for the exact-range withholding
 	// of report numbers and the call-flow certification, and their cases.
-	composeRootProductionLines = 231_557
-	composeRootTestLines       = 362_378
+	composeRootProductionLines = 231_698
+	composeRootTestLines       = 362_482
 )
 
 // A read under these floors stopped early or read the wrong place, and would
