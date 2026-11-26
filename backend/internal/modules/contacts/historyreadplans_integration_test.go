@@ -60,10 +60,20 @@ func (n mailboxPlanNode) boundsHistoryRows(limit int) bool {
 	return true
 }
 
-func TestHistoryReadersSeekPastACompleteUnrelatedMailbox(t *testing.T) {
+// One installation of 100,000 unrelated messages serves every bounded history
+// reader, because writing it costs far more than all the reads together. Each
+// reader's own records are added after the readers before it have run.
+func TestHistoryReadsSeekPastAnUnrelatedInstallation(t *testing.T) {
 	e := setupDedupe(t)
-	ctx := e.as()
 	connected := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	e.seedHistoryReadBackground(e.as(), t, connected)
+	t.Run("domain evidence", func(t *testing.T) { domainEvidenceSeeksPastAnEntireMatchingHistory(t, e, connected) })
+	t.Run("history readers", func(t *testing.T) { historyReadersSeekPastACompleteUnrelatedMailbox(t, e, connected) })
+	t.Run("cohort hold", func(t *testing.T) { theCohortHoldSeeksPastAnUnrelatedInstallation(t, e) })
+}
+
+func historyReadersSeekPastACompleteUnrelatedMailbox(t *testing.T, e *dedupeEnv, connected time.Time) {
+	ctx := e.as()
 	e.connectMailbox(ctx, t, connected)
 	e.sentBy(ctx, t, e.rep, "hot@bounded-history.test", connected.Add(-time.Hour))
 	wanted := e.sentBy(ctx, t, e.rep, "wanted@bounded-history.test", connected.Add(-time.Hour))
@@ -76,7 +86,7 @@ func TestHistoryReadersSeekPastACompleteUnrelatedMailbox(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	e.seedHistoryReadBackground(ctx, t, connected)
+	e.seedHotCorrespondent(ctx, t, connected)
 	analyzeAsOwner(t, "activity", "activity_participant", "capture_import", "contact", "contact_email")
 	recorder := &historyPlanTrace{}
 	for _, mode := range []string{"force_custom_plan", "force_generic_plan"} {
@@ -228,6 +238,13 @@ func (e *dedupeEnv) seedHistoryReadBackground(ctx context.Context, t *testing.T,
 			t.Fatal(err)
 		}
 	}
+}
+
+// seedHotCorrespondent writes 2,000 messages after connected to two addresses.
+// It runs after the message to hot@ before connected, as a history import
+// writes them.
+func (e *dedupeEnv) seedHotCorrespondent(ctx context.Context, t *testing.T, connected time.Time) {
+	t.Helper()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `WITH hot AS(
           INSERT INTO activity(kind,direction,source,captured_by,counterparty_email,counterparty_outbound_attested,occurred_at)
