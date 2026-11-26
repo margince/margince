@@ -33,6 +33,7 @@ import {
   useSaveSignInPolicy,
 } from "../../lib/sign-in-policy";
 import { useInstallationSettings } from "../../lib/uploadlimit";
+import { GoogleDirectoryPanel } from "./google-directory";
 import { GroupRoleGrants } from "./group-role-grants";
 import { useMyMfa } from "./mfa.queries";
 import "./sign-in-methods.css";
@@ -107,13 +108,19 @@ export function SignInMethodsCard({
   // its own tab, so they are not fetched twice.
   if (part === "grants")
     return settings.data ? (
-      <GroupRoleGrants
-        // Defaulted: the field is contract-required, and a body that lost it
-        // hands over `undefined`.
-        initial={settings.data.oidc_group_role_map ?? {}}
-        canManage={canManageGrants}
-        lock={lockFor(locks, "identity.oidc_group_role_map", t)}
-      />
+      <>
+        <GroupRoleGrants
+          // Defaulted: the field is contract-required, and a body that lost it
+          // hands over `undefined`.
+          initial={settings.data.oidc_group_role_map ?? {}}
+          canManage={canManageGrants}
+          lock={lockFor(locks, "identity.oidc_group_role_map", t)}
+        />
+        <GoogleDirectoryPanel
+          canManage={canManageGrants}
+          lock={lockFor(locks, "identity.google_directory_credential", t)}
+        />
+      </>
     ) : null;
 
   return (

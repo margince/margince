@@ -23764,6 +23764,105 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /installation/authentication-policy/google-directory:
+    get:
+      tags: [Identity]
+      operationId: getGoogleDirectory
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Whether the Google directory connection is set up, and how its last check went.
+      description: |
+        The group→role map reads a Google member's groups from the Workspace Directory API,
+        because Google's ID tokens carry none. This says whether the credential that does it
+        is stored and how the last lookup went. The key and the admin address have no read
+        path: nothing here returns either.
+
+        `last_result` and `last_reason` describe the newest check: a sign-in lookup that
+        failed, a lookup that ended a run of failures, or the check made when the credential
+        was stored. Both are absent before any check. A failed lookup never fails the
+        sign-in, so this is where an operator sees that members are signing in without the
+        roles their groups map to.
+
+        Governed by `authentication_policy` read. Human-only.
+      responses:
+        '200':
+          description: The connection status.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GoogleDirectoryStatus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Identity]
+      operationId: setGoogleDirectory
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Store or replace the Google directory credential.
+      description: |
+        Seals a Google service-account key and the admin address it acts for in the key
+        vault, replacing any earlier credential. The old sealed copy is destroyed after the
+        new one is in place.
+
+        The credential is checked before it is sealed: Google must exchange the key for a
+        token under domain-wide delegation with the one read-only scope
+        `https://www.googleapis.com/auth/admin.directory.group.readonly`, and answer a group
+        read for the admin address. A credential that fails is a 422 naming what to fix,
+        never echoing the key, and nothing is stored.
+
+        `service_account_json` and `admin_subject` are write-only. Takes effect on the next
+        Google sign-in, without a restart.
+
+        Requires a key vault; without one the answer is 503. 409 when a boot source sets the
+        credential. Audit-only write (no event stream, EVT-NOEVT-3).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GoogleDirectoryInput' }
+      responses:
+        '200':
+          description: Sealed. The status, with the check just made.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GoogleDirectoryStatus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: >-
+            This installation has no key vault, so the credential cannot be stored. The remedy
+            is the operator's, the vault root key, and not anything the caller sent.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    delete:
+      tags: [Identity]
+      operationId: deleteGoogleDirectory
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Remove the Google directory credential.
+      description: |
+        Drops the reference and destroys the sealed credential. Removing one that was never
+        stored succeeds, so a retry is safe. Google members then sign in as before the
+        connection existed: the map grants them nothing.
+
+        Audit-only write (no event stream, EVT-NOEVT-3).
+      responses:
+        '204': { description: 'Removed, or there was nothing to remove.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
+        '503':
+          description: >-
+            This installation has no key vault, so there is no sealed credential to remove.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /installation/settings:
     get:
       tags: [Identity]
@@ -43743,6 +43842,52 @@ components:
             leaving the group — revocation stays a deliberate admin action — and an
             empty object means no group grants anything. It admits nobody who was not
             already invited.
+    GoogleDirectoryStatus:
+      type: object
+      additionalProperties: false
+      required: [configured]
+      description: >-
+        Whether the Google directory credential is stored and how the newest check went. Carries
+        neither the key nor the admin address.
+      properties:
+        configured:
+          type: boolean
+          description: A credential is stored, or a boot source sets one.
+        last_checked_at:
+          type: string
+          format: date-time
+          description: When the newest check ran. Absent before any check.
+        last_result:
+          type: string
+          enum: [ok, failed]
+          x-extensible-enum: true
+          description: How the newest check ended. Absent before any check.
+        last_reason:
+          type: string
+          enum: [key_invalid, delegation_refused, permission_denied, member_not_found, timeout, unavailable, bad_answer]
+          x-extensible-enum: true
+          description: >-
+            Why the newest check failed, present only when `last_result` is `failed`. A closed
+            vocabulary, never Google's own words. `delegation_refused` is the common setup
+            mistake: the service account's client ID has no domain-wide delegation for the
+            read-only group scope, or the admin address is wrong.
+    GoogleDirectoryInput:
+      type: object
+      additionalProperties: false
+      required: [service_account_json, admin_subject]
+      properties:
+        service_account_json:
+          type: string
+          writeOnly: true
+          minLength: 1
+          description: The service account's JSON key file, as Google issues it.
+        admin_subject:
+          type: string
+          format: email
+          writeOnly: true
+          description: >-
+            The Workspace admin the service account acts for. The Directory API refuses a
+            delegated read that names no admin.
     BaseCurrencyLock:
       type: object
       additionalProperties: false
