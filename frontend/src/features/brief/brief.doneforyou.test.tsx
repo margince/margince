@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
-import { handledForYouOptions, type Receipt } from "../../lib/handled";
+import type { Receipt } from "../../lib/handled";
 import {
   jsonResponse,
   render,
@@ -183,7 +183,9 @@ it("keeps an older server's summary whole and claims no missing reason", async (
     "summary",
   );
   if (!head) throw new Error("no deal preview");
-  expect(screen.getByText('Closed "Deal 1" as lost — reason 1.0')).toBeTruthy();
+  expect(head.closest("li")?.textContent).toContain(
+    "Closed as lost — reason 1.0",
+  );
   expect(screen.queryByText(en["brief.done.noReason"])).toBeNull();
 });
 
@@ -600,205 +602,21 @@ it("links Change history to the Worklist's Change history panel", async () => {
   expect(dials.get("queue_at")).toBe("history");
 });
 
-it("puts recent small changes below the heading even without changed deals", async () => {
+it("puts the small changes card straight under the heading, with no loose summary line", async () => {
   stubApi({
     "GET /magic": () =>
       jsonResponse(
         receipt({
-          done: [
-            line({
-              id: "old",
-              occurred_at: "2026-09-12T01:00:00Z",
-              summary: { key: "magic.action.create_contact" },
-            }),
-            line({
-              id: "new",
-              occurred_at: "2026-09-13T01:00:00Z",
-              summary: { key: "magic.action.create_activity" },
-            }),
-          ],
+          done: [line({ summary: { key: "magic.action.create_contact" } })],
         }),
       ),
   });
   const { container } = render(
     <DoneForYou completed={() => <span>Small changes card</span>} />,
   );
-  const preview = await screen.findByText(
-    "Saved email or meeting · Created contact",
-  );
-  expect(preview.previousElementSibling).toBe(
+  const card = await screen.findByText("Small changes card");
+  expect(card.previousElementSibling).toBe(
     container.querySelector(".brief-done-band"),
   );
-  expect(preview.nextElementSibling?.textContent).toBe("Small changes card");
-});
-
-it("bounds the section preview to three distinct recent sentences", async () => {
-  stubApi({
-    "GET /magic": () =>
-      jsonResponse(
-        receipt({
-          done: [
-            line({
-              id: "1",
-              occurred_at: "2026-09-13T04:00:00Z",
-              summary: { key: "magic.action.create_activity" },
-            }),
-            line({
-              id: "2",
-              occurred_at: "2026-09-13T03:00:00Z",
-              summary: { key: "magic.action.create_activity" },
-            }),
-            line({
-              id: "3",
-              occurred_at: "2026-09-13T02:00:00Z",
-              summary: { key: "magic.action.create_contact" },
-            }),
-            line({
-              id: "4",
-              occurred_at: "2026-09-13T01:00:00Z",
-              summary: { key: "magic.action.archive_activity" },
-            }),
-            line({
-              id: "5",
-              occurred_at: "2026-09-12T01:00:00Z",
-              summary: { key: "magic.action.create_company" },
-            }),
-          ],
-        }),
-      ),
-  });
-  const { container } = render(<DoneForYou completed={() => null} />);
-  await screen.findByText(
-    "Saved email or meeting · Created contact · Archived email or meeting",
-  );
-  expect(
-    container.querySelector(".brief-done-preview")?.textContent,
-  ).not.toContain("company");
-});
-
-it("previews a changed deal directly after the heading", async () => {
-  routes([change(1)], [bundle(1, [auditId(1)])]);
-  const { container } = render(<DoneForYou completed={() => null} />);
-  await screen.findByText('Closed "Deal 1" as lost');
-  const preview = container.querySelector(".brief-done-preview");
-  expect(preview?.previousElementSibling).toBe(
-    container.querySelector(".brief-done-band"),
-  );
-  expect(container.querySelector("summary .brief-done-preview")).toBeNull();
-});
-
-it("does not preview a deal's receipt again as a small change", async () => {
-  routes(
-    [change(1)],
-    [bundle(1, [auditId(1)])],
-    undefined,
-    receipt({
-      done: [
-        line({
-          receipt_ids: [auditId(1)],
-          summary: { key: "magic.action.create_activity" },
-        }),
-      ],
-    }),
-  );
-  const { container } = render(<DoneForYou completed={() => null} />);
-  await screen.findByText('Closed "Deal 1" as lost');
-  expect(container.querySelector(".brief-done-preview")?.textContent).toBe(
-    'Closed "Deal 1" as lost',
-  );
-});
-
-it("keeps the preview aligned with cached deal cards when their refresh fails", async () => {
-  const fresh = change(1);
-  let failHandled = false;
-  stubApi({
-    "GET /deal-corrections/pending": () =>
-      jsonResponse({
-        bundles: [bundle(1, [auditId(1)])],
-        deals: 1,
-        base_currency: "EUR",
-      }),
-    "GET /worklist/handled": () =>
-      failHandled
-        ? jsonResponse({ title: "Unavailable" }, 503)
-        : jsonResponse({
-            as_of: "2026-09-13T08:00:00Z",
-            receipts: [fresh],
-            truncated: false,
-          }),
-    "GET /magic": () =>
-      jsonResponse(
-        receipt({
-          done: [
-            line({
-              receipt_ids: [fresh.id],
-              summary: { key: "magic.action.create_activity" },
-            }),
-          ],
-        }),
-      ),
-  });
-  const { client, container } = render(<DoneForYou completed={() => null} />);
-  await screen.findByText('Closed "Deal 1" as lost');
-  failHandled = true;
-  await client.invalidateQueries({ queryKey: handledForYouOptions.queryKey });
-  await waitFor(() =>
-    expect(client.getQueryState(handledForYouOptions.queryKey)?.status).toBe(
-      "error",
-    ),
-  );
-  expect(container.querySelector(".brief-done-preview")?.textContent).toBe(
-    'Closed "Deal 1" as lost',
-  );
-  expect(screen.getByRole("link", { name: "Deal 1" })).toBeTruthy();
-});
-
-it("does not show a confident preview when the changes summary fails", async () => {
-  stubApi({
-    "GET /deal-corrections/pending": () =>
-      jsonResponse({ title: "Unavailable" }, 503),
-    "GET /magic": () =>
-      jsonResponse(
-        receipt({
-          done: [line({ summary: { key: "magic.action.create_activity" } })],
-        }),
-      ),
-  });
-  const { container } = render(<DoneForYou completed={() => null} />);
-  await screen.findByRole("button", { name: "Retry" });
-  expect(container.querySelector(".brief-done-preview")).toBeNull();
-});
-
-it("orders and bounds the preview across deal and small-change sources", async () => {
-  routes(
-    [change(1, 0, { occurred_at: "2026-09-13T03:00:00Z" })],
-    [bundle(1, [auditId(1)])],
-    undefined,
-    receipt({
-      done: [
-        line({
-          id: "a",
-          occurred_at: "2026-09-13T04:00:00Z",
-          summary: { key: "magic.action.create_activity" },
-        }),
-        line({
-          id: "b",
-          occurred_at: "2026-09-13T02:00:00Z",
-          summary: { key: "magic.action.create_contact" },
-        }),
-        line({
-          id: "c",
-          occurred_at: "2026-09-13T01:00:00Z",
-          summary: { key: "magic.action.archive_activity" },
-        }),
-      ],
-    }),
-  );
-  const { container } = render(<DoneForYou completed={() => null} />);
-  await screen.findByText(
-    'Saved email or meeting · Closed "Deal 1" as lost · Created contact',
-  );
-  expect(
-    container.querySelector(".brief-done-preview")?.textContent,
-  ).not.toContain("Archived");
+  expect(screen.queryByText("Created contact")).toBeNull();
 });

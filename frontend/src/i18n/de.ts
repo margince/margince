@@ -7217,7 +7217,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.updating": "Wird aktualisiert…",
-  "brief.briefedAt": "Von Margince zusammengefasst um {time}",
+  "brief.briefedAt": "Von Margince vorbereitet um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
   "brief.first.title": "Braucht dich",
@@ -8884,6 +8884,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.moveUndoFailed":
     "Die Aufgabe wurde nicht zurückverschoben. Versuche es erneut.",
   "tasks.remind.menu": "Erinnerung",
+  "tasks.remind.chipName": "Erinnerung (am {when})",
   "tasks.remind.inAnHour": "In 1 Stunde",
   "tasks.remind.tomorrowMorning": "Morgen früh",
   "tasks.remind.beforeDue": "1 Stunde vor Fälligkeit",
@@ -8901,6 +8902,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.remind.needsTime": "Gib einen Tag und eine Uhrzeit ein.",
   "tasks.remind.past": "Wähle eine Zeit, die noch bevorsteht.",
   "tasks.log.action": "Ergebnis erfassen",
+  "tasks.more": "Mehr",
+  "tasks.context": "Kontext",
   "tasks.log.record": "Zu welchem Datensatz gehört diese Aktivität?",
   "tasks.log.chooseRecord": "Anderen Datensatz wählen",
   "tasks.log.noRecord": "Ohne Datensatz erfassen",
