@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states \"3 moved, 0 failed\" and that Aachener Metallwerke now carries the calls, which conveys that all three items moved to Aachener Metallwerke as one batch.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer says the three items that sat on Vorort Systeme now sit on Aachener Metallwerke, moved as one batch. Any noun for them counts (mails, calls, activities), and so does a line such as 3 moved, 0 failed. Answer no if it gives another number, or says only some moved.",
+  "answer": "The e-mail went to Dom Digital. Aachener Metallwerke now carries the calls.\n\n3 moved, 0 failed."
+}
