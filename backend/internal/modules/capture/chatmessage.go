@@ -223,8 +223,8 @@ func chatAlias(provider string, alias *connector.ChatAlias) *connector.ChannelId
 
 // chatActingContext puts on the context who a chat connection acts for: the
 // member behind a member-owned account, and the seat the account files through.
-// Filing a message and changing one both run under it, so both act for the
-// same member and seat.
+// Filing a message and changing one both run under it, so both read one
+// owner for a message.
 func chatActingContext(ctx context.Context, binding connector.ChatBinding) (context.Context, error) {
 	if binding.Ownership == connector.ChatOwnedByMember {
 		actor, ok := principal.Actor(ctx)
