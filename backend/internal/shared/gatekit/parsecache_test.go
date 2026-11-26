@@ -160,7 +160,7 @@ func waitUntilCollected(t *testing.T, path string, mode parser.Mode) {
 	parses.mu.Lock()
 	entry := parses.entries[parseKey{spelled: path, mode: mode}]
 	parses.mu.Unlock()
-	if entry == nil || !entry.filled.Load() {
+	if entry == nil {
 		t.Fatalf("%s was never held", path)
 	}
 	for range 10 {
@@ -173,4 +173,32 @@ func waitUntilCollected(t *testing.T, path string, mode parser.Mode) {
 		}
 	}
 	t.Fatalf("the tree of %s outlived every reference to it", path)
+}
+
+func TestAPathThatCannotBeReadIsAnErrorEachTimeItIsAsked(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "notafile.go")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if tree, err := ParseFile(dir, 0); err == nil || tree != nil {
+			t.Fatalf("a directory parsed as a Go file: tree %v, error %v", tree, err)
+		}
+	}
+}
+
+func TestAFileThatDoesNotParseIsNeverHeld(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "broken.go")
+	writeSource(t, path, "package broken\n\nfunc {\n", time.Unix(1_700_000_000, 0))
+	for range 2 {
+		if _, err := ParseFile(path, 0); err == nil {
+			t.Fatal("a file with a syntax error parsed without one")
+		}
+	}
+	parses.mu.Lock()
+	entry := parses.entries[parseKey{spelled: path, mode: 0}]
+	parses.mu.Unlock()
+	if entry.value.tree.Value() != nil {
+		t.Error("a tree that failed to parse is held, so its error would not be reported again")
+	}
 }

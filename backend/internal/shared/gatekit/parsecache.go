@@ -20,7 +20,7 @@ type parseKey struct {
 	mode    parser.Mode
 }
 
-var parses = holder[parseKey, *parseSlot]{entries: map[parseKey]*held[*parseSlot]{}}
+var parses = holder[parseKey, parseSlot]{entries: map[parseKey]*held[parseSlot]{}}
 
 // parseSlot holds one version's tree while some gate references it. A tree no
 // gate holds any more is collected rather than kept to the end of the run.
@@ -86,11 +86,7 @@ func ParseFile(path string, mode parser.Mode) (*ast.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	slot, err := entry.fill(func() (*parseSlot, error) { return &parseSlot{}, nil })
-	if err != nil {
-		return nil, err
-	}
-	return slot.get(path, mode)
+	return entry.value.get(path, mode)
 }
 
 // SourceFileSet is the FileSet a ParseFile tree's positions belong to.
