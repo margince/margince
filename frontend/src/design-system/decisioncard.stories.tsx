@@ -370,6 +370,20 @@ export const FieldChange: Story = {
   },
 };
 
+// A proposal that says why it exists. The reason names the record and the
+// fact that prompted it, and leads what the card says under its headline.
+export const WithItsReason: Story = {
+  args: {
+    ...FieldChange.args,
+    approval: approval({
+      ...FieldChange.args?.approval,
+      why: {
+        text: "Helvetia Rail wrote on 14 Nov that the framework agreement ends with 2026.",
+      },
+    }),
+  },
+};
+
 // A kind that declares what it shows, beside the same payload without the
 // declaration — the two halves of this card's reading, on one page.
 //

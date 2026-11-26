@@ -19,7 +19,7 @@ import (
 )
 
 // Record is the kind of core record a column holds the id of. Closed: the
-// merge and the erasure only know these three.
+// merge and the erasure only know these four.
 type Record string
 
 // The record kinds a column can hold.
@@ -27,15 +27,16 @@ const (
 	Company Record = "company"
 	Contact Record = "contact"
 	Lead    Record = "lead"
+	Deal    Record = "deal"
 )
 
 // Validate enforces membership in the closed set.
 func (r Record) Validate() error {
 	switch r {
-	case Company, Contact, Lead:
+	case Company, Contact, Lead, Deal:
 		return nil
 	}
-	return fmt.Errorf("record kind %q is not one the merge moves (company, contact, lead)", string(r))
+	return fmt.Errorf("record kind %q is not one the merge moves (company, contact, lead, deal)", string(r))
 }
 
 // Link says one column holds the id of a core record.

@@ -23,6 +23,7 @@ package capture
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -30,6 +31,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -119,6 +121,224 @@ func TestASuppressedMessageIsFiledUnderNobodyItCopies(t *testing.T) {
 		t.Fatalf("a suppressed message is filed under %v, want nobody — the ladder judged this sender, "+
 			"and filing it puts a bulk sender's mail on a contact's timeline and hands it a qualifying event "+
 			"the judgement just refused", filed)
+	}
+}
+
+// A second mailbox joining a suppressed message files it under nobody either,
+// even where a record holds the suppressed sender's address. That holds once
+// the trace sweep has removed the ladder's trace of the first capture too.
+func TestASecondMailboxJoiningASuppressedMessageFilesItUnderNobody(t *testing.T) {
+	for _, swept := range []bool{false, true} {
+		t.Run(map[bool]string{false: "trace kept", true: "trace swept"}[swept], func(t *testing.T) {
+			env := newCaptureEnv(t)
+			e, sync := env.e, env.sync
+			syncSecond := secondMailbox(t, e, e.Rep3)
+			store := contacts.NewStore(e.DB())
+			if _, err := store.EnsureContactByEmail(contactCreator(e), "Gitex Events", "hello@event.gitex.com", "manual", storekit.RefuseErased); err != nil {
+				t.Fatalf("seeding a contact at the sender's address: %v", err)
+			}
+			// A conference blast on a prefix subdomain with List-Unsubscribe, which the ladder suppresses.
+			mail := []byte(strings.Join([]string{
+				"From: GITEX <hello@event.gitex.com>", "To: " + captureOwner, "Cc: " + secondSeatAddress,
+				"Subject: newsletter", "Date: Wed, 04 Jun 2026 08:00:00 +0000", "Message-ID: <gx2@event.gitex.com>",
+				"List-Unsubscribe: <https://example.com/unsub>", "Content-Type: text/plain", "", "hello", "",
+			}, "\r\n"))
+			sync(t, mail)
+			if n := countRows(t, e, `SELECT count(*) FROM capture_trace WHERE source_id = 'gx2@event.gitex.com' AND stage = 'tier_ladder' AND outcome = 'suppressed'`); n == 0 {
+				t.Fatal("the first mailbox's ladder did not suppress the blast, so this test proves nothing")
+			}
+			if swept {
+				if _, err := capturemod.NewTraceStore(e.DB()).SweepOlderThan(e.Admin(), 0); err != nil {
+					t.Fatalf("sweeping the trace: %v", err)
+				}
+			}
+			syncSecond(t, mail)
+			if filed := contactsFiledUnder(t, e, "gx2@event.gitex.com"); len(filed) != 0 {
+				t.Fatalf("a suppressed message is filed under %v once a second mailbox joined it, want nobody", filed)
+			}
+		})
+	}
+}
+
+// An introduction whose copied outsider the ladder suppressed stays unfiled
+// after the trace sweep, though the stored counterparty is the colleague.
+func TestAJoinedIntroductionWithASuppressedOutsiderStaysUnfiledAfterTheSweep(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	store := contacts.NewStore(e.DB())
+	if _, err := store.EnsureContactByEmail(contactCreator(e), "Cc Contact", "cc@partner.example", "manual", storekit.RefuseErased); err != nil {
+		t.Fatalf("seeding the copied contact: %v", err)
+	}
+	mail := []byte(strings.Join([]string{
+		"From: Colleague <" + secondSeatAddress + ">", "To: " + captureOwner, "Cc: dse@eu.docusign.net, cc@partner.example",
+		"Subject: intro", "Date: Wed, 04 Jun 2026 08:00:00 +0000", "Message-ID: <intro-sup@myco.example>",
+		"Content-Type: text/plain", "", "hello", "",
+	}, "\r\n"))
+	sync(t, mail)
+	if n := countRows(t, e, `SELECT count(*) FROM capture_trace WHERE source_id = 'intro-sup@myco.example' AND stage = 'tier_ladder' AND outcome = 'suppressed'`); n == 0 {
+		t.Fatal("the first mailbox's ladder did not suppress the introduction, so this test proves nothing")
+	}
+	if _, err := capturemod.NewTraceStore(e.DB()).SweepOlderThan(e.Admin(), 0); err != nil {
+		t.Fatalf("sweeping the trace: %v", err)
+	}
+	syncSecond(t, mail)
+	if n := countRows(t, e, `SELECT count(*) FROM capture_import ci JOIN activity a ON a.id = ci.activity_id
+		WHERE a.source_id = 'intro-sup@myco.example' AND ci.user_id = '`+e.Rep3.String()+`'`); n != 1 {
+		t.Fatalf("the second mailbox recorded %d imports of the introduction, want 1, so this test proves nothing", n)
+	}
+	if filed := contactsFiledUnder(t, e, "intro-sup@myco.example"); len(filed) != 0 {
+		t.Fatalf("a suppressed introduction is filed under %v once a second mailbox joined it, want nobody", filed)
+	}
+}
+
+// A mail that only copies an address the ladder once suppressed is not itself
+// suppressed. A join still files it under the joining seat's own contact.
+func TestAJoinedMailCopyingASuppressedAddressIsStillFiled(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	sync(t, email("dse@eu.docusign.net", "DocuSign EU", captureOwner, "ds-earlier@docusign.net", ""))
+	store := contacts.NewStore(e.DB())
+	private, err := store.EnsureContactByEmail(contactCreator(e), "Private Contact", "private@partner.example", "manual", storekit.RefuseErased)
+	if err != nil {
+		t.Fatalf("seeding the second seat's contact: %v", err)
+	}
+	ownerExec(t, e, `UPDATE contact SET owner_id = $2, visibility = 'owner' WHERE id = $1`, private, e.Rep3)
+	mail := emailCC("sender@partner.example", "Sender", captureOwner,
+		secondSeatAddress+", dse@eu.docusign.net, private@partner.example", "copies-sup@partner.example")
+	sync(t, mail)
+	syncSecond(t, mail)
+	if filed := contactsFiledUnder(t, e, "copies-sup@partner.example"); !slices.Contains(filed, private) {
+		t.Fatalf("the mail is filed under %v, want the second seat's private contact among them", filed)
+	}
+}
+
+// A sender the ladder once suppressed is spared once the workspace writes to
+// it. A join then files its later mail as the first capture would.
+func TestAJoinFilesMailFromASuppressedSenderTheWorkspaceLaterWroteTo(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	blast := func(msgID string) []byte {
+		return []byte(strings.Join([]string{
+			"From: GITEX <hello@event.gitex.com>", "To: " + captureOwner, "Cc: " + secondSeatAddress,
+			"Subject: newsletter", "Date: Wed, 04 Jun 2026 08:00:00 +0000", "Message-ID: <" + msgID + ">",
+			"List-Unsubscribe: <https://example.com/unsub>", "Content-Type: text/plain", "", "hello", "",
+		}, "\r\n"))
+	}
+	sync(t, blast("gx-first@event.gitex.com"))
+	if n := countRows(t, e, `SELECT count(*) FROM capture_pending_counterparty WHERE email = 'hello@event.gitex.com' AND status = 'suppressed'`); n == 0 {
+		t.Fatal("the first blast left no suppressed ledger row, so this test proves nothing")
+	}
+	env.syncSent(t, map[string]bool{"reply-gitex@myco.example": true},
+		email(captureOwner, "", "hello@event.gitex.com", "reply-gitex@myco.example", ""))
+	store := contacts.NewStore(e.DB())
+	private, err := store.EnsureContactByEmail(contactCreator(e), "Gitex Events", "hello@event.gitex.com", "manual", storekit.RefuseErased)
+	if err != nil {
+		t.Fatalf("seeding the second seat's contact: %v", err)
+	}
+	ownerExec(t, e, `UPDATE contact SET owner_id = $2, visibility = 'owner' WHERE id = $1`, private, e.Rep3)
+	later := blast("gx-later@event.gitex.com")
+	sync(t, later)
+	syncSecond(t, later)
+	if filed := contactsFiledUnder(t, e, "gx-later@event.gitex.com"); !slices.Contains(filed, private) {
+		t.Fatalf("the spared mail is filed under %v, want the second seat's private contact among them", filed)
+	}
+}
+
+// A join files under a lead that holds an address on the mail, once, however
+// many mailboxes deliver it.
+func TestAJoinFilesALeadOnce(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	address := "lena@prospect.example"
+	lead, _, err := contacts.NewStore(e.DB()).CreateLead(e.AsFullUser(), contacts.CreateLeadInput{FullName: new("Lena Prospect"), Email: &address, Source: "manual"})
+	if err != nil {
+		t.Fatalf("creating the lead: %v", err)
+	}
+	mail := emailCC(address, "Lena", captureOwner, secondSeatAddress, "lead-join@prospect.example")
+	sync(t, mail)
+	syncSecond(t, mail)
+	if n := countRows(t, e, `SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
+		WHERE a.source_id = 'lead-join@prospect.example' AND l.lead_id = '`+lead.Id.String()+`'`); n != 1 {
+		t.Fatalf("the mail is filed %d times under the lead, want once", n)
+	}
+}
+
+// A mailbox the mail was never delivered to gains no import and files nothing
+// when it presents the same message.
+func TestAMailboxThatWasNotARecipientFilesNothingOnAJoin(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	store := contacts.NewStore(e.DB())
+	private, err := store.EnsureContactByEmail(contactCreator(e), "Private Contact", "private@partner.example", "manual", storekit.RefuseErased)
+	if err != nil {
+		t.Fatalf("seeding the second seat's contact: %v", err)
+	}
+	ownerExec(t, e, `UPDATE contact SET owner_id = $2, visibility = 'owner' WHERE id = $1`, private, e.Rep3)
+	mail := emailCC("sender@partner.example", "Sender", captureOwner, "private@partner.example", "not-delivered@partner.example")
+	sync(t, mail)
+	syncSecond(t, mail)
+	if filed := contactsFiledUnder(t, e, "not-delivered@partner.example"); slices.Contains(filed, private) {
+		t.Fatalf("a mailbox that never received the mail filed it under its seat's contact: %v", filed)
+	}
+}
+
+// A join files nothing on a thread the joining seat judged its private life.
+// The same seat's next business mail still reaches its private contact.
+func TestAJoinFilesNothingOnAThreadTheSeatHoldsPrivate(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	store := contacts.NewStore(e.DB())
+	private, err := store.EnsureContactByEmail(contactCreator(e), "Private Contact", "friend@partner.example", "manual", storekit.RefuseErased)
+	if err != nil {
+		t.Fatalf("seeding the second seat's contact: %v", err)
+	}
+	ownerExec(t, e, `UPDATE contact SET owner_id = $2, visibility = 'owner' WHERE id = $1`, private, e.Rep3)
+	seedPersonalThread(t, e, e.Rep3, "held-join@partner.example", []string{"sender@partner.example", "friend@partner.example"})
+	cc := secondSeatAddress + ", friend@partner.example"
+	for _, msgID := range []string{"held-join@partner.example", "open-join@partner.example"} {
+		mail := emailCC("sender@partner.example", "Sender", captureOwner, cc, msgID)
+		sync(t, mail)
+		syncSecond(t, mail)
+	}
+	if filed := contactsFiledUnder(t, e, "open-join@partner.example"); !slices.Contains(filed, private) {
+		t.Fatalf("a business join never reached the seat's private contact, so the held case proves nothing: %v", filed)
+	}
+	if filed := contactsFiledUnder(t, e, "held-join@partner.example"); slices.Contains(filed, private) {
+		t.Fatalf("a join filed a thread the seat holds private under its contact: %v", filed)
+	}
+}
+
+// A join leaves the links the project and deal attribution after it may still
+// need, as a new capture does. A mail copying more contacts than the ceiling
+// holds is filed up to that reservation, and the join adds nothing past it.
+func TestAJoinLeavesTheLinksTheLaterWritersNeed(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	store := contacts.NewStore(e.DB())
+	copied := []string{secondSeatAddress}
+	for i := range 25 {
+		address := fmt.Sprintf("c%02d@partner.example", i)
+		if _, err := store.EnsureContactByEmail(contactCreator(e), fmt.Sprintf("Copied %02d", i), address, "manual", storekit.RefuseErased); err != nil {
+			t.Fatalf("seeding %s: %v", address, err)
+		}
+		copied = append(copied, address)
+	}
+	mail := emailCC("sender@partner.example", "Sender", captureOwner, strings.Join(copied, ", "), "crowd@partner.example")
+	sync(t, mail)
+	before := len(contactsFiledUnder(t, e, "crowd@partner.example"))
+	if before != 22 {
+		t.Fatalf("the first capture filed %d contact links, want 22, so the join never meets the reservation", before)
+	}
+	syncSecond(t, mail)
+	if after := len(contactsFiledUnder(t, e, "crowd@partner.example")); after != before {
+		t.Fatalf("the join took the activity from %d to %d contact links; it must leave the three later writers their room", before, after)
 	}
 }
 

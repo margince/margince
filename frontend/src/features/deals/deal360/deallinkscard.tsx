@@ -37,8 +37,9 @@ function isLinkEnd(kind: string | null): kind is LinkedRecordType {
 
 /**
  * The deal's typed links to other deals, companies and contacts, read from
- * either end. A reader who may change the deal can add and remove links. The
- * server decides again, so a refusal shows under the card.
+ * either end. A reader who may change the deal can add a link. Remove shows
+ * where the server says this reader may remove the link (`removable`), which
+ * an incoming link from a record they may not change is not.
  */
 export function DealLinksCard({
   deal,
@@ -78,7 +79,6 @@ export function DealLinksCard({
                 link={link}
                 dealId={deal.id}
                 types={types}
-                canWrite={canWrite}
                 removing={remove.isPending && remove.variables === link.id}
                 onRemove={() => remove.mutate(link.id)}
               />
@@ -106,14 +106,12 @@ function LinkRow({
   link,
   dealId,
   types,
-  canWrite,
   removing,
   onRemove,
 }: Readonly<{
   link: RecordLink;
   dealId: string;
   types: readonly LinkType[] | undefined;
-  canWrite: boolean;
   removing: boolean;
   onRemove: () => void;
 }>) {
@@ -122,7 +120,11 @@ function LinkRow({
   const other = outgoing
     ? { type: link.to_type, id: link.to_id, name: link.to_name }
     : { type: link.from_type, id: link.from_id, name: link.from_name };
-  const label = linkTypeLabel(types, link.link_type);
+  const label = linkTypeLabel(
+    types,
+    link.link_type,
+    t("deal.links.unknownType"),
+  );
   const direction = t(
     outgoing ? "deal.links.outgoing" : "deal.links.incoming",
     { type: label },
@@ -143,7 +145,7 @@ function LinkRow({
           : direction
       }
       right={
-        canWrite ? (
+        link.removable ? (
           <Button variant="ghost" pending={removing} onClick={onRemove}>
             {t("deal.links.remove")}
           </Button>

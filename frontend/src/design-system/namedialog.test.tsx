@@ -190,6 +190,28 @@ it("says an empty name is required on Save, focuses it, and writes nothing", asy
   expect(onSave).not.toHaveBeenCalled();
 });
 
+it("takes no more characters than its limit", async () => {
+  const user = userEvent.setup({ delay: null });
+  render(
+    <LocaleProvider initial="en">
+      <NameDialog
+        open
+        onClose={() => undefined}
+        title="New team"
+        label="Team name"
+        confirmLabel="Create"
+        maxLength={5}
+        onSave={() => undefined}
+      />
+    </LocaleProvider>,
+  );
+  const field = screen.getByRole("textbox", { name: "Team name" });
+
+  await user.type(field, "Operations");
+
+  expect(field).toHaveValue("Opera");
+});
+
 function Titled({ title, label }: Readonly<{ title: string; label: string }>) {
   return (
     <LocaleProvider initial="en">
@@ -223,16 +245,32 @@ it("prints both when the label differs from the title", () => {
 
 describe("nameRefusal", () => {
   const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
+  const team = {
+    label: "Team name",
+    duplicate: "users.teamDuplicate",
+  } as const;
 
-  it("puts a conflict on the name, in the caller's words", () => {
+  it("puts a taken name on the name, in the caller's words", () => {
     const taken = new ProblemError({
       status: 409,
-      code: "conflict",
-      detail: 'a team named "Ops" already exists: conflict',
+      code: "name_taken",
+      detail: 'a team called "Ops" already exists',
     });
-    expect(nameRefusal(taken, t, "users.teamDuplicate")).toEqual({
+    expect(nameRefusal(taken, t, team)).toEqual({
       problem: null,
       nameProblem: t("users.teamDuplicate"),
+    });
+  });
+
+  it("leaves a plain conflict under the form, never claiming the name is taken", () => {
+    const stale = new ProblemError({
+      status: 409,
+      code: "conflict",
+      detail: "The team changed since you opened it. Reload and try again.",
+    });
+    expect(nameRefusal(stale, t, team)).toEqual({
+      problem: "The team changed since you opened it. Reload and try again.",
+      nameProblem: null,
     });
   });
 
@@ -247,16 +285,38 @@ describe("nameRefusal", () => {
       code: "conflict",
       detail: "The table is busy. Try again.",
     });
-    const code = "custom_field_label_taken";
-    expect(nameRefusal(taken, t, "cf.labelTaken", code)).toEqual({
+    const field = {
+      label: "Label",
+      duplicate: "cf.labelTaken",
+      code: "custom_field_label_taken",
+    } as const;
+    expect(nameRefusal(taken, t, field)).toEqual({
       problem: null,
       nameProblem: t("cf.labelTaken"),
     });
-    expect(nameRefusal(busy, t, "cf.labelTaken", code)).toEqual({
+    expect(nameRefusal(busy, t, field)).toEqual({
       problem: "The table is busy. Try again.",
       nameProblem: null,
     });
   });
+
+  it.each(["name", "label"])(
+    "puts a too-long %s on the name, worded with the field and its limit",
+    (field) => {
+      const tooLong = new ProblemError({
+        status: 422,
+        code: "validation_error",
+        detail: "the request failed validation",
+        details: {
+          errors: [{ field, code: "too_long", message: "too long", max: 120 }],
+        },
+      });
+      expect(nameRefusal(tooLong, t, team)).toEqual({
+        problem: null,
+        nameProblem: "Team name: at most 120 characters.",
+      });
+    },
+  );
 
   it("keeps any other refusal under the form", () => {
     const denied = new ProblemError({
@@ -264,14 +324,14 @@ describe("nameRefusal", () => {
       code: "permission_denied",
       detail: "x",
     });
-    expect(nameRefusal(denied, t, "users.teamDuplicate")).toEqual({
+    expect(nameRefusal(denied, t, team)).toEqual({
       problem: t("common.permissionDenied"),
       nameProblem: null,
     });
   });
 
   it("says nothing before a write is refused", () => {
-    expect(nameRefusal(null, t, "users.teamDuplicate")).toEqual({
+    expect(nameRefusal(null, t, team)).toEqual({
       problem: null,
       nameProblem: null,
     });

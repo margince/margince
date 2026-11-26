@@ -17,15 +17,15 @@ import { formatDate } from "../../format/format.dates";
 import { useLocale, useT } from "../../i18n";
 import { useCanMutate } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
-import { blankRequired, problemMessageOf } from "../../lib/problem";
-import { useViewerId } from "../../lib/session";
-import { useViewerZone } from "../../lib/viewerzone";
 import {
   type TransferableRecordType,
   useOwnershipOffer,
   useOwnershipOfferActions,
   useOwnershipOfferCandidates,
-} from "./ownershiprequest";
+} from "../../lib/ownershiprequest";
+import { blankRequired, problemMessageOf } from "../../lib/problem";
+import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type OfferedRecord = Readonly<{
   id?: string;

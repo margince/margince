@@ -81,17 +81,13 @@ func (s *Store) PinWorklistRow(ctx context.Context, row WorklistRowRef) error {
 				return err
 			}
 		}
-		by, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return err
-		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		query := fmt.Sprintf(`
-			INSERT INTO worklist_pin (reader_id, source, row_id, set_by)
-			VALUES ($%[1]d, $%[2]d, $%[3]d, $%[4]d)
+			INSERT INTO worklist_pin (reader_id, source, row_id)
+			VALUES ($%[1]d, $%[2]d, $%[3]d)
 			ON CONFLICT (reader_id, source, row_id) DO NOTHING`,
-			arg(reader), arg(row.Source), arg(row.RowID), arg(by))
+			arg(reader), arg(row.Source), arg(row.RowID))
 		tag, err := tx.Exec(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("activities: pinning a worklist row: %w", err)

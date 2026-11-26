@@ -104,8 +104,8 @@ func (s *Store) Create(ctx context.Context, in Definition) (crmcontracts.SalesIn
 				return err
 			}
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative (id, name, description, owner_id, objective_metric, target_value, deadline, lead_rule, deal_rule, include_future, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'manual', $11)`,
+		if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative (id, name, description, owner_id, objective_metric, target_value, deadline, lead_rule, deal_rule, include_future, captured_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 			id, in.Name, in.Description, owner, in.Objective, in.Target, in.Deadline, leadRule, dealRule, include, by); err != nil {
 			return fmt.Errorf("insert initiative: %w", err)
 		}
@@ -217,9 +217,9 @@ func (s *Store) Launch(ctx context.Context, id ids.UUID, ifVersion *int64) (crmc
 			return httperr.Validation("members", "too_many", "narrow the rules: a launch freezes at most "+strconv.Itoa(ruleReadLimit)+" records of each kind")
 		}
 		now := s.now().UTC()
-		if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative_baseline (initiative_id, deal_id, amount_minor_base, status, stage_id, captured_at)
-			SELECT $1, d.id, d.amount_minor_base, d.status, d.stage_id, $3 FROM deal d WHERE d.id = ANY($2)`,
-			id, members.Deals, now); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative_baseline (initiative_id, deal_id)
+			SELECT $1, d.id FROM deal d WHERE d.id = ANY($2)`,
+			id, members.Deals); err != nil {
 			return fmt.Errorf("freeze the baseline: %w", err)
 		}
 		tag, err := tx.Exec(ctx, `UPDATE sales_initiative SET status = 'live', launch_at = $2, version = version + 1, updated_at = now() WHERE id = $1 AND archived_at IS NULL AND version = $3`, id, now, versionOf(before))

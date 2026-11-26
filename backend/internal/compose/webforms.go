@@ -12,9 +12,7 @@ package compose
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
-	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -23,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/importcells"
 	"github.com/margince/margince/backend/internal/compose/inquiries"
+	"github.com/margince/margince/backend/internal/compose/readerlocale"
 	"github.com/margince/margince/backend/internal/compose/webformlead"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/automation"
@@ -30,10 +29,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -82,11 +81,12 @@ func publicForms(forms webforms.Handlers) func(http.Handler) http.Handler {
 			}
 			w.Header().Set("Referrer-Policy", "no-referrer")
 			w.Header().Set("Cache-Control", "no-store")
+			r = r.WithContext(systemtext.WithLocale(r.Context(), readerlocale.Anonymous(r)))
 			key := strings.TrimPrefix(r.URL.Path, publicFormsPrefix)
 			// The key is checked before it meters anything: a made-up key
 			// must not become a limiter key of its own.
 			if !webforms.ValidFormKey(key) {
-				httperr.Write(w, r, apperrors.ErrNotFound)
+				forms.AnswerRefusal(w, r, apperrors.ErrNotFound)
 				return
 			}
 			// The workspace is already bound: the identity middleware binds the
@@ -101,7 +101,7 @@ func publicForms(forms webforms.Handlers) func(http.Handler) http.Handler {
 			if r.Method == http.MethodOptions {
 				form, v := forms.Throttle().Preflight(ctx, workspace.String(), key, address)
 				if v.Refused {
-					writeIntakeRefused(w, r, v)
+					forms.AnswerRefusal(w, r, v.Refusal())
 					return
 				}
 				forms.ServePreflight(w, r.WithContext(ctx), form)
@@ -110,23 +110,15 @@ func publicForms(forms webforms.Handlers) func(http.Handler) http.Handler {
 			v := forms.Throttle().Check(ctx, workspace.String(), key, address)
 			switch {
 			case v.Refused:
-				writeIntakeRefused(w, r, v)
+				forms.AnswerRefusal(w, r, v.Refusal())
 				return
 			case v.Unknown:
-				httperr.Write(w, r, apperrors.ErrNotFound)
+				forms.AnswerRefusal(w, r, apperrors.ErrNotFound)
 				return
 			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
-}
-
-func writeIntakeRefused(w http.ResponseWriter, r *http.Request, v webforms.ThrottleVerdict) {
-	wait := int(math.Ceil(v.RetryAfter.Seconds()))
-	httperr.Write(w, r, &httperr.DetailedError{
-		Status: http.StatusTooManyRequests, Code: "rate_limited", RetryAfterSeconds: wait,
-		Detail: fmt.Sprintf("This form receives too many submissions right now. Wait %d seconds and send it again.", wait),
-	})
 }
 
 type inquiryWork = inquiries.Work

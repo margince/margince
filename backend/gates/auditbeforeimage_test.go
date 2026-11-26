@@ -112,6 +112,7 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/channelidentity.go:auditChannelIdentityChange": "binding an account to a contact who had none replaces nothing: the question is which account reaches this human, and before the bind none did. A rebind takes the other branch and names the binding it moved",
 
 	"internal/modules/contacts/impersonationwarning.go:carryImpersonationWarningTx": "a merge moving the merged-away contact's open warning to the survivor. It is an OCCURRENCE on the survivor: the survivor held no open warning, so no field of it has a prior value to name, and the image names the reason carried",
+	"internal/modules/contacts/impersonationwarning.go:raiseImpersonationWarningTx": "a later mail labelling a contact that carried no verdict. It is an OCCURRENCE on the contact: the guard matches only a row whose verdict columns were empty, so no field has a prior value to name, and the image names the reason raised",
 	"internal/modules/contacts/impersonationwarning.go:ClearImpersonationWarning":   "a user answering the sender check's warning on a contact as fine. It is an OCCURRENCE on the contact: the verdict and its reason stay on the row and gain the moment and the user that cleared it, and the image names the reason cleared",
 	"internal/modules/contacts/acquisitionrequest.go:RetractAcquisitionRequest":     "a human taking back the request a contact's acquisition records. It is an OCCURRENCE on the contact: the acquisition rows stay and gain the moment the request was withdrawn, and the image names the request kinds withdrawn",
 	"internal/modules/consent/qualifyingevent.go:retractQualifyingSubject":          "a human taking back an exchange they recorded. It is an OCCURRENCE on the contact, as recording is: the exchange row stays and gains the moment it was withdrawn, and the image names the exchange by its kind and when it happened",
@@ -175,6 +176,7 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 // would let a real defect through in silence.
 var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/reporting/persistence.go:recordChange": "The shared mutation writer requires a non-nil before image for every non-create action before invoking Audit.",
+	"internal/modules/knowledge/external.go:auditAndQueue":   "op is only create or update, and each caller spells it as a literal: the create caller has no prior row and passes none, the update caller passes the replaced document's name and checksum",
 	// The seam that routes an extension's own change, choosing the door from
 	// what the change carries rather than from a verb it cannot read.
 	"internal/compose/extledger.go:recordExtensionChange": "the verb is the unit's own, and the seam picks the door from whether the change declared a before-image, so an update either carries one or is recorded as the occurrence it says it is",

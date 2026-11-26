@@ -151,6 +151,7 @@ export function ContactDealCard({
           title={
             <Button
               variant="link"
+              align="start"
               className="pe-card-open"
               onClick={() => navigate({ screen: "deals", id: card.dealId })}
             >

@@ -291,10 +291,7 @@ export function CompanyRecordBody({
           (historical)". The tab strip cannot say that, because a tab label
           names a place, not its qualifier. */}
       {tab === "finance" && !company.archived_at && (
-        <CompanyFinanceCard
-          companyId={company.id}
-          lifecycle={company.lifecycle}
-        />
+        <CompanyFinanceCard companyId={company.id} lifecycle={company.status} />
       )}
       {tab === "documents" && (
         // The tab's stacked column, so the two panels are spaced like every

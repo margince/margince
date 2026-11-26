@@ -177,8 +177,9 @@ export const RenameDuplicate: Story = {
             type: "about:blank",
             title: "Conflict",
             status: 409,
-            code: "conflict",
-            detail: 'conflict: a team named "Nord" already exists',
+            code: "name_taken",
+            detail:
+              'a team called "Nord" already exists; choose a different name',
           },
           409,
         ),

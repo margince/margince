@@ -25,7 +25,7 @@ import (
 func TestAnUnprovenContractEndingStaysASignalWithoutAnAccountConflict(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
-	e.WsExec(t, `UPDATE company SET lifecycle='customer' WHERE id=$1`, company.UUID)
+	e.WsExec(t, `UPDATE company SET status='customer' WHERE id=$1`, company.UUID)
 	seedSignal(t, company.UUID, "contract_ended", "warn", "They wrote that one contract ends.", "2026-05-20T09:00:00Z")
 	view, err := company360Service(e).Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, company360SignalPerms), company)
 	if err != nil {
@@ -50,7 +50,7 @@ func TestAnEndedContractDoesNotContradictAnEndedRelationship(t *testing.T) {
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, company360SignalPerms)
 
-	e.WsExec(t, `UPDATE company SET lifecycle = 'former_customer' WHERE id = $1`, company.UUID)
+	e.WsExec(t, `UPDATE company SET status = 'former_customer' WHERE id = $1`, company.UUID)
 	seedSignal(t, company.UUID, "contract_ended", "warn",
 		"They wrote that the contract ends on 31 July.", "2026-05-20T09:00:00Z")
 
@@ -83,7 +83,7 @@ func TestTheConflictStaysSilentWithoutTheSignalGrant(t *testing.T) {
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 
-	e.WsExec(t, `UPDATE company SET lifecycle = 'customer' WHERE id = $1`, company.UUID)
+	e.WsExec(t, `UPDATE company SET status = 'customer' WHERE id = $1`, company.UUID)
 	seedSignal(t, company.UUID, "contract_ended", "warn",
 		"They wrote that the contract ends on 31 July.", "2026-05-20T09:00:00Z")
 
@@ -104,10 +104,10 @@ func seedSignal(t *testing.T, company ids.UUID, kind, severity, summary, at stri
 	t.Helper()
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `INSERT INTO signal
 		(id, kind, source_channel, entity_type, entity_id, resolved_company_id,
-		 resolution_state, severity, summary, status, detected_at, source, captured_by)
+		 resolution_state, severity, summary, status, detected_at, source, source_system, captured_by)
 		VALUES ($1, '`+kind+`', 'derived', 'company', '`+company.String()+`',
 		        '`+company.String()+`', 'resolved', '`+severity+`', '`+summary+`', 'open',
-		        '`+at+`', 'signal-scan', 'agent:`+kind+`')`, ids.NewV7()); err != nil {
+		        '`+at+`', 'automation', 'signal-scan', 'agent:`+kind+`')`, ids.NewV7()); err != nil {
 		t.Fatalf("seeding a signal: %v", err)
 	}
 }

@@ -176,11 +176,9 @@ export function mapCompanyUpdate(
   if (Object.hasOwn(rows, "domains") && !sameDomainSet(desired, current)) {
     body.domains = desired;
   }
-  const lifecycle = stringField(values.lifecycle).trim();
-  if (lifecycle) {
-    body.lifecycle = lifecycle as NonNullable<
-      UpdateCompanyRequest["lifecycle"]
-    >;
+  const status = stringField(values.status).trim();
+  if (status) {
+    body.status = status as NonNullable<UpdateCompanyRequest["status"]>;
   }
   // Always sent when the field was rendered, even empty: this is a replace-set,
   // and "the user cleared every type" is an edit, not an absence. The form
@@ -410,7 +408,7 @@ export function companyEditFields(
     // retired classification tried to answer with one value, and the reason
     // neither was editable from this page at all.
     {
-      key: "lifecycle",
+      key: "status",
       required: true,
       label: "company.lifecycle",
       type: "select",

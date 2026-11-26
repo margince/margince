@@ -244,12 +244,14 @@ jobs:
               - 'tools/**'
               - 'user-guide/**'
               - 'Dockerfile*'
+              - 'docker-bake.hcl'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'renovate.json'
               - 'README.md'
               - 'CLA.md'
               - 'LICENSING.md'
+              - 'MAINTAINERS.md'
               - 'CODE_OF_CONDUCT.md'
               - 'CONTRIBUTING.md'
               - 'SECURITY.md'
@@ -643,7 +645,7 @@ jobs:
       contents: read
     # The baseline pass loads the whole tree, so it gets a runner. The strict
     # pass loads only the packages a change touched, which leaves room for the
-    # modules outside backend/.
+    # modules outside backend/ and the few packages the untagged pass reads.
     # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
     strategy:
       fail-fast: false
@@ -654,7 +656,7 @@ jobs:
             fetch-depth: 1
             filter: ""
           - pass: strict
-            legs: lint-strict lint-modules
+            legs: lint-strict lint-untagged lint-modules
             fetch-depth: 0
             filter: blob:none
     # Setup mirrors deterministic-gates, which says why each step is there.

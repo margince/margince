@@ -191,7 +191,7 @@ export const AboutEdit: Story = {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Edit About" }));
     const about = within(await screen.findByRole("dialog", { name: "About" }));
-    await expect(about.getByRole("textbox", { name: "Title" })).toHaveValue(
+    await expect(about.getByRole("textbox", { name: "Job title" })).toHaveValue(
       "Head of fleet",
     );
     await waitFor(() =>

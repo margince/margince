@@ -94,12 +94,12 @@ type ExitCriterion struct {
 	Hint          string
 }
 
-// Offer is one offer on the deal.
+// Offer is one offer on the deal. Its figure is the net: a deal's value has no tax.
 type Offer struct {
-	GrossMinor int64
-	Currency   string
-	Status     string
-	Accepted   bool
+	NetMinor int64
+	Currency string
+	Status   string
+	Accepted bool
 }
 
 // StageMove is one move in the deal's stage history.

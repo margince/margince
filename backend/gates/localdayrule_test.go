@@ -62,6 +62,7 @@ var allowed = gatekit.Waive(map[string]string{
 	"internal/compose/handoffseam.go":                         record,
 	"internal/compose/installseam/":                           "installation set-up reads the installation zone",
 	"internal/compose/integration/harness.go":                 "the test harness seeds the installation zone",
+	"internal/compose/jobschedulebook.go":                     "a clock-time extension job runs once for the installation, on its zone",
 	"internal/compose/jobs_pastactivityclock.go":              combined,
 	"internal/compose/jobs_riskverdict.go":                    combined,
 	"internal/compose/lifecyclereview/":                       record,

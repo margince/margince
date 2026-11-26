@@ -17,7 +17,7 @@ import (
 // seat holder by name, an amount in its currency.
 func agentChangeWords(db *database.DB) agents.ChangeWords {
 	reader := newApprovalPreviewReader(db)
-	return func(ctx context.Context, current, changes map[string]json.RawMessage) ([]crmcontracts.ApprovalPreviewChange, error) {
-		return reader.changedValues(ctx, toolUpdateRecord, current, changes)
+	return func(ctx context.Context, recordType string, current, changes map[string]json.RawMessage) ([]crmcontracts.ApprovalPreviewChange, error) {
+		return reader.changedValues(ctx, toolUpdateRecord, recordType, current, changes)
 	}
 }

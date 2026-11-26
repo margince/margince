@@ -41,7 +41,14 @@ const AgentBusyCode = "import_agent_busy"
 // later. Every other classified fault is settled: something must change (the
 // arguments, a human's decision, an operator's) before a retry means anything.
 func (f Fault) Transient() bool {
-	_, ok := transientCodes[f.Code]
+	return TransientCode(f.Code)
+}
+
+// TransientCode reports whether a refusal with this code clears on its own, so
+// the same request sent again unchanged may succeed. A client that holds only
+// the answer's code, not the Fault, asks this.
+func TransientCode(code string) bool {
+	_, ok := transientCodes[code]
 	return ok
 }
 

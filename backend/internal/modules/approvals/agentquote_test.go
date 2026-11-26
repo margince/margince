@@ -26,7 +26,7 @@ func TestAnAgentsTextCannotCloseTheQuoteItIsShownIn(t *testing.T) {
 	if strings.Count(in.Summary, "”") != 1 || !strings.HasSuffix(in.Summary, "”") || strings.Contains(in.Summary, "\n") {
 		t.Errorf("the summary %q can be read as ending before the agent's text does", in.Summary)
 	}
-	stored, err := marshalSystemSummary(context.Background(), in.Summary, in.SummaryParts, in.SystemText, nil)
+	stored, err := marshalSystemSummary(context.Background(), in)
 	if err != nil {
 		t.Fatal(err)
 	}

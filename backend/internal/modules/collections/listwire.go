@@ -9,6 +9,7 @@ package collections
 
 import (
 	"context"
+	"slices"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -23,6 +24,11 @@ func (s *Store) ListsPage(ctx context.Context, filter ListFilter) (crmcontracts.
 	if err != nil {
 		return crmcontracts.ListListResponse{}, err
 	}
+	// A list over a declared kind this reader may not read is left out, as the
+	// kind is from the kind directory. A refusal would close the whole page.
+	lists = slices.DeleteFunc(lists, func(l listRow) bool {
+		return !kindRemoved(l.EntityType) && kindUnavailable(ctx, l.EntityType)
+	})
 	summaries, err := s.summarize(ctx, lists)
 	if err != nil {
 		return crmcontracts.ListListResponse{}, err
@@ -201,7 +207,8 @@ func wireList(l listSummary) crmcontracts.List {
 		VisibleCount: l.VisibleCount, Health: crmcontracts.ListHealth(l.Health), CanEdit: l.CanEdit,
 		CreatedAt: &l.CreatedAt, UpdatedAt: &l.UpdatedAt, ArchivedAt: l.ArchivedAt,
 	}
-	if len(l.Definition) > 0 {
+	// A removed kind's filter names fields no reader can read any more.
+	if len(l.Definition) > 0 && l.Health != healthUnavailable {
 		out.Definition = &l.Definition
 	}
 	if len(l.RetiredFields) > 0 {

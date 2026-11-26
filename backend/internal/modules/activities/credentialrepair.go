@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
 )
 
 // EvidenceKeyMaskedStoredText flags the audit row of a mail whose stored text
@@ -87,7 +88,7 @@ func MaskStoredMailTextTx(
 		if keepsTypedText(kind) {
 			continue
 		}
-		wrote, err := maskRowTextTx(ctx, tx, id, subject, body)
+		wrote, err := maskRowTextTx(ctx, tx, id, string(kind), subject, body)
 		if err != nil {
 			return nil, err
 		}
@@ -114,7 +115,7 @@ func MaskStoredMailTextTx(
 // whether anything moved. The old text pins the update, so a live edit landing
 // between the read and the write leaves this row to the next pass.
 func maskRowTextTx(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, subject, body *string,
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, kind string, subject, body *string,
 ) (bool, error) {
 	maskedSubject, maskedBody := maskedText(subject), maskedText(body)
 	if same(subject, maskedSubject) && same(body, maskedBody) {
@@ -124,10 +125,10 @@ func maskRowTextTx(
 	// The caller holds the row lock; the old text guards against a writer that
 	// does not take it.
 	tag, err := tx.Exec(ctx, `
-		UPDATE activity SET subject = $2, body = $3, `+declineStampsClearedWhen("true")+`
+		UPDATE activity SET subject = $2, body = $3, body_own_end = $6, `+declineStampsClearedWhen("true")+`
 		 WHERE id = $1
 		   AND subject IS NOT DISTINCT FROM $4 AND body IS NOT DISTINCT FROM $5`,
-		id, maskedSubject, maskedBody, subject, body)
+		id, maskedSubject, maskedBody, subject, body, mailquote.OwnEnd(kind, deref(maskedSubject), maskedBody))
 	if err != nil {
 		return false, fmt.Errorf("activities: masking the stored text of %s: %w", id, err)
 	}
@@ -144,7 +145,7 @@ func maskRowTextTx(
 		return false, err
 	}
 	// The same event an edit emits, because the embeddings are rebuilt from it.
-	// `search_tsv` is generated, so the index follows the row without being
+	// A trigger keeps `search_tsv`, so the index follows the row without being
 	// told.
 	//
 	// Only the columns that moved are named. A subscriber acting on a field

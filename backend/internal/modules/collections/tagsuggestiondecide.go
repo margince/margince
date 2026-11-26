@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -106,14 +105,10 @@ func requireRecordUpdate(ctx context.Context, entityType string) error {
 // recordTagSuggestionDecision moves an open suggestion to its decided state,
 // with its audit row in the same transaction.
 func recordTagSuggestionDecision(ctx context.Context, tx pgx.Tx, id ids.UUID, state string) error {
-	actor, err := storekit.Actor(ctx)
-	if err != nil {
-		return err
-	}
 	tag, err := tx.Exec(ctx, `
-		UPDATE tag_suggestion SET state = $2, decided_by = $3, decided_at = now()
+		UPDATE tag_suggestion SET state = $2, decided_at = now()
 		 WHERE id = $1 AND state = 'open'`,
-		id, state, storekit.UUIDOrNil(actor.UserID))
+		id, state)
 	if err != nil {
 		return fmt.Errorf("collections: recording the tag suggestion decision: %w", err)
 	}

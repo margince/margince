@@ -13,7 +13,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useAnchoredToTrigger } from "./anchored";
-import { Button } from "./button";
+import { Button, RefusalLines } from "./button";
 import {
   coveredByDialog,
   panelsOpenedFrom,
@@ -348,7 +348,9 @@ export function OverflowMenu({
             </p>
           ))}
           <CloseMenu.Provider value={close}>
-            {(keepMounted || everOpened) && layer !== null && children}
+            <RefusalLines>
+              {(keepMounted || everOpened) && layer !== null && children}
+            </RefusalLines>
           </CloseMenu.Provider>
         </div>,
         layer ?? document.body,

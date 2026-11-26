@@ -25,9 +25,8 @@ import (
 // storedEdge is the stored row version of one interaction edge: xmin changes on
 // every rewrite, so an equal value proves nothing was written.
 type storedEdge struct {
-	xmin     string
-	computed time.Time
-	total    int
+	xmin  string
+	total int
 }
 
 type graphSkipEnv struct{ e *Env }
@@ -84,8 +83,8 @@ func (v graphSkipEnv) edge(t *testing.T, user ids.UUID, contact ids.ContactID) (
 	var row storedEdge
 	found := true
 	v.inTx(t, func(tx pgx.Tx) error {
-		err := tx.QueryRow(context.Background(), `SELECT xmin::text, computed_at, count_total FROM graph_interaction_edge
-			WHERE user_id = $1 AND contact_id = $2`, user, contact).Scan(&row.xmin, &row.computed, &row.total)
+		err := tx.QueryRow(context.Background(), `SELECT xmin::text, count_total FROM graph_interaction_edge
+			WHERE user_id = $1 AND contact_id = $2`, user, contact).Scan(&row.xmin, &row.total)
 		if err == pgx.ErrNoRows {
 			found = false
 			return nil

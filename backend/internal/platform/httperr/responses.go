@@ -229,6 +229,20 @@ func fieldDetails(fields []FieldError) map[string]any {
 	return map[string]any{fieldErrorsKey: errs}
 }
 
+// FieldErrorsOf reads fieldDetails' shape back out of a decoded problem's
+// details. A details bag without that shape holds no field errors.
+func FieldErrorsOf(details map[string]any) []FieldError {
+	raw, err := json.Marshal(details[fieldErrorsKey])
+	if err != nil {
+		return nil
+	}
+	var fields []FieldError
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return nil
+	}
+	return fields
+}
+
 // Duplicate is the 409 dedupe shape. existingID is included only when
 // known AND disclosable — a conflict with a row outside the caller's
 // row scope answers 409 without the id.

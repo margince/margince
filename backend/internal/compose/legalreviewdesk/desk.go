@@ -74,6 +74,7 @@ func (d Desk) Raise(ctx context.Context, tx pgx.Tx, request deals.ReviewRequest)
 		}
 		digest := sha256.Sum256(body)
 		_, err = d.Approvals.StageOrJoinPendingInTx(system, tx, approvals.StageInput{
+			Why:            approvals.HeadlineSaysWhy,
 			Kind:           approvalsubject.KindLegalReviewRequest,
 			ProposedChange: body,
 			DiffHash:       hex.EncodeToString(digest[:]),

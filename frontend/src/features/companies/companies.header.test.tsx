@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { company, jsonResponse } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { meFixture } from "../../testing/mefixture";
@@ -64,35 +65,40 @@ async function openRecordMenu(
 // the page carries. Distinct from the archived case: this is the record's
 // OTHER refusal cause, on a record that is not archived at all.
 describe("CompanyScreen — a live record that is not the viewer's to change", () => {
-  it("names why edit/merge/archive/share are refused, from an id the page actually renders", async () => {
-    const user = userEvent.setup();
-    const notMine = { ...company, owner_id: "u-someone-else", writable: false };
-    stubFetch(async (url) => {
-      if (url.includes("/me")) {
-        return jsonResponse(meFixture({ allow: { company: ["read"] } }));
-      }
-      if (url.includes("/activities")) {
-        return jsonResponse({ data: [] });
-      }
-      return jsonResponse(notMine);
-    });
-    render(<CompanyScreen id="o-1" />);
+  it.each([
+    ["a writing role", ["read", "update"], en["record.notYoursToChange"]],
+    ["a role that only reads", ["read"], en["record.roleReadsOnly"]],
+  ] as const)(
+    "names why edit/merge/archive/share are refused to %s, from an id the page actually renders",
+    async (_role, actions, sentence) => {
+      const user = userEvent.setup();
+      const notMine = {
+        ...company,
+        owner_id: "u-someone-else",
+        writable: false,
+      };
+      stubFetch(async (url) => {
+        if (url.includes("/me")) {
+          return jsonResponse(meFixture({ allow: { company: actions } }));
+        }
+        if (url.includes("/activities")) {
+          return jsonResponse({ data: [] });
+        }
+        return jsonResponse(notMine);
+      });
+      render(<CompanyScreen id="o-1" />);
 
-    // Each control WAITED for, not read in the tick the first one arrived in.
-    // openRecordMenu waits for `edit-record`; the two below were then fetched
-    // with a non-retrying getByTestId in the same breath, so a menu whose
-    // items mount a beat apart threw here — the failure this file sees under a
-    // loaded full run and never in isolation.
-    const refused = [
-      await openRecordMenu(user, "archive-record"),
-      await screen.findByTestId("share-record"),
-    ];
-    for (const control of refused) {
-      expect(control.hasAttribute("disabled")).toBe(true);
-      const describedBy = control.getAttribute("aria-describedby");
-      expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-        "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
-      );
-    }
-  });
+      const refused = [
+        await openRecordMenu(user, "archive-record"),
+        await screen.findByTestId("share-record"),
+      ];
+      for (const control of refused) {
+        expect(control.hasAttribute("disabled")).toBe(true);
+        const describedBy = control.getAttribute("aria-describedby");
+        expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
+          sentence,
+        );
+      }
+    },
+  );
 });

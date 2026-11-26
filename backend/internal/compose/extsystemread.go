@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -205,17 +206,18 @@ func readDealSummary(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) (exte
 	out := extension.DealSummary{ID: id.String()}
 	var (
 		owner      *ids.UUID
+		mergedInto string
 		archivedAt *time.Time
 	)
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT d.name, s.name, d.status, d.amount_minor, d.currency, d.expected_close_date,
-			       d.owner_id, d.archived_at
+			       d.owner_id, d.archived_at, COALESCE(d.merged_into_id::text, '')
 			  FROM deal d
 			  JOIN stage s ON s.id = d.stage_id
 			 WHERE d.id = $1`, id).
 			Scan(&out.Name, &out.StageName, &out.Status, &out.AmountMinor, &out.Currency, &out.ExpectedClose,
-				&owner, &archivedAt)
+				&owner, &archivedAt, &mergedInto)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return extension.DealSummary{}, extension.ErrNotFound
@@ -230,6 +232,7 @@ func readDealSummary(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) (exte
 		out.AmountDisplay = mailcopy.For(string(mailcopy.English)).Money(*out.AmountMinor, *out.Currency)
 	}
 	out.Archived = archivedAt != nil
+	out.MergedIntoID = mergedInto
 	return out, nil
 }
 
@@ -247,13 +250,14 @@ const dealResponsibleQuery = `
 func readDealResponsible(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) ([]extension.Responsible, error) {
 	var out []extension.Responsible
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		var exists bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal WHERE id = $1)`, id).Scan(&exists); err != nil {
-			return err
-		}
-		if !exists {
+		survivor, err := deals.FollowMergeTx(ctx, tx, id)
+		if errors.Is(err, pgx.ErrNoRows) {
 			return extension.ErrNotFound
 		}
+		if err != nil {
+			return err
+		}
+		id = survivor
 		rows, err := tx.Query(ctx, fmt.Sprintf(dealResponsibleQuery, workforce.LiveMemberSQL("u"), storekit.DealTeamSQL("d", "u.id")),
 			id, extension.MaxResponsible)
 		if err != nil {

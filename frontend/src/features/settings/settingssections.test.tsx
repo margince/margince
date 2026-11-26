@@ -23,6 +23,7 @@ import { catalogContext } from "./settingsnav";
 import { COMPANY_CONTEXT_OFF, EVERY_GRANT } from "./settingspages.fixtures";
 import {
   COMPANY_CONTEXT_SECTIONS,
+  SUBPAGE_SECTIONS,
   settingsSectionKeys,
 } from "./settingssections";
 import { settingsTabLabel } from "./settingstabs";
@@ -71,8 +72,14 @@ const pageStories = Object.values(composeStories(stories)).filter(
   (story) => story.parameters.settingsPage !== undefined,
 );
 
-// Not a table header: it heads a column of records.
+const tabStories = Object.values(composeStories(stories)).filter(
+  (story) => story.parameters.settingsTab !== undefined,
+);
+
+// Not a table header: it heads a column of records. A section header names
+// the panels under it, so search offers it as a page's section too.
 const NAMING = [
+  ".section-header > .section-header-title",
   ".settingrow-naming > .t-name",
   ".field > label:not(.sr-only)",
   ".field-label-row > label:not(.sr-only)",
@@ -167,13 +174,27 @@ function drawnSections(page: SettingsPageId, tab: string | undefined) {
   ].map(t);
 }
 
-const TAB_NAMES = new Set<string>(
-  SETTINGS_PAGES.flatMap((page) =>
+// A sub-address leads with its own name too, drawn by the switch that opens it.
+const TAB_NAMES = new Set<string>([
+  ...SETTINGS_PAGES.flatMap((page) =>
     "tabs" in page
       ? page.tabs.flatMap((tab) => settingsTabLabel(page.id, tab.id) ?? [])
       : [],
   ),
-);
+  ...Object.values(SUBPAGE_SECTIONS).flatMap((parts) =>
+    Object.values(parts ?? {}).flatMap((keys) => keys[0] ?? []),
+  ),
+]);
+
+function tabStory(page: SettingsPageId, tab: string | undefined) {
+  const Story = tabStories.find(
+    (story) => story.parameters.settingsTab === `${page}/${tab}`,
+  );
+  if (Story === undefined) {
+    throw new Error(`no story in settings.stories.tsx renders ${page}/${tab}`);
+  }
+  return Story;
+}
 
 async function expectTabDraws(
   Story: (typeof pageStories)[number],
@@ -185,7 +206,7 @@ async function expectTabDraws(
     ...(DRAWN_NOT_OFFERED[page] ?? []),
     ...(tab === undefined ? [] : (DRAWN_NOT_OFFERED[address] ?? [])),
   ];
-  const view = render(<Story route={settingsHref(page, tab)} />);
+  const view = render(<Story />);
   await waitFor(() => {
     // A tab that drew no panel at all crashed or never loaded.
     expect(view.container.querySelector(".panel"), address).not.toBeNull();
@@ -219,6 +240,17 @@ describe("each settings page's sections are the names it draws", () => {
     );
   });
 
+  it("has one tab story for every tab past a page's first", () => {
+    const covered = tabStories.map((story) => story.parameters.settingsTab);
+    expect(covered.sort(stable)).toEqual(
+      SETTINGS_PAGES.flatMap((page) =>
+        tabsOf(page.id)
+          .slice(1)
+          .map((tab) => `${page.id}/${tab}`),
+      ).sort(stable),
+    );
+  });
+
   it.each(SETTINGS_PAGES.map((page) => page.id))(
     "%s lists every panel and setting it draws, and nothing else",
     async (page) => {
@@ -234,8 +266,12 @@ describe("each settings page's sections are the names it draws", () => {
         );
         return;
       }
-      for (const tab of tabsOf(page)) {
-        await expectTabDraws(Story, page, tab);
+      for (const [index, tab] of tabsOf(page).entries()) {
+        await expectTabDraws(
+          index === 0 ? Story : tabStory(page, tab),
+          page,
+          tab,
+        );
       }
     },
   );

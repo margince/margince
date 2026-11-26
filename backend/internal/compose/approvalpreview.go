@@ -42,7 +42,6 @@ const (
 	previewValueText        = "text"
 	previewValueDate        = "date"
 	previewAdvanceDeal      = "advance_deal"
-	previewLifecycle        = "lifecycle"
 )
 
 type approvalPreviewReader struct {
@@ -203,7 +202,7 @@ func (r approvalPreviewReader) populateChanges(ctx context.Context, approval crm
 	if len(changes) == 0 {
 		return out, nil
 	}
-	out.Changes, err = r.changedValues(ctx, approval.Kind, current, changes)
+	out.Changes, err = r.changedValues(ctx, approval.Kind, derefString(approval.TargetEntityType), current, changes)
 	if previewUnavailable(err) {
 		out.Changes = []crmcontracts.ApprovalPreviewChange{}
 		return out, nil
@@ -222,7 +221,7 @@ func (r approvalPreviewReader) populateChanges(ctx context.Context, approval crm
 	return out, nil
 }
 
-func (r approvalPreviewReader) changedValues(ctx context.Context, kind string, current, changes map[string]json.RawMessage) ([]crmcontracts.ApprovalPreviewChange, error) {
+func (r approvalPreviewReader) changedValues(ctx context.Context, kind, recordType string, current, changes map[string]json.RawMessage) ([]crmcontracts.ApprovalPreviewChange, error) {
 	labels, err := r.referenceNames(ctx, current, changes)
 	if err != nil {
 		return nil, err
@@ -261,9 +260,19 @@ func (r approvalPreviewReader) changedValues(ctx context.Context, kind string, c
 		if err := r.moneyValue(ctx, key, &next, proposed); err != nil {
 			return nil, err
 		}
+		markCompanyStatus(recordType, key, &old)
+		markCompanyStatus(recordType, key, &next)
 		out = append(out, crmcontracts.ApprovalPreviewChange{Field: key, Before: old, After: next})
 	}
 	return out, nil
+}
+
+// markCompanyStatus gives a company's status the kind a reader translates as a
+// funnel position. A deal and a lead name another vocabulary `status`.
+func markCompanyStatus(recordType, field string, value *crmcontracts.ApprovalPreviewValue) {
+	if recordType == string(recordTypeCompany) && field == previewFieldStatus && value.Kind == previewValueText {
+		value.Kind = previewValueLifecycle
+	}
 }
 
 func previewUnavailable(err error) bool {
@@ -316,8 +325,6 @@ func (r approvalPreviewReader) value(ctx context.Context, field string, raw json
 	}
 	value.Kind, value.Text = previewValueText, text
 	switch field {
-	case previewLifecycle:
-		value.Kind = previewLifecycle
 	case previewFieldValidUntil, previewFieldClosedAt, previewFieldStartedAt, previewFieldTargetEndDate, previewFXRateDate, acceptFieldExpectedClose:
 		if _, err := time.Parse(time.RFC3339, text); err != nil {
 			if _, err := time.Parse(time.DateOnly, text); err != nil {
