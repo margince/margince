@@ -6,10 +6,10 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import {
-  installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
+  stubWithSession,
 } from "../../testing/story-utils";
 import { EvidenceVerdict, profileFieldClaim } from "./evidenceverdict";
 
@@ -47,10 +47,11 @@ const EXTRACTED: ProfileField = {
 
 const CONFIRM = `POST /companies/${COMPANY}/profile-fields/${EXTRACTED.field}/confirm`;
 const CORRECT = `PATCH /companies/${COMPANY}/profile-fields/${EXTRACTED.field}`;
+const EDITOR = { company: ["read", "update"] } as const;
 
 function verdict(routes: RouteMap = {}) {
   return () => {
-    installFetchStub(routes);
+    stubWithSession(routes, EDITOR);
     return (
       <StoryProviders>
         <EvidenceVerdict
@@ -219,7 +220,7 @@ export const RowMovedUnderYou: Story = {
  *  automatic refresh, so there is nothing here awaiting a decision. */
 export const SetByAnAgent: Story = {
   render: () => {
-    installFetchStub({});
+    stubWithSession({}, EDITOR);
     return (
       <StoryProviders>
         <EvidenceVerdict

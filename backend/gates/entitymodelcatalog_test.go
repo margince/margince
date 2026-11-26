@@ -87,7 +87,7 @@ var (
 	catalogIndex    = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+) (CREATE (?:UNIQUE )?INDEX .*)$`)
 	catalogFunction = regexp.MustCompile(`^(?:public|ext)\.[a-z0-9_]+\([^)]*\) secdef=`)
 	catalogRelation = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+) acl=\S* rls=\S+ force=\S+$`)
-	catalogView     = regexp.MustCompile(`^(?:public|ext)\.[a-z0-9_]+ opts=`)
+	catalogView     = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+) opts=`)
 	// catalogStorage is a table's storage options, which no page renders.
 	catalogStorage    = regexp.MustCompile(`^(?:public|ext)\.[a-z0-9_]+ storage=\S+ toast=\S+$`)
 	catalogTrigger    = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+)\.([a-zA-Z0-9_]+) (CREATE (?:CONSTRAINT )?TRIGGER .*)$`)
@@ -129,10 +129,14 @@ func parseHeadCatalog(t *testing.T) *emSchema {
 	var indexes []emConstraint
 	var unrecognised []string
 	relations := map[string]bool{}
+	// A view is granted on like a table, and stores no column of its own.
+	views := map[string]bool{}
 	for _, record := range catalogRecords(t) {
 		switch {
-		case catalogIgnored.MatchString(record), catalogView.MatchString(record),
+		case catalogIgnored.MatchString(record),
 			catalogStorage.MatchString(record), catalogFunction.MatchString(record):
+		case catalogView.MatchString(record):
+			views[catalogView.FindStringSubmatch(record)[1]] = true
 		case catalogRelation.MatchString(record):
 			relations[catalogRelation.FindStringSubmatch(record)[1]] = true
 		case catalogIndex.MatchString(record):
@@ -155,6 +159,9 @@ func parseHeadCatalog(t *testing.T) *emSchema {
 	for _, unknown := range unrecognised {
 		t.Errorf("%s holds a record this parser does not recognise, so the entity model would "+
 			"render without it and read complete:\n\t%s", headCatalogPath, truncate(unknown, 200))
+	}
+	for view := range views {
+		delete(relations, view)
 	}
 	schema.attachIndexes(indexes)
 	schema.resolveForeignKeys()

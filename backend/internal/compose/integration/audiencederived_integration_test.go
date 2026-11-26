@@ -426,9 +426,9 @@ func TestNarrowingLeavesAFieldAContactConfirmed(t *testing.T) {
 	seedSignatureField(t, e, contact, activity, "title", "Leiterin Recht")
 	// The contact corrects it, which replaces source_ref with their own.
 	if _, err := e.Owner.Exec(ctx, `
-		UPDATE contact_profile_field
-		   SET value = 'Justiziarin', source_ref = 'human:correction', captured_by = 'human:someone'
-		 WHERE contact_id = $1 AND field = 'title'`, contact); err != nil {
+		UPDATE field_provenance
+		   SET value = 'Justiziarin', evidence_ref = 'human:correction', captured_by = 'human:someone'
+		 WHERE object_type = 'contact' AND value IS NOT NULL AND object_id = $1 AND field_name = 'title'`, contact); err != nil {
 		t.Fatal(err)
 	}
 
@@ -494,10 +494,10 @@ func TestNarrowingLeavesAFieldAContactRestored(t *testing.T) {
 	// the state ApplySignatureFields leaves behind when it overwrites.
 	seedSignatureField(t, e, contact, activity, "title", "VP Finance")
 	if _, err := e.Owner.Exec(ctx, `
-		UPDATE contact_profile_field
+		UPDATE field_provenance
 		   SET superseded_value = 'CFO', superseded_captured_by = 'human:earlier',
 		       superseded_observed_at = now() - interval '1 day'
-		 WHERE contact_id = $1 AND field = 'title'`, contact); err != nil {
+		 WHERE object_type = 'contact' AND value IS NOT NULL AND object_id = $1 AND field_name = 'title'`, contact); err != nil {
 		t.Fatal(err)
 	}
 	// title is a MIRRORED field: the restore CASes on the contact column agreeing
@@ -612,9 +612,9 @@ func seedContactForSignature(t *testing.T, e *SearchEnv) ids.UUID {
 func seedSignatureField(t *testing.T, e *SearchEnv, contact, activity ids.UUID, field, value string) {
 	t.Helper()
 	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO contact_profile_field
-		       (contact_id, field, value_key, value, evidence_snippet, source_ref, source, captured_by)
-		VALUES ($1, $2, CASE WHEN $2 = 'phone' THEN $3 ELSE '' END, $3,
+		INSERT INTO field_provenance
+		       (object_type, object_id, field_name, value_key, value, evidence_snippet, evidence_ref, source, captured_by)
+		VALUES ('contact', $1, $2, CASE WHEN $2 = 'phone' THEN $3 ELSE '' END, $3,
 		        'aus der Signatur', 'activity:'||$4, 'capture_enrich', 'system:enrich')`,
 		contact, field, value, activity.String()); err != nil {
 		t.Fatalf("seeding a signature-derived field: %v", err)

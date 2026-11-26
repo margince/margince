@@ -199,6 +199,9 @@ func (s *Store) ApplyTechnicalEnrichmentTx(
 	if err := auth.HoldWritableLive(ctx, tx, "company", in.CompanyID.UUID); err != nil {
 		return err
 	}
+	if err := moveLegacyEvidence(ctx, tx, entityCompany, in.CompanyID.UUID); err != nil {
+		return err
+	}
 	fields := reconciledFields(in.Completed)
 	if len(fields) == 0 {
 		// Every lane failed. Nothing is authoritative, so nothing changes —

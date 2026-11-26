@@ -19,10 +19,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestDomainEvidenceSeeksPastAnEntireMatchingHistory(t *testing.T) {
-	e := setupDedupe(t)
+// domainEvidenceSeeksPastAnEntireMatchingHistory runs on the history
+// background alone, whose every message is a day older than connected.
+func domainEvidenceSeeksPastAnEntireMatchingHistory(t *testing.T, e *dedupeEnv, connected time.Time) {
 	ctx := e.as()
-	e.seedHistoryReadBackground(ctx, t, time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
 	analyzeAsOwner(t, "activity", "activity_participant")
 	for _, mode := range []string{"force_custom_plan", "force_generic_plan"} {
 		for _, domain := range []string{"unrelated.test", "mail.unrelated.test", "absent.test"} {
@@ -49,7 +49,7 @@ func TestDomainEvidenceSeeksPastAnEntireMatchingHistory(t *testing.T) {
 					if (at != nil) != (domain != "absent.test") {
 						return fmt.Errorf("domain %s evidence=%v", domain, at)
 					}
-					if at != nil && !at.Equal(time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC)) {
+					if at != nil && !at.Equal(connected.Add(-24*time.Hour)) {
 						return fmt.Errorf("unexpected evidence date %s", at)
 					}
 					return assertDomainEvidencePlan(t, tx, trace, 64)

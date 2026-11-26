@@ -152,6 +152,88 @@ describe("the data import hub", () => {
     expect(namesAskedFor()).toEqual([["u-ada"]]);
   });
 
+  it("tells a draft, a tested run and a finished import apart", async () => {
+    stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({
+          data: [
+            {
+              ...run,
+              id: "r4",
+              file_name: "draft.csv",
+              status: "pending",
+              created_at: "2026-08-13T15:30:00Z",
+              row_count: 12,
+              parts: [{ file: "draft.csv", object: "contact", row_count: 0 }],
+            },
+            {
+              ...run,
+              id: "r3",
+              file_name: "tested.csv",
+              status: "awaiting_approval",
+              created_at: "2026-08-13T11:45:00Z",
+              row_count: 4,
+              parts: [{ file: "tested.csv", object: "contact", row_count: 4 }],
+            },
+            {
+              ...run,
+              id: "r2",
+              file_name: "crm.zip",
+              status: "complete",
+              created_at: "2026-08-13T10:05:00Z",
+              parts: [
+                {
+                  file: "companies.csv",
+                  object: "company",
+                  row_count: 9,
+                  rows_written: 6,
+                },
+                {
+                  file: "contacts.csv",
+                  object: "contact",
+                  row_count: 40,
+                  rows_written: 12,
+                },
+              ],
+            },
+            {
+              ...run,
+              id: "r1",
+              file_name: "undone.csv",
+              status: "undone",
+              created_at: "2026-08-13T09:00:00Z",
+              parts: [
+                {
+                  file: "undone.csv",
+                  object: "contact",
+                  row_count: 4,
+                  rows_written: 2,
+                },
+              ],
+            },
+          ],
+        }),
+    });
+    render(<ImportCard />);
+    const [, draft, tested, done, undone] = await screen.findAllByRole("row");
+    // A draft no test has read counts the rows its upload counted.
+    expect(within(draft).getByRole("cell", { name: "12" })).toBeVisible();
+    // Runs of one day differ by their time of day.
+    const times = [draft, tested, done, undone].map(
+      (row) => /\d{2}:\d{2}/.exec(row.textContent ?? "")?.[0],
+    );
+    expect(times.every((time) => time !== undefined)).toBe(true);
+    expect(new Set(times).size).toBe(4);
+    expect(within(tested).getByText("Test run ready")).toBeVisible();
+    expect(
+      within(tested).getByRole("link", { name: "Continue" }),
+    ).toHaveAttribute("href", expect.stringContaining("run=r3"));
+    expect(within(tested).queryByRole("button", { name: "Cancel" })).toBeNull();
+    expect(within(done).getByText("18 of 49 imported")).toBeVisible();
+    // An undone run reversed what it wrote, so it says only what it read.
+    expect(within(undone).getByRole("cell", { name: "4" })).toBeVisible();
+  });
+
   it("asks no seat name for a run an agent started", async () => {
     stubRoutes({
       "GET /imports": () =>

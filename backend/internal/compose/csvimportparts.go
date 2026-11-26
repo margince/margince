@@ -22,14 +22,14 @@ func bundleSourceFor(
 ) (migration.Source, func(object string) []migration.SkippedLine, error) {
 	if len(run.Parts) == 0 {
 		single := migration.NewCSVSource(blobs, sourceRef, run.Object, run.Fields, run.SourceKey)
-		shapeAddressCells(single, run.Object, run.Fields)
+		shapeCells(single, run.Object, run.Fields)
 		return single, func(string) []migration.SkippedLine { return single.Skipped() }, nil
 	}
 	parts := make([]*migration.CSVSource, 0, len(run.Parts))
 	for _, part := range run.Parts {
 		entry := migration.ZipPart{Key: sourceRef, Entry: part.File, Budget: uploadCap}
 		partSource := migration.NewZipPartSource(blobs, entry, part.Object, part.Fields, part.SourceKey)
-		shapeAddressCells(partSource, part.Object, part.Fields)
+		shapeCells(partSource, part.Object, part.Fields)
 		parts = append(parts, partSource)
 	}
 	bundle, err := migration.NewBundleSource(parts...)

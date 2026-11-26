@@ -2,10 +2,13 @@
 jurisdiction: lv
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Informācijas sabiedrības pakalpojumu likums"
     provision: "9. pants"
     source-url: https://likumi.lv/ta/id/96619
+    text-digest: e2ae40eb25607cbfc352954b22fbf0db1ec64cbe4d78ef429d2e2628ed5dbc07
+    text-fetched: 2026-11-25
 fixtures:
   - finding: objection_route
     triggers: lv/fixtures/advertising-without-objection-route.md

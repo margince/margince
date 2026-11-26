@@ -7031,7 +7031,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
   "brief.updating": "Đang cập nhật…",
-  "brief.briefedAt": "Margince tóm tắt lúc {time}",
+  "brief.briefedAt": "Margince chuẩn bị lúc {time}",
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",
   "brief.first.title": "Cần bạn xử lý",
@@ -10464,9 +10464,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.recent.files_other": "{count} tệp",
   "import.recent.filesBy": "{files} · bởi {name}",
   "import.recent.undo": "Hoàn tác",
+  "import.recent.rowsImported": "Đã nhập {written}/{read}",
   "import.status.pending": "Bản nháp",
   "import.status.validating": "Đang kiểm tra",
-  "import.status.awaiting_approval": "Chưa nhập",
+  "import.status.awaiting_approval": "Đã chạy thử xong",
   "import.status.running": "Đang nhập",
   "import.status.complete": "Hoàn tất",
   "import.status.failed": "Đã dừng",
@@ -10760,7 +10761,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Lần nhập này đang chạy. Nó tự hoàn tất và trang này tự cập nhật.",
   "import.reason.undo_failed": "Không thể hoàn tác bản ghi này.",
   "import.reason.amount_negative":
-    "“{value}” nhỏ hơn 0, mà số tiền của deal thì không được âm.",
+    "“{value}” nhỏ hơn 0, mà số tiền nhập vào thì không được âm.",
   "import.reason.author_too_long": "Tác giả dài hơn {max} ký tự.",
   "import.reason.cannot_create":
     "Bạn không có quyền tạo {plural} nên tệp {plural} bị bỏ qua.",
@@ -10806,10 +10807,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào.",
   "import.reason.employer_column_empty_dropped":
     "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.employer_column_empty_will_drop":
+    "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào. Hàng sẽ được nhập mà không có liên kết.",
   "import.reason.employer_not_found":
     "Không có công ty nào tên “{name}” trong CRM nên không có gì để liên kết liên hệ này.",
   "import.reason.employer_not_found_dropped":
     "Không có công ty nào tên “{name}” trong CRM nên không có gì để liên kết liên hệ này. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.employer_not_found_will_drop":
+    "Không có công ty nào tên “{name}” trong CRM nên không có gì để liên kết liên hệ này. Hàng sẽ được nhập mà không có liên kết.",
   "import.reason.employer_refused":
     "Không thể xác định công ty. Hãy chọn một công ty rõ ràng mà bạn được phép liên kết.",
   "import.reason.employer_will_create":
@@ -10833,10 +10838,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên trong nhóm quyết định công ty nào thuê liên hệ này.",
   "import.reason.link_ambiguous_dropped":
     "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên trong nhóm quyết định công ty nào thuê liên hệ này. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.link_ambiguous_will_drop":
+    "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên trong nhóm quyết định công ty nào thuê liên hệ này. Hàng sẽ được nhập mà không có liên kết.",
   "import.reason.link_not_found":
     "Không có công ty nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
   "import.reason.link_not_found_dropped":
     "Không có công ty nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.link_not_found_will_drop":
+    "Không có công ty nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng sẽ được nhập mà không có liên kết.",
   "import.reason.linkedin_held":
     "URL LinkedIn này đã thuộc về một bản ghi khác trong CRM nên hàng không thể dùng nó.",
   "import.reason.natural_key_taken": "Đã có một bản ghi dùng khóa này.",
@@ -10845,7 +10854,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.not_a_domain": "“{value}” không phải tên miền có thể ghi.",
   "import.reason.not_a_number": "“{value}” không phải là số.",
   "import.reason.not_an_amount":
-    "“{value}” không phải số tiền bằng {currency}. Hãy viết như 12000.50.",
+    "“{value}” không phải số tiền bằng {currency}. Hãy viết như {example}.",
+  "import.reason.amount_too_many_decimals":
+    "“{value}” có nhiều chữ số thập phân hơn mức {currency} cho phép. Hãy viết như {example}.",
+  "import.reason.amount_needs_currency":
+    "Số tiền “{value}” chưa có loại tiền. Hãy điền mã vào cột tiền tệ của hàng này, ví dụ EUR.",
+  "import.reason.not_a_phone":
+    "“{value}” không phải số điện thoại. Hãy viết kèm mã quốc gia, ví dụ +49 30 1234567.",
   "import.reason.not_an_email":
     "“{value}” không phải địa chỉ email có thể ghi.",
   "import.reason.not_yes_no": "“{value}” không phải có hoặc không.",
@@ -10897,6 +10912,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "“{value}” không phải giai đoạn của quy trình “{pipeline}”. Các giai đoạn: {names}.",
   "import.reason.currency_not_a_code":
     "“{value}” không phải mã tiền tệ. Hãy viết ba chữ cái, ví dụ EUR.",
+  "import.reason.currency_not_money":
+    "“{value}” là mã cho “không có tiền tệ” hoặc để thử nghiệm, nên không định giá được deal. Hãy viết loại tiền của deal, ví dụ EUR.",
+  "import.reason.close_date_far":
+    "“{value}” cách hơn {years} năm nữa. Hãy kiểm tra lại ngày chốt này.",
   "import.reason.close_date_future":
     "“{value}” ở tương lai, mà ngày chốt của deal đã đóng không được ở tương lai.",
   "import.reason.close_date_past":
@@ -10924,6 +10943,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
   "import.reason.contact_not_found_dropped":
     "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.contact_not_found_will_drop":
+    "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng sẽ được nhập mà không có liên kết.",
   "import.reason.activity_type_unnamed":
     "Nêu loại hoạt động: “note”, “call”, “meeting” hoặc “email”.",
   "import.reason.activity_type_unknown":
@@ -10972,12 +10993,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không có lead nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
   "import.reason.lead_not_found_dropped":
     "Không có lead nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.lead_not_found_will_drop":
+    "Không có lead nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng sẽ được nhập mà không có liên kết.",
   "import.reason.deal_not_found":
     "Không có deal nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
   "import.reason.link_row_skipped":
     "Hàng “{ref}” đã bị bỏ qua trong lần nhập này nên không có gì để liên kết.",
   "import.reason.link_row_skipped_dropped":
     "Hàng “{ref}” đã bị bỏ qua trong lần nhập này nên không có gì để liên kết. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.link_row_skipped_will_drop":
+    "Hàng “{ref}” đã bị bỏ qua trong lần nhập này nên không có gì để liên kết. Hàng sẽ được nhập mà không có liên kết.",
   "import.reason.undo_edited":
     "Hồ sơ này đã được sửa sau khi nhập nên được giữ nguyên.",
   "import.reason.undo_still_referenced":
@@ -10988,10 +11013,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tệp không thể đặt trạng thái “{value}”. Dùng Xác nhận đủ điều kiện hoặc Loại lead trên lead. Trạng thái tệp được đặt: {allowed}.",
   "import.reason.deal_not_found_dropped":
     "Không có deal nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.deal_not_found_will_drop":
+    "Không có deal nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng sẽ được nhập mà không có liên kết.",
   "import.reason.activity_link_ambiguous":
     "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên quyết định hoạt động này nói về công ty nào.",
   "import.reason.activity_link_ambiguous_dropped":
     "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên quyết định hoạt động này nói về công ty nào. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.activity_link_ambiguous_will_drop":
+    "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên quyết định hoạt động này nói về công ty nào. Hàng sẽ được nhập mà không có liên kết.",
   "import.reason.value_unreadable": "Không đọc được “{value}”.",
   "import.problem.broken_link": "Liên kết hỏng",
   "import.problem.dropped_link": "Liên kết bị bỏ",

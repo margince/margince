@@ -321,6 +321,9 @@ func applyEvidenceFieldsWithOverwrite(
 			return nil, err
 		}
 	}
+	if err := moveLegacyEvidence(ctx, tx, entityCompany, companyID.UUID); err != nil {
+		return nil, err
+	}
 	applied := map[string]any{}
 	for _, f := range fields {
 		// A machine's industry is a code or nothing: free words reach neither
@@ -360,8 +363,8 @@ func applyEvidenceFieldsWithOverwrite(
 		// since claimed.
 		// The row keeps what a machine read, cut to its columns; the human form
 		// writes its own rows and is refused past the limit instead.
-		value := textbounds.Fit("public.company_profile_field.value", f.Value)
-		snippet := textbounds.Fit("public.company_profile_field.evidence_snippet", f.EvidenceSnippet)
+		value := textbounds.Fit("public.field_provenance.value", f.Value)
+		snippet := textbounds.Fit("public.field_provenance.evidence_snippet", f.EvidenceSnippet)
 		if _, err := tx.Exec(ctx, upsertCompanyProfileField,
 			companyID, f.Field, value, snippet, f.SourceURL, f.Confidence, source, by, overwrite[f.Field], nil); err != nil {
 			return nil, fmt.Errorf("upsert profile field %s: %w", f.Field, err)

@@ -8,6 +8,10 @@ import { numberFormat } from "../format/formatters";
 import { dateTimePreferences } from "../format/preferences";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  refusedLock,
+  refusedLockSentence,
+} from "./installation-settings.currency";
 import type { FieldProblem } from "./problembody";
 import { PROBLEM_CODE_COPY } from "./problemcodecopy";
 
@@ -110,7 +114,7 @@ export function wordsFaultInEnglish(
   labels?: FieldLabels,
 ): boolean {
   if (PROBLEM_CODE_COPY.has(fault.code) || fault.code === TOO_LONG) return true;
-  if (opensOnWireKey(fault)) return true;
+  if (opensOnWireKey(fault) || refusedLock(fault) !== undefined) return true;
   const worded =
     FIELD_CODE_WORDING.has(fault.code) || fault.code === OUT_OF_RANGE;
   return worded && labels?.[fault.field] !== undefined;
@@ -138,8 +142,9 @@ export function faultSentence(
     locale === "en" && !wordsFaultInEnglish(fault, labels) && fault.message;
   const message = key
     ? translate(locale, key, fault.params)
-    : serverWords ||
-      (codeMessage(fault, locale, label) ?? worded(INVALID, locale, label));
+    : (refusedLockSentence(fault, locale) ??
+      (serverWords ||
+        (codeMessage(fault, locale, label) ?? worded(INVALID, locale, label))));
   const sentence = openingCase(message, locale);
   return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
 }

@@ -10,7 +10,7 @@ import { provenanceOf } from "../../design-system/provenanceof";
 import { QueryStates } from "../../design-system/querystates";
 import { RecordBack } from "../../design-system/recordview";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { valueFor } from "../../lib/labelfor";
@@ -182,9 +182,64 @@ const STATUS_TONE = {
   cancelled: "default",
 } as const satisfies Record<ImportRun["status"], string>;
 
-// The rows a run holds, once a dry run has counted them.
+// The rows a run holds: what its test read, or what the upload counted while
+// no test has read the file.
 function rowsOf(run: ImportRun): number {
-  return (run.parts ?? []).reduce((sum, part) => sum + part.row_count, 0);
+  const read = (run.parts ?? []).reduce((sum, one) => sum + one.row_count, 0);
+  return read > 0 ? read : (run.row_count ?? 0);
+}
+
+// The rows a run created or updated, once it finished or stopped partway. An
+// undone run reversed them, so it says only what it read.
+function rowsWrittenOf(run: ImportRun): number | undefined {
+  const parts = run.parts ?? [];
+  const wrote = run.status === "complete" || run.status === "failed";
+  if (!wrote || parts.length === 0) return undefined;
+  let written = 0;
+  for (const part of parts) {
+    if (part.rows_written === undefined) return undefined;
+    written += part.rows_written;
+  }
+  return written;
+}
+
+// A draft and a tested run both wait for their reader, so each opens again. A
+// tested run is cancelled from its own page, where its report is.
+function RunActions({
+  run,
+  cancel,
+  onUndo,
+}: Readonly<{
+  run: ImportRun;
+  cancel: ReturnType<typeof useStopImportTest>;
+  onUndo: (id: string) => void;
+}>) {
+  const t = useT();
+  if (run.status === "pending" || run.status === "awaiting_approval") {
+    return (
+      <div className="cell-actions">
+        <AppLink className="link-button" href={runHref(run.id)}>
+          {t("import.draft.continue")}
+        </AppLink>
+        {run.status === "pending" ? (
+          <Button
+            variant="ghost"
+            pending={cancel.isPending && cancel.variables === run.id}
+            onClick={() => cancel.mutate(run.id)}
+          >
+            {t("import.draft.cancel")}
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
+  return run.status === "complete" ? (
+    <div className="cell-actions">
+      <Button variant="ghost" onClick={() => onUndo(run.id)}>
+        {t("import.recent.undo")}
+      </Button>
+    </div>
+  ) : null;
 }
 
 // The seat that started a run. `captured_by` is the principal, `human:<uuid>`,
@@ -252,7 +307,8 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
             {
               key: "date",
               header: t("import.recent.col.date"),
-              render: (one) => formatDate(one.created_at, locale, readerZone),
+              render: (one) =>
+                formatDateTime(one.created_at, locale, readerZone),
             },
             {
               key: "file",
@@ -293,7 +349,16 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
               key: "rows",
               header: t("import.recent.col.rows"),
               align: "end",
-              render: (one) => formatNumber(rowsOf(one), locale),
+              render: (one) => {
+                const read = formatNumber(rowsOf(one), locale);
+                const written = rowsWrittenOf(one);
+                return written === undefined
+                  ? read
+                  : t("import.recent.rowsImported", {
+                      written: formatNumber(written, locale),
+                      read,
+                    });
+              },
             },
             {
               key: "status",
@@ -309,33 +374,9 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
               header: t("import.recent.col.actions"),
               headerHidden: true,
               fold: "end",
-              render: (one) => {
-                if (one.status === "pending") {
-                  return (
-                    <div className="cell-actions">
-                      <AppLink className="link-button" href={runHref(one.id)}>
-                        {t("import.draft.continue")}
-                      </AppLink>
-                      <Button
-                        variant="ghost"
-                        pending={
-                          cancel.isPending && cancel.variables === one.id
-                        }
-                        onClick={() => cancel.mutate(one.id)}
-                      >
-                        {t("import.draft.cancel")}
-                      </Button>
-                    </div>
-                  );
-                }
-                return one.status === "complete" ? (
-                  <div className="cell-actions">
-                    <Button variant="ghost" onClick={() => setUndoing(one.id)}>
-                      {t("import.recent.undo")}
-                    </Button>
-                  </div>
-                ) : null;
-              },
+              render: (one) => (
+                <RunActions run={one} cancel={cancel} onUndo={setUndoing} />
+              ),
             },
           ]}
         />

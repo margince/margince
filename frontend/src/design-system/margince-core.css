@@ -154,6 +154,16 @@
   margin: calc(var(--coreGlass) / -2) 0 0 calc(var(--coreGlass) / -2);
   z-index: 1;
 }
+/* Whole CSS px are whole device px at a ratio of 1 or 2; at any other ratio,
+   the engine's corner snap keeps the edge within one device px. */
+@supports (width: round(1px, 1px)) {
+  .core-shell {
+    --coreGlassPx: round(var(--coreGlass), 1px);
+    width: var(--coreGlassPx);
+    height: var(--coreGlassPx);
+    margin: calc(var(--coreGlassPx) / -2) 0 0 calc(var(--coreGlassPx) / -2);
+  }
+}
 /* The contact shadow, so the ball sits on something instead of floating in
    soup. Sized from the ball, so it tracks every breakpoint. */
 .core-shell::after {
