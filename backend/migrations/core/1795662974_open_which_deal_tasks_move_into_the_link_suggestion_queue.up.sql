@@ -1,35 +1,11 @@
 -- SPDX-License-Identifier: BUSL-1.1
 -- SPDX-FileCopyrightText: 2026 Gradion
 
--- A link suggestion may come from Margince itself: the "Which deal is this
--- about?" question capture asks when several open deals fit a mail. That
--- question is for the one colleague the mailbox confirms is responsible, so
--- the row names its reader instead of a unit. A unit's row names no reader.
---
--- A unit's proposal and a colleague's question are keyed apart, so one never
--- takes the place of the other for the same message and target.
---
 -- The open question tasks of a live colleague with a full seat move into the
 -- queue: one pending row per deal the task offered, for the assignee, and the
 -- task is done. A task of anyone else stays as it was. There is at most one
 -- open question per conversation and colleague, so the set is small.
 SET LOCAL lock_timeout = '5s';
-
-ALTER TABLE activity_link_suggestion
-    ALTER COLUMN unit DROP NOT NULL,
-    ADD COLUMN IF NOT EXISTS for_user uuid,
-    ADD CONSTRAINT activity_link_suggestion_for_user_fkey FOREIGN KEY (for_user)
-        REFERENCES app_user(id) ON DELETE CASCADE,
-    ADD CONSTRAINT activity_link_suggestion_producer CHECK ((unit IS NULL) = (for_user IS NOT NULL));
-
-CREATE INDEX IF NOT EXISTS idx_activity_link_suggestion_for_user
-    ON activity_link_suggestion (for_user) WHERE for_user IS NOT NULL;
-
-DROP INDEX IF EXISTS uq_activity_link_suggestion_target;
-CREATE UNIQUE INDEX IF NOT EXISTS uq_activity_link_suggestion_unit_target
-    ON activity_link_suggestion (activity_id, entity_type, entity_id) WHERE unit IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS uq_activity_link_suggestion_question
-    ON activity_link_suggestion (activity_id, entity_type, entity_id, for_user) WHERE for_user IS NOT NULL;
 
 -- A task written before tasks recorded their deals offers the open deals of
 -- its project, else of its company, as the decline read them.

@@ -408,10 +408,10 @@ func (s *Store) RejectLinkSuggestion(ctx context.Context, id ids.UUID) (crmcontr
 	return s.decideLinkSuggestion(ctx, id, suggestionRejected)
 }
 
+// decideLinkSuggestion finds the row before any grant check: a question asked
+// of another colleague answers not found, so nobody learns it exists.
+// mayDecide then asks the grants.
 func (s *Store) decideLinkSuggestion(ctx context.Context, id ids.UUID, decision string) (crmcontracts.LinkSuggestion, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-		return crmcontracts.LinkSuggestion{}, err
-	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.LinkSuggestion{}, err

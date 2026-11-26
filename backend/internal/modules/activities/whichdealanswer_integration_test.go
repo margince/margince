@@ -11,10 +11,12 @@ package activities
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -86,7 +88,7 @@ func TestADealClosedSinceTheQuestionIsGone(t *testing.T) {
 	if err != nil || len(queue) != 1 {
 		t.Fatalf("queue = %+v, %v; want the question", queue, err)
 	}
-	f.e.exec(t, `UPDATE deal SET status = 'lost' WHERE id = $1`, f.deal)
+	f.e.exec(t, `UPDATE deal SET status = 'lost', closed_at = now(), lost_reason = 'Went with another vendor' WHERE id = $1`, f.deal)
 
 	if after, err := f.queue(); err != nil || len(after) != 0 {
 		t.Fatalf("queue after the deal closed = %+v, %v; want it empty", after, err)
@@ -210,21 +212,42 @@ func (f suggestionFixture) waitForAnAdvisoryLockWaiter(t *testing.T) {
 }
 
 // A suggested deal's value reaches the queue only through the reader's field
-// masks.
+// masks. A role whose mask withholds the amount gets neither it nor its
+// currency. The mask binds a reader with a bounded row scope, as on every
+// deal read.
 func TestTheQueueShowsADealsValueOnlyWhenTheReaderMaySeeIt(t *testing.T) {
 	f := newSuggestionFixture(t)
 	f.e.exec(t, `UPDATE deal SET amount_minor = 4200000, currency = 'EUR' WHERE id = $1`, f.deal)
 	f.askAbout(t, f.message, f.deal)
 	open, err := f.queue()
 	if err != nil || len(open) != 1 || open[0].DealAmountMinor == nil || *open[0].DealAmountMinor != 4200000 {
-		t.Fatalf("an unmasked reader's queue = %+v, %v; want the deal's value", open, err)
+		t.Fatalf("an unmasked reader's queue holds %d rows, %v; want the deal's value", len(open), err)
 	}
-	masked := f
-	actor, _ := principal.Actor(f.ctx)
+	if got := factsOf(open[0]); got != "4200000 EUR" {
+		t.Fatalf("an unmasked reader reads %q, want the value and its currency", got)
+	}
+	masked := ownRowsSeat(f.e, f.e.rep)
+	actor, _ := principal.Actor(masked)
 	actor.Permissions.FieldMasks = []principal.FieldMask{{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways}}
-	masked.ctx = principal.WithActor(f.ctx, actor)
-	hidden, err := masked.queue()
-	if err != nil || len(hidden) != 1 || hidden[0].DealAmountMinor != nil || hidden[0].DealCurrency != nil {
-		t.Fatalf("a masked reader's queue = %+v, %v; want the value withheld", hidden, err)
+	masked = principal.WithActor(masked, actor)
+	hidden := open[0]
+	if err := f.store.tx(masked, func(tx pgx.Tx) error { return withDealFacts(masked, tx, &hidden) }); err != nil {
+		t.Fatalf("reading the deal's value as a masked reader: %v", err)
 	}
+	if got := factsOf(hidden); got != "none none" {
+		t.Fatalf("a masked reader reads %q, want the value and its currency withheld", got)
+	}
+}
+
+// factsOf prints the value and currency a suggestion carries, "none" for each
+// one withheld.
+func factsOf(suggestion crmcontracts.LinkSuggestion) string {
+	amount, currency := "none", "none"
+	if suggestion.DealAmountMinor != nil {
+		amount = strconv.FormatInt(*suggestion.DealAmountMinor, 10)
+	}
+	if suggestion.DealCurrency != nil {
+		currency = *suggestion.DealCurrency
+	}
+	return amount + " " + currency
 }
