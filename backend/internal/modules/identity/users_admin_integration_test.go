@@ -174,7 +174,7 @@ func TestInviteUserCreatesInvitedMemberWithRoleTokenAndEvent(t *testing.T) {
 
 	var liveTokens int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM auth_token WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL`,
+		`SELECT count(*) FROM auth_token WHERE user_id = $1 AND used_at IS NULL`,
 		userID).Scan(&liveTokens); err != nil {
 		t.Fatal(err)
 	}

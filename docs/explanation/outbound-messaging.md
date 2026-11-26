@@ -523,7 +523,7 @@ machine's draft, so an agent's edit is not text the owner wrote. The recorder al
 is not human. Naming a reference on the agent path would only make that "no" look like an error
 in the wiring. The channel reply carries none either: `SendMessageInput` has no such field.
 
-The signal row keeps **no** `final_text`, and carries no link to a contact, activity or subject. An
+The signal row keeps **no** copy of the sent text, and carries no link to a contact, activity or subject. An
 erase under GDPR article 17 could not find it. So keeping the sent mail there would keep the mail of an
 erased contact for the whole retention window.
 

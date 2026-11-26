@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // livePartnerSQL renders "this company's partner programme is live" — a row
@@ -348,9 +347,9 @@ func upsertPartnerRow(ctx context.Context, tx pgx.Tx, up partnerUpsert) (partner
 		INSERT INTO partner (company_id, partner_kinds, cert_status, margin_tier,
 		                     certified_staff, retention_rate, relationship_stage, next_step,
 		                     next_step_due_at, served_segments, partner_fit_score,
-		                     partner_fit_score_computed, partner_fit_override_reason, source, captured_by)
+		                     partner_fit_score_computed, partner_fit_override_reason, captured_by)
 		VALUES ($1, $2, coalesce($3, 'applied'), $4, coalesce($5, 0), $6,
-		        $16, $9, $10, $11, $12, $13, $14, '`+provenance.RecordSourceManual+`', $7)
+		        $16, $9, $10, $11, $12, $13, $14, $7)
 		ON CONFLICT (company_id) DO UPDATE SET
 		  partner_kinds = EXCLUDED.partner_kinds,
 		  cert_status = coalesce($3, partner.cert_status),

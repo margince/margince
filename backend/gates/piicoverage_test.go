@@ -383,7 +383,6 @@ var piiTables = map[string]piiHandling{
 		retentionErase: true,
 		retentionErasures: []string{
 			"generated_original = NULL",
-			"final_text = NULL",
 			"content_erased_at = now()",
 		},
 		sarRead: false,

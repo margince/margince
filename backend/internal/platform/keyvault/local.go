@@ -180,8 +180,8 @@ func (v *localVault) Put(ctx context.Context, ws ids.WorkspaceID, secret []byte)
 	// unreferenced, and benign (there is no vault_secret sweeper today; if one
 	// is ever added it reclaims these, but nothing depends on that).
 	if _, err := v.pool.Exec(ctx,
-		`INSERT INTO vault_secret (ref, ciphertext, key_version) VALUES ($1, $2, $3)`,
-		string(ref), sealed, currentKeyVersion); err != nil {
+		`INSERT INTO vault_secret (ref, ciphertext) VALUES ($1, $2)`,
+		string(ref), sealed); err != nil {
 		return "", fmt.Errorf("keyvault: storing secret %s: %w", refLogSafe(ref), err)
 	}
 	return ref, nil

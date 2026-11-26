@@ -296,7 +296,7 @@ export interface paths {
         put?: never;
         /**
          * Redeem a reset token and set a new password.
-         * @description Validates the single-use token (`auth_token` purpose=`password_reset`), sets the new password, marks the token used, and invalidates existing sessions. An expired, consumed, or unknown token produces one neutral error. Audited.
+         * @description Validates the single-use token, sets the new password, marks the token used, and invalidates existing sessions. An expired, consumed, or unknown token produces one neutral error. Audited.
          */
         post: operations["resetPassword"];
         delete?: never;
@@ -60571,6 +60571,11 @@ export interface components {
             connection?: components["schemas"]["PassportConnection"];
             /** Format: date-time */
             created_at: string;
+            /**
+             * Format: uuid
+             * @description The member who granted the passport its authority. A server built before this field omits it.
+             */
+            granted_by?: string;
             /** Format: date-time */
             expires_at?: string | null;
             /** Format: date-time */

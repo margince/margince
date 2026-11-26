@@ -138,8 +138,8 @@ func (s *Service) writeEdition(ctx context.Context, tx pgx.Tx, claim executionCl
 		return err
 	}
 	var b bindings
-	values := []string{b.add(edition.Id), b.add(claim.ID), b.add(report.Id), b.add(edition.ReportRevision), b.add(report.Audience), b.add(report.AudienceTeamId), b.add(report.OwnerId), b.add(edition.CapturedAt), b.add(edition.IntendedDueAt), b.add(raw)}
-	if _, err := tx.Exec(ctx, "INSERT INTO report_edition(id,execution_id,report_id,report_revision,publication_audience,publication_team_id,owner_id,captured_at,intended_due_at,manifest) VALUES ("+strings.Join(values, ",")+")", b.values...); err != nil {
+	values := []string{b.add(edition.Id), b.add(claim.ID), b.add(report.Id), b.add(report.Audience), b.add(report.AudienceTeamId), b.add(report.OwnerId), b.add(edition.CapturedAt), b.add(edition.IntendedDueAt), b.add(raw)}
+	if _, err := tx.Exec(ctx, "INSERT INTO report_edition(id,execution_id,report_id,publication_audience,publication_team_id,owner_id,captured_at,intended_due_at,manifest) VALUES ("+strings.Join(values, ",")+")", b.values...); err != nil {
 		return err
 	}
 	if err := writeEditionContributions(ctx, tx, edition.Id, facts); err != nil {
