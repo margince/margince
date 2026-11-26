@@ -550,3 +550,44 @@ func requireNoRendering(t *testing.T, rec *httptest.ResponseRecorder, what strin
 		t.Fatalf("%s = %d %v, want 404 not_found", what, rec.Code, problem["code"])
 	}
 }
+
+// An agent presents its granting user's own permissions, so it is refused the
+// buyer that user is refused. No agent tool sends or renders an offer, so this
+// holds the store entry points an agent principal could still reach.
+func TestAnAgentWhoseUserCannotOpenTheBuyerIsRefusedASend(t *testing.T) {
+	e := Setup(t)
+	draft, _, _ := draftOfferOnAColleaguesCompany(t, e)
+
+	noGrant := e.AgentFor(t, e.Rep3, []ids.UUID{e.Team1}, offerDeskWideNoCompanyPerms)
+	_, err := e.Deals.SendOffer(noGrant, draft, nil)
+	requireBuyerNotReadable(t, err, "Meridian")
+	requireStillADraftWithNoSnapshot(t, e, draft)
+}
+
+func TestAnAgentWhoseUserCannotOpenTheBuyerIsRefusedARender(t *testing.T) {
+	e := Setup(t)
+	sent, _, _ := seedOfferOnAPrivateCompany(t, e)
+
+	hidden := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, offerDeskWideCompanyPerms)
+	_, err := e.Deals.PrepareRender(hidden, sent)
+	requireBuyerNotReadable(t, err, "Meridian")
+}
+
+// An archived buyer stays readable: the company read serves it under
+// include_archived to a seat that may open it, so render and send do too.
+func TestAnArchivedBuyerCompanyStillRendersAndSendsForASeatThatCanOpenIt(t *testing.T) {
+	e := Setup(t)
+	offer, _, company := draftOfferOnAColleaguesCompany(t, e)
+	if _, err := e.Contacts.ArchiveCompany(e.Admin(), companyIDOf(company), nil); err != nil {
+		t.Fatalf("archiving the buyer company: %v", err)
+	}
+	desk := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
+
+	ingredients, err := e.Deals.PrepareRender(desk, offer)
+	if err != nil || ingredients.BuyerBlock["display_name"] != "Meridian Labs" {
+		t.Fatalf("render with an archived buyer = %v, %v; want the buyer block", ingredients.BuyerBlock, err)
+	}
+	if _, err := e.Deals.SendOffer(desk, offer, nil); err != nil {
+		t.Errorf("send with an archived buyer: %v", err)
+	}
+}

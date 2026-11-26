@@ -107,35 +107,15 @@ func (s *Store) PrepareRender(ctx context.Context, id ids.OfferID) (RenderIngred
 //
 // A caller who may not read the company is refused, frozen snapshot included.
 // The alternative is a document that names nobody.
-func resolveRenderBuyerBlock(ctx context.Context, tx pgx.Tx, offer crmcontracts.Offer) (block map[string]any, err error) {
-	if err := requireReadableBuyerTx(ctx, tx, offer); err != nil {
+func resolveRenderBuyerBlock(ctx context.Context, tx pgx.Tx, offer crmcontracts.Offer) (map[string]any, error) {
+	live, err := readReadableBuyer(ctx, tx, offer)
+	if err != nil {
 		return nil, err
 	}
 	if offer.BuyerSnapshot != nil {
 		return *offer.BuyerSnapshot, nil
 	}
-	if offer.BuyerCompanyId == nil {
-		return block, err
-	}
-	var displayName string
-	var legalName *string
-	scanErr := tx.QueryRow(ctx,
-		`SELECT display_name, legal_name FROM company WHERE id = $1`,
-		ids.UUID(*offer.BuyerCompanyId)).Scan(&displayName, &legalName)
-	if errors.Is(scanErr, pgx.ErrNoRows) {
-		return block, err
-	}
-	if scanErr != nil {
-		return nil, fmt.Errorf("render: read buyer company: %w", scanErr)
-	}
-	block = map[string]any{
-		filterCompanyID: offer.BuyerCompanyId.String(),
-		"display_name":  displayName,
-	}
-	if legalName != nil {
-		block["legal_name"] = *legalName
-	}
-	return block, nil
+	return live, nil
 }
 
 // issuerName is who this installation issues a document AS, and it is the one
