@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -36,7 +35,9 @@ const (
 )
 
 // checkLanguage refuses a code the language table does not hold.
-func checkLanguage(language string) error { return textlang.CheckRegistered(languageField, language) }
+func checkLanguage(ctx context.Context, tx pgx.Tx, language string) error {
+	return storekit.CheckLanguage(ctx, tx, languageField, language)
+}
 
 // ListProductTranslations answers a product's text in every further language.
 func (s *Store) ListProductTranslations(ctx context.Context, id ids.ProductID) ([]crmcontracts.ProductTranslation, error) {
@@ -75,9 +76,6 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 	if err := auth.Require(ctx, "product", principal.ActionUpdate); err != nil {
 		return crmcontracts.ProductTranslation{}, err
 	}
-	if err := checkLanguage(language); err != nil {
-		return crmcontracts.ProductTranslation{}, err
-	}
 	name = strings.TrimSpace(name)
 	if description != nil && strings.TrimSpace(*description) == "" {
 		description = nil
@@ -97,6 +95,9 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 	var out crmcontracts.ProductTranslation
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := lockProductForTranslation(ctx, tx, id); err != nil {
+			return err
+		}
+		if err := checkLanguage(ctx, tx, language); err != nil {
 			return err
 		}
 		before, err := readProductTranslation(ctx, tx, id, language)
@@ -128,9 +129,6 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 // DeleteProductTranslation removes a product's text in one language.
 func (s *Store) DeleteProductTranslation(ctx context.Context, id ids.ProductID, language string) error {
 	if err := auth.Require(ctx, "product", principal.ActionUpdate); err != nil {
-		return err
-	}
-	if err := checkLanguage(language); err != nil {
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {

@@ -55,16 +55,6 @@ func declared(exts []extension.Extension) []extension.Language {
 	return out
 }
 
-// Register tells the Go writers which languages the units added. A bad code is
-// then refused with a message naming the field. It runs after Preflight.
-func Register(exts []extension.Extension) {
-	var codes []string
-	for _, language := range declared(exts) {
-		codes = append(codes, language.Code)
-	}
-	textlang.SetRegistered(codes)
-}
-
 // Reconcile writes the units' languages into the table. Every write is an
 // idempotent upsert, and a core row is never touched: a label change reaches a
 // unit row only.

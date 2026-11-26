@@ -10,12 +10,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-func TestAnEntityLanguageIsStoredLowerCaseAndMustBeOffered(t *testing.T) {
+func TestAnEntityLanguageIsStoredLowerCaseAndTwoLetters(t *testing.T) {
 	if got, err := cleanEntityLanguage("DE"); err != nil || got != "de" {
 		t.Errorf("DE cleaned to %q, %v; want de", got, err)
 	}
-	_, err := cleanEntityLanguage("fr")
+	_, err := cleanEntityLanguage("fra")
 	if fault, ok := errors.AsType[*values.ParseError](err); !ok || fault.Field != wireDefaultLanguage || fault.Code != "invalid_language" {
-		t.Errorf("fr answered %v, want invalid_language on %s", err, wireDefaultLanguage)
+		t.Errorf("fra answered %v, want invalid_language on %s", err, wireDefaultLanguage)
 	}
 }

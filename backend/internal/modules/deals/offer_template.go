@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -42,7 +43,30 @@ const defaultOfferTemplateLocale = "de-DE"
 
 // templateLocaleShape is offer_template_locale_shape: a language and an
 // optional region, so a template for de-DE and one for de-AT stay different.
+var languageShape = regexp.MustCompile(`^[a-z]{2}$`)
+
 var templateLocaleShape = regexp.MustCompile(`^[a-z]{2}(-[A-Z]{2})?$`)
+
+// templateLocaleFault is the one refusal of a locale the shape check would stop.
+var templateLocaleFault = &values.ParseError{Field: "locale", Code: "invalid_locale",
+	Message: "locale is a language and an optional region, for example de-DE or de"}
+
+// checkTemplateLocale is the one locale check that create, preview and update share.
+func checkTemplateLocale(locale string) error {
+	if !templateLocaleShape.MatchString(locale) {
+		return templateLocaleFault
+	}
+	return nil
+}
+
+// templateLocaleViolation answers the shape CHECK a writer did not pre-check as
+// the same field refusal, so no path returns it as a server error.
+func templateLocaleViolation(err error) error {
+	if constraint, ok := storekit.CheckViolation(err); ok && constraint == "offer_template_locale_shape" {
+		return templateLocaleFault
+	}
+	return nil
+}
 
 // offerTemplateIsDefaultField names the is_default column/audit-payload
 // key in the one place both the Patch call and the two audit maps
@@ -185,6 +209,9 @@ func (s *Store) CreateOfferTemplate(ctx context.Context, in CreateOfferTemplateI
 			if conflict := offerTemplateUniqueViolation(err, locale); conflict != nil {
 				return conflict
 			}
+			if fault := templateLocaleViolation(err); fault != nil {
+				return fault
+			}
 			return fmt.Errorf("insert offer_template: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "offer_template", id.UUID, nil, map[string]any{
@@ -323,6 +350,9 @@ func (s *Store) UpdateOfferTemplate(ctx context.Context, id ids.OfferTemplateID,
 		layout = map[string]any{}
 	}
 
+	if err := checkTemplateLocale(locale); err != nil {
+		return crmcontracts.OfferTemplate{}, err
+	}
 	var out crmcontracts.OfferTemplate
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		// Locked before the read: the empty-patch answer and a write without
@@ -357,6 +387,9 @@ func (s *Store) UpdateOfferTemplate(ctx context.Context, id ids.OfferTemplateID,
 		if err := p.ApplyGuarded(ctx, tx, "offer_template", id.UUID, in.IfVersion); err != nil {
 			if conflict := offerTemplateUniqueViolation(err, locale); conflict != nil {
 				return conflict
+			}
+			if fault := templateLocaleViolation(err); fault != nil {
+				return fault
 			}
 			return fmt.Errorf("apply offer_template patch: %w", err)
 		}

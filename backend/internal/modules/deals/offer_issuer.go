@@ -299,7 +299,7 @@ func (s *Store) sendSnapshots(ctx context.Context, tx pgx.Tx, baseCurrency strin
 // asked for, else the issuing entity's, else its template's.
 func (s *Store) offerLanguage(ctx context.Context, tx pgx.Tx, entity ids.LegalEntityID, template *ids.OfferTemplateID, asked *string) (string, error) {
 	if asked != nil {
-		return *asked, checkLanguage(*asked)
+		return *asked, checkLanguage(ctx, tx, *asked)
 	}
 	issuer, err := s.installation.IssuerEntity(ctx, tx, &entity)
 	if err != nil {
@@ -317,15 +317,23 @@ func (s *Store) offerLanguage(ctx context.Context, tx pgx.Tx, entity ids.LegalEn
 	if err != nil {
 		return "", err
 	}
-	return languageOfLocale(locale), nil
+	language := languageOfLocale(locale)
+	held, err := storekit.LanguageRegistered(ctx, tx, language)
+	if err != nil {
+		return "", err
+	}
+	if !held {
+		return languageOfLocale(defaultOfferTemplateLocale), nil
+	}
+	return language, nil
 }
 
 // languageOfLocale is the language part of a template locale, with `-` or
-// `_` as the separator. A locale whose language part is no ISO 639-1 code
+// `_` as the separator. A locale whose language part is no two-letter code
 // takes the default template locale's language instead.
 func languageOfLocale(locale string) string {
 	part, _, _ := strings.Cut(strings.ReplaceAll(locale, "_", "-"), "-")
-	if language := strings.ToLower(part); checkLanguage(language) == nil {
+	if language := strings.ToLower(part); languageShape.MatchString(language) {
 		return language
 	}
 	fallback, _, _ := strings.Cut(defaultOfferTemplateLocale, "-")
@@ -349,7 +357,7 @@ func (s *Store) issuerPatch(ctx context.Context, tx pgx.Tx, p *storekit.Patch, c
 	in UpdateOfferInput, dropped *string,
 ) (*string, error) {
 	if in.Language != nil {
-		if err := checkLanguage(*in.Language); err != nil {
+		if err := checkLanguage(ctx, tx, *in.Language); err != nil {
 			return dropped, err
 		}
 		if current.Language == nil || *current.Language != *in.Language {

@@ -55,8 +55,8 @@ func TestAnOfferTemplateKeepsItsRegionButNotAFreeWord(t *testing.T) {
 }
 
 // An installation that stored a language the table does not hold upgrades
-// without losing the row. The key over such a column stays unvalidated, and the
-// two columns an old CHECK already held are validated.
+// without losing the row. The key over such a column stays unvalidated.
+// Only the app_user key is validated, because that table is small.
 func TestTheLanguageKeysApplyOverAStoredUnknownCode(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
@@ -87,7 +87,7 @@ func TestTheLanguageKeysApplyOverAStoredUnknownCode(t *testing.T) {
 		t.Fatalf("the notice in fr: %d rows, %v; the upgrade must keep it", kept, err)
 	}
 	for constraint, want := range map[string]bool{
-		"consent_text_version_locale_fkey": false, "activity_language_fkey": true, "app_user_locale_fkey": true,
+		"consent_text_version_locale_fkey": false, "activity_language_fkey": false, "app_user_locale_fkey": true,
 	} {
 		var validated bool
 		if err := conn.QueryRow(ctx, `SELECT convalidated FROM pg_constraint WHERE conname = $1`, constraint).Scan(&validated); err != nil {

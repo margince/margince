@@ -6,11 +6,11 @@ package languages_test
 import (
 	"slices"
 	"strings"
+
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/languages"
 	"github.com/margince/margince/backend/internal/platform/datatask"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -45,23 +45,6 @@ func TestPreflightAdmitsTwoUnitsDeclaringOneLanguage(t *testing.T) {
 	arabic := extension.Language{Code: "ar", Label: "Arabic"}
 	if err := languages.Preflight([]extension.Extension{unit("egypt-pack", arabic), unit("saudi-pack", arabic)}); err != nil {
 		t.Fatalf("two jurisdiction packs that both write Arabic were refused: %v", err)
-	}
-}
-
-func TestRegisterLetsTheWritersAcceptADeclaredLanguageOnly(t *testing.T) {
-	t.Cleanup(func() { textlang.SetRegistered(nil) })
-	if textlang.Registered("ar") {
-		t.Fatal("ar was registered before any unit declared it")
-	}
-	languages.Register([]extension.Extension{unit("egypt-pack", extension.Language{Code: "ar", Label: "Arabic"})})
-	if !textlang.Registered("ar") {
-		t.Error("ar was declared and the writers still refuse it")
-	}
-	if textlang.Registered("fr") {
-		t.Error("fr was never declared and the writers accept it")
-	}
-	if err := textlang.CheckRegistered("language", "fr"); err == nil || !strings.Contains(err.Error(), "language") {
-		t.Errorf("the refusal of fr = %v, want a field error naming the field", err)
 	}
 }
 

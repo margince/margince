@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // TextVersion is one published wording.
@@ -134,7 +133,7 @@ func PublishTextVersionTx(ctx context.Context, tx pgx.Tx, in TextVersion) (ids.U
 		}
 	}
 	if in.Locale != "" {
-		if err := textlang.CheckRegistered("locale", in.Locale); err != nil {
+		if err := storekit.CheckLanguage(ctx, tx, "locale", in.Locale); err != nil {
 			return ids.UUID{}, err
 		}
 	}

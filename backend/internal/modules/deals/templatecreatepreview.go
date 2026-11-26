@@ -12,7 +12,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func readyTemplateCreation(in CreateOfferTemplateInput) CreateOfferTemplateInput {
@@ -27,9 +26,8 @@ func readyTemplateCreation(in CreateOfferTemplateInput) CreateOfferTemplateInput
 }
 
 func (s *Store) admitTemplateCreation(ctx context.Context, tx pgx.Tx, in CreateOfferTemplateInput) error {
-	if !templateLocaleShape.MatchString(in.Locale) {
-		return &values.ParseError{Field: "locale", Code: "invalid_locale",
-			Message: "locale is a language and an optional region, for example de-DE or de"}
+	if err := checkTemplateLocale(in.Locale); err != nil {
+		return err
 	}
 	var noExclusion ids.OfferTemplateID
 	if err := s.checkTemplateNameConflict(ctx, tx, noExclusion, in.Name); err != nil {

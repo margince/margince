@@ -15,8 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // An agent's offer is issued by the entity of the human it acts for.
@@ -87,33 +85,12 @@ func TestTheRenderReadsTheNamedLogoAndSkipsAMissingOne(t *testing.T) {
 // template value never reaches the offer's language check in the table.
 func TestATemplateLocaleGivesItsLanguageOrTheDefault(t *testing.T) {
 	for locale, want := range map[string]string{
-		"de-DE": "de", "de_AT": "de", "en-GB": "en", "EN_us": "en", "fr": "de",
+		"de-DE": "de", "de_AT": "de", "en-GB": "en", "EN_us": "en", "fr": "fr",
 		"": "de", "x": "de", "deu-DE": "de", "12-34": "de",
 	} {
 		if got := languageOfLocale(locale); got != want {
 			t.Errorf("locale %q gives language %q, want %q", locale, got, want)
 		}
-	}
-}
-
-func TestATemplateLocaleGivesALanguageAUnitDeclared(t *testing.T) {
-	t.Cleanup(func() { textlang.SetRegistered(nil) })
-	textlang.SetRegistered([]string{"fr"})
-	if got := languageOfLocale("fr-FR"); got != "fr" {
-		t.Errorf("a declared language gave %q, want fr", got)
-	}
-}
-
-func TestAnOfferLanguageNoUnitDeclaredIsRefusedOnTheField(t *testing.T) {
-	for _, code := range []string{"fr", "FR", "deu", ""} {
-		err := checkLanguage(code)
-		var parse *values.ParseError
-		if !errors.As(err, &parse) || parse.Field != "language" || parse.Code != "invalid_language" {
-			t.Errorf("checkLanguage(%q) = %v, want an invalid_language refusal on the language field", code, err)
-		}
-	}
-	if err := checkLanguage("vi"); err != nil {
-		t.Errorf("a shipped language was refused: %v", err)
 	}
 }
 

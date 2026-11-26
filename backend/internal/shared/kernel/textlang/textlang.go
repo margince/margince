@@ -24,12 +24,8 @@
 package textlang
 
 import (
-	"slices"
 	"strings"
-	"sync/atomic"
 	"unicode"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Lang is a detected correspondence language. Three plus Unknown, because
@@ -73,40 +69,6 @@ func Known(code string) bool {
 		}
 	}
 	return false
-}
-
-// registered holds the codes stored data may carry beyond Shipped: the languages
-// the composed units declared. It is replaced whole and never edited in place,
-// so a reader never sees a half-built set.
-var registered atomic.Pointer[[]string]
-
-// SetRegistered replaces the extra languages the stored data may carry. The boot
-// calls it with the unit-declared codes; Shipped codes need not be listed.
-func SetRegistered(codes []string) {
-	extra := slices.Clone(codes)
-	registered.Store(&extra)
-}
-
-// Registered reports whether a code may be stored in a language column: a
-// shipped language, or one a composed unit declared. It asks what the language
-// table's foreign key asks, so a writer refuses a bad code by field name.
-func Registered(code string) bool {
-	if Known(code) {
-		return true
-	}
-	extra := registered.Load()
-	return extra != nil && slices.Contains(*extra, code)
-}
-
-// CheckRegistered refuses a code no language column may hold, as a field error
-// naming the field. A column that is a language code takes its validation from
-// here, so the 422 a client sees and the foreign key behind it answer alike.
-func CheckRegistered(field, code string) error {
-	if Registered(code) {
-		return nil
-	}
-	return &values.ParseError{Field: field, Code: "invalid_language",
-		Message: field + " is a language this installation offers, for example de"}
 }
 
 // The bar a winner clears.

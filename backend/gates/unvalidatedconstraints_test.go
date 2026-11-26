@@ -65,6 +65,7 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 		"precision data task fills in only the rows the noon repair's audit proves; the rest stay " +
 		"unknown on purpose, and the rule binds every row written since",
 	"confirm_token.confirm_token_question_locale_fkey":            unlistedLanguage,
+	"activity.activity_language_fkey":                             largeTableLanguage,
 	"consent_text_version.consent_text_version_locale_fkey":       unlistedLanguage,
 	"legal_entity.legal_entity_default_language_fkey":             unlistedLanguage,
 	"offer.offer_language_fkey":                                   unlistedLanguage,
@@ -95,6 +96,14 @@ const unlistedLanguage = "" +
 	"that was never offered. The unknown_language_values data task lists them and rewrites none, " +
 	"because a mapping would be a guess. A VALIDATE would fail the upgrade of an installation that " +
 	"holds one. The key binds every row written since"
+
+// largeTableLanguage is the cost of validating a key over activity, the largest
+// table in the schema. Its old CHECK held every stored row to the three shipped
+// codes, so a VALIDATE would find nothing. It still scans every row, and the
+// lock timeout does not bound a scan.
+const largeTableLanguage = "" +
+	"a VALIDATE scans every activity row, which the lock timeout does not bound on the largest table. " +
+	"The CHECK it replaced already held every stored row to the three shipped codes, so no stored row fails it"
 
 // unlistedLocale is the same cost for the two locale columns and their shape check.
 const unlistedLocale = "" +
