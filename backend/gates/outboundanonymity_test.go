@@ -88,7 +88,7 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"internal/modules/capture/oauthflow/oauthflow.go:func token":    "exchanges a code against a token endpoint using this app's registered client id, which is the identity that endpoint checks",
 	"internal/modules/capture/zalo/client.go:func request":          "calls Zalo under the Official Account's own app id and tokens, and that account IS the identity Zalo checks and revokes",
 	"internal/modules/capture/whatsapp/graph.go:func do":            "calls the Graph API under the business's own system-user token, and that account IS the identity Meta bills and revokes",
-	"internal/platform/safedownload/safedownload.go:func Get":       "fetches one message's attachment from the link the chat provider issued for it, on hosts the caller allows; the provider's own account behind that link is the identity it checks",
+	"internal/platform/safedownload/safedownload.go:func Get":       "fetches a file from a media address the chat provider itself handed over, with the caller's provider headers, so the provider's own account names the caller",
 	"internal/modules/capture/telegram/api.go:func request":         "calls a bot API under the bot's own token, and the bot IS the identity there",
 	"internal/modules/capture/telegram/sendfiles.go:func SendFiles": "calls a bot API under the bot's own token, and the bot IS the identity there",
 })

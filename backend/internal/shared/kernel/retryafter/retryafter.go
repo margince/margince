@@ -37,12 +37,11 @@ func Of(resp *http.Response) time.Duration {
 	if resp == nil {
 		return 0
 	}
-	return FromHeader(resp.Header)
+	return OfHeader(resp.Header)
 }
 
-// FromHeader is Of, for a caller that holds the response's header and not the
-// response.
-func FromHeader(h http.Header) time.Duration {
+// OfHeader is Of, for a caller that holds the response headers but no *http.Response.
+func OfHeader(h http.Header) time.Duration {
 	return Header(h.Get("Retry-After"))
 }
 
