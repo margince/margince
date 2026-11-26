@@ -211,6 +211,9 @@
 .empty {
   text-align: start;
   padding: var(--space-5) var(--padCard);
+  /* An empty answer often repeats what the reader typed, which may be one
+     unbroken run; it wraps inside the card rather than running past it. */
+  overflow-wrap: anywhere;
 }
 /* The instructional variant: a heading in the primary ink, a measured
    paragraph under it, the one verb below. The measure keeps the explanation
