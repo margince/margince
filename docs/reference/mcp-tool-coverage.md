@@ -140,8 +140,8 @@ An assistant can also reach Margince through the REST API, with the downloadable
 | Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | an admin | ✅ earlier listing |
 | Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | an admin | ✅ earlier listing |
 | Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ✅ earlier listing |
-| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ |
-| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ✅ |
+| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ earlier listing |
+| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ✅ earlier listing |
 | Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | an admin | ✅ earlier listing |
 | Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | an admin | ✅ earlier listing |
 | The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | an admin | ✅ earlier listing |
@@ -152,7 +152,7 @@ An assistant can also reach Margince through the REST API, with the downloadable
 | What have I promised | Promised and still open is the commitments view | an admin | ✅ earlier listing |
 | Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ earlier listing |
 | Is she already here | Is this contact already here is the identify engine | an admin | ✅ earlier listing |
-| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ❌ |
+| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ❌ earlier listing |
 | Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ earlier listing |
 | Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ earlier listing |
 | Mark that company as seen | Marking seen when asked | an admin | ✅ earlier listing |
