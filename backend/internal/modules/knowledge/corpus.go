@@ -227,9 +227,7 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 }
 
 // buildCorpusPatch folds the sparse edit into a patch carrying each set
-// field's before/after image. updated_at is absent on purpose: the table's
-// BEFORE UPDATE trigger owns it, so a patch that named it would be the second
-// writer of one value.
+// field's before/after image.
 func buildCorpusPatch(current crmcontracts.KnowledgeCorpus, override *float64, in UpdateCorpus) *storekit.Patch {
 	p := storekit.NewPatch()
 	if in.Name != nil {
@@ -403,7 +401,7 @@ func (s *Store) ListCorpora(ctx context.Context) ([]crmcontracts.KnowledgeCorpus
 // Not a GROUP BY join: it drops a corpus with no documents, which must stay in
 // the list reporting zeros.
 var corpusColumns = `c.id, c.name, c.description, c.topic_statement, c.min_similarity,
-	c.default_ask, c.reindexing, c.created_at, c.archived_at, c.managed_source IS NOT NULL,
+	c.default_ask, c.reindexing, c.created_at, c.archived_at, c.managed_source IS NOT DISTINCT FROM '` + HandbookSource + `',
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL),
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL
 	    AND ` + ingestInFlight + `),

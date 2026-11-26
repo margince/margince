@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -73,6 +74,7 @@ func TestErasingAContactWithholdsTheKeptEvidenceOfTheirSignals(t *testing.T) {
 func TestErasingAContactRedactsTheExtensionEvidenceAboutThem(t *testing.T) {
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
+	extregistrytest.Reset(t)
 	signaltypes.Register("erasetest", []extension.SignalTypeDeclaration{{
 		Kind: "loss", Label: "Loss",
 		Evidence: []extension.SignalEvidenceField{

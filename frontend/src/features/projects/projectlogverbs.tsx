@@ -38,9 +38,9 @@ export function ProjectLogVerbs({
   );
   return (
     <>
-      {!refusedReasonId && activity.refusedId && (
+      {!refusedReasonId && activity.refusalKey && (
         <p className="t-caption" id={activity.sentenceId}>
-          {t("record.logActivityRefused")}
+          {t(activity.refusalKey)}
         </p>
       )}
       <Button

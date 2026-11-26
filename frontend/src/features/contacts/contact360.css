@@ -390,7 +390,6 @@
   padding: 0;
   color: var(--textPrimary);
   font: inherit;
-  text-align: start;
 }
 
 /* A file's name with the mail it came with beneath it. */

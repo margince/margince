@@ -96,10 +96,12 @@ export function EmailVerb({
   contact,
   intent,
   reasonId,
+  bare,
 }: Readonly<{
   contact: Contact;
   intent: string;
   reasonId: string | undefined;
+  bare?: boolean;
 }>) {
   const t = useT();
   if (reasonId !== undefined) {
@@ -117,6 +119,7 @@ export function EmailVerb({
       draft={{ label: t("task.next.draftEmail"), intent }}
       address={contact.primary_email ?? undefined}
       record={{ entityType: "contact", entityId: contact.id }}
+      bare={bare}
     />
   );
 }

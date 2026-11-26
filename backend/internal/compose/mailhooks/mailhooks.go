@@ -95,8 +95,11 @@ func failedChange(unit extension.Extension, hook string) capture.HookChange {
 
 // change is one hook's change. A reason the unit did not declare makes it ignored.
 func change(unit extension.Extension, hook, reason string) capture.HookChange {
-	c := capture.HookChange{Unit: string(unit.Name), Hook: hook, Reason: reason, Result: capture.HookChanged}
-	if !slices.Contains(unit.MailHooks.Reasons, reason) {
+	c := capture.HookChange{
+		Unit: string(unit.Name), Hook: hook, Reason: reason, Result: capture.HookChanged,
+		Declared: slices.Contains(unit.MailHooks.Reasons, reason),
+	}
+	if !c.Declared {
 		c.Result = capture.HookIgnored
 	}
 	return c

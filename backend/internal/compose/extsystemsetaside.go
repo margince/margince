@@ -71,7 +71,7 @@ func (s systemSetAside) Contacts(ctx context.Context, user extension.UserID, con
 	var states map[ids.UUID]contacts.NudgeState
 	err = database.WithWorkspaceTx(ctx, s.rt.deps.pool, func(tx pgx.Tx) error {
 		var err error
-		states, err = contacts.NudgeStatesOf(ctx, tx, reader, asked, time.Now())
+		states, err = contacts.NudgeStatesOf(ctx, tx, reader, asked, s.rt.clockNow())
 		return err
 	})
 	if err != nil {
@@ -82,6 +82,14 @@ func (s systemSetAside) Contacts(ctx context.Context, user extension.UserID, con
 		out[raw] = setAsideStateOf(states[asked[i]])
 	}
 	return out, nil
+}
+
+// clockNow is the binding's injected clock, or the wall clock when none is bound.
+func (r *callRuntime) clockNow() time.Time {
+	if r.deps.now != nil {
+		return r.deps.now()
+	}
+	return time.Now()
 }
 
 func setAsideStateOf(state contacts.NudgeState) extension.SetAsideState {

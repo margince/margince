@@ -15,6 +15,10 @@ type Efficiency struct {
 	Runs  int     `json:"runs"`
 	Calls *Spread `json:"calls"`
 	Turns *Spread `json:"turns"`
+	// Refused counts calls answered with a refusal; Retries counts the same call
+	// made again after one. A verdict from before the lane measured them has neither.
+	Refused *Spread `json:"refused"`
+	Retries *Spread `json:"retries"`
 }
 
 // Spread is one metric's median and range across a verdict's finished runs.
@@ -41,6 +45,22 @@ func (e *Efficiency) TurnsCell() string {
 		return Dash
 	}
 	return e.Turns.cell()
+}
+
+// RefusedCell renders the median refused calls with their range.
+func (e *Efficiency) RefusedCell() string {
+	if e == nil {
+		return Dash
+	}
+	return e.Refused.cell()
+}
+
+// RetriesCell renders the median retries with their range.
+func (e *Efficiency) RetriesCell() string {
+	if e == nil {
+		return Dash
+	}
+	return e.Retries.cell()
 }
 
 func (s *Spread) cell() string {
@@ -74,6 +94,18 @@ func MedianCalls(measured []*Efficiency) string {
 // MedianTurns is MedianCalls for the model's turns.
 func MedianTurns(measured []*Efficiency) string {
 	median, _ := medianOver(measured, func(e *Efficiency) *Spread { return e.Turns })
+	return median
+}
+
+// MedianRefused is MedianCalls for the refused calls.
+func MedianRefused(measured []*Efficiency) string {
+	median, _ := medianOver(measured, func(e *Efficiency) *Spread { return e.Refused })
+	return median
+}
+
+// MedianRetries is MedianCalls for the retries.
+func MedianRetries(measured []*Efficiency) string {
+	median, _ := medianOver(measured, func(e *Efficiency) *Spread { return e.Retries })
 	return median
 }
 

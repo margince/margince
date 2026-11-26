@@ -59,8 +59,7 @@ whatever it does.
 
 The fitness tests hold the rest of the surface. Units are trusted code that runs in the role process; see
 [what the tier does not guard against](#what-the-tier-does-not-guard-against). Extensibility costs a new
-build. In return, the build proves that a composed product is wired the same way the core is, or it
-fails.
+build. In return, the build proves a composed product is wired the same way as the core, or fails.
 
 ## Principles
 
@@ -121,7 +120,7 @@ already exists:
 | `Secrets` | The secret keys the unit will use, by name and scope. It is a request; it grants nothing |
 | `OAuthApps` | Vendors whose sign-in the core runs for an admin. The core keeps the tokens and gives the unit a live access token through `Runtime.OAuthAccessToken` |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
-| `Reach` | The unit's own tables whose columns hold a core company, contact or lead id. The core's merge moves those columns onto the record that stays, and its erasure clears the columns a table lists. Core never names the unit's tables in its own SQL |
+| `Reach` | The unit's own tables whose columns hold a core company, contact, lead or deal id. The core's merge moves those columns onto the record that stays, and its erasure clears the columns a table lists. Core never names the unit's tables in its own SQL |
 | `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |
 | `Instrumentation` | Watches the whole process: the root log handler, every request, each job and extension delivery, and each panic the core catches. In the browser it sees errors and screen changes. It may serve an edge with no sign-in at `/v1/public/instrument/<unit>/`. It names no vendor. The core logs and skips a `Start` that fails or panics, and a hook that panics. A `Start` that never returns still holds up boot, and an `HTTP` wrapper that panics fails that request |
 
@@ -213,6 +212,7 @@ the harm could go before turning the unit on:
 | `entries` | `Entries` | Which core screens offer a way into the unit, and the object a reader needs `read` on to see it |
 | `oauth_apps` | `OAuthApps` | Which vendors an admin is sent to, the scopes asked for, and the token URL that receives the client secret |
 | `instrumentation` | `Instrumentation` | Which of its three parts the unit has: `start` (a backend part), `browser` (the named export the SPA calls) and `edge` (a session-less path under `/v1/public/instrument/<unit>/`) |
+| `mail_hooks` | `MailHooks` | Which mail-capture hooks it sets, what of each captured mail they read, and the reasons its answers may give |
 
 The `extension.Extension` value the unit returns, and every field the manifest derives, must be written
 out in full in the source. A field the generate step does not know fails it, with the place in the file.
@@ -529,7 +529,7 @@ The fitness tests and `scripts/` checks guard the tier, so the promises cannot d
 | The surface mark exists only under `pkg/`, so nothing adds to the allowlist from any other place | `backend/gates/extensions_arch_test.go` |
 | The composed set is wired only at the role `main.go` files, and each required role wires it | `backend/gates/extensions_arch_test.go` |
 | The plain composition gives the committed stub again, with no change at all | `make check-composition` |
-| The public surface keeps working for code built against it (advisory before the first release tag, enforced after) | `scripts/check-pkg-freeze.sh` |
+| The public surface keeps working for code built against it (advisory before the first release tag, enforced after), and each exported name has a caller in this tree or a written reason | `scripts/check-pkg-freeze.sh`, `backend/gates/extensionexportuse_test.go` |
 | The core stays free of any one jurisdiction | `scripts/check-no-jurisdiction.sh` |
 | No unit table carries a workspace column, row-level security or a policy, and none touches anything in `public` | `make check-ext-migrations` (applies the migrations of each unit as a new role with limited rights) |
 | Every unit table grants the runtime role `SELECT, INSERT, UPDATE, DELETE` and no other set; a table that grants *nothing* would answer `permission denied` at the first call | `make check-ext-migrations` |
@@ -542,8 +542,10 @@ The fitness tests and `scripts/` checks guard the tier, so the promises cannot d
 | A unit lands a record only where an operator can see that it does: `source_system` is derived from a declared ingress source, so a typing error is refused, not a second source namespace | `internal/compose/extingress.go` (`declaredIngress`), `internal/compose/extensions.go` (`preflightIngress`) |
 | An ingest runs on the live authority of the named member, and only for a member who holds one of the user-scoped secrets of that unit now. So a unit cannot work as a colleague who never asked it to | `internal/compose/extingressauthority.go`, `extingress_integration_test.go` |
 | An ingest is refused from a call that has a caller, and from inside a transaction the unit holds. On a pool of one, the second would otherwise wait with no end | `internal/compose/extingress.go`, `extingress_test.go`, `extingress_integration_test.go` |
-| An address may be offered as identity evidence only by a source that declared the key. The gate refuses it and names who asked. The admission check of capture holds it for every other caller of the pipeline | `internal/compose/extingress.go` (`refuseUndeclaredMergeKey`), `internal/modules/capture/sinkchannel.go` (`admitCounterpartyKeys`) |
-| The public record type cannot fall behind the capture shape of the core without anyone seeing: every field is copied, or skipped with its reason | `internal/compose/extingressdrift_test.go` |
+| An address may be offered as identity evidence only by a source that declared the key. The gate refuses it and names who asked. The admission check of capture holds it for every other caller of the pipeline | `internal/compose/extingress/mapping.go` (`RefuseUndeclaredMergeKey`), `internal/modules/capture/sinkchannel.go` (`admitCounterpartyKeys`) |
+| The public record type cannot fall behind the capture shape of the core without anyone seeing: every field is copied, or skipped with its reason | `internal/compose/extingress/drift_test.go` |
+| A chat message of a unit files through `capture.FileChatMessage`, as every chat network does. A source that pins a posture (`classified` or `held`, never `shared`) files each message under it, as the mail of that member. The audience then follows the contact as it does for mail | `internal/compose/extingress/chat.go`, `internal/modules/capture/chatmessage.go`, `internal/modules/capture/chatseat.go`, `internal/compose/integration/capture/capture_sdkchat_integration_test.go` |
+| A message filed on a contact or lead the member chose is checked on the live rights of that member. One they cannot see answers as one that does not exist, stores nothing and stops no other record of the batch. A member-owned source keeps one saved place per member, and a stale writer is refused with `ErrPositionConflict` | `internal/compose/extingress/subject.go`, `internal/compose/extingress/position.go`, `internal/compose/extsdkchat_integration_test.go` |
 | A unit may file a message on a transport it declared and on no other, and no other kind may name a transport at all. A record that claims a path it did not take is one the reply path would answer on | `internal/compose/extingress.go` (`refuseUndeclaredTransport`) |
 | A unit may bind a counterparty identity only under a provider it supplies. Otherwise it could put an account it controls on the contact record of someone else, and take the next reply of that contact | `internal/compose/extingress.go` (`refuseUnitIdentity`) |
 | A unit cannot take over the name of a core channel provider. The check step at boot, where both sets exist, catches the same name in both and fails the boot. It does not send the replies of that provider through the unit | `internal/compose/channelprovider.go` |

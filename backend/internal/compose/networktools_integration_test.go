@@ -172,8 +172,8 @@ func seedInteractionEdge(t *testing.T, e *integration.Env, user, contact ids.UUI
 		_, err := tx.Exec(ctx, `
 			INSERT INTO graph_interaction_edge
 			    (user_id, contact_id, last_at, count_90d, in_count_90d,
-			     out_count_90d, count_total, computed_at)
-			VALUES ($1, $2, now(), 6, 3, 3, 6, now())`, user, contact)
+			     out_count_90d, count_total)
+			VALUES ($1, $2, now(), 6, 3, 3, 6)`, user, contact)
 		return err
 	}, "seeding the interaction edge")
 }

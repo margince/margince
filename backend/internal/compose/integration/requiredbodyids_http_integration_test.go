@@ -161,13 +161,17 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 			supplied: AnyMap{"name": "Orphan stage", "position": 9, "pipeline_id": absent},
 			field:    "pipeline_id",
 		},
+		// A merge answers an unseen survivor with the bare 409, so a missing one
+		// answers 409 too (recordmerge.Screen).
 		"MergeContactJSONBody.target_id": {
 			method: "POST", path: "/v1/contacts/" + f.contact + "/merge",
 			omitted: AnyMap{}, supplied: AnyMap{"target_id": absent}, field: "target_id",
+			suppliedStatus: http.StatusConflict,
 		},
 		"MergeCompanyJSONBody.target_id": {
 			method: "POST", path: "/v1/companies/" + f.company + "/merge",
 			omitted: AnyMap{}, supplied: AnyMap{"target_id": absent}, field: "target_id",
+			suppliedStatus: http.StatusConflict,
 		},
 		"RelinkActivityJSONBody.entity_id": {
 			method: "POST", path: "/v1/activities/" + f.activity + "/relink",

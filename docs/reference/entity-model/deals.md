@@ -76,7 +76,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-52 columns · primary key `(id)` · referenced by 30 foreign keys
+53 columns · primary key `(id)` · referenced by 31 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -105,6 +105,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `manager_request_reasons` | `text[]` |  |  |
 | `manager_requested_at` | `timestamp with time zone` |  |  |
 | `manager_requested_by` | `uuid` |  |  |
+| `merged_into_id` | `uuid` |  | Set when this deal was merged away into another, and null otherwise. |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `partner_attribution` | `text` |  | What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). |
@@ -141,6 +142,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `id, arr_source_offer_id` | `offer` | deleting the parent keeps this row and clears the link |
 | `company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `lost_reason_code` | `deal_loss_reason` | the parent cannot be deleted while this row points at it |
+| `merged_into_id` | `deal` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `partner_company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `pipeline_id` | `pipeline` | the parent cannot be deleted while this row points at it |
@@ -164,6 +166,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_lost_reason_basis_check`: `CHECK ((((lost_reason_code IS NULL) = (lost_reason_basis IS NULL)) AND ((lost_reason_basis IS NULL) OR (lost_reason_basis = ANY (ARRAY['recorded', 'mapped'])))))`
 - `deal_lost_reason_code_only_when_lost`: `CHECK (((lost_reason_code IS NULL) OR (status = 'lost')))`
 - `deal_lost_reason_only_when_lost`: `CHECK (((lost_reason IS NULL) OR (status = 'lost')))`
+- `deal_manager_request_reasons_vocabulary`: `CHECK ((manager_request_reasons <@ ARRAY['big_deal', 'single_contact', 'stuck']))`
 - `deal_money_currency_pair`: `CHECK ((((amount_minor IS NULL) AND (expected_arr_minor IS NULL)) = (currency IS NULL)))`
 - `deal_partner_attribution_check`: `CHECK (((partner_attribution IS NULL) OR (partner_attribution = ANY (ARRAY['sourced', 'influenced']))))`
 - `deal_partner_attribution_pairing`: `CHECK (((partner_company_id IS NULL) = (partner_attribution IS NULL)))`
@@ -192,6 +195,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `idx_deal_live_newest`: `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_deal_lost_reason_code`: `btree (lost_reason_code) WHERE (lost_reason_code IS NOT NULL)`
 - `idx_deal_lost_reason_note_key`: `btree (md5(lower(btrim(lost_reason)))) WHERE (lost_reason IS NOT NULL)`
+- `idx_deal_merged_into`: `btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)`
 - `idx_deal_name_trgm`: `gin (f_fold_apostrophes(lower(name)) gin_trgm_ops)`
 - `idx_deal_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
 - `idx_deal_partner`: `btree (partner_company_id) WHERE ((partner_company_id IS NOT NULL) AND (archived_at IS NULL))`
@@ -255,7 +259,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_correction
 
-21 columns · primary key `(id)` · referenced by 0 foreign keys
+20 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -270,7 +274,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `note_activity_id` | `uuid` |  | Points at `activity.id`. |
 | `remaining_open_stages` | `text` | yes |  |
 | `reoffered_at` | `timestamp with time zone` |  |  |
-| `reversal_audit_id` | `uuid` |  | Points at `audit_log.id`. |
 | `reversed_at` | `timestamp with time zone` |  |  |
 | `reversed_by` | `text` |  |  |
 | `run_id` | `uuid` |  | Points at `close_date_run.id`. |
@@ -288,7 +291,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `audit_log_id` | `audit_log` | deleting the parent deletes this row |
 | `deal_id` | `deal` | deleting the parent deletes this row |
 | `note_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
-| `reversal_audit_id` | `audit_log` | deleting the parent keeps this row and clears the link |
 | `run_id` | `close_date_run` | deleting the parent keeps this row and clears the link |
 | `stage_history_id` | `deal_stage_history` | deleting the parent keeps this row and clears the link |
 
@@ -423,7 +425,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_loss_reason_mapping
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+6 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -431,7 +433,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `decided_by` | `text` | yes |  |
 | `note_key` | `text` | yes |  |
 | `reason_key` | `text` | yes | Points at `deal_loss_reason.key`. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -461,7 +462,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_product
 
-11 columns · primary key `(deal_id, product_id)` · referenced by 0 foreign keys
+9 columns · primary key `(deal_id, product_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -471,9 +472,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `currency` | `currency_code` |  |  |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `known_amount_minor` | `bigint` |  | For a `line` row, the part of the value already known. |
-| `offer_line_item_id` | `uuid` |  | Points at `offer_line_item.id`. |
 | `product_id` | `uuid` | yes | Points at `product.id`. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | `offer` is derived from the accepted offer; `manual` was set by hand on the deal; `line` is the sum of the deal's own lines for the product. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
@@ -482,7 +481,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `deal_id` | `deal` | deleting the parent deletes this row |
-| `offer_line_item_id` | `offer_line_item` | deleting the parent keeps this row and clears the link |
 | `product_id` | `product` | the parent cannot be deleted while this row points at it |
 
 **Rules**
@@ -499,7 +497,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Indexes**
 
-- `deal_product_offer_line_item_idx`: `btree (offer_line_item_id) WHERE (offer_line_item_id IS NOT NULL)`
 - `deal_product_pkey`: `unique, btree (deal_id, product_id)`
 - `deal_product_product_idx`: `btree (product_id)`
 
@@ -620,7 +617,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_stage_history
 
-25 columns · primary key `(id)` · referenced by 3 foreign keys
+24 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -636,7 +633,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `from_position_at_change` | `integer` |  |  |
 | `from_stage_id` | `uuid` |  | Points at `stage.id`. |
 | `fx_date_at_change` | `date` |  |  |
-| `fx_rate_at_change` | `numeric` |  |  |
 | `import_run_id` | `uuid` |  |  |
 | `lost_reason_code_at_change` | `text` |  | Points at `deal_loss_reason.key`. |
 | `owner_id_at_change` | `uuid` |  |  |
@@ -683,7 +679,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_suggestion
 
-21 columns · primary key `(id)` · referenced by 1 foreign key
+19 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -693,9 +689,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `confidence` | `numeric(4,3)` | yes |  |
 | `currency` | `currency_code` |  | Present when amount_minor is, and only then. |
 | `decided_at` | `timestamp with time zone` |  |  |
-| `decided_by` | `uuid` |  | Points at `app_user.id`. |
 | `evidence_count` | `integer` | yes |  |
-| `evidence_through` | `timestamp with time zone` | yes |  |
 | `fingerprint` | `text` | yes |  |
 | `kind` | `text`, default `'open_deal'::text` | yes | An open suggestion is open_deal. |
 | `name_hint` | `text` | yes | Which evidence leads, as a code the client words in the reader's language. |
@@ -715,7 +709,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 |---|---|---|
 | `accepted_deal_id` | `deal` | deleting the parent keeps this row and clears the link |
 | `company_id` | `company` | deleting the parent deletes this row |
-| `decided_by` | `app_user` | deleting the parent keeps this row and clears the link |
 | `pipeline_id` | `pipeline` | deleting the parent deletes this row |
 | `proposed_stage_id` | `stage` | deleting the parent deletes this row |
 
@@ -738,7 +731,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_suggestion_pkey`: `unique, btree (id)`
 - `idx_deal_suggestion_accepted_deal`: `btree (accepted_deal_id) WHERE (accepted_deal_id IS NOT NULL)`
 - `idx_deal_suggestion_company`: `btree (company_id, decided_at)`
-- `idx_deal_suggestion_decided_by`: `btree (decided_by) WHERE (decided_by IS NOT NULL)`
 - `idx_deal_suggestion_open`: `btree (created_at DESC, id DESC) WHERE (state = 'open')`
 - `idx_deal_suggestion_pipeline`: `btree (pipeline_id)`
 - `idx_deal_suggestion_stage`: `btree (proposed_stage_id)`
@@ -807,6 +799,11 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `superseded_at` | `timestamp with time zone` |  |  |
 | `to_currency` | `currency_code` | yes | The workspace base currency. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
+
+**Rules**
+
+- `fx_rate_pair_distinct`: `CHECK (((from_currency) <> (to_currency)))`
+- `fx_rate_rate_positive`: `CHECK ((rate > (0)::numeric))`
 
 **Indexes**
 
@@ -952,7 +949,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## offer_line_item
 
-21 columns · primary key `(id)` · referenced by 1 foreign key
+21 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1133,7 +1130,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## product_translation
 
-8 columns · primary key `(product_id, language)` · referenced by 0 foreign keys
+7 columns · primary key `(product_id, language)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1142,7 +1139,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `name` | `text` | yes |  |
 | `product_id` | `uuid` | yes | Points at `product.id`. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 

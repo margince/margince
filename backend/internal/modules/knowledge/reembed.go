@@ -231,9 +231,7 @@ const abandonedAfter = "1 hour"
 // second answer to "is this corpus in a state it can be asked in".
 //
 // The threshold is compared in SQL against ingest_started_at, so the DATABASE's
-// clock decides and the column says what it needs to know. updated_at would be
-// wrong: the trigger moves it for any write, so a row touched for any other
-// reason would look like a fresh attempt and never be swept.
+// clock decides and the column says what it needs to know.
 //
 // There is no clock to inject and none to get wrong, and a test backdates the
 // column rather than waiting.

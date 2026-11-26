@@ -196,8 +196,8 @@ func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 // the one thing measured to move tool selection, so it is not trimmed to fit.
 // docs/reference/agent-tool-budget.md carries the current figures.
 const (
-	listingBudgetNumerator   = 17
-	listingBudgetDenominator = 24
+	listingBudgetNumerator   = 1
+	listingBudgetDenominator = 2
 )
 
 // oneToolBudgetNumerator/Denominator bound one tool's rendered entry: a

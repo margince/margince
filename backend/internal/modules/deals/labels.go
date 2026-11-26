@@ -50,6 +50,22 @@ func (s *Store) DealLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]s
 	return labels, nil
 }
 
+// DealNamesTx includes archived deals: a history keeps naming a deal after it is archived.
+func (s *Store) DealNamesTx(ctx context.Context, tx pgx.Tx, want []ids.UUID) (map[ids.UUID]string, error) {
+	query, args, err := dealIdentityQuery(ctx, want, storekit.IncludeArchived, false)
+	if err != nil {
+		return nil, err
+	}
+	if len(want) == 0 {
+		return map[ids.UUID]string{}, nil
+	}
+	names, err := storekit.LabelsByID(ctx, tx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("deals: reading deal names: %w", err)
+	}
+	return names, nil
+}
+
 // DealReferences returns scoped deal names and archive state without full detail reads.
 func (s *Store) DealReferences(ctx context.Context, want []ids.UUID) ([]crmcontracts.RecordReference, error) {
 	query, args, err := dealIdentityQuery(ctx, want, storekit.IncludeArchived, true)

@@ -51,7 +51,8 @@ function mount(move: PerformableMove, client = new QueryClient()) {
 }
 
 it("draws a refused task move with the server's reason and writes no task", async () => {
-  const reason = "You do not have permission to add tasks";
+  const reason =
+    "Your role can only read. Ask an administrator for another role.";
   const writes = mount({
     action: "create_task",
     arguments: { subject: "Send the revised quote" },
@@ -67,7 +68,8 @@ it("draws a refused task move with the server's reason and writes no task", asyn
 });
 
 it("draws a refused follow-up with the server's reason", async () => {
-  const reason = "You do not have permission to send email";
+  const reason =
+    "Your role can only read. Ask an administrator for another role.";
   mount({
     action: "draft_email",
     arguments: {

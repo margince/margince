@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"time"
 
+	"github.com/margince/margince/backend/internal/compose/extingress"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -63,7 +65,7 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 	if !slices.Contains(declared.Lands, rec.Kind()) {
 		return extension.Result{}, fmt.Errorf("%w: %q does not land %q records", extension.ErrIngressNotDeclared, rec.System, string(rec.Kind()))
 	}
-	if err := refuseUndeclaredMergeKey(declared, rec.Counterparty); err != nil {
+	if err := extingress.RefuseUndeclaredMergeKey(declared, rec.Counterparty); err != nil {
 		return extension.Result{}, err
 	}
 	// An invocation with a caller has two authorities in play — the caller's
@@ -80,23 +82,11 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 		return extension.Result{}, err
 	}
 	defer r.endIngest()
-	// A record the grammar refuses is a DISPOSITION, not an error. The unit
-	// moves its cursor past it either way — stopping on one malformed message
-	// parks the whole connection — so answering an error class only put the
-	// distinction it needs most, "the core skipped this" versus "I built
-	// something the core cannot use", somewhere it had to match on. The
-	// complaint still travels: a unit that logs the reason gets the same
-	// sentence it used to read off the error.
 	if err := rec.Validate(); err != nil {
-		// The breadcrumb the core keeps, before the answer the unit gets: the
-		// unit already knows it dropped this one, and the installation is the
-		// party that could not tell. See extingressrefusal.go.
-		r.noteRefusal(ctx, extension.RefusalOf(err))
-		return extension.Result{
-			Disposition: extension.DispositionUnrepresentable,
-			Refusal:     extension.RefusalOf(err),
-			Reason:      err.Error(),
-		}, nil
+		return r.refusedRecord(ctx, extension.RefusalOf(err), err.Error()), nil
+	}
+	if declared.PinnedPosture != "" && !extingress.IsChatMessage(rec) {
+		return r.refusedRecord(ctx, extension.RefusalActivity, "a member-owned chat source lands chat messages only"), nil
 	}
 	if rec.Kind() != extension.KindActivity {
 		return r.ingestOtherKind(ctx, on, rec, declared)
@@ -123,7 +113,12 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 	if err != nil {
 		return extension.Result{}, err
 	}
-	return r.landRecord(runCtx, sink, rec, declared)
+	return r.landRecord(runCtx, sink, rec, declared, on)
+}
+
+func (r *callRuntime) refusedRecord(ctx context.Context, class extension.RecordRefusal, reason string) extension.Result {
+	r.noteRefusal(ctx, class)
+	return extension.Result{Disposition: extension.DispositionUnrepresentable, Refusal: class, Reason: reason}
 }
 
 // landRecord performs the one write and maps its outcome onto the published
@@ -135,18 +130,62 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 // connector's watermark. Reporting that to a unit as a failure would have the
 // unit retry a deliberate drop on every poll, forever, so it is a success here
 // with a disposition that says what happened.
-func (r *callRuntime) landRecord(ctx context.Context, sink *capture.Sink, rec extension.Record, declared extension.IngressSource) (extension.Result, error) {
-	ref, err := sink.Upsert(ctx, r.normalized(rec, declared))
+func (r *callRuntime) landRecord(ctx context.Context, sink *capture.Sink, rec extension.Record, declared extension.IngressSource, on extension.UserID) (extension.Result, error) {
+	ctx = capture.WithMemberGuard(ctx, extingress.MemberGuard(r.unit, memberConsentedTx))
+	chosen, err := extingress.ChosenRef(rec.ChosenSubject)
+	if err != nil {
+		return extension.Result{}, r.ingressRefusal(ctx, err)
+	}
+	if chosen != nil {
+		if err := extingress.CheckSubject(ctx, r.deps.pool, *chosen); err != nil {
+			return r.subjectResult(ctx, err)
+		}
+	}
+	ref, err := r.fileRecord(ctx, sink, rec, declared, on, chosen)
 	switch {
 	case errors.Is(err, connector.ErrSkip):
 		return extension.Result{Disposition: extension.DispositionSkipped}, nil
+	case chosen != nil && errors.Is(err, apperrors.ErrNotFound):
+		return r.subjectResult(ctx, extingress.ErrSubjectNotFound)
 	case err != nil:
 		return extension.Result{}, r.ingressRefusal(ctx, err)
+	}
+	if chosen != nil {
+		if err := extingress.EnsureChosenLink(ctx, r.deps.pool, ref, *chosen); err != nil {
+			return r.subjectResult(ctx, err)
+		}
 	}
 	return extension.Result{
 		Ref:         extension.Ref{Type: string(ref.Type), ID: ref.ID.String()},
 		Disposition: extension.DispositionAccepted,
 	}, nil
+}
+
+func (r *callRuntime) subjectResult(ctx context.Context, err error) (extension.Result, error) {
+	if errors.Is(err, extingress.ErrSubjectNotFound) {
+		return extension.Result{Disposition: extension.DispositionSubjectNotFound, Reason: "no such contact or lead"}, nil
+	}
+	return extension.Result{}, r.ingressRefusal(ctx, err)
+}
+
+func (r *callRuntime) fileRecord(
+	ctx context.Context, sink *capture.Sink, rec extension.Record, declared extension.IngressSource,
+	on extension.UserID, chosen *datasource.EntityRef,
+) (datasource.EntityRef, error) {
+	if extingress.IsChatMessage(rec) {
+		binding, msg, err := extingress.ChatInput(extingress.ChatSource{
+			CapturedBy: ingressPrincipalPrefix + r.unit, SourceSystem: r.sourceSystem(rec.System),
+			Member: extingress.UserUUID(on), Source: declared,
+			Credential: extingress.ChannelModel(composedChannelsFor(r.unit), rec.Activity.ChannelProvider), Now: time.Now().UTC(),
+		}, rec)
+		if err != nil {
+			return datasource.EntityRef{}, err
+		}
+		return capture.FileChatMessage(ctx, sink, binding, msg)
+	}
+	norm := r.normalized(rec, declared)
+	norm.Counterparty = norm.Counterparty.WithChosenSubject(chosen)
+	return sink.Upsert(ctx, norm)
 }
 
 // ingressAuthority builds the principal one ingest runs as: the connector
@@ -225,10 +264,10 @@ func (r *callRuntime) normalized(rec extension.Record, declared extension.Ingres
 			Subject:         rec.Activity.Subject,
 			Body:            rec.Activity.Body,
 			OccurredAt:      rec.Activity.OccurredAt,
-			DateOnly:        rec.Activity.DateOnly,
+			DateOnly:        rec.Precision() != extension.PrecisionInstant,
 			DurationSeconds: rec.Activity.DurationSeconds,
 			Direction:       rec.Activity.Direction,
-			AssigneeID:      namedAssignee(rec.Activity.AssigneeID),
+			AssigneeID:      extingress.UserUUID(rec.Activity.AssigneeID),
 			DueAt:           rec.Activity.DueAt,
 		},
 		Source:       r.sourceSystem(rec.System),
@@ -236,108 +275,11 @@ func (r *callRuntime) normalized(rec extension.Record, declared extension.Ingres
 		ThreadKey:    rec.ThreadKey,
 		Addresses:    rec.Addresses,
 		Raw:          rec.Raw,
-		Counterparty: counterpartyOf(rec.Counterparty, declared),
-		Participants: participantsOf(rec.Participants),
+		Counterparty: extingress.CounterpartyOf(rec.Counterparty, declared),
+		Participants: extingress.ParticipantsOf(rec.Participants),
+		Parts:        extingress.PartsOf(rec.Parts),
+		PartDrops:    rec.PartDrops,
 	}
-}
-
-// namedAssignee reads the colleague a unit named for a task. An id that is not a
-// canonical UUID cannot reach here: Record.Validate refuses it.
-func namedAssignee(id extension.UserID) ids.UUID {
-	parsed, err := ids.Parse(string(id))
-	if err != nil {
-		return ids.UUID{}
-	}
-	return parsed
-}
-
-// participantsOf maps the published roster onto the core's.
-//
-// Record.Validate has already refused an over-cap roster and a party with no
-// identity by the time this runs, so CapParticipants here is belt and braces
-// rather than the decision: it is the core's own bound, applied where the core
-// can see it, for a record that reached this function some other way. Said
-// plainly because the alternative is a reader assuming this line is what stops
-// a sixty-contact group — it is not, and the refusal a unit reads comes from the
-// door.
-func participantsOf(parties []extension.Participant) []connector.MessageParticipant {
-	if len(parties) == 0 {
-		return nil
-	}
-	mapped := make([]connector.MessageParticipant, 0, len(parties))
-	for _, p := range parties {
-		mapped = append(mapped, connector.MessageParticipant{
-			Email:         p.Email,
-			ChannelUserID: p.Account,
-			DisplayName:   p.Name,
-			Role:          p.Role,
-		})
-	}
-	return connector.CapParticipants(mapped).Participants
-}
-
-// counterpartyOf maps the published counterparty onto the core's and stamps what
-// the SOURCE declared onto it.
-//
-// The declaration is stamped, never taken from the record — the rule Source and
-// CapturedBy already follow, for the same reason: a unit that could state its own
-// trust could widen it per record, which is the whole thing a declaration exists
-// to bound. It is reduced to the one question the core asks (may this address
-// corroborate?) rather than carried as the key list, which belongs to the
-// manifest an operator reads.
-func counterpartyOf(cp extension.Counterparty, declared extension.IngressSource) connector.Counterparty {
-	return connector.Counterparty{
-		Email:       cp.Email,
-		DisplayName: cp.DisplayName,
-		Domain:      cp.Domain,
-		Direction:   cp.Direction,
-		// The binding that makes the record repliable, held to the same
-		// declared set the activity's own transport is (refuseUnitIdentity):
-		// a unit that could bind an identity under a core connector's
-		// provider would be writing into the table the workspace's own
-		// reply path resolves its recipients from.
-		//
-		// DisplayName lands on Username, which is the core's display-only
-		// field for exactly this: a handle nothing routes, authorizes or
-		// deduplicates on. The two names differ because the core's is
-		// Telegram-shaped and the published one is not, and renaming either
-		// would be a change at a security-sensitive identity for a word.
-		ChannelIdentity: connector.ChannelIdentity{
-			Provider:      cp.ChannelIdentity.Provider,
-			ChannelUserID: cp.ChannelIdentity.ChannelUserID,
-			Username:      cp.ChannelIdentity.DisplayName,
-		},
-	}.WithDeclaredEmailMerge(declaresMergeKey(declared, extension.MergeKeyEmail))
-}
-
-// declaresMergeKey reports whether a source vouched for one identity key.
-func declaresMergeKey(declared extension.IngressSource, key extension.MergeKey) bool {
-	return slices.Contains(declared.Merges, key)
-}
-
-// refuseUndeclaredMergeKey is the unit-facing half of the merge-key gate: a
-// source may offer an address to MATCH on only if it vouched for one.
-//
-// It is the attributable refusal — a unit author reads their own grammar rather
-// than an unattributable "the core could not land this record" — and it is not
-// the invariant. Capture's own admitCounterpartyKeys holds that, for every
-// caller of Upsert including the ones that never pass through here. Two layers,
-// the way refuseUndeclaredTransport and refuseUnitIdentity are two layers, not
-// two spellings of one rule.
-//
-// It asks only about an address CORROBORATING a human named by a channel
-// identity. A mail-shaped record's address IS that record's identity, belongs to
-// no declaration, and is untouched.
-func refuseUndeclaredMergeKey(declared extension.IngressSource, cp extension.Counterparty) error {
-	namedByChannel := cp.ChannelIdentity.Provider != "" && cp.ChannelIdentity.ChannelUserID != ""
-	if !namedByChannel || cp.Email == "" {
-		return nil
-	}
-	if declaresMergeKey(declared, extension.MergeKeyEmail) {
-		return nil
-	}
-	return fmt.Errorf("%w: ingress source %q carries a counterparty address to match on but declares no %q merge key",
-		extension.ErrInvalid, declared.System, string(extension.MergeKeyEmail))
 }
 
 // refuseUndeclaredTransport holds the kind/transport pairing on ANY of a unit's
@@ -435,7 +377,7 @@ func (r *callRuntime) sourceSystem(system string) string {
 // record ever carries while the ones that do arrive stay raw — a mismatch
 // nothing fails on, because a directory miss is a fallback rather than an error.
 func extSourceSystem(unit, system string) string {
-	return connector.ExtensionSourceSystemPrefix + unit + ":" + system
+	return extension.QualifiedName(extension.Name(unit), system)
 }
 
 // declaredIngress resolves the source the record names against what the

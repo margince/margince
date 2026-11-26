@@ -12,9 +12,14 @@ import {
 } from "../design-system/recordpicker";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { type RequiredGrant, useGrantRefused } from "../lib/capability";
+import {
+  type RequiredGrant,
+  useGrantRefused,
+  useWriteBlock,
+} from "../lib/capability";
 import { fromHere } from "../lib/navigatefrom";
 import type { Route } from "../lib/router";
+import { WRITE_BLOCK_REFUSAL } from "../lib/writerefusal";
 import { mergeSentence } from "./merge.sentence";
 import "../design-system/querystates.css";
 
@@ -38,6 +43,7 @@ export function MergeAction<Survivor extends { id: string }>({
   survivorRoute,
   disabledReasonId,
   requires,
+  initialTarget,
 }: Readonly<{
   label: string;
   sourceId: string;
@@ -63,14 +69,20 @@ export function MergeAction<Survivor extends { id: string }>({
   disabledReasonId?: string;
   // The grant the merge needs; required for the reason `ArchiveAction` gives.
   requires: RequiredGrant;
+  // The survivor already chosen, for a caller that knows which record to keep
+  // and still wants the reader to read the sentence before confirming.
+  initialTarget?: RecordPickerCandidate;
 }>) {
   const t = useT();
   const refused = useGrantRefused(requires);
+  const block = useWriteBlock(requires.object);
   const queryClient = useQueryClient();
   const toast = useToast();
   const headingId = useId();
   const [open, setOpen] = useState(false);
-  const [target, setTarget] = useState<RecordPickerCandidate | null>(null);
+  const [target, setTarget] = useState<RecordPickerCandidate | null>(
+    initialTarget ?? null,
+  );
   const source = { name: sourceName, detail: sourceDetail };
   const searchOthers = useCallback(
     async (q: string) =>
@@ -96,7 +108,7 @@ export function MergeAction<Survivor extends { id: string }>({
 
   const close = () => {
     setOpen(false);
-    setTarget(null);
+    setTarget(initialTarget ?? null);
     mutation.reset();
   };
 
@@ -104,7 +116,11 @@ export function MergeAction<Survivor extends { id: string }>({
     <>
       <Button
         reasonId={disabledReasonId}
-        reason={refused ? t("record.actionRefused") : undefined}
+        reason={
+          refused
+            ? t(block ? WRITE_BLOCK_REFUSAL[block] : "record.actionRefused")
+            : undefined
+        }
         onClick={() => setOpen(true)}
         data-testid="merge-record"
       >

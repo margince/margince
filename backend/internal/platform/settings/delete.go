@@ -57,7 +57,7 @@ func (s *Store) DeleteRawTx(ctx context.Context, tx pgx.Tx, key string) (bool, e
 		return false, fmt.Errorf("settings: probing %s: %w", key, err)
 	}
 	if frozen {
-		return false, FrozenValue{Setting: key, Reason: why}
+		return false, FrozenValue{Setting: key, Freeze: why}
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM setting WHERE key = $1`, key); err != nil {
 		return false, fmt.Errorf("settings: removing %s: %w", key, err)

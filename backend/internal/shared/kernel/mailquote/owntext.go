@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 )
 
 // preamblePattern is the From and To lines capture writes above a mail's text.
@@ -28,8 +30,11 @@ func Preamble(body string) (preamble, text string) {
 //
 // A line a mail program writes above such mail ends the text. A quote marked
 // with ">" ends it only when nothing follows, so an inline reply stays whole.
-func OwnTextEnd(lines []string) int {
-	for i := 0; i < len(lines); i++ {
+//
+// A forward passes its first quoted mail on as its own text. Outlook writes a
+// forward and a reply alike, so only the subject tells them apart.
+func OwnTextEnd(lines []string, subject string) int {
+	for i := ForwardedBlockEnd(lines, subject); i < len(lines); i++ {
 		if !startsQuote(lines, i) {
 			continue
 		}
@@ -45,21 +50,73 @@ func OwnTextEnd(lines []string) int {
 	return len(lines)
 }
 
+// ForwardedBlockEnd is the line after the header block of the mail a forward
+// passes on. It is 0 for any other mail, and when the first quote opens no
+// block. Gmail and Apple Mail write that block under a forward line, and
+// Outlook writes it bare.
+func ForwardedBlockEnd(lines []string, subject string) int {
+	if !mailsubject.IsForward(subject) {
+		return 0
+	}
+	header := forwardedHeader(lines)
+	if header < 0 {
+		return 0
+	}
+	end := header + 1
+	for end < len(lines) && strings.TrimSpace(lines[end]) != "" && !startsQuote(lines, end) {
+		end++
+	}
+	return end
+}
+
+// forwardedHeader is the line the forwarded mail's header block opens on, or
+// -1 when there is none. An inline reply in the note is the note's own text.
+func forwardedHeader(lines []string) int {
+	for i := 0; i < len(lines); i++ {
+		if !startsQuote(lines, i) && !OpensReplyHeader(lines[i], lines[i+1:]) {
+			continue
+		}
+		if after, marked := markedRunEnd(lines, i); marked {
+			if !hasText(lines[after:]) {
+				return -1
+			}
+			i = after - 1
+			continue
+		}
+		return headerAt(lines, i)
+	}
+	return -1
+}
+
+// headerAt is the header a quote at index opens: that line, or the first after
+// a forward line and blank lines. It is -1 when another line comes first.
+func headerAt(lines []string, index int) int {
+	for header := index; header < len(lines); header++ {
+		if OpensReplyHeader(lines[header], lines[header+1:]) {
+			return header
+		}
+		if header > index && strings.TrimSpace(lines[header]) != "" {
+			return -1
+		}
+	}
+	return -1
+}
+
 // OwnEnd is what a writer of an activity body stores beside it: how many
-// characters, from the start, the sender wrote. It is nil for any kind but mail,
-// and for a mail with no body.
-func OwnEnd(kind string, body *string) *int {
+// characters, from the start, the sender wrote. The subject is the mail's own.
+// It is nil for any kind but mail, and for a mail with no body.
+func OwnEnd(kind, subject string, body *string) *int {
 	if kind != MailKind || body == nil {
 		return nil
 	}
-	chars := ownChars(*body)
+	chars := ownChars(*body, subject)
 	return &chars
 }
 
-func ownChars(body string) int {
+func ownChars(body, subject string) int {
 	preamble, text := Preamble(body)
 	lines := strings.Split(text, "\n")
-	end := OwnTextEnd(lines)
+	end := OwnTextEnd(lines, subject)
 	own := len(preamble)
 	for _, line := range lines[:end] {
 		own += len(line) + 1

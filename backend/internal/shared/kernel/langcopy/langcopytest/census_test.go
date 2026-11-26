@@ -269,3 +269,22 @@ func TestIndexedPlaceholdersCannotDisappearFromTheCensus(t *testing.T) {
 		t.Fatalf("indexed or padded placeholders disappeared: %v", got)
 	}
 }
+
+func TestGermanStyleFailsEachMechanicalBreak(t *testing.T) {
+	t.Parallel()
+	for name, german := range map[string]string{
+		"dash":      "zu wenige Kontakte — der Deal hängt an einem Kontakt",
+		"semicolon": "Von der Website gelesen; die Bestätigung übernimmt den Wert",
+		"sie":       "Diese Nachricht dürfen Sie nicht lesen.",
+		"ihnen":     "Manches ist Ihnen nicht sichtbar.",
+	} {
+		table := map[string]langcopy.Phrase{name: {En: "x", De: german, Vi: "x"}}
+		if s := run(func(r reporter) { GermanStyle(r, table) }); len(s.errors) == 0 {
+			t.Errorf("%s: %q passed", name, german)
+		}
+	}
+	fine := map[string]langcopy.Phrase{"fine": {En: "x", De: "Sie haben geantwortet. Die Nachricht ist für dich sichtbar.", Vi: "x"}}
+	if s := run(func(r reporter) { GermanStyle(r, fine) }); len(s.errors) != 0 || s.fatal != "" {
+		t.Errorf("a sentence opening with Sie as they failed: %v %s", s.errors, s.fatal)
+	}
+}

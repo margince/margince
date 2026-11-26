@@ -221,7 +221,6 @@ var foreignKeyNoIndexNeeded = map[string]string{
 	"communication_instruction":  "an instruction is consumed or revoked in place",
 	"communication_review":       "append-only: a review is the decision somebody made",
 	"consent_text_version":       "append-only, and the migration revokes DELETE on it: a proof row pointing at a removed version is the failure it prevents",
-	"audit_log":                  "append-only by trigger (audit_log_immutable refuses DELETE), which is the whole point of the table",
 	"close_date_run":             "append-only: a sweep run holds the cursor the next one resumes from",
 	"deal_stage_evidence":        "append-only: evidence for why a stage moved",
 	"stage_exit_criterion":       "a criterion is archived, so the evidence that met it keeps resolving",

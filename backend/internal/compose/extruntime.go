@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -76,6 +77,8 @@ type extensionRuntimeBinding struct {
 	// BindExtensionModels and BindExtensionObjects; nil, the capability refuses by name.
 	models func(ai.Task) completer
 	blob   blobstore.Store
+	// now is the clock a time-bound read asks; nil means the wall clock.
+	now func() time.Time
 }
 
 // BindExtensionCapture records the capture pipeline a unit's ingress lands

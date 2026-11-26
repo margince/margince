@@ -118,10 +118,12 @@ func isSignOff(line string) bool {
 // boundaryIndex is the first line belonging to the tail rather than the
 // message, and which kind of tail it opens. The index is -1 when the whole
 // body is the message. A sign-off counts only above the quoted earlier mail.
-func boundaryIndex(lines []string) (int, EmailBodyTail) {
-	quote := mailquote.OwnTextEnd(lines)
+func boundaryIndex(lines []string, subject string) (int, EmailBodyTail) {
+	quote := mailquote.OwnTextEnd(lines, subject)
 	signOffFloor := max(0, len(lines)-trailingScanLines)
-	for i, line := range lines[:quote] {
+	// A sign-off above a forwarded mail closes the note, not the message.
+	for i := mailquote.ForwardedBlockEnd(lines, subject); i < quote; i++ {
+		line := lines[i]
 		if signatureDelimiter.MatchString(line) || (i >= signOffFloor && isSignOff(line)) {
 			return i, TailSignature
 		}
@@ -133,12 +135,13 @@ func boundaryIndex(lines []string) (int, EmailBodyTail) {
 }
 
 // SplitEmailBody separates a stored mail body into the part worth reading on a
-// row and the tail worth keeping but not showing.
+// row and the tail worth keeping but not showing. The subject is the mail's
+// own, which says whether it forwards.
 //
 // The message is never allowed to become empty: a body that is nothing but a
 // greeting is a real message, and a heuristic that folds it away has hidden the
 // mail rather than tidied it.
-func SplitEmailBody(body string) EmailBodyParts {
+func SplitEmailBody(body, subject string) EmailBodyParts {
 	if strings.TrimSpace(body) == "" {
 		return EmailBodyParts{Tail: TailNone}
 	}
@@ -153,7 +156,7 @@ func SplitEmailBody(body string) EmailBodyParts {
 	}
 
 	lines := strings.Split(rest, "\n")
-	cut, tail := boundaryIndex(lines)
+	cut, tail := boundaryIndex(lines, subject)
 	if cut < 0 {
 		return EmailBodyParts{Header: header, Main: strings.TrimSpace(rest), Tail: TailNone}
 	}
@@ -175,8 +178,8 @@ var collapseWhitespace = regexp.MustCompile(`\s+`)
 
 // EmailSummaryText is the message on one line, for a row preview: the sender's
 // own words, never their sign-off and never the `From:` preamble.
-func EmailSummaryText(body string) string {
-	collapsed := strings.TrimSpace(collapseWhitespace.ReplaceAllString(SplitEmailBody(body).Main, " "))
+func EmailSummaryText(body, subject string) string {
+	collapsed := strings.TrimSpace(collapseWhitespace.ReplaceAllString(SplitEmailBody(body, subject).Main, " "))
 	// A body that is only a quoted forward has no message of its own. The whole
 	// text is a better preview than an empty one.
 	if collapsed != "" {

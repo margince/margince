@@ -127,7 +127,7 @@ func TestCompanyCreationApprovalMatchesTheWriter(t *testing.T) {
 			for _, detail := range *preview.Details {
 				values[detail.Field] = detail.Value.Text
 			}
-			if values["display_name"] != "Approval Buyer" || values["creation_primary_domain"] != "approval-buyer.test" || values["address_city"] != "Berlin" || values["lifecycle"] != "unknown" {
+			if values["display_name"] != "Approval Buyer" || values["creation_primary_domain"] != "approval-buyer.test" || values["address_city"] != "Berlin" || values["status"] != "unknown" {
 				t.Fatalf("values: %+v", values)
 			}
 			if n := e.WsCount(t, `SELECT count(*) FROM company WHERE display_name='Approval Buyer'`); n != 0 {
@@ -141,7 +141,7 @@ func TestCompanyCreationApprovalMatchesTheWriter(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if created.DisplayName != values["display_name"] || created.Lifecycle == nil || string(*created.Lifecycle) != values["lifecycle"] || created.Domains == nil || len(*created.Domains) != 1 || (*created.Domains)[0].Domain != values["creation_primary_domain"] || !(*created.Domains)[0].IsPrimary {
+			if created.DisplayName != values["display_name"] || created.Status == nil || string(*created.Status) != values["status"] || created.Domains == nil || len(*created.Domains) != 1 || (*created.Domains)[0].Domain != values["creation_primary_domain"] || !(*created.Domains)[0].IsPrimary {
 				t.Fatalf("writer: %+v", created)
 			}
 		})

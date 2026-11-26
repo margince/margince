@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer states that a privacy notice under Art. 14 GDPR is owed to Katrin Sommer telling her where her data came from, but it neither reports the notice as sent nor offers to send it or says it cannot be produced yet, so the criterion's required offer/inability statement is missing.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says Katrin Sommer is owed a notice of where her data came from, and either offers to send it once the user agrees, or says it cannot be produced yet. Answer no if it reports the notice sent, says nothing is owed, or never says what is owed.",
+  "answer": "You owe her a privacy notice under Art. 14 GDPR, within a month of getting her data, telling her where it came from."
+}

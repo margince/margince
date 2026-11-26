@@ -8,18 +8,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 
 	"golang.org/x/mod/modfile"
-	"golang.org/x/mod/module"
 
+	"github.com/margince/margince/backend/internal/platform/unitset"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -30,28 +27,13 @@ const (
 	// fetchedUnitsDir holds the versioned extensions copied out of the module
 	// cache. The cache is read-only, and the frontend install writes beside a
 	// unit's frontend/.
-	fetchedUnitsDir = "build/extensions"
+	fetchedUnitsDir = unitset.FetchedDir
 	// fetchedUnitsIndex lists each copied unit as `name | module@version`.
 	// The frontend notice plugin and scripts/backend-notices.sh read it to
 	// find third-party source that sits inside the repository tree.
 	fetchedUnitsIndex = fetchedUnitsDir + "/fetched-units.txt"
-	backendModule     = "github.com/margince/margince/backend"
+	backendModule     = unitset.BackendModule
 )
-
-var majorVersionSuffix = regexp.MustCompile(`^v[0-9]+$`)
-
-// unitSource is one extension the instance requires, and where its code is.
-type unitSource struct {
-	developmentOnly bool
-	name            string
-	modulePath      string
-	version         string
-	dir             string
-	// download is the module@version fetched for it: the requirement itself,
-	// or what the instance's replace points it at.
-	download string
-	fetched  bool
-}
 
 // downloadedModule is the part of `go mod download -json` this composer reads.
 type downloadedModule struct {
@@ -70,74 +52,10 @@ func instanceGoMod(root string) string {
 	return filepath.Join(root, instanceDirName, "go.mod")
 }
 
-// instanceUnits lists the extensions to compose: every module the instance's
-// go.mod requires, except core's backend and composition and the `// indirect`
-// dependencies. A replace onto a folder is composed where it sits; any other
-// requirement is read from its copy under fetchedUnitsDir.
-func instanceUnits(root string) ([]unitSource, error) {
-	goModPath := instanceGoMod(root)
-	raw, err := os.ReadFile(goModPath) // #nosec G304 -- the instance's go.mod, named by the operator or core's own
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	mod, err := modfile.Parse(goModPath, raw, nil)
-	if err != nil {
-		return nil, err
-	}
-	if err := validateDevelopmentMarkers(mod); err != nil {
-		return nil, fmt.Errorf("%s: %w", goModPath, err)
-	}
-	replaces := map[string]*modfile.Replace{}
-	for _, r := range mod.Replace {
-		replaces[r.Old.Path+"@"+r.Old.Version] = r
-	}
-	seen := map[string]string{}
-	var units []unitSource
-	for _, r := range mod.Require {
-		if r.Indirect || isCoreModule(r.Mod.Path) {
-			continue
-		}
-		name := unitNameFromModulePath(r.Mod.Path)
-		if other, dup := seen[name]; dup {
-			return nil, fmt.Errorf("%s: %s and %s are both the unit %q; one name, one unit", goModPath, other, r.Mod.Path, name)
-		}
-		seen[name] = r.Mod.Path
-		unit := resolveUnit(root, goModPath, name, r.Mod, replaces)
-		for _, comment := range r.Syntax.Suffix {
-			if strings.TrimSpace(strings.TrimPrefix(comment.Token, "//")) == developmentOnlyMarker {
-				unit.developmentOnly = true
-			}
-		}
-		units = append(units, unit)
-	}
-	return units, nil
-}
-
-// resolveUnit applies the instance's replace the way Go does: one for this
-// exact version wins over one for every version. A replace onto a folder is
-// composed in place; onto another module version, that version is fetched.
-func resolveUnit(root, goModPath, name string, req module.Version, replaces map[string]*modfile.Replace) unitSource {
-	u := unitSource{name: name, modulePath: req.Path, version: req.Version, download: req.Path + "@" + req.Version}
-	r := replaces[req.Path+"@"+req.Version]
-	if r == nil {
-		r = replaces[req.Path+"@"]
-	}
-	if r != nil && r.New.Version == "" {
-		u.dir = r.New.Path
-		if !filepath.IsAbs(u.dir) {
-			u.dir = filepath.Join(filepath.Dir(goModPath), u.dir)
-		}
-		u.dir = filepath.Clean(u.dir)
-		return u
-	}
-	if r != nil {
-		u.download = r.New.Path + "@" + r.New.Version
-	}
-	u.dir, u.fetched = filepath.Join(root, filepath.FromSlash(fetchedUnitsDir), name), true
-	return u
+// instanceUnits lists every extension the instance's go.mod requires; see
+// unitset.Read.
+func instanceUnits(root string) ([]unitset.Unit, error) {
+	return unitset.Read(root, instanceGoMod(root))
 }
 
 // fetchUnits copies every versioned extension out of the module cache. The
@@ -155,11 +73,11 @@ func fetchUnits(root string) error {
 	var wanted []string
 	unitOf, downloadOf := map[string]string{}, map[string]string{}
 	for _, u := range units {
-		if u.fetched {
-			wanted = append(wanted, u.download)
-			modPath, _, _ := strings.Cut(u.download, "@")
-			unitOf[modPath] = u.name
-			downloadOf[modPath] = u.download
+		if u.Fetched {
+			wanted = append(wanted, u.Download)
+			modPath, _, _ := strings.Cut(u.Download, "@")
+			unitOf[modPath] = u.Name
+			downloadOf[modPath] = u.Download
 		}
 	}
 	if err := os.MkdirAll(outDir, 0o755); err != nil { // #nosec G301 -- build output the image copies, like the units in it
@@ -264,16 +182,6 @@ func downloadModules(instanceDir string, versions []string) ([]downloadedModule,
 		return nil, fmt.Errorf("go mod download: %w\n%s", runErr, stderr.String())
 	}
 	return modules, nil
-}
-
-// unitNameFromModulePath takes the unit name from the module path's last
-// element, skipping a major-version suffix (…/crm/v2 is the unit crm).
-func unitNameFromModulePath(modulePath string) string {
-	base := path.Base(modulePath)
-	if majorVersionSuffix.MatchString(base) {
-		return path.Base(path.Dir(modulePath))
-	}
-	return base
 }
 
 // goBinary is the running toolchain's go: a writable PATH entry must not choose

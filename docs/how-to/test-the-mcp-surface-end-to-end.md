@@ -212,23 +212,23 @@ A scenario that fails lists what failed to hold. That can be a tool it never cal
 a fact it never said, or something it must not say. It can be a judged criterion, with the
 reason of the judge in one sentence. It can also be a record that the run put in the wrong state.
 
+### The server's record of each call
+
+The lane starts its stack with `mcp.call_log` set to a file in its work folder. The setting is for dev and debugging only: a production install refuses to boot with it. The api writes one JSON line there for each `/mcp` call, with secrets stripped. A line holds the caller, the tool, the arguments, the outcome and the answer. Each run's lines are cut out beside its transcript as `<transcript>.calls`, and both are kept in `e2e/llm/records/`.
+
+Where that file is there, `check.py` reads from it which calls were made, which worked and what each answered. A client that drops `isError` or moves a long answer to a file can then no longer change a verdict. The judge also reads the server's answers, cut to size, to tell whether what the answer states is true. The REST way in writes no such file, so its runs are graded from the transcript as before. Each line's `correlation_id` is the one in the `trace` of its `event_outbox` rows, which name their `audit_log` rows. So a write can be followed after a restore.
+
 ### How directly a run finished
 
-A good model needs fewer rounds, so the lane counts them. After each scenario it prints an
-`efficiency:` line, and the verdict keeps an `efficiency` object. Each count is given as the middle
-value of the runs, with the least and the most.
+A good model needs fewer rounds, so the lane counts them. After each scenario it prints an `efficiency:` line, and the verdict keeps an `efficiency` object. Each count is given as the middle value of the runs, with the least and the most.
 
-The counts are tool calls, model turns, refused calls, prompt tokens and output tokens. How long a
-run lasted is there too when the transcript carries `duration_ms`. A refused call includes a bare tool
-name that the CLI turned away. A run with no last result is left out, and `runs` says how many runs
-are behind the numbers.
+The counts are tool calls, model turns, refused calls, retries, prompt tokens and output tokens. How long a run lasted is there too when the transcript carries `duration_ms`. A refused call includes a bare tool name that the CLI turned away.
+
+A retry is a refused call made once more, with the same tool and action. So a model that learns from one refusal scores one retry, and one that keeps trying scores more. Where the server's record is there, `refused by the client` counts the calls in the transcript that never reached the server. A run with no last result is left out, and `runs` says how many runs are behind the numbers.
 
 A turn is one request to the model, and a Gemini run counts its agent's answers. The codex CLI reports no such count. So a GPT verdict has no turns, and the page shows `-`.
 
-These numbers never fail a case and never change the exit code. A scenario can set
-`expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true`
-and the `efficiency:` line ends with `slow`. The page shows the calls and turns for each case and
-model, and the calls per case for each model. A verdict from before this measure shows `-`.
+These numbers never fail a case and never change the exit code. A scenario can set `expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true` and the `efficiency:` line ends with `slow`. The page shows the calls, turns, refused calls and retries for each case and model, and the middle value of each for each model. A verdict from before this measure shows `-`.
 
 ### The end state
 
@@ -236,7 +236,7 @@ A case that writes can name the state it must leave behind:
 
 ```yaml
 must_end_with:
-  - company "Emsland Ventilbau GmbH" lifecycle=prospect
+  - company "Emsland Ventilbau GmbH" status=prospect
 ```
 
 After each run, `e2e/llm/endstate.py` reads the records back before the lane puts back the snapshot.
@@ -283,6 +283,7 @@ Before you call a red scenario a product regression, rule out the harness:
 | `CERTIFICATE_VERIFY_FAILED` | A Python with no CA bundle | The bridge uses the system bundle instead; check that it exists |
 | OpenRouter 404 `No endpoints found that can handle the requested parameters` | `require_parameters` routing, and a parameter that no endpoint declares | Remove the parameter from the request of the bridge |
 | `HARNESS: agy: authentication failed or timed out` | `agy` has no sign-in it can reach from the run's own home | On macOS, run `agy` once and sign in. On another system, find where `agy` keeps its sign-in, and link that place into the home in `agy_home` |
+| Codex writes at once on an `ask_user_first` act the prompt asked for in other words | The prompt of Codex puts what the user asked for above the text of a tool, and the lane approves its own server for Codex | Accepted for now: [choose-how-a-tool-asks-first.md](choose-how-a-tool-asks-first.md#how-codex-acts). Codex follows a hold |
 | `agy used a tool outside the lane's MCP server: read_file …` | The model reached for its own file tool, most often when the prompt is not clear | A harness stop, never a score. Run the case again; if it happens again, the prompt is not clear enough for Gemini |
 | `codex refused to call …: MCP tool call requires approval` | Codex in `exec` mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`). This stop means the installed codex no longer accepts that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (it refuses an unknown key before any model call), and set it in `run_codex` in `e2e/llm/drive.py` |
 | `the stack did not answer an authenticated call after the restore` | The snapshot restore between runs cuts every database connection, and the api still answered 503 after 30 seconds | A harness stop, never a score. Read `make dev-logs DEV_SLUG=<slug> FOLLOW=0 N=500` before the next boot replaces the log |
@@ -329,7 +330,7 @@ The stamp then holds `graded_commit` and `graded_at` too. Where the two commits 
 A verdict whose stamp no longer matches the tree, or that has none, is stale.
 `make e2e-llm-report` names what moved. A pull request that makes a verdict
 stale gets a comment that lists it (`mcp-e2e-stale.yml`). List those verdicts in the PR body when you
-do not run them again.
+do not run them again. The coverage page still shows a stale verdict, marked `earlier listing`, and its case table names what moved. So a change that makes a verdict stale also generates the page again, with the command above.
 
 `mcp-sweep.yml` sweeps every case in parts, side by side, with `claude-sonnet-5-5` over the Claude CLI. Its header comment says what it needs.
 It uploads verdicts only when every case has a new one from a stack whose search ranks by meaning. Each part keeps its transcripts as an `e2e-llm-transcripts-*` artifact.

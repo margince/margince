@@ -310,7 +310,12 @@ function ListSinceVisit({ list }: Readonly<{ list: List }>) {
   );
 }
 
-type ListNotice = "archived" | "invalid" | "retired_field" | "ownerless";
+type ListNotice =
+  | "archived"
+  | "unavailable"
+  | "invalid"
+  | "retired_field"
+  | "ownerless";
 
 /** The one standing state the list's notice speaks for, most pressing first. */
 function noticeOf(list: List): ListNotice | null {
@@ -318,6 +323,7 @@ function noticeOf(list: List): ListNotice | null {
     return "archived";
   }
   if (
+    list.health === "unavailable" ||
     list.health === "invalid" ||
     list.health === "retired_field" ||
     list.health === "ownerless"
@@ -380,6 +386,13 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
       >
         <p>{t("lists.archived.body")}</p>
         <ErrorLine error={archive.error} />
+      </Callout>
+    );
+  }
+  if (notice === "unavailable") {
+    return (
+      <Callout tone="info" title={t("lists.unavailable.title")}>
+        {t("lists.unavailable.body")}
       </Callout>
     );
   }

@@ -17,6 +17,7 @@
 
 import { useCompanyMarksByID } from "../../components/companymarks";
 import { type ListColumn, ListTable } from "../../design-system/listtable";
+import { ABSENT } from "../../format/absent";
 import {
   formatDateAbbrev,
   formatMoneyOrAbsent,
@@ -286,7 +287,7 @@ function cellText(
   const value = row[name];
   const { t, locale, zone } = reading;
   if (value === null || value === undefined) {
-    return "—";
+    return ABSENT;
   }
   if (typeof value === "boolean") {
     return t(value ? "field.yes" : "field.no");

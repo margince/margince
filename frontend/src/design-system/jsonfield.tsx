@@ -54,7 +54,7 @@ export function JsonField({
   const lines = Math.max(value.split("\n").length, 1);
   const marked = new Set(problemLines);
   return (
-    <div className={`json-field${invalid ? " json-field-invalid" : ""}`}>
+    <div className="json-field">
       <div className="json-field-gutter" ref={gutter} aria-hidden="true">
         {Array.from({ length: lines }, (_, i) => (
           <span
@@ -70,7 +70,7 @@ export function JsonField({
         {...rest}
         className="code-block json-field-text"
         spellCheck={false}
-        aria-invalid={invalid || undefined}
+        aria-invalid={invalid || rest["aria-invalid"] || undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onScroll={(e) => {

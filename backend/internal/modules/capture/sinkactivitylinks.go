@@ -41,6 +41,7 @@ func (s *Sink) linkActivity(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 			datasource.EntityContact: "contact_id",
 			datasource.EntityCompany: "company_id",
 			datasource.EntityDeal:    "deal_id",
+			datasource.EntityLead:    leadLinkColumn,
 		}[link.Type]
 		if !ok {
 			return fmt.Errorf("capture: activities cannot link a %s", link.Type)
@@ -57,3 +58,22 @@ func (s *Sink) linkActivity(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 	}
 	return nil
 }
+
+// EnsureChosenLinkTx files an activity on the contact or lead a member chose,
+// when it is not filed there already. A replay of a stored message calls it.
+// The choice of the second filing is kept, and a repeat of the first is a no-op.
+func EnsureChosenLinkTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, subject datasource.EntityRef) error {
+	column := "contact_id"
+	if subject.Type == datasource.EntityLead {
+		column = leadLinkColumn
+	}
+	var filed bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity_link WHERE activity_id = $1 AND `+column+` = $2)`,
+		activity, subject.ID).Scan(&filed); err != nil || filed {
+		return err
+	}
+	return (&Sink{}).linkActivity(ctx, tx, activity, []datasource.EntityRef{subject})
+}
+
+// leadLinkColumn is the activity_link column that holds a lead.
+const leadLinkColumn = "lead_id"

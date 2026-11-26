@@ -85,10 +85,11 @@ func (c *Connector) Sync(_ context.Context, _ connector.Auth, cursor connector.C
 	return cursor, nil
 }
 
-// Normalize maps one verbatim Telegram update, delegating to the package
-// function the ingest worker also calls so the mapping has one spelling.
-func (c *Connector) Normalize(ctx context.Context, raw connector.RawRecord) ([]connector.NormalizedRecord, error) {
-	return Normalize(ctx, raw)
+// Normalize files nothing. A Telegram update is a chat message, filed through
+// ParseChatMessage and capture.FileChatMessage, which need the connection the
+// update arrived on.
+func (c *Connector) Normalize(context.Context, connector.RawRecord) ([]connector.NormalizedRecord, error) {
+	return nil, fmt.Errorf("telegram: updates are filed as chat messages, not as pre-built records: %w", connector.ErrSkip)
 }
 
 // HealthCheck asks Telegram whether the token still names a live bot. getMe is

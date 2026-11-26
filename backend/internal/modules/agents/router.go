@@ -76,6 +76,7 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		// router is listed as decided per call when its actions differ.
 		spec.Actions = append(spec.Actions, mcp.ToolAction{
 			Action: choices[i], Verb: target.Name, Tier: target.Tier, AskUserFirst: target.AskUserFirst,
+			PreviewArgument: target.PreviewArgument, PickedBy: pickedBy(rt, choices[i]),
 		})
 		if target.Tier != first.Tier {
 			spec.Tier = mcp.TierDynamic
@@ -441,6 +442,18 @@ var errRouteArguments = errors.New("crmagents: re-encoding routed arguments")
 // names, so it has no route field of its own.
 type targetChooser interface {
 	chooseTarget(members map[string]json.RawMessage) (string, error)
+	// pickedBy names, per target choice, the arguments that choose it, as a
+	// client reads them in the router's copy.
+	pickedBy() map[string]string
+}
+
+// pickedBy is the arguments that choose choice, and empty for a router that
+// picks by one argument's value.
+func pickedBy(rt router, choice string) string {
+	if chooser, ok := rt.(targetChooser); ok {
+		return chooser.pickedBy()[choice]
+	}
+	return ""
 }
 
 func pickTarget(rt router, members map[string]json.RawMessage) (string, error) {

@@ -700,7 +700,10 @@ it("snoozes the Home task before a slow day refresh and pins the next click to i
     await screen.findByRole("button", { name: en["brief.focus.context"] }),
   );
   const dialog = await screen.findByRole("dialog");
-  const snooze = await within(dialog).findByRole("button", {
+  await user.click(
+    await within(dialog).findByRole("button", { name: /^Due / }),
+  );
+  const snooze = await screen.findByRole("button", {
     name: en["tasks.snooze"],
   });
   await user.click(snooze);

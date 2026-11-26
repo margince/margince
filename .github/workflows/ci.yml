@@ -130,6 +130,8 @@ jobs:
       # docs/explanation/ci-pipeline.md rather than left to be inferred from
       # this filter.
       images: ${{ steps.filter.outputs.images == 'true' || github.event_name == 'merge_group' }}
+      # The release scripts and the workflows that call them. See the filter below.
+      release: ${{ steps.filter.outputs.release == 'true' || github.event_name == 'merge_group' }}
       # A pull request into `develop` takes the fast lanes only. The slow ones run
       # each night on develop's tip, before develop is merged into main: see
       # docs/how-to/land-through-develop.md.
@@ -244,6 +246,7 @@ jobs:
               - 'tools/**'
               - 'user-guide/**'
               - 'Dockerfile*'
+              - 'docker-bake.hcl'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'renovate.json'
@@ -344,6 +347,18 @@ jobs:
               - 'Dockerfile'
               - '.dockerignore'
               - 'docker-bake.hcl'
+            # What `make check-release` tests, and the workflows that call it.
+            # Only the release workflows run these scripts, so `make check`
+            # leaves their tests out and this scope runs them instead.
+            # backend/gates/releaselane_test.go derives what this scope must
+            # hold from the tree.
+            release:
+              - 'Makefile'
+              - 'scripts/release*'
+              - 'scripts/lib-git-fixture.sh'
+              - '.github/workflows/release.yml'
+              - '.github/workflows/release-tag.yml'
+              - '.github/workflows/_release-*.yml'
             # Everything that can change WHICH packages are in the tree, and
             # therefore which licenses the gate below judges. `**/pnpm-lock.yaml`
             # is globbed on purpose: a Renovate lockfile-only PR is precisely
@@ -644,7 +659,7 @@ jobs:
       contents: read
     # The baseline pass loads the whole tree, so it gets a runner. The strict
     # pass loads only the packages a change touched, which leaves room for the
-    # modules outside backend/.
+    # modules outside backend/ and the few packages the untagged pass reads.
     # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
     strategy:
       fail-fast: false
@@ -655,7 +670,7 @@ jobs:
             fetch-depth: 1
             filter: ""
           - pass: strict
-            legs: lint-strict lint-modules
+            legs: lint-strict lint-untagged lint-modules
             fetch-depth: 0
             filter: blob:none
     # Setup mirrors deterministic-gates, which says why each step is there.
@@ -1654,6 +1669,27 @@ jobs:
       - name: Build the role images
         run: docker buildx bake -f docker-bake.hcl default
 
+  # The release scripts' own tests. They left `make check` because only the
+  # release workflows run the scripts; those workflows run this lane before
+  # they build, and this job runs it on a pull request that changes it.
+  release-scripts:
+    name: release-scripts
+    timeout-minutes: 10
+    needs: [changes]
+    if: needs.changes.outputs.release == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The release scripts pass their own tests
+        run: make check-release
+
   ci:
     name: ci
     timeout-minutes: 10
@@ -1683,6 +1719,7 @@ jobs:
       - uat
       - license-gate
       - images
+      - release-scripts
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -33,6 +33,8 @@ type CallActionProps = { record: CallRecord } & (
       label: string;
       /** The card's one filled verb, where calling is the work. */
       filled?: boolean;
+      /** A line in a menu: the word alone, since a menu line draws no glyph. */
+      bare?: boolean;
     }
   | {
       appearance: "icon";
@@ -80,7 +82,9 @@ export function CallAction(props: Readonly<CallActionProps>) {
     );
   }
   if (props.appearance === "button") {
-    return href && callVerb(href, props.label, props.filled, onClick);
+    return (
+      href && callVerb(href, props.label, props.filled, onClick, props.bare)
+    );
   }
   const icon = <Phone aria-hidden="true" />;
   if (props.reasonId !== undefined || !href) {
@@ -110,9 +114,11 @@ function callVerb(
   label: string,
   filled: boolean | undefined,
   onClick: ((event: MouseEvent<HTMLAnchorElement>) => void) | undefined,
+  bare: boolean | undefined,
 ) {
   const look = filled ? "btn btn-primary" : undefined;
-  return linkVerb(href, <Phone aria-hidden="true" />, label, onClick, look);
+  const glyph = bare ? null : <Phone aria-hidden="true" />;
+  return linkVerb(href, glyph, label, onClick, look);
 }
 
 // A labelled verb that goes somewhere: `Button`'s ghost look on an anchor, which

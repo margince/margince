@@ -292,8 +292,11 @@ func insertOnce(
 		in.Description, in.StartedAt, in.TargetEndDate, in.Source, by,
 		in.SourceSystem, in.StartPhase(),
 	})
-	cfCols, cfHolders, args, cfErr := storekit.InsertFragments(active, in.CustomFields, base)
+	cfCols, cfHolders, args, cfErr := storekit.InsertFragmentsIn(ctx, tx, active, in.CustomFields, base)
 	if cfErr != nil {
+		if rbErr := sp.Rollback(ctx); rbErr != nil {
+			return false, fmt.Errorf("roll the project-insert savepoint back after %v: %w", cfErr, rbErr)
+		}
 		return false, cfErr
 	}
 	insertErr := storekit.ExecSourceInsert(ctx, sp, projectObject,

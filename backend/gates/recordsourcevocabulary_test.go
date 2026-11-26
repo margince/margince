@@ -25,6 +25,8 @@ import (
 //
 // gatekit:fixture the held tables and the request each one's source arrives on
 var recordSourceHeld = map[string]string{
+	"company": "CreateCompanyRequest",
+	"contact": "CreateContactRequest",
 	"deal":    "CreateDealRequest",
 	"offer":   "CreateOfferRequest",
 	"partner": "",
@@ -37,8 +39,6 @@ var recordSourceHeld = map[string]string{
 var recordSourceFree = gatekit.Waive(map[string]string{
 	"CreateActivityRequest":     "an activity's source also names the code that wrote the row, and readers select on those words",
 	"CreateTaskRequest":         "a task is an activity and shares its source",
-	"CreateCompanyRequest":      "capture and domain triage store a message id or a domain in a company's source",
-	"CreateContactRequest":      "capture stores the message a contact was read from in its source",
 	"CreateLeadRequest":         "a lead's source is matched against the administered lead source list",
 	"CreateRelationshipRequest": "a relationship's source cites the record or mail the edge was read from",
 	"CreateCustomFieldRequest":  "a custom field is configuration, not a record that arrives by a channel",
