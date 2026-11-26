@@ -20,7 +20,8 @@ const CapturedBy = "connector:whatsapp"
 // ChatMessage maps one decoded message to what the provider said about it. A
 // reaction, an edit and a revoke are no new conversation entry, so they answer
 // connector.ErrSkip. ChatChange maps the edit and the revoke. A media item files as its caption, or as a
-// placeholder naming its type until media is downloaded.
+// placeholder naming its type when it has none. The ingest worker downloads
+// the file itself.
 func ChatMessage(msg Message) (connector.ChatMessage, error) {
 	_, userID := CustomerIdentity(msg)
 	if userID == "" {
