@@ -24,12 +24,12 @@ import {
   invalidateClosedLead,
   leadPromotePreviewKey,
 } from "../../lib/leadkeys";
+import { leadIdentityName } from "../../lib/leadname";
 import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { moneyLimit, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useLeadCompanyNameReading } from "./leadcompany";
-import { leadIdentityName } from "./leadname";
 import {
   amountRefusal,
   dealBlock,

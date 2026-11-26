@@ -18,7 +18,7 @@ import {
   formatDuration,
   formatNumber,
 } from "../../format/format";
-import { leadIdentityName } from "./leadname";
+import { leadIdentityName } from "../../lib/leadname";
 import type { ReadingContext } from "./leadstandingparts";
 import { nextBookedMeeting } from "./leadstandingparts";
 
