@@ -273,13 +273,15 @@ function CalendarRow({
 }: Readonly<{ sentence: string; verb: string }>) {
   const t = useT();
   // A seat or role that may not capture connects nothing: it is told why, and
-  // never sent to a setting it cannot change.
-  const refusal = captureRefusalOf(useConnectors().data);
+  // never sent to a setting it cannot change. An unanswered roster has not said
+  // the reader may, so it offers no link either.
+  const roster = useConnectors().data;
+  const refusal = captureRefusalOf(roster);
   return (
     <PanelRow>
       {sentence}
       {refusal !== null && ` ${t(refusal)}`}
-      {refusal === null && (
+      {roster !== undefined && refusal === null && (
         <>
           {" "}
           <AppLink

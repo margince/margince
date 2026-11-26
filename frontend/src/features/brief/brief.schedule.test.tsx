@@ -35,16 +35,23 @@ function taskRow(id: string, title: string): WorklistItem {
 
 // A QueryClient because the next meeting names its records through
 // `EntityRef`, which reads a name it is not handed.
-// The mailbox roster says whether this reader may connect a calendar at all.
-function draw(node: React.ReactNode, captures = true) {
+// The mailbox roster says whether this reader may connect a calendar at all,
+// and an unanswered one has not said yet.
+type Roster = "captures" | "refused" | "unanswered";
+
+function draw(node: React.ReactNode, roster: Roster = "captures") {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () =>
-      Response.json({
-        data: [],
-        providers: [],
-        seat_capture: captures ? { allowed: true } : { allowed: false },
-      }),
+    vi.fn(() =>
+      roster === "unanswered"
+        ? new Promise<Response>(() => {})
+        : Promise.resolve(
+            Response.json({
+              data: [],
+              providers: [],
+              seat_capture: { allowed: roster === "captures" },
+            }),
+          ),
     ),
   );
   const client = new QueryClient();
@@ -334,7 +341,7 @@ describe("the schedule panel", () => {
     ["unreadable", "brief.schedule.unreadable", "brief.schedule.reconnect"],
   ] as const)(
     "says a %s calendar counted nothing",
-    (calendar, sentence, verb) => {
+    async (calendar, sentence, verb) => {
       const day = { ...readingsDay({}, []), calendar };
       draw(<SchedulePanel day={day} state="ready" />);
 
@@ -343,11 +350,25 @@ describe("the schedule panel", () => {
       // No meeting row, and no claim about the rest of the day.
       expect(panel.querySelectorAll(".rail-schedule-row")).toHaveLength(0);
       expect(panel.textContent).not.toContain(en["brief.schedule.clearRest"]);
-      expect(
-        within(panel)
-          .getByRole("link", { name: en[verb] })
-          .getAttribute("href"),
-      ).toBe("/#/settings/connections");
+      const link = await within(panel).findByRole("link", { name: en[verb] });
+      expect(link.getAttribute("href")).toBe("/#/settings/connections");
+    },
+  );
+
+  // Before the roster answers, nothing has said this reader may connect, so a
+  // member whose capture will be refused is not sent to the setting meanwhile.
+  it.each([
+    ["not_connected", "brief.schedule.notConnected"],
+    ["unreadable", "brief.schedule.unreadable"],
+  ] as const)(
+    "offers no link for a %s calendar before the roster answers",
+    (calendar, sentence) => {
+      const day = { ...readingsDay({}, []), calendar };
+      draw(<SchedulePanel day={day} state="ready" />, "unanswered");
+
+      const panel = screen.getByRole("region");
+      expect(panel.textContent).toContain(en[sentence]);
+      expect(within(panel).queryByRole("link")).toBeNull();
     },
   );
 
@@ -360,7 +381,7 @@ describe("the schedule panel", () => {
     "offers a reader who may not connect no link for a %s calendar",
     async (calendar, sentence) => {
       const day = { ...readingsDay({}, []), calendar };
-      draw(<SchedulePanel day={day} state="ready" />, false);
+      draw(<SchedulePanel day={day} state="ready" />, "refused");
 
       const panel = screen.getByRole("region");
       expect(panel.textContent).toContain(en[sentence]);
@@ -389,7 +410,7 @@ describe("the schedule panel", () => {
 
   // A meeting booked by hand is a fact the CRM holds whatever the calendar
   // says, so it follows the sentence instead of hiding behind it.
-  it("names a hand-booked next meeting under a calendar that cannot count", () => {
+  it("names a hand-booked next meeting under a calendar that cannot count", async () => {
     const day = {
       ...readingsDay({}, []),
       calendar: "not_connected" as const,
@@ -402,7 +423,9 @@ describe("the schedule panel", () => {
     expect(rows[0].textContent).toContain(en["brief.schedule.notConnected"]);
     expect(rows[1].classList.contains("rail-schedule-row")).toBe(true);
     expect(
-      within(panel).getByRole("link", { name: en["brief.schedule.connect"] }),
+      await within(panel).findByRole("link", {
+        name: en["brief.schedule.connect"],
+      }),
     ).toBeTruthy();
     expect(within(panel).getByText("Weber kickoff")).toBeTruthy();
   });
