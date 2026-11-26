@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 244.4 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63963 |
+| Approx. wire tokens | 63977 |
 | Largest tool | `read_details` (15.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -36,7 +36,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Descriptions (incl. governance clause) | 51.1 KB | 20% | Yes, every step |
 | Input schemas | 148.1 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **199.1 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **199.2 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 465 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 524 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 448 |
-| [`find_records`](#find_records) | Find records | yes |  | 2050 |
+| [`find_records`](#find_records) | Find records | yes |  | 2053 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 351 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 3353 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1921 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2994 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 3005 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1419 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 527 |
@@ -3626,6 +3626,7 @@ next_cursor to read on.
           "company",
           "contact",
           "deal",
+          "deal_room",
           "lead",
           "offer_template",
           "product",
@@ -9845,6 +9846,7 @@ user first for the actions ai_call, ai_calls.)
         "channel_connections",
         "channel_providers",
         "colleagues",
+        "company_types",
         "confirm_submissions",
         "connector_containers",
         "connectors",
@@ -9882,6 +9884,7 @@ user first for the actions ai_call, ai_calls.)
         "legal_entity_members",
         "legal_holds",
         "legal_review_settings",
+        "link_types",
         "list_filters",
         "member",
         "member_retirement",
@@ -9903,6 +9906,7 @@ user first for the actions ai_call, ai_calls.)
         "query",
         "record_fields",
         "record_history",
+        "record_kinds",
         "recovery_health",
         "report_blocks",
         "report_vocabulary",
