@@ -2229,6 +2229,7 @@ export const en = {
   "systemJob.agent_resume": "Agent run resume",
   "systemJob.agent_scheduler": "Scheduled agent runs",
   "systemJob.voice_build": "Writing style build",
+  "systemJob.document_read": "Document reading",
   "systemJob.forecast_chances": "Forecast stage rates",
   "systemJob.assurance_freshness": "Forecast check freshness",
   "systemJob.forecast_call_baseline": "Forecast call baseline",

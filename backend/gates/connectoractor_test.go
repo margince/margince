@@ -345,7 +345,6 @@ var actorKinds = map[string]string{
 var agentJobsStillSystemTyped = gatekit.Waive(map[string]string{
 	"internal/compose/approvalpreviewcommitment.go": forAColleague,
 	"internal/compose/deepreadprincipal.go":         forAColleague,
-	"internal/compose/jobs_documentextract.go":      forAColleague,
 	"internal/compose/jobs_transcript.go":           forAColleague,
 	"internal/compose/commitmenttask.go":            forNoOne,
 	"internal/compose/jobs_knowledgeingest.go":      forNoOne,

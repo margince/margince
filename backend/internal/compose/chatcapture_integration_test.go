@@ -57,7 +57,7 @@ func readChatScreenshot(t *testing.T, modelReply string) chatFixture {
 		t.Fatal(err)
 	}
 	brain := scriptedBrain{FakeClient: ai.NewFakeClient().Script(modelReply), carriage: carriesImagesOnly}
-	if err := NewDocumentExtractor(env.Pool, brain, discardLogger()).Read(ctx, store, reading.ID, attachment); err != nil {
+	if err := NewDocumentExtractor(env.Pool, brain, discardLogger()).Read(ctx, ctx, store, reading.ID, attachment); err != nil {
 		t.Fatal(err)
 	}
 	return chatFixture{env: env, store: store, blob: blob, contact: contact, attachment: attachment, reading: reading.ID}

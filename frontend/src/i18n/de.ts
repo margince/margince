@@ -2310,6 +2310,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
   "systemJob.voice_build": "Ablauf der Schreibstil-Analyse",
+  "systemJob.document_read": "Ablauf des Dokument-Auslesens",
   "systemJob.forecast_chances": "Prognose-Phasenquoten",
   "systemJob.assurance_freshness": "Aktualität der Prognoseprüfung",
   "systemJob.forecast_call_baseline": "Ausgangsstand einer Prognoseabgabe",
