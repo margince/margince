@@ -1541,14 +1541,15 @@ for field in '"driver": "gpt:api"' '"effort": "reasoning medium"' '"system_promp
 	fi
 done
 
-# CASE 64 — the seeded rep has no brief today, said in either order; an
-# answer that reads a brief out of nothing does not hold.
+# CASE 64 — the seeded rep has no brief today, in any wording; an answer that
+# reads a brief out of nothing does not hold.
 c64="case64-catch-me-up-and-the-brief.yaml"
-judges "$c64" case64 says-the-brief-is-missing 0
-judges "$c64" case64 says-there-is-no-brief 0
-judges "$c64" case64 says-the-brief-hasnt-been-generated 0
-judges "$c64" case64 says-the-brief-isnt-there 0
-judges "$c64" case64 reads-a-brief-that-is-not-there 1 "never said anything matching"
+judges "$c64" case64 says-the-brief-is-missing 0 "!the judge says NO"
+judges "$c64" case64 says-there-is-no-brief 0 "!the judge says NO"
+judges "$c64" case64 says-the-brief-hasnt-been-generated 0 "!the judge says NO"
+judges "$c64" case64 says-the-brief-isnt-there 0 "!the judge says NO"
+judges "$c64" case64 says-there-isnt-one-yet 0 "!the judge says NO"
+judges "$c64" case64 reads-a-brief-that-is-not-there 1 "the judge says NO to: Criterion 1."
 
 # CASE 112 — the admin has no plan this week, and either order of saying so
 # holds; an answer that invents a plan does not.

@@ -42,8 +42,6 @@ class ContractedNegationTest(unittest.TestCase):
              "Bruno isn't going anywhere, so Bruno is closed."),
             ("case40-sort-the-queue.yaml", "recorded", "The title is not recorded.", "The title hasn't been recorded."),
             ("case56-not-the-same.yaml", "a duplicate", "They are not the same contact.", "They aren't the same contact."),
-            ("case64-catch-me-up-and-the-brief.yaml", "brief", "The brief has not been generated.",
-             "The brief hasn't been generated."),
             ("case112-my-plan-and-the-dossier.yaml", "started", "Your plan has not been started.",
              "Your plan hasn't been started."),
         ):
