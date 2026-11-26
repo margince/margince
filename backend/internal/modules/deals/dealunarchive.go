@@ -22,8 +22,8 @@ import (
 
 var dealUnarchive = storekit.UnarchiveShape{
 	Table: dealTable,
-	// A deal is never merged, so it answers false for the merged column.
-	Lock: `SELECT name, archived_at, false, version FROM deal WHERE id = $1 FOR UPDATE`,
+	// A merged-away deal is refused: its offers and contracts now belong to the survivor.
+	Lock: `SELECT name, archived_at, merged_into_id IS NOT NULL, version FROM deal WHERE id = $1 FOR UPDATE`,
 	Children: []storekit.ChildRestore{{Table: "relationship", Statement: `UPDATE relationship r SET archived_at = NULL
 		WHERE r.id = $1 AND r.archived_at = $2
 		  AND NOT EXISTS (SELECT 1 FROM contact c WHERE c.id IN (r.contact_id, r.counterparty_contact_id) AND c.archived_at IS NOT NULL)

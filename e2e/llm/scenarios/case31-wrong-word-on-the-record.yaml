@@ -18,12 +18,8 @@
 #                     explicitly does not want, and three other accounts carry
 #                     it honestly.
 #
-# What this case CANNOT see, stated rather than papered over: check.py has no
-# must_not_call, so a run that removes the tagging AND also retires the word
-# would be caught only if it said so. The positive criterion below — that the
-# word survives for the other accounts — is the whole guard, and a silent
-# retirement passes it. Reaching that needs the database read back after the
-# run, which this lane does not do.
+# Retiring the word would also take it off the three accounts that carry it
+# honestly, so the end state reads it back on them (must_end_with).
 name: case31_wrong_word_on_the_record
 title: The word that should not be on this one
 criteria: [1, 2]

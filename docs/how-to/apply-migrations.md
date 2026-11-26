@@ -159,12 +159,12 @@ Some migrations take a lock on a whole table, and every other user of that table
 migration sets a short `lock_timeout`, so on a busy installation it fails, and does not wait without end.
 Run it when the app is not busy, and run `migrate up` again if it timed out.
 
-- `1790401426_bookings_reserve_their_exact_interval` builds the rule that stops two booking holds sharing
-  time. It locks the whole activity table, and waits at most three seconds for that lock.
+- `1790401426_bookings_reserve_their_exact_interval` builds the rule that stops two booking holds sharing time. It locks the whole activity table, and waits at most three seconds for that lock.
 
 ## Build an index while the app still writes
 
-Put `-- pgmigrate:no-transaction` on a line by itself in the up file of such a migration.
+A plain `CREATE INDEX` blocks writes until it has read every row, so an index on a table an earlier migration made is built `CONCURRENTLY`.
+`TestAnIndexOnAPreExistingTableIsBuiltConcurrently` fails one built plainly. Put `-- pgmigrate:no-transaction` on a line by itself in the up file of such a migration.
 The [runner](../../backend/internal/platform/dbmigrate/notransaction.go) records the version after
 all statements finish, so each statement must be safe to run again.
 

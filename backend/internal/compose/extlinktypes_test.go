@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func TestRegisterExtensionsRegistersDeclaredLinkTypes(t *testing.T) {
-	recordkinds.Reset()
-	t.Cleanup(recordkinds.Reset)
+	extregistrytest.Reset(t)
 	err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name: "links-ok", Version: "0.0.1",
 		LinkTypes: []extension.LinkType{{Type: "follow_up_of", Label: "Follow-up", From: []string{"deal"}, To: []string{"deal"}}},
@@ -28,6 +28,7 @@ func TestRegisterExtensionsRegistersDeclaredLinkTypes(t *testing.T) {
 }
 
 func TestABadLinkTypeDeclarationAbortsTheBoot(t *testing.T) {
+	extregistrytest.Reset(t)
 	for _, c := range []struct {
 		name  string
 		types []extension.LinkType
@@ -49,5 +50,4 @@ func TestABadLinkTypeDeclarationAbortsTheBoot(t *testing.T) {
 			t.Errorf("%s: a refused set registered its type", c.name)
 		}
 	}
-	t.Cleanup(recordkinds.Reset)
 }

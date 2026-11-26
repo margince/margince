@@ -80,6 +80,15 @@ var relationshipTargetByID = map[string]string{
 
 func (readRelationships) routeTargets() map[string]string { return relationshipTargetByID }
 
+// pickedBy names each choice by itself: a choice is the id argument that picks it.
+func (readRelationships) pickedBy() map[string]string {
+	picked := map[string]string{}
+	for id := range relationshipTargetByID {
+		picked[id] = id
+	}
+	return picked
+}
+
 var errRelationshipsNamesOneID = &BadArgsError{Cause: errors.New("name exactly one of contact_id, company_id or deal_id")}
 
 func (readRelationships) chooseTarget(members map[string]json.RawMessage) (string, error) {

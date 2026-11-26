@@ -105,7 +105,7 @@ func measureTeamFunnel(ctx context.Context, tx pgx.Tx, review *TeamReview, end t
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	from, to := arg(end.AddDate(0, 0, -7*funnelWindowWeeks)), arg(end)
 	who := arg(rosterIDs(*review))
-	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	scope, err := standingDealScope(ctx, arg)
 	if err != nil {
 		return err
 	}

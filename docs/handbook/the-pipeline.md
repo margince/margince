@@ -26,7 +26,7 @@ This offers open stages only, and skips deals already on that stage. A note then
 ### How do I mark a deal as won?
 To mark a deal as won in Margince, move it to a stage whose **Stage type** is **Won**. In the pipeline you start with, that is the stage called Won. On the board, **Mark won** in the card's **…** menu does the same.
 1. Open the deal and click the Won stage on its **Stage** ladder. Or choose **Mark won** in the card's menu on **Board**, or drag the card to the Won column.
-2. The dialog says "This closes the deal as won. Nothing changes until you confirm."
+2. The dialog says "This closes the deal as won. Nothing changes until you confirm." If its project is still in Initiative or Pursuing, it adds "This also moves {project} to Delivering." Winning moves that project to Delivering, and its phase history names the won deal.
 3. Without a signed contract, the dialog asks **How was it won?** on opening. **Confirm** waits for your answer. **Other** also needs **Details**.
 4. Press **Confirm**. The deal closes.
 

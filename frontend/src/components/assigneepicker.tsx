@@ -145,6 +145,22 @@ export function useMemberFilterOptions(enabled: boolean) {
 }
 
 /**
+ * The viewer first, under `you`, then every other member by name: how the
+ * owner dial and the filter builder both list who may own a record.
+ */
+export function youThenByName(
+  members: readonly UserOption[],
+  viewerId: string | undefined,
+  you: string,
+  locale: Locale,
+): UserOption[] {
+  const others = members
+    .filter((member) => member.value !== viewerId)
+    .sort((a, b) => forReader(a.label, b.label, locale));
+  return viewerId ? [{ value: viewerId, label: you }, ...others] : others;
+}
+
+/**
  * The workspace's contacts as assignment options — everyone the roster carries
  * LESS agent seats.
  *

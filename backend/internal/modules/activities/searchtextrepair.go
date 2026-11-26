@@ -35,8 +35,9 @@ func SearchTextDataTask() datatask.Task {
 // storedMail is a mail read under its row lock, so the end computed from the
 // body is written beside that same body.
 type storedMail struct {
-	ID   ids.UUID
-	Body string
+	ID      ids.UUID
+	Subject *string
+	Body    string
 }
 
 // RebuildSearchTextTx stores where the sender's own text ends for each mail in
@@ -50,7 +51,7 @@ func RebuildSearchTextTx(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (d
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT id, body FROM activity
+	rows, err := tx.Query(ctx, `SELECT id, subject, body FROM activity
 		WHERE id = ANY(@inspected) AND kind = @mail AND body IS NOT NULL AND body_own_end IS NULL AND restricted_at IS NULL
 		ORDER BY id FOR UPDATE`, pgx.NamedArgs{"inspected": page, "mail": mailquote.MailKind})
 	if err != nil {
@@ -63,7 +64,7 @@ func RebuildSearchTextTx(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (d
 	mailIDs, ownEnds := make([]ids.UUID, 0, len(mails)), make([]*int, 0, len(mails))
 	for _, mail := range mails {
 		mailIDs = append(mailIDs, mail.ID)
-		ownEnds = append(ownEnds, mailquote.OwnEnd(mailquote.MailKind, &mail.Body))
+		ownEnds = append(ownEnds, mailquote.OwnEnd(mailquote.MailKind, deref(mail.Subject), &mail.Body))
 	}
 	var changed int
 	if err := tx.QueryRow(ctx, `SELECT public.rebuild_activity_search_text(@inspected::uuid[], @mails::uuid[], @ends::int[])`,

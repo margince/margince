@@ -333,8 +333,8 @@ func (s *Service) saveTargetRevision(ctx context.Context, tx pgx.Tx, target crmc
 		return err
 	}
 	var b bindings
-	values := []string{b.add(target.Id), b.add(target.Revision), b.add(raw), b.add(s.now()), b.add(author)}
-	_, err = tx.Exec(ctx, "INSERT INTO sales_target_revision(target_id,revision,definition,effective_at,created_by) VALUES ("+strings.Join(values, ",")+")", b.values...)
+	values := []string{b.add(target.Id), b.add(target.Revision), b.add(raw), b.add(author)}
+	_, err = tx.Exec(ctx, "INSERT INTO sales_target_revision(target_id,revision,definition,created_by) VALUES ("+strings.Join(values, ",")+")", b.values...)
 	return err
 }
 

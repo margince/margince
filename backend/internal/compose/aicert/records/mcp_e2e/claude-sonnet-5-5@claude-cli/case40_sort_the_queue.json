@@ -5,33 +5,38 @@
     2,
     3
   ],
-  "passed": 2,
-  "runs": 2,
+  "passed": 3,
+  "runs": 3,
   "pass_at": 2,
   "driver": "claude:cli",
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
   "stamp": {
-    "scenario": "09f25ba8c52e21ce",
-    "tools": "42f7f135ac62768d",
-    "instructions": "c5c644eee9719be0",
-    "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "1d06e4e790e4733576f87296a1fcadc09dafe0ae",
-    "ran_at": "2026-11-22T04:57:24Z",
-    "graded_commit": "24405859b1f4fe6f5c16d1e06e82b54398a7f1fa",
-    "graded_at": "2026-11-22T16:00:18Z"
+    "scenario": "0b9d21083a4b8c99",
+    "tools": "7373cbb214bc5bfb",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T05:59:50Z",
+    "graded_commit": "912b71dc578079b2703d8a70ecfadb4a704aeafe",
+    "graded_at": "2026-11-25T06:28:39Z"
   },
   "usage": {
-    "input_tokens": 26,
-    "output_tokens": 4945,
-    "cache_creation_input_tokens": 27012,
-    "cache_read_input_tokens": 1050845,
-    "runs_measured": 2,
-    "runs_costed": 2,
-    "cost_usd": 0.2626
+    "input_tokens": 44,
+    "output_tokens": 7462,
+    "cache_creation_input_tokens": 37744,
+    "cache_read_input_tokens": 1692315,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.3949
   },
   "tools_by_run": [
     {
@@ -42,6 +47,20 @@
         "disqualify_lead",
         "find_records",
         "list_records",
+        "promote_lead",
+        "qualify_lead",
+        "read_context",
+        "read_record",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_state",
+        "find_records",
+        "list_records",
         "preview_lead_promotion",
         "promote_lead",
         "qualify_lead",
@@ -56,51 +75,46 @@
       "tools": [
         "catch_me_up_on",
         "change_state",
-        "disqualify_lead",
         "find_records",
         "list_records",
-        "preview_lead_promotion",
         "promote_lead",
         "qualify_lead",
         "read_context",
-        "read_details",
-        "read_record",
-        "read_view",
         "whoami"
       ]
     }
   ],
   "efficiency": {
-    "runs": 2,
+    "runs": 3,
     "calls": {
-      "median": 14,
-      "min": 13,
+      "median": 15,
+      "min": 11,
       "max": 15
     },
     "turns": {
-      "median": 15,
-      "min": 14,
+      "median": 16,
+      "min": 12,
       "max": 16
     },
     "refused": {
-      "median": 2.5,
-      "min": 2,
-      "max": 3
+      "median": 4,
+      "min": 4,
+      "max": 4
     },
     "prompt_tokens": {
-      "median": 538941.5,
-      "min": 492337,
-      "max": 585546
+      "median": 552789,
+      "min": 541115,
+      "max": 636199
     },
     "output_tokens": {
-      "median": 2472.5,
-      "min": 2267,
-      "max": 2678
+      "median": 2656,
+      "min": 2049,
+      "max": 2757
     },
     "duration_ms": {
-      "median": 19662,
-      "min": 18168,
-      "max": 21156
+      "median": 22279,
+      "min": 19096,
+      "max": 27263
     }
   }
 }

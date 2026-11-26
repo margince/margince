@@ -232,9 +232,7 @@ var subjectActivityEmbeddingsDelete = `
 // activities on the subject's timeline embed text ABOUT them; the vector
 // store must not keep what a similarity probe could partially reconstruct.
 func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, displayName string, emails []string, identities []channelIdentity, erased erasedCitations) (rawPurged, aiPayloadsPurged int64, err error) {
-	rawPurged, err = deleteRawOriginalsTx(ctx, tx,
-		`r.payload_object @> jsonb_build_object('matched_subjects', jsonb_build_array(@subject::text))`,
-		pgx.NamedArgs{sqlArgSubject: contactID.String()})
+	rawPurged, err = deleteSubjectOriginalsTx(ctx, tx, contactID)
 	if err != nil {
 		return 0, 0, err
 	}

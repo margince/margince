@@ -228,8 +228,8 @@ func channelReplyContact(ctx context.Context, tx pgx.Tx, ci connector.ChannelIde
 	err := tx.QueryRow(ctx, `
 		SELECT pci.contact_id FROM contact_channel_identity pci
 		JOIN contact p ON p.id = pci.contact_id AND p.archived_at IS NULL
-		WHERE pci.provider = $1 AND pci.channel_user_id = $2 AND pci.archived_at IS NULL`,
-		ci.Provider, ci.ChannelUserID).Scan(&contactID)
+		WHERE pci.provider = $1 AND pci.channel_user_id = $2 AND pci.account_scope = $3 AND pci.archived_at IS NULL`,
+		ci.Provider, ci.ChannelUserID, ci.AccountScope).Scan(&contactID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.ContactID{}, false, nil
 	}

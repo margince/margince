@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
@@ -124,7 +125,7 @@ func readForecastDealMoves(
 		       m.amount_minor_at_change, m.base_minor_at_change, m.base_currency_at_change
 		  FROM unnest($1::uuid[]) AS d(id)
 		 CROSS JOIN (VALUES (false, $2::timestamptz), (true, $3::timestamptz)) AS x(training, at)
-		  LEFT JOIN deal dl ON dl.id = d.id
+		  LEFT JOIN deal dl ON dl.id = d.id AND `+deals.StandingSQL("dl")+`
 		  LEFT JOIN LATERAL (
 		        SELECT h.changed_at, h.semantic_at_change, h.amount_minor_at_change,
 		               h.base_minor_at_change, h.base_currency_at_change

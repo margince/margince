@@ -21,6 +21,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"testing"
@@ -297,6 +298,21 @@ func TestAConnectorCreatedContactIsGovernedByTheInstallationsPosture(t *testing.
 	}
 	if runs := c.runsForContact(t); runs != 0 {
 		t.Errorf("a captured counterparty triggered %d runs with automatic lookups switched off — connecting a mailbox would look up every sender in its history", runs)
+	}
+}
+
+// A contact.created can outlive its contact: a reset or a delete removes the
+// row after the event was staged. No retry finds it again, so the consumer
+// skips the entry instead of leaving it pending on cg:contact-data.
+func TestAContactCreatedForAContactThatIsGoneIsSkipped(t *testing.T) {
+	c := setupProviderConsumer(t, true)
+
+	err := c.consumer.HandleEvent(context.Background(), humanCreated(ids.NewV7()))
+	if !errors.Is(err, events.ErrUnactionable) {
+		t.Errorf("the consumer answered %v for a contact that does not exist, want ErrUnactionable", err)
+	}
+	if *c.enqueued != 0 {
+		t.Errorf("%d submit jobs were committed for a contact that does not exist, want 0", *c.enqueued)
 	}
 }
 

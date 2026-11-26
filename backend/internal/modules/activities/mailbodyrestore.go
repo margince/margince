@@ -79,13 +79,17 @@ func RestoreMailBodyTx(ctx context.Context, tx pgx.Tx, r MailBodyRestoration) (b
 		}
 		return false, nil, err
 	}
+	ownEnd, err := restoredOwnEnd(ctx, tx, r)
+	if err != nil {
+		return false, nil, err
+	}
 	var before, after struct {
 		completeness string
 		ruleset      *string
 	}
 	var threadKey *string
 	var replyCleared bool
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		WITH old AS (SELECT body_completeness, owed_verdict_ruleset, reply_verdict FROM activity
 		              WHERE id = $1 AND restricted_at IS NULL)
 		UPDATE activity a SET body = $2, body_own_end = $7, body_completeness = $3, language = NULL,
@@ -108,7 +112,7 @@ func RestoreMailBodyTx(ctx context.Context, tx pgx.Tx, r MailBodyRestoration) (b
 		RETURNING old.body_completeness, old.owed_verdict_ruleset, a.body_completeness, a.owed_verdict_ruleset, a.thread_key,
 		          old.reply_verdict IS NOT NULL AND a.reply_verdict IS NULL`,
 		r.Activity, r.Body, r.Completeness, r.Version, r.StoredBody, r.Subject,
-		mailquote.OwnEnd(mailquote.MailKind, &r.Body)).
+		ownEnd).
 		Scan(&before.completeness, &before.ruleset, &after.completeness, &after.ruleset, &threadKey, &replyCleared)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil, nil
@@ -156,4 +160,16 @@ func recordReplyVerdictCleared(ctx context.Context, tx pgx.Tx, id ids.UUID, clea
 		return errNoActorForCorrection
 	}
 	return appendReplyVerdictHistory(ctx, tx, id, nil, actor.ID, false)
+}
+
+// restoredOwnEnd is the stored end of the restored body under the subject the
+// row keeps, which a forward prefix in it moves.
+func restoredOwnEnd(ctx context.Context, tx pgx.Tx, r MailBodyRestoration) (*int, error) {
+	subject := r.Subject
+	if subject == nil {
+		if err := tx.QueryRow(ctx, `SELECT subject FROM activity WHERE id = $1`, r.Activity).Scan(&subject); err != nil {
+			return nil, fmt.Errorf("activities: reading the subject of %s for its own text: %w", r.Activity, err)
+		}
+	}
+	return mailquote.OwnEnd(mailquote.MailKind, deref(subject), &r.Body), nil
 }

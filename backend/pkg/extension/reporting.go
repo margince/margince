@@ -9,8 +9,8 @@ import (
 )
 
 // ReportNamePrefix opens the name of every count and breakdown a unit adds.
-// A name then shows at a glance that it is not one of core's.
-const ReportNamePrefix = "ext:"
+// It is QualifiedPrefix.
+const ReportNamePrefix = QualifiedPrefix
 
 // ReportCount is a number a unit adds to Reports and Home: how many live
 // records a population holds. It is inert data. Core runs it through the same
@@ -51,7 +51,7 @@ type ReportBreakdown struct {
 // the one place the form is built, so a unit can only name one under its own
 // name.
 func ReportName(unit Name, name string) string {
-	return ReportNamePrefix + string(unit) + ":" + name
+	return QualifiedName(unit, name)
 }
 
 // ValidatePopulation says whether a population names a core population, which
@@ -83,7 +83,7 @@ func (b ReportBreakdown) Validate(kinds []RecordKindDeclaration) error {
 	}
 	kind, _ := ValidatePopulation(b.Population, kinds)
 	if kind == "" {
-		if !recordKindGrammar.MatchString(b.By) {
+		if !shortNameGrammar.MatchString(b.By) {
 			return fmt.Errorf("report breakdown %q splits by %q, which is not a field name", b.Name, b.By)
 		}
 		return nil
@@ -102,8 +102,8 @@ func (b ReportBreakdown) Validate(kinds []RecordKindDeclaration) error {
 }
 
 func validateReport(name, label, population string, kinds []RecordKindDeclaration) error {
-	if !recordKindGrammar.MatchString(name) || len(name) > maxRecordKindLength {
-		return fmt.Errorf("report %q is not a valid name (a lower-case letter, then lower-case letters, digits and underscores, at most %d characters)", name, maxRecordKindLength)
+	if !shortNameGrammar.MatchString(name) || len(name) > maxShortNameLength {
+		return fmt.Errorf("report %q is not a valid name (a lower-case letter, then lower-case letters, digits and underscores, at most %d characters)", name, maxShortNameLength)
 	}
 	if strings.TrimSpace(label) == "" {
 		return fmt.Errorf("report %q has no label", name)

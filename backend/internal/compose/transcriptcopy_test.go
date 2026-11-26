@@ -15,6 +15,7 @@ import (
 
 func TestTranscriptExplanationLanguageKeepsEveryOutcomeAndCount(t *testing.T) {
 	langcopytest.Census(t, transcriptWords)
+	langcopytest.GermanStyle(t, transcriptWords)
 	seat := ids.NewV7()
 	for _, language := range []string{"de", "vi"} {
 		said := transcriptCopyFor(language)

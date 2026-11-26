@@ -129,4 +129,23 @@ describe("a deal amount the currency cannot hold", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(save.mock.calls[0]?.[0]).toMatchObject({ amount: "1.99" });
   });
+
+  it("refuses a blank Amount on a won deal that has a price, and allows it on an open one", () => {
+    const amountOf = (closed: boolean) =>
+      dealEditFields(t, {
+        partnerOptions: [],
+        masked: [],
+        closed,
+        priced: true,
+        me: "u1",
+        currentOwner: null,
+        currency: "EUR",
+        leadingCurrencies: ["EUR"],
+        locale: "en",
+      }).find((field) => field.key === "amount");
+    expect(amountOf(true)?.validate?.("", {})).toBe(
+      "A won or lost deal keeps its price. Reopen it first to remove it.",
+    );
+    expect(amountOf(false)?.validate?.("", {})).toBeUndefined();
+  });
 });

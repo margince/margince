@@ -43,6 +43,19 @@ func TestAnAppDerivesIntoTheManifest(t *testing.T) {
 	}
 }
 
+// The drawer names an app by the unit's title unless the app names itself, and
+// checkAppLabels then holds the title key to every locale.
+func TestAnAppWithoutALabelTakesTheUnitTitle(t *testing.T) {
+	app := `&extension.App{Icon: extension.IconPlug, Group: extension.AppGroupWork, Object: "ext_x_visit", Export: "XApp"}`
+	derived, err := deriveSynthetic(t, "x", appUnitSource(app), gatedVerb("ext_x_visit"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(derived), `"label": "extX.title"`) {
+		t.Fatalf("an app with no label does not carry the unit's title key:\n%s", derived)
+	}
+}
+
 // Generation refuses what the boot would, through the same published Validate.
 func TestAnAppTheBootWouldRefuseIsRefusedAtGeneration(t *testing.T) {
 	for name, app := range map[string]string{

@@ -70,7 +70,7 @@ func (l Lock) Prose() string {
 		}
 		return fmt.Sprintf(
 			"%d rate(s) in the sheet convert into %s and cannot be restated against another base; "+
-				"clear the rate sheet first", l.Count, base)
+				"remove every currency from the rate sheet first", l.Count, base)
 	default:
 		return ""
 	}

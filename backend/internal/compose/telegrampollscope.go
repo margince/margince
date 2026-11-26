@@ -116,21 +116,6 @@ func telegramAnySubjectSuppressed(ctx context.Context, tx pgx.Tx, accounts []str
 	return false, nil
 }
 
-// telegramRawSourceID is raw_capture's dedupe key for one polled update.
-// update_id is a PER-BOT sequence, so the key MUST carry the bot:
-// raw_capture_source_unique is (source_system, source_id) and
-// InsertRawCaptureTx's ON CONFLICT overwrites the stored payload, so a bare
-// update_id would let the bot a workspace was REPLACED onto land on the outgoing
-// bot's row and destroy the only copy of a message already captured —
-// unrecoverable, because Telegram has no history API to re-fetch it from.
-//
-// The bot id and not the connection id: the counter being namespaced is the BOT's,
-// so a bot disconnected and reconnected under a fresh connection id still dedupes
-// its own re-deliveries against what it delivered before.
-func telegramRawSourceID(botID string, updateID int64) string {
-	return fmt.Sprintf("%s:%d", botID, updateID)
-}
-
 // telegramLockKeys names an update's subjects as the eraser names them, so the two
 // sides of the race take the identical locks.
 func telegramLockKeys(accounts []string) []storekit.ChannelIdentityKey {

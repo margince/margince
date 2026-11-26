@@ -23,6 +23,7 @@ import { catalogContext } from "./settingsnav";
 import { COMPANY_CONTEXT_OFF, EVERY_GRANT } from "./settingspages.fixtures";
 import {
   COMPANY_CONTEXT_SECTIONS,
+  SUBPAGE_SECTIONS,
   settingsSectionKeys,
 } from "./settingssections";
 import { settingsTabLabel } from "./settingstabs";
@@ -75,8 +76,10 @@ const tabStories = Object.values(composeStories(stories)).filter(
   (story) => story.parameters.settingsTab !== undefined,
 );
 
-// Not a table header: it heads a column of records.
+// Not a table header: it heads a column of records. A section header names
+// the panels under it, so search offers it as a page's section too.
 const NAMING = [
+  ".section-header > .section-header-title",
   ".settingrow-naming > .t-name",
   ".field > label:not(.sr-only)",
   ".field-label-row > label:not(.sr-only)",
@@ -171,13 +174,17 @@ function drawnSections(page: SettingsPageId, tab: string | undefined) {
   ].map(t);
 }
 
-const TAB_NAMES = new Set<string>(
-  SETTINGS_PAGES.flatMap((page) =>
+// A sub-address leads with its own name too, drawn by the switch that opens it.
+const TAB_NAMES = new Set<string>([
+  ...SETTINGS_PAGES.flatMap((page) =>
     "tabs" in page
       ? page.tabs.flatMap((tab) => settingsTabLabel(page.id, tab.id) ?? [])
       : [],
   ),
-);
+  ...Object.values(SUBPAGE_SECTIONS).flatMap((parts) =>
+    Object.values(parts ?? {}).flatMap((keys) => keys[0] ?? []),
+  ),
+]);
 
 function tabStory(page: SettingsPageId, tab: string | undefined) {
   const Story = tabStories.find(

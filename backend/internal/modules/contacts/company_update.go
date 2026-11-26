@@ -56,9 +56,9 @@ type UpdateCompanyInput struct {
 	// add missing, archive removed, flip is_primary). nil leaves domains
 	// untouched; an empty slice clears them.
 	Domains *[]CompanyDomainInput
-	// Lifecycle, when non-nil, moves where the account stands with us
+	// Status, when non-nil, moves where the account stands with us
 	// (ADR-0079/A124). nil leaves it untouched.
-	Lifecycle *string
+	Status *string
 	// Phone and Email, when non-nil, set or (when empty) clear the main number
 	// and the general address. nil leaves them untouched.
 	Phone *string
@@ -112,6 +112,11 @@ func (s *Store) ReplaceUnitCompanyTypesTx(
 ) (crmcontracts.Company, error) {
 	if err := auth.Require(ctx, companyEntity, principal.ActionUpdate); err != nil {
 		return crmcontracts.Company{}, err
+	}
+	// Lock the row before reading the set, so two writers take turns and
+	// neither loses the other's types.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM company WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, id); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("lock company for type edit: %w", err)
 	}
 	all, err := readLiveRelationshipTypes(ctx, tx, id)
 	if err != nil {
@@ -167,7 +172,7 @@ func (s *Store) writeCompanyInTx(
 	if err := stageAdoptedSource(ctx, tx, id, p, in.AdoptSource); err != nil {
 		return none, err
 	}
-	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+	if err := storekit.SetCustomFieldPatchIn(ctx, tx, p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return none, err
 	}
 
@@ -228,8 +233,7 @@ func recordCompanyUpdate(
 	if err != nil {
 		return fmt.Errorf("audit company update: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-		crmcontracts.PublicEventCompanyUpdated{ChangedFields: after}); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, companyUpdatedEvent(after)); err != nil {
 		return fmt.Errorf("emit company.updated: %w", err)
 	}
 	return nil

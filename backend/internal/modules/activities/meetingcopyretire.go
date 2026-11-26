@@ -161,6 +161,9 @@ func carryRostersTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.Acti
 // The survivor's guest list and the seats it holds busy stay whole. A party a
 // member relinked keeps that mark, so no roster on the survivor retires it.
 func carryMissingParticipantsTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) ([]ids.UUID, error) {
+	if _, err := storekit.LowercaseOlderParticipantAddresses(ctx, tx, `ap.activity_id = $1`, duplicate); err != nil {
+		return nil, err
+	}
 	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, survivor.UUID); err != nil {
 		return nil, err
 	}

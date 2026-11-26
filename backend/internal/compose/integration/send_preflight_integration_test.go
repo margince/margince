@@ -55,11 +55,24 @@ type preflightEnv struct {
 // a vault before apptest.SetupAppWithOptions has opened the harness's own.
 func setupPreflight(t *testing.T, extra ...compose.Option) *preflightEnv {
 	t.Helper()
-	gmailCfg := compose.GmailConfig{
+	return setupPreflightIn(t, append([]compose.Option{preflightGmailApp()}, extra...)...)
+}
+
+// preflightGmailApp is the Google app setupPreflight configures.
+func preflightGmailApp() compose.Option {
+	return compose.WithGmailCapture(compose.GmailConfig{
 		ClientID: "preflight-id", ClientSecret: "preflight-secret",
 		StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: preflightBaseURL,
-	}
-	return setupPreflightIn(t, append([]compose.Option{compose.WithGmailCapture(gmailCfg, compose.CaptureConfig{})}, extra...)...)
+	}, compose.CaptureConfig{})
+}
+
+// setupPreflightServingMCP is setupPreflight with the MCP connector mounted at
+// the harness's own origin, for a test that calls tools as an agent.
+func setupPreflightServingMCP(t *testing.T) *preflightEnv {
+	t.Helper()
+	return setupPreflightAt(t, func(origin string) []compose.Option {
+		return []compose.Option{preflightGmailApp(), compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp")}
+	})
 }
 
 // setupPreflightWithoutGoogleApp boots the same composition on a deployment
@@ -78,6 +91,13 @@ func setupPreflightWithoutGoogleApp(t *testing.T) *preflightEnv {
 // database, so the one installation serves both.
 func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	t.Helper()
+	return setupPreflightAt(t, func(string) []compose.Option { return extra })
+}
+
+// setupPreflightAt is setupPreflightIn for options that name the harness's
+// origin, which is known only once its listener is open.
+func setupPreflightAt(t *testing.T, extra func(origin string) []compose.Option) *preflightEnv {
+	t.Helper()
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
 		t.Fatalf("generating a test root key: %v", err)
@@ -87,8 +107,9 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	if err != nil {
 		t.Fatalf("building the local vault: %v", err)
 	}
-	opts := append([]compose.Option{compose.WithKeyvault(vault), compose.WithOperatorMail(apptest.DiscardingMailer{}), compose.WithPublicBaseURL(preflightBaseURL)}, extra...)
-	e := apptest.SetupAppWithOptions(t, opts...)
+	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
+		return append([]compose.Option{compose.WithKeyvault(vault), compose.WithOperatorMail(apptest.DiscardingMailer{}), compose.WithPublicBaseURL(preflightBaseURL)}, extra(origin)...)
+	})
 	// This suite composes its OWN vault (a real local one, because the
 	// pre-flight it is about needs a credential custodian), and WithKeyvault
 	// replaces the harness's. AppEnv.Vault has to name the one the server

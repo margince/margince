@@ -142,3 +142,9 @@ func TestTheGermanOnboardingCopyAddressesItsReaderAsDu(t *testing.T) {
 		}
 	}
 }
+
+func TestTheGermanOnboardingFollowsTheGermanStylePage(t *testing.T) {
+	for _, field := range germanOnboarding(t) {
+		langcopytest.GermanText(t, field.name, field.text)
+	}
+}

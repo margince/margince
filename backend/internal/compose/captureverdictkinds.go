@@ -108,6 +108,8 @@ For EACH supplied address emit exactly one kind:
   "company_sender" — the company itself writing under its own name rather than a
     named employee, including mail signed only with a company, office or product name from an
     address named for the company or a place rather than a function.
+    A generic salutation ("Dear Sir or Madam") and a signature of only a company and an office are
+    the clearest signs of it: such mail is this kind at high confidence, since nobody is named.
   "newsletter" — bulk editorial or marketing mail, however welcome. Subscribing is not a
     business relationship.
   "transactional" — automated mail from a service: receipts, invoices, notifications, delivery
@@ -134,8 +136,9 @@ school, their personal bank — is "personal". Ask who the matter belongs to, no
 company it is.
 DIRECTION matters where you are told it. A message the mailbox owner WROTE to an address is an
 intention, not yet a relationship, and an address that has never written back has told you
-nothing about itself. Prefer a kind that records no contact — "personal" when the owner wrote
-about their own private affair — and lower your confidence.
+nothing about itself. Prefer a kind that records no contact, "personal" when the owner wrote
+about their own private affair, and state the confidence that kind earns. Lower your confidence
+only when you still answer a kind that records a contact.
 Judge the DIRECTION of the offer, not its politeness. A "contact" wants something this business
 sells, or supplies something it was engaged to supply. Someone offering to sell this business a
 service it shows no sign of having asked for — financing, capital, leads, SEO, staffing,

@@ -185,14 +185,10 @@ type Event struct {
 	Payload json.RawMessage
 }
 
-// eventVerbGrammar is the verb half of an extension event type. The namespace
-// half is the core's to supply, so this is the whole of what a unit spells.
-var eventVerbGrammar = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
-
 // Validate checks the shape of an event: the verb's grammar, the payload's
 // JSON, and the payload's size against MaxEventPayloadBytes.
 func (e Event) Validate() error {
-	if !eventVerbGrammar.MatchString(e.Verb) {
+	if !shortNameGrammar.MatchString(e.Verb) {
 		return fmt.Errorf("extension: %q is not an event verb (lower snake_case, e.g. note_added)", e.Verb)
 	}
 	if len(e.Payload) > MaxEventPayloadBytes {

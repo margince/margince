@@ -45,7 +45,7 @@ func reportSummaryIDs(reports []crmcontracts.ReportingReport) []ids.UUID {
 
 func populateEditionSummary(ctx context.Context, tx pgx.Tx, reports []crmcontracts.ReportingReport, index map[ids.UUID]int) error {
 	var b bindings
-	audience, err := audienceClause(ctx, &b)
+	audience, err := audienceClause(ctx, b.add)
 	if err != nil {
 		return err
 	}

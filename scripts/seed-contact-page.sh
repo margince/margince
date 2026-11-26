@@ -61,7 +61,7 @@ status="$(api GET '/companies?q=Glazed%20Frog&limit=10')"
 [[ "$status" = "200" ]] || fail "GET /v1/companies returned HTTP $status"
 company_id="$(jq -r '.data[] | select(.display_name == "Glazed Frog") | .id' "$workdir/body" | sed -n 1p)"
 if [[ -z "$company_id" ]]; then
-  status="$(api POST /companies '{"display_name":"Glazed Frog","domains":[{"domain":"glazedfrog.com","is_primary":true}],"source":"seed"}')"
+  status="$(api POST /companies '{"display_name":"Glazed Frog","domains":[{"domain":"glazedfrog.com","is_primary":true}],"source":"api"}')"
   [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "create company returned HTTP $status"; }
   company_id="$(jq -r .id "$workdir/body")"
   echo "  OK: created Glazed Frog"
@@ -84,7 +84,7 @@ ensure_contact() { # ensure_contact <full_name> <title> <email> — prints the i
     return
   fi
   status="$(api POST /contacts "$(jq -n --arg n "$name" --arg t "$title" --arg e "$email" \
-    '{full_name:$n,title:$t,emails:[{email:$e,is_primary:true}],source:"seed"}')")"
+    '{full_name:$n,title:$t,emails:[{email:$e,is_primary:true}],source:"api"}')")"
   [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "create contact $name returned HTTP $status"; }
   jq -r .id "$workdir/body"
 }

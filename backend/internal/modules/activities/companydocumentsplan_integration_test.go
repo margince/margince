@@ -47,7 +47,7 @@ func seedBusyAccount(ctx context.Context, t *testing.T, tx pgx.Tx, busy ids.UUID
 	         CASE WHEN g <= 200 THEN (SELECT id FROM seeded_busy) ELSE (SELECT id FROM seeded_company WHERE id <> (SELECT id FROM seeded_busy) ORDER BY id OFFSET g % 40 LIMIT 1) END company_id
 	    FROM generate_series(1, 4000) g;
 	INSERT INTO contact (id, full_name, source, captured_by)
-	  SELECT id, 'Employee '||g, 'seed', 'system' FROM seeded_contact;
+	  SELECT id, 'Employee '||g, 'manual', 'system' FROM seeded_contact;
 	INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 	  SELECT 'employment', id, company_id, 'seed', 'system' FROM seeded_contact;
 	INSERT INTO pipeline (id, name) VALUES ('00000000-0000-7000-8000-00000000d0c5', 'Seeded');
