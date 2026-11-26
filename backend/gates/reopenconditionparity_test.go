@@ -25,8 +25,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -131,7 +129,7 @@ func reopenContractEnum(t *testing.T) []string {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(body, &doc); err != nil {
+	if err := unmarshalYAML(body, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	schema, ok := doc.Components.Schemas["ReopenCondition"]

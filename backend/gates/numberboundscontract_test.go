@@ -62,7 +62,7 @@ func TestEveryNumberBoundIsTaggedForTheDecoders(t *testing.T) {
 		t.Fatal(err)
 	}
 	var doc yaml.Node
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatal(err)
 	}
 	census := newBoundCensus(t, doc.Content[0])

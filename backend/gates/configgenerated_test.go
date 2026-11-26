@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
-	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -124,7 +123,7 @@ func compiledConfigSchema(t *testing.T) *jsonschema.Schema {
 func asJSONValue(t *testing.T, name string, raw []byte) any {
 	t.Helper()
 	var doc any
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("%s is not parseable yaml: %v", name, err)
 	}
 	encoded, err := json.Marshal(doc)
