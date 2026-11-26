@@ -155,7 +155,7 @@ Margince writes the review on the Monday after the week, and then it is **Frozen
 
 ### What is on Today?
 **Today**, on **Home**, shows the kinds of work that need attention when the list is complete.
-Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
+Each item names its record and shows the facts that call for action. A line beside the date says when Margince prepared the brief.
 - **Needs you**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that. A mailbox, booking page, AI task or automation that stopped takes no card. A badge beside **Needs you** counts the system issues and opens the Worklist on **System**. Mail that could not be delivered keeps its card and is counted there too.
   A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands.
 - Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its reminder is due. A quiet day shows a card that says "All caught up" and the time Margince last checked. It shows only when Margince could read every list of work. If it could not, Home says some work could not be checked. Calendar and mailbox status do not change this card.
