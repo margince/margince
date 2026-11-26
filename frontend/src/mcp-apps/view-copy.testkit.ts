@@ -9,7 +9,7 @@ import {
 } from "../../scripts/lib/source-tree";
 
 // The views ship English outside the i18n catalog, so their copy is read off
-// the source, page titles included.
+// the source, the pages' titles and labels included.
 
 const viewsDir = dirname(fileURLToPath(import.meta.url));
 
@@ -18,6 +18,7 @@ const NOT_SHIPPED =
   /\.(test|stories|testkit)\.tsx?$|\/fixture\.ts$|\/story-hosts\.tsx$/;
 
 const PAGE_TITLE = /<title>([^<]*)<\/title>/g;
+const PAGE_LABEL = /\b(aria-label|alt|placeholder|title)="([^"]*)"/g;
 
 /** viewCopy maps where each string stands, `mcp-apps/<file>:<line>:<column>`,
  *  to its text. A template's substitutions read as `{}`, as a placeholder. */
@@ -41,14 +42,23 @@ export function viewCopy(dir = viewsDir): Record<string, string> {
     visit(source);
   }
   for (const path of filesMatching(dir, /\.html$/)) {
-    for (const title of readFileSync(path, "utf8").matchAll(PAGE_TITLE)) {
+    const page = readFileSync(path, "utf8");
+    for (const title of page.matchAll(PAGE_TITLE)) {
       copy[`${at(path)}:<title>`] = title[1] ?? "";
+    }
+    for (const label of page.matchAll(PAGE_LABEL)) {
+      const line = page.slice(0, label.index).split("\n").length;
+      copy[`${at(path)}:${line}:${label[1]}`] = label[2] ?? "";
     }
   }
   return copy;
 }
 
 function literalText(node: ts.Node): string | undefined {
+  if (ts.isJsxText(node)) {
+    const text = node.text.trim();
+    return text === "" ? undefined : text;
+  }
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
     const module =
       ts.isImportDeclaration(node.parent) ||

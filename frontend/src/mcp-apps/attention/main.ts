@@ -237,7 +237,7 @@ function atRiskCard(answer: Record<string, unknown>): HTMLElement {
         marker: dealTile(name),
         name,
         reasons: asList(deal.risks).map(asRecord).map(riskLine),
-        question: `Catch me up on the deal “${name}” (${asText(deal.deal_id)}): who does my team know there, and how can my team reach more people there?`,
+        question: `Catch me up on the deal “${name}” (${asText(deal.deal_id)}): who does my team know there, and how can my team widen its reach there?`,
       }),
     );
   });

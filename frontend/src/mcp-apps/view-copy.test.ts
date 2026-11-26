@@ -28,7 +28,7 @@ describe("viewCopy", () => {
     }
   });
 
-  it("keeps every string, writes a substitution as {} and skips test code", () => {
+  it("keeps every string and label, writes a substitution as {} and skips test and story code", () => {
     const dir = mkdtempSync(join(tmpdir(), "view-copy-"));
     mkdirSync(join(dir, "card"));
     writeFileSync(
@@ -37,15 +37,27 @@ describe("viewCopy", () => {
     );
     writeFileSync(join(dir, "card", "main.test.ts"), 'it("don\'t");\n');
     writeFileSync(join(dir, "card", "fixture.ts"), 'const f = "we";\n');
+    writeFileSync(join(dir, "card", "card.stories.tsx"), 'const s = "we";\n');
+    writeFileSync(join(dir, "story-hosts.tsx"), 'const h = "we";\n');
+    writeFileSync(
+      join(dir, "card", "panel.tsx"),
+      'const p = <p aria-label="Close panel">  Saved  </p>;\n',
+    );
     writeFileSync(
       join(dir, "card", "index.html"),
-      "<html><title>The card</title></html>",
+      '<html><title>The card</title>\n<img alt="Logo" /><input placeholder="Search" aria-label="Find" title="Hint" /></html>',
     );
     try {
       expect(viewCopy(dir)).toEqual({
         "mcp-apps/card/main.ts:2:12": "Open",
         "mcp-apps/card/main.ts:2:20": "Due {} late",
+        "mcp-apps/card/panel.tsx:1:25": "Close panel",
+        "mcp-apps/card/panel.tsx:1:41": "Saved",
         "mcp-apps/card/index.html:<title>": "The card",
+        "mcp-apps/card/index.html:2:alt": "Logo",
+        "mcp-apps/card/index.html:2:placeholder": "Search",
+        "mcp-apps/card/index.html:2:aria-label": "Find",
+        "mcp-apps/card/index.html:2:title": "Hint",
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });

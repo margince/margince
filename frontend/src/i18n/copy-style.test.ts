@@ -9,8 +9,7 @@ import { en } from "./en";
 // catalog because every other locale is translated from it: a defect here
 // becomes one per catalog. The rest of that page is the author's judgement.
 // Each rule lists every offender as `key: "value"`, so one run names all the
-// strings a rewrite has to touch. The MCP app views ship English beside the
-// catalog, so each string they hold is checked as one more value.
+// strings a rewrite has to touch.
 const catalog: Record<string, string> = { ...en, ...viewCopy() };
 
 // A placeholder names a parameter, not copy, and `{us}` or `{me}` would read as
