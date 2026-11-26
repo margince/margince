@@ -70,3 +70,9 @@
   display: grid;
   gap: var(--space-1);
 }
+
+/* In a task's pane the reasons are its first section, under their own heading. */
+.worklist-why-plain {
+  display: grid;
+  gap: var(--space-3);
+}

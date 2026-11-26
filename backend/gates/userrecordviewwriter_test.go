@@ -107,12 +107,12 @@ func TestUserRecordViewHasOneWriter(t *testing.T) {
 			if filepath.Base(path) == "userrecordviewwriter_test.go" {
 				return nil
 			}
-			source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
-			if readErr != nil {
-				return readErr
+			file, parseErr := gatekit.ParseFile(path, 0)
+			if parseErr != nil {
+				return parseErr
 			}
 			judged++
-			for _, line := range gatekit.SQLStatementsIn(t, path, string(source)) {
+			for _, line := range gatekit.SQLStatementsOf(file) {
 				if writesViewBaseline.MatchString(line) {
 					findings = append(findings, rel+": "+gatekit.FirstLineOf(line))
 				}

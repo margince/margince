@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer says the e-mail went to Dom Digital and only the three calls ended up on Aachener Metallwerke, so it does not say all three items moved to Aachener as one batch, and 're-created' is not clearly a move.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer says the three items that sat on Vorort Systeme now sit on Aachener Metallwerke, moved as one batch. Any noun for them counts (mails, calls, activities), and so does a line such as 3 moved, 0 failed. Answer no if it gives another number, or says only some moved.",
+  "answer": "Dom Digital now has the e-mail and Aachener Metallwerke has all three calls.\n\nI re-created the call entries on Aachener so the history reads properly."
+}

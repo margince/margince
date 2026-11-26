@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states Katrin Sommer is owed an Art. 14 GDPR notice of where her data came from (a bought list), and offers to send it through Margince once the user says yes, which satisfies the criterion.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says Katrin Sommer is owed a notice of where her data came from, and either offers to send it once the user agrees, or says it cannot be produced yet. Answer no if it reports the notice sent, says nothing is owed, or never says what is owed.",
+  "answer": "Katrin Sommer's record says she came from a bought list, so under Art. 14 GDPR she is owed a notice of where her data came from and what you hold on her, within a month.\n\nNothing has gone out. I can send that notice through Margince once you say yes."
+}

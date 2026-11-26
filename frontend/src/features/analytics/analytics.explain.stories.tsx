@@ -11,6 +11,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { CellExplain, ExplainFrame } from "./analytics.explain";
+import { REPORT_SCHEMA } from "./analytics.questions.testkit";
 
 // One row's "Explain this number" drawer, opened from its trigger the way a
 // reader opens it. The body is the same one the report card's panel draws, so
@@ -39,6 +40,7 @@ function drawerStory(answer: RouteMap[string]) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
+      "GET /analytics/schema": () => jsonResponse(REPORT_SCHEMA),
       "GET /reports/pipeline-current/derivation": answer,
     });
     return (

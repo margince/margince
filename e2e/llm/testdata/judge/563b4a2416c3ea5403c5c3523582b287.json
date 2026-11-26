@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states that no background job is failing, names the workspace's AI models (claude-sonnet-5-5 and gemini-4-hydrogen-medium), and lists three recent changes each attributed to a named person.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says whether any background job is failing, names the AI model or models the workspace routes its work to, and lists recent changes across the workspace with who made each. Answer no if any of the three is missing.",
+  "answer": "No background job is failing: the last runs of every job finished.\n\nThe workspace routes its AI work to claude-sonnet-5-5 for drafting and gemini-4-hydrogen-medium for embeddings.\n\nRecent changes:\n- Anna Weber moved Nordwind Logistik to Negotiation.\n- Jonas Keller added the contact Heike Brandt.\n- Lea Braun changed the deal amount on the Elbmarsch offer."
+}

@@ -51,7 +51,7 @@ func (s *Service) liveClient(ctx context.Context, clientID string) (string, erro
 // Unlike parseOAuthScopes this never errors: an unknown scope has already been
 // refused on the authorize request this screen is rendering.
 func offlineRequested(raw string) bool {
-	return slices.Contains(strings.Fields(raw), scopeOfflineAccess)
+	return slices.Contains(strings.Fields(raw), ScopeOfflineAccess)
 }
 
 // consentRequestPayload maps the read model onto the generated wire shape. The

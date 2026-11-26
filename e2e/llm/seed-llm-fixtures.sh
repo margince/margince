@@ -174,8 +174,8 @@ print("")' "$email"
 # worth spending: a row a reader finds in a failing transcript says which lane
 # put it there.
 FIXTURE_SOURCE="seed:llm-fixtures"
-# A deal, offer, project and partner take only one of six channels as source, so
-# their fixture rows name the channel they really came through.
+# A company, contact, deal, offer, project and partner take only one of six
+# channels as source, so their fixture rows name the channel they came through.
 CHANNEL_SOURCE="api"
 
 # with_source adds FIXTURE_SOURCE to a record's create body that names none,
@@ -188,7 +188,7 @@ with_source() {
   esac
   printf '%s' "$body" | FIXTURE_SOURCE="$FIXTURE_SOURCE" python3 -c 'import json,os,sys
 row=json.load(sys.stdin)
-channel = sys.argv[1] in ("/deals", "/projects", "/offers", "/partners")
+channel = sys.argv[1] in ("/companies", "/contacts", "/deals", "/projects", "/offers", "/partners")
 row.setdefault("source", "api" if channel else os.environ["FIXTURE_SOURCE"])
 print(json.dumps(row, ensure_ascii=False))' "$path"
 }
