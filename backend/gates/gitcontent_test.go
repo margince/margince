@@ -184,6 +184,9 @@ func TestAnExportedGitDirDoesNotSteerTheCensus(t *testing.T) {
 	if tracked := gitTracked(t, root); !tracked["here.md"] || tracked["elsewhere.md"] {
 		t.Errorf("the census followed GIT_DIR to another repository: %v", tracked)
 	}
+	if files, err := trackedIndexAt(root); err != nil || len(files) != 1 || files[0].path != "here.md" {
+		t.Errorf("the tracked-files index followed GIT_DIR to another repository: %v (%v)", files, err)
+	}
 }
 
 // gitFixture answers the two things a purpose-built repository is made of: a
