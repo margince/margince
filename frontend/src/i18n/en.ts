@@ -12936,6 +12936,9 @@ export const en = {
   "senders.markBusiness": "Mark as business",
   "senders.keepOut": "Exclude",
   "senders.withdraw": "Withdraw my answer",
+  "senders.liftPrivate": "Lift: allow contacts again",
+  "senders.kind.private": "Private",
+  "senders.privateStands": "No contact is made for this sender",
   "senders.keepOutTitle": "Exclude this sender permanently?",
   "senders.keepOutBody":
     "No contact is created, and mail this sender already brought into your mailbox is destroyed. Copies a colleague imported stay theirs.",

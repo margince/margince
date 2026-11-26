@@ -31345,10 +31345,11 @@ export interface components {
             /** @description The ledger's own lifecycle for this sender. */
             status?: string;
             /**
-             * @description What YOU decided instead, absent when you have not.
+             * @description What YOU decided instead, absent when you have not. `personal` is the standing decision a
+             *     private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
              * @enum {string}
              */
-            decision?: "business" | "keep_out";
+            decision?: "business" | "keep_out" | "personal";
             /**
              * @description What your decision overruled. Present so the page can say you corrected something,
              *     rather than showing only the answer that now stands.
