@@ -255,31 +255,6 @@ describe("company-360 deep read", () => {
     expect(screen.queryByText("Read up to the page limit")).toBeNull();
   });
 
-  it("a failed read says why, in the reader's words for the recorded cause", async () => {
-    const { calls } = stubDeepRead({
-      report: () =>
-        jsonResponse({
-          ...runningRead,
-          status: "failed",
-          status_code: "internal",
-          status_detail:
-            "The read failed inside this system rather than at the site.",
-          pages: [],
-          fact_count: 0,
-          finished_at: "2026-07-17T08:00:02Z",
-        }),
-    });
-    render(<CompanyScreen id="o-1" />);
-    await startDeepRead(calls);
-
-    await waitFor(() => expect(screen.getByText("Failed")).toBeTruthy());
-    expect(
-      screen.getByText(
-        "Margince could not finish the read. The cause is on this installation, not on the site, and an admin finds it in the server log.",
-      ),
-    ).toBeTruthy();
-  });
-
   it("pitches the research offer only until a read exists", async () => {
     // The panel does two jobs and must not do both at once: it explains a
     // capability nobody here has used, then reports on the read that answered

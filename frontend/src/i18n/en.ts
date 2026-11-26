@@ -5679,8 +5679,6 @@ export const en = {
   "co.tech.laneFailed":
     "{lane} did not respond. The previous result is unchanged.",
   "co.tech.laneRefused": "The site blocked the read.",
-  "co.tech.laneFailedFirst":
-    "{lane} did not respond, so nothing has been read from it yet.",
   "co.tech.lane.dns": "DNS",
   "co.tech.lane.certlog": "Certificates",
   "co.tech.lane.homepage": "Homepage",
@@ -7659,22 +7657,6 @@ export const en = {
   "deepread.statusFailed": "Failed",
   "deepread.statusCancelled": "Canceled",
   "deepread.resumesAt": "Resumes automatically {when}.",
-  "deepread.failure.bot_blocked": "The site’s bot protection refused the read.",
-  "deepread.failure.http_server_error":
-    "The site answered with a server error.",
-  "deepread.failure.timeout": "The site did not answer in time.",
-  "deepread.failure.http_client_error":
-    "The site’s front page could not be found.",
-  "deepread.failure.dns": "The domain does not point to a server.",
-  "deepread.failure.tls": "The site’s HTTPS certificate could not be verified.",
-  "deepread.failure.robots_disallowed":
-    "The site asks crawlers not to read it.",
-  "deepread.failure.unreadable":
-    "The site answered, but with nothing readable.",
-  "deepread.failure.internal":
-    "Margince could not finish the read. The cause is on this installation, not on the site, and an admin finds it in the server log.",
-  "deepread.failure.stale_reclaim":
-    "The read stopped reporting, so it was ended.",
   "deepread.pagesSoFar_one": "{count} page read so far",
   "deepread.pagesSoFar_other": "{count} pages read so far",
   "deepread.stoppedEarly": "Stopped early: {reason}",

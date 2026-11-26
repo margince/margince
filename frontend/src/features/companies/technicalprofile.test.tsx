@@ -117,32 +117,6 @@ describe("the technical profile card", () => {
     expect(await screen.findByText(/hat nicht geantwortet/)).toBeTruthy();
   });
 
-  // A lane that never answered has no previous result to keep, so the notice
-  // does not promise one.
-  it("promises an unchanged previous result only where one was read", async () => {
-    const never = laneState("failed");
-    installFetchStub({
-      "GET /me": A_READER,
-      [`GET /companies/${COMPANY}/facts`]: () =>
-        jsonResponse({
-          data: [fact("mail_provider", "microsoft365", "Microsoft 365")],
-        }),
-      [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
-        jsonResponse({
-          ...never,
-          lanes: never.lanes.map((lane) => ({
-            ...lane,
-            last_success_at: null,
-          })),
-        }),
-    });
-    renderCard();
-    expect(
-      await screen.findByText(/daher liegt noch kein Ergebnis vor/),
-    ).toBeTruthy();
-    expect(screen.queryByText(/unverändert/)).toBeNull();
-  });
-
   // The card is a read. It has no button for anyone, so a reader who may not
   // write the record sees exactly what a rep sees — and the absence of a
   // control is not a permission decision the card has to make.

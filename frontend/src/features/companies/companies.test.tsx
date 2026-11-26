@@ -357,10 +357,16 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     render(<CompaniesScreen />);
     await waitFor(() => expect(urls.length).toBeGreaterThan(0));
 
-    await user.click(screen.getByRole("button", { name: "Customers" }));
+    await user.click(screen.getByRole("button", { name: "Prospects" }));
 
     await waitFor(() =>
-      expect(urls.some((url) => url.includes("status=customer"))).toBe(true),
+      expect(
+        urls.some(
+          (url) =>
+            new URL(url, "https://test.local").searchParams.get("status") ===
+            "prospect",
+        ),
+      ).toBe(true),
     );
   });
 
