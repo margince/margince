@@ -377,8 +377,14 @@ func TestAnUncountedActivityAtTheClocksInstantDecidesNoPrecision(t *testing.T) {
 	links := []AnyMap{{"entity_type": "company", "entity_id": company}, {"entity_type": "project", "entity_id": project}}
 	mustCall(t, e, "POST", "/v1/activities", AnyMap{"kind": "note", "subject": "Met at the fair", "source": "manual",
 		"occurred_at": "2025-03-09T12:00:00Z", "occurred_precision": "day", "links": links}, http.StatusCreated, nil)
+	// A meeting is logged first and called off afterwards, the way a rep does it.
+	var meeting versionedWire
 	mustCall(t, e, "POST", "/v1/activities", AnyMap{"kind": "meeting", "subject": "Called off", "source": "manual",
-		"occurred_at": "2025-03-09T12:00:00Z", "meeting_status": "canceled", "links": links}, http.StatusCreated, nil)
+		"occurred_at": "2025-03-09T12:00:00Z", "links": links}, http.StatusCreated, &meeting)
+	if status := e.Call(t, "PATCH", "/v1/activities/"+meeting.ID, AnyMap{"meeting_status": "canceled"},
+		withIfMatch(nil, meeting.Version), nil); status != http.StatusOK {
+		t.Fatalf("calling the meeting off -> %d", status)
+	}
 	var record, card struct {
 		Precision string `json:"last_activity_precision"`
 	}
