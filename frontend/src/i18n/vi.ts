@@ -14788,6 +14788,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.deal_suggestion": "Đề xuất deal",
   "audit.kind.dedupe_candidate": "Hồ sơ có thể trùng",
   "audit.kind.existing_customer_notice": "Thông báo khách hàng hiện có",
+  "audit.kind.extension_object_usage": "Bộ nhớ của tiện ích mở rộng",
   "audit.kind.field_provenance": "Nguồn của trường",
   "audit.kind.finance_connection": "Kết nối kế toán",
   "audit.kind.finance_customer_link": "Liên kết khách hàng kế toán",
@@ -23396,6 +23397,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiServing.previewFailed":
     "Máy chủ không thể kiểm tra giá trị này: {reason} Nút Lưu sẽ tắt cho đến khi kiểm tra được.",
   "dealDecline.action": "Không thuộc deal này",
+  "dealFiling.byUnit": "{unit} đã gắn thư vào đây: {reason}",
+  "dealFiling.byUnitNoReason": "{unit} đã gắn thư vào đây",
   "dealDecline.done":
     "Đã đánh dấu là không thuộc deal này. Mục này không còn giữ deal hoạt động.",
   "dealDecline.doneProjectKept":

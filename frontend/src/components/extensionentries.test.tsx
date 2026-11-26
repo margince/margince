@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { rulesIn } from "../testing/css";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { ExtensionEntries } from "./extensionentries";
+import { ENTRY_ICONS, ExtensionEntries, entryIcon } from "./extensionentries";
 
 // The vanilla registry is empty, so each case hands the component the shape
 // the generator emits. The label is a core key, because the merged catalogue
@@ -170,5 +170,13 @@ describe("ExtensionEntries", () => {
       { slot: "log_activity", inRow: true, registry: [] },
     );
     expect(container.innerHTML).toBe("");
+  });
+});
+
+describe("entryIcon", () => {
+  it("answers a listed glyph and nothing for a name the list lacks", () => {
+    expect(entryIcon("camera")).toBe(ENTRY_ICONS.camera);
+    expect(entryIcon("constructor")).toBeUndefined();
+    expect(entryIcon("no-such-glyph")).toBeUndefined();
   });
 });

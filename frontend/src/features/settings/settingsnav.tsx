@@ -379,8 +379,8 @@ function useTabContext(): CatalogContext {
 }
 
 // Which extension units this build composed. Read here rather than inside the
-// catalog: the extensions registry reaches `@composition/screens`, and
-// importing it there would drag React into a module importable from anywhere.
+// catalog: the extensions registry sits behind a build alias. Imported there,
+// it would drag that alias into a module importable from anywhere.
 export function catalogContext(): CatalogContext {
   return {
     composedUnitScopes: (["workspace", "user"] as const).filter(

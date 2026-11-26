@@ -1,8 +1,15 @@
 import type { components } from "../../api/schema";
 import type { ReadingTone } from "../../design-system/readingtone";
+import {
+  type ActivityMoment,
+  activityDaysAgo,
+  activityPlacedAt,
+  type OccurredPrecision,
+} from "../../format/activitywhen";
 import { calendarDaysUntil } from "../../format/daysuntil";
 import { displayDay } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
+import { UTC_ZONE } from "../../format/timezone";
 import { valueFor } from "../../lib/labelfor";
 import { dueOnDay } from "../../lib/standingpeeks";
 import type { ProjectHealthState } from "./projecthealth.queries";
@@ -175,26 +182,61 @@ export function phaseTimes(view: Project360): ReadonlyMap<string, PhaseTime> {
   );
 }
 
-export type LastUpdate = Readonly<{ at: string; daysAgo: number }>;
+export type LastUpdate = Readonly<{
+  // Where the timeline places it, which for a day entry is its date's start.
+  at: string;
+  // The stored time, which the activity rows are matched against.
+  occurredAt: string;
+  daysAgo: number;
+  precision: OccurredPrecision;
+}>;
 
-/** The newest filed activity, from the rollup when served, else the row. */
-export function lastUpdate(view: Project360): LastUpdate | undefined {
-  const at = view.rollups?.last_activity_at ?? view.project.last_activity_at;
-  if (!at) {
+/**
+ * The newest filed activity, from the rollup when served, else the row. A
+ * `day` entry counts whole days from its own date to `as_of`'s date in `zone`.
+ */
+export function lastUpdate(
+  view: Project360,
+  zone: string = UTC_ZONE,
+): LastUpdate | undefined {
+  const moment = lastUpdateMoment(view);
+  if (!moment) {
     return undefined;
   }
   return {
-    at,
-    daysAgo: daysPast(Date.parse(at), Date.parse(view.as_of)).days,
+    at: activityPlacedAt(moment, zone),
+    occurredAt: moment.at,
+    daysAgo: activityDaysAgo(moment, Date.parse(view.as_of), zone),
+    precision: moment.precision,
   };
+}
+
+function lastUpdateMoment(view: Project360): ActivityMoment | undefined {
+  const rollup = view.rollups;
+  if (rollup?.last_activity_at) {
+    return {
+      at: rollup.last_activity_at,
+      precision: rollup.last_activity_precision ?? "instant",
+    };
+  }
+  const project = view.project;
+  return project.last_activity_at
+    ? {
+        at: project.last_activity_at,
+        precision: project.last_activity_precision ?? "instant",
+      }
+    : undefined;
 }
 
 // A week with nothing filed is the silence the timeline draws as a band.
 export const QUIET_AFTER_DAYS = 7;
 
 /** The silence before `as_of` on a project still running, when long enough. */
-export function quietStretch(view: Project360): LastUpdate | undefined {
-  const last = lastUpdate(view);
+export function quietStretch(
+  view: Project360,
+  zone: string = UTC_ZONE,
+): LastUpdate | undefined {
+  const last = lastUpdate(view, zone);
   if (
     !last ||
     view.project.phase === "closed" ||

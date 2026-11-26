@@ -14,7 +14,8 @@ import {
 import { PageTitle } from "./shelltitle";
 
 // One composed unit, so the unit's branch has a unit to name.
-vi.mock("@composition/extensions", () => ({
+vi.mock("@composition/extensions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@composition/extensions")>()),
   extensions: [{ name: "notes", verbs: [] }],
 }));
 

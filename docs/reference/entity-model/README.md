@@ -30,8 +30,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 354 |
-| Columns | 4352 |
+| Tables | 355 |
+| Columns | 4363 |
 | Foreign keys | 618 |
 | Owning areas | 40 |
 
@@ -52,7 +52,7 @@ Ranked by how many foreign keys point at them.
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 30 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 14 | 9 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 8 | 8 |
-| [`attachment`](activities.md#attachment) | [activities](activities.md) | 27 | 6 |
+| [`attachment`](activities.md#attachment) | [activities](activities.md) | 28 | 6 |
 
 ```mermaid
 erDiagram
@@ -107,7 +107,7 @@ erDiagram
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
-| [compose](compose.md) | 42 |
+| [compose](compose.md) | 43 |
 | [consent](consent.md) | 23 |
 | [contacts](contacts.md) | 49 |
 | [continuity](continuity.md) | 1 |
@@ -187,7 +187,7 @@ erDiagram
 | [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 3 | 0 |
 | [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 6 | 0 |
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 12 | 0 |
-| [`attachment`](activities.md#attachment) | activities | 27 | 6 |
+| [`attachment`](activities.md#attachment) | activities | 28 | 6 |
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 13 | 0 |
 | [`audit_log`](platform.md#audit_log) | platform | 15 | 1 |
 | [`auth_token`](identity.md#auth_token) | identity | 12 | 0 |
@@ -308,6 +308,7 @@ erDiagram
 | [`existing_customer_notice_purpose`](consent.md#existing_customer_notice_purpose) | consent | 2 | 0 |
 | [`extension_ingest_position`](compose.md#extension_ingest_position) | compose | 5 | 0 |
 | [`extension_ingest_refusal`](compose.md#extension_ingest_refusal) | compose | 5 | 0 |
+| [`extension_object_usage`](compose.md#extension_object_usage) | compose | 5 | 0 |
 | [`extension_secret`](platform.md#extension_secret) | platform | 7 | 0 |
 | [`federated_identity`](identity.md#federated_identity) | identity | 6 | 0 |
 | [`field_mask`](identity.md#field_mask) | identity | 6 | 0 |
@@ -325,8 +326,8 @@ erDiagram
 | [`generated_summary`](platform.md#generated_summary) | platform | 9 | 0 |
 | [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
 | [`geocode_country_cache`](contacts.md#geocode_country_cache) | contacts | 4 | 0 |
-| [`graph_contact_edge`](search.md#graph_contact_edge) | search | 9 | 0 |
-| [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 17 | 0 |
+| [`graph_contact_edge`](search.md#graph_contact_edge) | search | 10 | 0 |
+| [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 18 | 0 |
 | [`home_read_cache`](compose.md#home_read_cache) | compose | 9 | 0 |
 | [`home_read_fence`](compose.md#home_read_fence) | compose | 2 | 0 |
 | [`home_read_fence_pending`](compose.md#home_read_fence_pending) | compose | 2 | 0 |
@@ -338,7 +339,7 @@ erDiagram
 | [`intro_request`](introductions.md#intro_request) | introductions | 31 | 0 |
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 10 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 11 | 1 |
-| [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 17 | 1 |
+| [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 15 | 1 |
 | [`lawful_basis_confirmation`](consent.md#lawful_basis_confirmation) | consent | 9 | 0 |
 | [`lead`](contacts.md#lead) | contacts | 49 | 20 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |
@@ -378,7 +379,7 @@ erDiagram
 | [`offer_line_item`](deals.md#offer_line_item) | deals | 21 | 0 |
 | [`offer_template`](deals.md#offer_template) | deals | 10 | 1 |
 | [`onboarding_wizard_state`](identity.md#onboarding_wizard_state) | identity | 15 | 0 |
-| [`partner`](contacts.md#partner) | contacts | 22 | 0 |
+| [`partner`](contacts.md#partner) | contacts | 27 | 0 |
 | [`partner_stage`](contacts.md#partner_stage) | contacts | 13 | 1 |
 | [`passport`](identity.md#passport) | identity | 14 | 9 |
 | [`pipeline`](deals.md#pipeline) | deals | 8 | 5 |

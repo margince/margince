@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -221,6 +222,7 @@ func slippingCandidate(d crmcontracts.Deal, now time.Time, zone *time.Location) 
 		Currency:             d.Currency,
 		Stalled:              d.Stalled != nil && *d.Stalled,
 		LastActivityAt:       d.LastActivityAt,
+		LastActivityDateOnly: d.LastActivityPrecision != nil && occurredday.IsDay(*d.LastActivityPrecision),
 		CreatedAt:            d.CreatedAt,
 		CloseDateProvisional: d.CloseDateProvisional,
 		WinProbability:       d.WinProbability,
