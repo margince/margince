@@ -7219,7 +7219,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.updating": "Wird aktualisiert…",
-  "brief.briefedAt": "Von Margince zusammengefasst um {time}",
+  "brief.briefedAt": "Von Margince vorbereitet um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
   "brief.first.title": "Braucht dich",
