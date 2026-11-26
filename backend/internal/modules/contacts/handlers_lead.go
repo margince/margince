@@ -176,7 +176,7 @@ func (h Handlers) AssignLeads(w http.ResponseWriter, r *http.Request) {
 // queue; an absent owner is refused, naming the field, as an absent lead id is.
 func bulkOwner(r *http.Request, sent *openapi_types.UUID) (*ids.UserID, error) {
 	if _, present := httperr.PresentField(r, "owner_id"); present && sent == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // no owner is the answer: the leads go back to the unassigned queue
 	}
 	var id ids.UUID
 	if sent != nil {
