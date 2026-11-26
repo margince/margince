@@ -32,7 +32,7 @@ func companyFieldHeldByAUser(ctx context.Context, tx pgx.Tx, companyID ids.Compa
 	err := tx.QueryRow(ctx, `
 		SELECT `+storekit.StampForAUserSQL("captured_by")+`
 		FROM field_provenance
-		WHERE object_type = 'company' AND object_id = $1 AND field_name = $2
+		WHERE object_type = 'company' AND object_id = $1 AND field_name = $2 AND value IS NULL
 		ORDER BY captured_at DESC, id DESC
 		LIMIT 1`, companyID, field).Scan(&held)
 	if errors.Is(err, pgx.ErrNoRows) {

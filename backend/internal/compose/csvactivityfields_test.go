@@ -70,7 +70,7 @@ func TestAnUneditedTimestampIsNotAChangeWhateverZoneTheStoreAnswersIn(t *testing
 func TestADayCellCarriesItsPrecisionToTheCreateAndTheUpdate(t *testing.T) {
 	for cell, want := range map[string]string{"2025-03-09": activities.PrecisionDay, "2025-03-09T10:00:00Z": ""} {
 		fields := map[string]string{activityTargetOccurredAt: cell}
-		typed, problem := checkActivityCells(fields, nil, cellClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), zone: time.UTC})
+		typed, problem := firstOf(checkActivityCells(fields, nil, cellClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), zone: time.UTC}))
 		if problem != nil {
 			t.Fatalf("%s: %+v", cell, problem)
 		}
@@ -90,7 +90,7 @@ func TestADayCellCarriesItsPrecisionToTheCreateAndTheUpdate(t *testing.T) {
 // A timed cell with nanoseconds past the stored microsecond names the instant
 // the column holds, so the row predicts unchanged.
 func TestATimedCellBelowAMicrosecondIsTheStoredInstant(t *testing.T) {
-	typed, problem := checkActivityCells(map[string]string{activityTargetOccurredAt: "2026-03-02T10:00:00.123456500Z"}, nil, activityNow)
+	typed, problem := firstOf(checkActivityCells(map[string]string{activityTargetOccurredAt: "2026-03-02T10:00:00.123456500Z"}, nil, activityNow))
 	if problem != nil {
 		t.Fatalf("the cell was refused: %+v", problem)
 	}

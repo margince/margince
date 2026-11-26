@@ -21,9 +21,9 @@ import (
 // descriptionField is the free-text column an import may map onto.
 const descriptionField = "description"
 
-// fieldFullName is a lead's own name column, spelled once for the three places
-// that map onto it.
-const fieldFullName = "full_name"
+// The name columns an import maps onto, spelled once: a lead's own full name,
+// and a contact's two parts.
+const fieldFullName, fieldFirstName, fieldLastName = "full_name", "first_name", "last_name"
 
 // fieldPhone is a phone number. A lead holds one in a column; a contact's
 // numbers are child rows, and the file's number becomes its primary work one.
@@ -76,7 +76,7 @@ var csvTargets = map[string][]string{
 	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, fieldLinkedIn, fieldPhone, fieldEmail, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
 	// The owner is named by the seat's email (csvowners.go), never by its id.
 	// `author` is a name (csvauthor.go).
-	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
+	migration.ObjectContact: append([]string{fieldFullName, fieldFirstName, fieldLastName, fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
 	// A stage change is an advance (dealUpdateFrom); the lost reason is written once.
 	migration.ObjectDeal: {
 		dealTargetName, dealTargetPipeline, dealTargetStage, dealTargetAmount, dealTargetCurrency, dealTargetCloseDate,

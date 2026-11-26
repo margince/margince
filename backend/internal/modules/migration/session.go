@@ -31,7 +31,10 @@ type Session struct {
 	DraftStep string
 	// Profile is what the upload read of each file; read only by GetStaged,
 	// and gone once the source is released.
-	Profile        json.RawMessage
+	Profile json.RawMessage
+	// UploadRows is the row count the profile holds, which a list reads without
+	// the profile; nil once the profile is gone.
+	UploadRows     *int
 	ApprovedBy     string
 	ApprovedAt     *time.Time
 	SupersededBy   *RunID
