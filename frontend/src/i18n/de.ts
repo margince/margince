@@ -12268,6 +12268,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Deine eingegebene Antwort wird nicht gespeichert. Beim Erfüllen wird festgehalten, was die Löschung vorfand: Gelöscht oder Nichts vorhanden.",
   "privacy.erasureAnswer.erased": "Gelöscht",
   "privacy.erasureAnswer.nothing_held": "Nichts vorhanden (bereits gelöscht)",
+  "privacy.answerRemoved": "Antwort mit der Löschung entfernt",
   "privacy.legalHoldTitle": "Durch Legal Hold blockiert",
   "privacy.legalHold":
     "Die Löschung hat hier keinen Vorrang, da für diesen Kontakt eine gesetzliche Aufbewahrungsfrist läuft (Art. 17 Abs. 3 lit. b). Die Sperre gilt für jede Rolle, auch für Admins, und lässt sich nicht übersteuern. Der Versuch wurde im Audit-Log festgehalten.",

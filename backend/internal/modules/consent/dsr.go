@@ -322,6 +322,10 @@ const (
 	// erasureAnswerNothingHeld: there was nothing left to erase, as after an
 	// earlier erasure of the same contact.
 	erasureAnswerNothingHeld = "nothing_held"
+	// erasedSubjectPrefix starts the placeholder the privacy engine writes over
+	// a retired case's subject_ref, followed by the case's own id;
+	// dsrerasedsentinel_test.go holds the two equal.
+	erasedSubjectPrefix = "erased+"
 )
 
 // erasureAnswers is the closed list an erasure's answer comes from.
@@ -374,6 +378,14 @@ func wireDSR(d dsrRow, subjects map[ids.UUID]dsrSubject) crmcontracts.DataSubjec
 		assignee := openapi_types.UUID(d.AssigneeID.UUID)
 		out.AssigneeId = &assignee
 	}
+	erased := subjectErased(d)
+	out.SubjectErased = &erased
+	out.ResolutionRemoved = new(erased && d.Resolution != nil && *d.Resolution == erasedResolution)
+	// An open retired case keeps its contact link, which names a record the
+	// erasure has already anonymised.
+	if erased {
+		return out
+	}
 	subjectID, ok := resolveDSRSubject(d)
 	if !ok {
 		return out
@@ -387,4 +399,10 @@ func wireDSR(d dsrRow, subjects map[ids.UUID]dsrSubject) crmcontracts.DataSubjec
 		}
 	}
 	return out
+}
+
+// subjectErased reports whether the case's subject was retired, leaving the
+// placeholder in subject_ref.
+func subjectErased(d dsrRow) bool {
+	return d.SubjectRef == erasedSubjectPrefix+d.ID.String()
 }

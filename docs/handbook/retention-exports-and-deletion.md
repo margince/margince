@@ -283,7 +283,7 @@ If two colleagues open the same request, the second sees "Someone else decided t
 
 Closing a request keeps a proof of the answer. It holds the request number, the email address the request came from, and the day it arrived. It holds its kind, how the identity was checked, the result, who closed it and when. For an erasure it also holds how many records of each kind were erased. It holds no mail and no other contact data.
 
-The proof is kept for three years after the end of the year the request was closed. Margince deletes it in the first month of the year after that. The request then no longer names who asked, and its history no longer shows it either.
+The proof is kept for three years after the end of the year the request was closed. Margince deletes it in the first month of the year after that. The request then names **Record not available** instead of who asked, and its history no longer shows who asked either.
 
 If someone disputes the answer, open the closed request and choose **Record a complaint**. The proof is then kept past its date. Choose **Close the complaint** when it is settled. Margince deletes the proof at the start of the next year.
 
@@ -322,7 +322,7 @@ Carrying one out is hard to do by mistake. You type **ERASE** to confirm, and th
 > activity and derived values. It cannot be undone. The erasure itself is
 > audited.
 
-The confirm button reads **Erase and suppress**.
+The confirm button reads **Erase and suppress**. The erasure also takes the contact off their other requests. Those then name **Record not available**, and an answer recorded on one reads **Answer removed with the erasure**.
 
 An erasure is not answered in your own words. Typed words could name the contact the erasure removes. Fulfilling records one of two answers:
 

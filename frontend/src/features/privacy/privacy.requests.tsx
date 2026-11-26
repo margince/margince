@@ -61,8 +61,12 @@ type UpdateDataSubjectRequest =
 type User = components["schemas"]["User"];
 
 // A record id that does not resolve may be hidden or erased, and the server
-// sends both the same, so the wording claims neither.
+// sends both the same, so the wording claims neither. A retired subject reads
+// the same, never as the placeholder the erasure left.
 export function subjectName(dsr: DataSubjectRequest, t: Translator): string {
+  if (dsr.subject_erased) {
+    return t("notice.recordUnavailable");
+  }
   if (dsr.subject_label) {
     return dsr.subject_label;
   }
@@ -350,7 +354,7 @@ export function DsrDetail({
             <DsrTransitions
               status={dsr.status}
               ready={(next) =>
-                closingReady(next, closing, dsr.resolution, dsr.kind)
+                closingReady(next, closing, writtenAnswer(dsr), dsr.kind)
               }
               pending={patch.isPending}
               onTransition={transition}
@@ -422,14 +426,10 @@ function DsrFacts({
     });
   }
   if (dsr.resolution && isTerminal(dsr.status)) {
-    // An erasure's answer is a fixed word, shown in the reader's language. By
-    // the value, not the case's kind: an erasure retires the subject's other
-    // cases with the same word.
-    const fixed = ERASURE_ANSWER_LABEL[dsr.resolution];
     facts.push({
       key: "resolution",
       term: t("privacy.resolution"),
-      value: fixed ? t(fixed) : dsr.resolution,
+      value: answerText(dsr, t),
     });
   }
 
@@ -470,9 +470,24 @@ function DsrAssignee({
   );
 }
 
+// The answer someone recorded, or null when the erasure that retired the
+// case left its placeholder in its place.
+function writtenAnswer(dsr: DataSubjectRequest): string | null {
+  return dsr.resolution_removed ? null : (dsr.resolution ?? null);
+}
+
+// An erasure's answer is a fixed word, shown in the reader's language; the
+// officer's own answer shows as written.
+function answerText(dsr: DataSubjectRequest, t: Translator): string {
+  const written = writtenAnswer(dsr);
+  if (written === null) return t("privacy.answerRemoved");
+  const fixed = ERASURE_ANSWER_LABEL[written];
+  return fixed ? t(fixed) : written;
+}
+
 function requestClosing(dsr: DataSubjectRequest): DsrClosing {
   return {
-    resolution: dsr.resolution ?? "",
+    resolution: writtenAnswer(dsr) ?? "",
     identityCheck: dsr.identity_verified ? "confirm_link" : "",
     requesterEmail: "",
   };

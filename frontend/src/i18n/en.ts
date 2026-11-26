@@ -12203,6 +12203,7 @@ export const en = {
     "The answer you typed is not kept. Fulfilling records what the erasure found: Erased, or Nothing held.",
   "privacy.erasureAnswer.erased": "Erased",
   "privacy.erasureAnswer.nothing_held": "Nothing held (already erased)",
+  "privacy.answerRemoved": "Answer removed with the erasure",
   "privacy.legalHoldTitle": "Blocked by legal hold",
   "privacy.legalHold":
     "This contact is inside a statutory retention window, so erasure does not take precedence here (Art. 17(3)(b)). The block applies to every role, including administrators, with no override. The attempt was audited.",

@@ -49129,7 +49129,16 @@ type DataSubjectRequest struct {
 	Kind             DataSubjectRequestKind   `json:"kind"`
 	Proof            *DataSubjectRequestProof `json:"proof,omitempty"`
 	Resolution       *string                  `json:"resolution,omitempty"`
-	Status           DataSubjectRequestStatus `json:"status"`
+
+	// ResolutionRemoved True when the answer recorded on the request was removed with its subject, and `resolution`
+	// holds the placeholder left in its place rather than an answer anyone wrote.
+	ResolutionRemoved *bool                    `json:"resolution_removed,omitempty"`
+	Status            DataSubjectRequestStatus `json:"status"`
+
+	// SubjectErased True when the request no longer names its subject: an erasure of that subject, or the end of
+	// the request's proof period, replaced `subject_ref` with a placeholder. Show the subject as a
+	// record that is not available, never the placeholder.
+	SubjectErased *bool `json:"subject_erased,omitempty"`
 
 	// SubjectKind Which kind of record `subject_label` was read from. Null when nothing resolved: an
 	// external identifier, an erased subject, or one the caller may not read.

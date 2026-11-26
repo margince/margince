@@ -54296,6 +54296,17 @@ components:
           description: |-
             Which kind of record `subject_label` was read from. Null when nothing resolved: an
             external identifier, an erased subject, or one the caller may not read.
+        subject_erased:
+          type: boolean
+          description: |-
+            True when the request no longer names its subject: an erasure of that subject, or the end of
+            the request's proof period, replaced `subject_ref` with a placeholder. Show the subject as a
+            record that is not available, never the placeholder.
+        resolution_removed:
+          type: boolean
+          description: |-
+            True when the answer recorded on the request was removed with its subject, and `resolution`
+            holds the placeholder left in its place rather than an answer anyone wrote.
         status: {type: string, enum: [open, in_progress, fulfilled, rejected]}
         due_at: {type: string, format: date-time, description: 'Statutory deadline (e.g. 30 days).'}
         due_rule:

@@ -433,28 +433,103 @@ describe("fulfilling an erasure", () => {
     expect(screen.queryByText(en["privacy.erasureDraftReplaced"])).toBeNull();
   });
 
-  // An erasure retires the subject's other cases with the same word, so an
-  // access case can hold it too. The label follows the value, not the kind.
+  // An erasure retires the subject's other cases: their subject and answer
+  // become placeholders, which the server flags. Neither placeholder shows.
   //
-  // Mutation: label only erasure cases and this shows the raw code.
-  it("shows a retired access case's erasure answer in the reader's words", async () => {
+  // Mutation: drop either flag's branch and the placeholder or "Erased" shows.
+  it("shows a retired access case as no record, its answer as removed", async () => {
+    const placeholder = "erased+01a1e600-6a15-7a33-a74c-0c5b91d9867b";
     stubRoutes({
       "GET /data-subject-requests": () =>
         jsonResponse({
           ...DSRS,
           data: DSRS.data.map((dsr) =>
-            dsr.id === "d2" ? { ...dsr, resolution: "erased" } : dsr,
+            dsr.id === "d2"
+              ? {
+                  ...dsr,
+                  subject_ref: placeholder,
+                  resolution: "erased",
+                  subject_erased: true,
+                  resolution_removed: true,
+                }
+              : dsr,
           ),
         }),
     });
     render(<RequestsPanel />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: /anna@acme\.test/i }),
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["notice.recordUnavailable"],
+      }),
+    );
+    const drawer = await screen.findByRole("dialog", {
+      name: en["notice.recordUnavailable"],
+    });
+    // The title and the Subject field.
+    expect(
+      within(drawer).getAllByText(en["notice.recordUnavailable"]),
+    ).toHaveLength(2);
+    expect(
+      within(drawer).getByText(en["privacy.answerRemoved"]),
+    ).toBeInTheDocument();
+    expect(within(drawer).queryByText(en["privacy.erasureAnswer.erased"])).toBeNull();
+    expect(screen.queryByText(new RegExp(placeholder))).toBeNull();
+  });
+
+  // An open case the erasure retired starts with no answer, never the placeholder.
+  it("drafts no answer from an open retired case's placeholder", async () => {
+    stubRoutes({
+      "GET /data-subject-requests": () =>
+        jsonResponse({
+          ...DSRS,
+          data: DSRS.data.map((dsr) =>
+            dsr.id === "d2"
+              ? {
+                  ...dsr,
+                  status: "in_progress",
+                  resolution: "erased",
+                  subject_erased: true,
+                  resolution_removed: true,
+                }
+              : dsr,
+          ),
+        }),
+    });
+    render(<RequestsPanel />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["notice.recordUnavailable"],
+      }),
     );
     expect(
-      await screen.findByText(en["privacy.erasureAnswer.erased"]),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("erased")).toBeNull();
+      await screen.findByRole("textbox", { name: en["privacy.resolution"] }),
+    ).toHaveValue("");
+  });
+
+  // The officer's own answer on a retired case is theirs, and shows as written.
+  it("shows an answer written after the retirement as written", async () => {
+    stubRoutes({
+      "GET /data-subject-requests": () =>
+        jsonResponse({
+          ...DSRS,
+          data: DSRS.data.map((dsr) =>
+            dsr.id === "d2"
+              ? { ...dsr, subject_erased: true, resolution_removed: false }
+              : dsr,
+          ),
+        }),
+    });
+    render(<RequestsPanel />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["notice.recordUnavailable"],
+      }),
+    );
+    expect(await screen.findByText("sent by post")).toBeInTheDocument();
+    expect(screen.queryByText(en["privacy.answerRemoved"])).toBeNull();
   });
 
   it("shows a fulfilled erasure's answer in the reader's words", async () => {
