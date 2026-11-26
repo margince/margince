@@ -190,11 +190,8 @@ var docWritePerms = principal.Permissions{
 	RowScope: principal.RowScopeTeam,
 }
 
-// The library is fed by the UPLOAD path, not by a hand-written column. A test
-// that seeds the row itself proves only that the read finds it;
-// it passes just as happily when nothing in the product ever writes it, which
-// is exactly how a file uploaded through the UI can be invisible to the account
-// view while every gate stays green.
+// The library is fed by the upload path. A test that seeds the row itself
+// proves only that the read finds it, and passes even when no upload lands there.
 func TestAnUploadedDocumentReachesTheAccountLibrary(t *testing.T) {
 	e := Setup(t)
 	store := activities.NewStore(e.DB()).WithBlobstore(blobstore.NewMemory())
@@ -399,11 +396,8 @@ func seedActivityWithDeal(t *testing.T, e *Env, deal ids.UUID) ids.UUID {
 	return id
 }
 
-// When two companies turn out to be one, the survivor's library has to hold
-// both sides' files. A file names its company by entity_id, so the merge
-// has to repoint it — a file left pointing at the dissolved company is filed
-// under a record that no longer exists, and to a user the contract has simply
-// vanished.
+// When two companies turn out to be one, the survivor's library holds both
+// sides' files. A file names its company by entity_id, so the merge repoints it.
 func TestACompanyMergeCarriesTheDocumentsAcross(t *testing.T) {
 	e := Setup(t)
 	files := activities.NewStore(e.DB())
