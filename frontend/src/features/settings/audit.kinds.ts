@@ -14,6 +14,7 @@ export const AUDIT_KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   ai_feedback: "audit.kind.ai_feedback",
   ai_model_rate: "audit.kind.ai_model_rate",
   ai_routing: "audit.kind.ai_routing",
+  ai_team_rules: "audit.kind.ai_team_rules",
   analytics_share: "audit.kind.analytics_share",
   approval: "audit.kind.approval",
   assurance_cycle: "audit.kind.assurance_cycle",

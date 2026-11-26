@@ -1,0 +1,18 @@
+{"object":"whatsapp_business_account","entry":[
+{"id":"WABA1","changes":[
+{"field":"messages","value":{"messaging_product":"whatsapp","metadata":{"display_phone_number":"15550001111","phone_number_id":"PNID1"},"contacts":[{"profile":{"name":"Ada"},"wa_id":"491701234567"}],"messages":[
+{"from":"491701234567","id":"wamid.OK1","timestamp":"1764000300","type":"text","text":{"body":"first"}},
+{"from":"491701234567","id":"wamid.BADTS","timestamp":"yesterday","type":"text","text":{"body":"bad time"}},
+"not an object",
+{"from":"491701234567","id":"wamid.OK2","timestamp":"1764000301","type":"text","text":{"body":"second"}}
+]}},
+{"field":"account_update","value":{"event":"PARTNER_ADDED"}},
+{"field":"messages","value":"garbage"}
+]},
+"garbage entry",
+{"id":"WABA2","changes":[
+{"field":"smb_message_echoes","value":{"metadata":{"display_phone_number":"15550002222","phone_number_id":"PNID2"},"message_echoes":[
+{"from":"15550002222","to":"4930111","id":"wamid.ECHO3","timestamp":"1764000302","type":"text","text":{"body":"other number"}}]}},
+{"field":"smb_app_state_sync","value":{"state_sync":[]}},
+{"field":"history","value":{}}
+]}]}

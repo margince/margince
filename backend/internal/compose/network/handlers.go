@@ -16,6 +16,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -48,6 +49,9 @@ type Reads struct {
 	// ordinary configuration, not a failure: the note is then written from the
 	// template, which is a note a colleague can actually paste.
 	introNoteLane Completer
+	// introNoteRules reads the team rules the note follows; a model draft is
+	// refused when it cannot.
+	introNoteRules draftvoice.RulesReader
 	// askedRoutes knows which routes to a contact are already spoken for, so a
 	// route the server would refuse with a 409 is not offered as though it
 	// were free. Nil leaves every route available, which is what the tab

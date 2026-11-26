@@ -276,8 +276,10 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	// store). Asking which transports a binary compiled in must not hand
 	// anything the power to destroy mail.
 	var purgeRemoved capture.MessagePurger
+	var purgeRemovedChat capture.ChatPurger
 	if purger := capturePurgerFor(pool, cfg.Blob, cfg.logger()); purger != nil {
 		purgeRemoved = purger.PurgeRemovedAdmitted
+		purgeRemovedChat = purger.PurgeRemovedChat
 	}
 	return capture.NewSink(InstallationDB(pool)).
 		WithPartyAuthority(identity.NewServiceFor(InstallationDB(pool))).
@@ -286,6 +288,11 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		WithSentEchoAdoption(comms.NewStore(InstallationDB(pool), time.Now, sentIdentity(InstallationDB(pool))).AdoptEchoIdentityTx).
 		WithPartyReceiptSettlement(sentPartySettlement(pool)).
 		WithMessagePurger(purgeRemoved).
+		// A chat message the provider edited or deleted after it was filed. The
+		// text is written by the module that owns it; a deletion follows the
+		// rules a mailbox deletion does.
+		WithChatEditor(activities.ApplyProviderEditTx).
+		WithChatPurger(purgeRemovedChat).
 		// The files a captured message carried, written by the module that owns
 		// the attachment table. Built here, from the store, so every role that
 		// composes a sink gets the same one — the worker runs mail capture and

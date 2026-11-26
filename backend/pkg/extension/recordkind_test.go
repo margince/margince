@@ -120,6 +120,8 @@ func TestRecordKindValidate(t *testing.T) {
 		{"other schema", mutate(func(k *kindDecl) { k.Table = "public.ext_visit_log_visit" }), false},
 		{"another unit's table", mutate(func(k *kindDecl) { k.Table = "ext_other_unit_visit" }), false},
 		{"a view segment", mutate(func(k *kindDecl) { k.View = "room-page" }), true},
+		{"an owner column", mutate(func(k *kindDecl) { k.OwnerColumn = "owner_id" }), true},
+		{"an owner column that is not a name", mutate(func(k *kindDecl) { k.OwnerColumn = "owner id" }), false},
 		{"a view that is a path", mutate(func(k *kindDecl) { k.View = "rooms/42" }), false},
 		{"delete policy unknown", mutate(func(k *kindDecl) { k.DeletePolicy = "shred" }), false},
 		{"delete policy archive only", mutate(func(k *kindDecl) { k.DeletePolicy = DeleteArchiveOnly }), true},

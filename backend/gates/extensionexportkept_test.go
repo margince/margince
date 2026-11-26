@@ -22,9 +22,16 @@ const memberChatIngest = "the member-owned chat ingest; no unit in this tree fil
 // tree that still call the old one.
 const seatBoundRead = "the seat-bound form of a deprecated system read; no unit in this tree makes that read"
 
+// testKit is the reason for the unit test kit. Its callers are units' tests,
+// which this census does not read; extensions/finance-demo's test calls each.
+const testKit = "the unit test kit; its callers are units' test files, which the census does not read"
+
 // exportWaivers are the exported pkg/extension names with no caller in this
 // tree, each with why it stays.
 var exportWaivers = gatekit.Waive(map[string]string{
+	"extension/extensiontest.Check":                  testKit,
+	"extension/extensiontest.CheckLink":              testKit,
+	"extension/extensiontest.CheckSignal":            testKit,
 	"extension.OccurredPrecision":                    memberChatIngest,
 	"extension.PostureClassified":                    memberChatIngest,
 	"extension.PostureHeld":                          memberChatIngest,

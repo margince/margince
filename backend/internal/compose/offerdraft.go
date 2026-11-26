@@ -23,15 +23,10 @@ package compose
 // rate card, or left at the honest zero sentinel — never guessed
 // (features/07 §8b, mirrored from poc-1's price_grounded convention).
 //
-// Context source decision: "the deal's captured context" resolves to
-// shared/ports/retrieval.Retriever.AssembleContext over the deal anchor —
-// the SAME seam runner.go's Surface-B loop and the intent tools already
-// ride (compose/runnerservice.go, compose/registry.go), backed by
-// modules/search's fixed-depth graph walk (activities linked to the deal,
-// plus the contacts/companies/deals those activities also touch). This file
-// invents no new context store: it is the one retrieval seam every other
-// AI consumer already shares, so "grounded in the deal's context" means
-// the same thing everywhere in the codebase.
+// The deal's captured context is shared/ports/retrieval.Retriever
+// .AssembleContext over the deal anchor. runner.go's Surface-B loop and the
+// intent tools ride the same seam, backed by modules/search's graph walk. This
+// file invents no new context store.
 //
 // The model call: same optional-CompleteValidated capability probe as
 // ai.Ask — a router-backed brain gets the §5.2
@@ -50,6 +45,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
+	"github.com/margince/margince/backend/internal/compose/draftrules"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -104,7 +101,7 @@ Return ONLY a JSON object: {"lines":[{"description":...,"quantity":"1","tax_rate
 // The line descriptions are prose on a document the customer receives and the
 // team reads, so they take the installation's base language.
 func offerDraftSystemFor(fence promptfence.Fence, lang string) string {
-	return offerDraftSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("workspace")
+	return offerDraftSystem + "\n\n" + draftrules.TeamRules + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("workspace") + "\n" + fence.PolicyRule()
 }
 
 // offerLineCandidate is the JSON shape the drafting prompt demands, one
@@ -163,12 +160,10 @@ type offerDrafter struct {
 	deals    *deals.Store
 	rateCard rateCardLookup
 	context  retrieval.Retriever
-	// pool reads the installation's base language, which the drafted line
-	// descriptions are written in. An offer is a shared document — it goes to a
-	// customer and every colleague on the deal reads it — so it takes the
-	// installation's language rather than whatever language the captured deal
-	// context happened to be in.
-	pool *pgxpool.Pool
+	// pool reads the base language the line descriptions are written in: an offer
+	// is a shared document, not the language of the captured deal context.
+	pool  *pgxpool.Pool
+	rules draftvoice.Reader // the team rules the line descriptions follow
 }
 
 // WithOfferDraft enables AI-drafted offer regeneration (arc 4b) over the
@@ -178,7 +173,7 @@ type offerDrafter struct {
 func WithOfferDraft(brain completer, retriever retrieval.Retriever) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		store := deals.NewStore(InstallationDB(pool), DealsInstallation())
-		s.offerDrafter = &offerDrafter{brain: brain, deals: store, rateCard: store, context: retriever, pool: pool}
+		s.offerDrafter = &offerDrafter{brain: brain, deals: store, rateCard: store, context: retriever, pool: pool, rules: ai.NewVoiceStore(InstallationDB(pool))}
 	}
 }
 
@@ -304,7 +299,7 @@ func (d offerDrafter) gatherDealContext(ctx context.Context, dealID ids.DealID) 
 // reads themselves stay where the orchestrator makes every other read.
 //
 //promptvoice:exempt returns offer LINE ITEMS — a description, a quantity and a price each carrying the snippet they came from. The description is the customer's own wording for what they asked for, not ours to rephrase.
-func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Product, lang string) model.Request {
+func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Product, lang, teamRules string) model.Request {
 	// The deal context is captured counterparty text — the customer wrote it —
 	// so the span it sits in has to be one the customer cannot close. Both
 	// blocks go inside the same span: separately wrapped, the seam between them
@@ -315,7 +310,7 @@ func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Pro
 		System: offerDraftSystemFor(fence, lang),
 		Messages: []model.Message{{
 			Role:    "user",
-			Content: fence.Wrap(renderContextBlock(dealContext, refs) + "\n" + renderCatalogBlock(catalog, refs)),
+			Content: draftvoice.WithTeamRules(fence, teamRules, fence.Wrap(renderContextBlock(dealContext, refs)+"\n"+renderCatalogBlock(catalog, refs))),
 		}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
@@ -326,7 +321,11 @@ func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Pro
 // draftCandidates asks the model for offer-line candidates over the
 // gathered context and the rate card the caller read for it.
 func (d offerDrafter) draftCandidates(ctx context.Context, dealContext []dealContextItem, catalog []crmcontracts.Product, language string) ([]offerLineCandidate, error) {
-	req := offerDraftRequest(dealContext, catalog, language)
+	teamRules, err := draftvoice.LoadTeamRules(ctx, d.rules, nil)
+	if err != nil {
+		return nil, err
+	}
+	req := offerDraftRequest(dealContext, catalog, language, teamRules)
 
 	resp, err := ai.Ask(ctx, d.brain, req, offerDraftShapeValid)
 	if err != nil {

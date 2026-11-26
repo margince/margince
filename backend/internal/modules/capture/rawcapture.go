@@ -30,6 +30,10 @@ type RawRecord struct {
 	SourceSystem string // e.g. "telegram"
 	SourceID     string // the provider's REDELIVERY key, unique per workspace; never the domain natural key
 	Payload      []byte // the verbatim provider payload
+	// Subjects name whose message this is, as storekit.ChannelRawSubjectKey spells each identity.
+	// Erasure and access requests select a raw row by them, so they never need to
+	// read a provider's payload. A network that knows its subjects must state them.
+	Subjects []string
 }
 
 // InsertRawCaptureTx is the ONLY sanctioned way for another package to
@@ -70,13 +74,13 @@ func InsertRawCaptureTx(ctx context.Context, tx pgx.Tx, rec RawRecord) (ids.UUID
 	}
 	var id ids.UUID
 	err = tx.QueryRow(ctx, `
-		INSERT INTO raw_capture (source_system, source_id, payload, payload_object, payload_offload_checked_at)
-		VALUES (@system, @source, @payload, @object::jsonb, now())
+		INSERT INTO raw_capture (source_system, source_id, payload, payload_object, payload_offload_checked_at, channel_subjects)
+		VALUES (@system, @source, @payload, @object::jsonb, now(), @subjects::text[])
 		ON CONFLICT (source_system, source_id) DO UPDATE
 		SET payload = EXCLUDED.payload, payload_object = EXCLUDED.payload_object,
- payload_offload_checked_at = now(), received_at = now()
+ payload_offload_checked_at = now(), received_at = now(), channel_subjects = EXCLUDED.channel_subjects
 		RETURNING id`,
-		pgx.NamedArgs{sqlArgSystem: rec.SourceSystem, sqlArgSource: rec.SourceID, sqlArgPayload: inline, sqlArgObject: ref}).Scan(&id)
+		pgx.NamedArgs{sqlArgSystem: rec.SourceSystem, sqlArgSource: rec.SourceID, sqlArgPayload: inline, sqlArgObject: ref, "subjects": rec.Subjects}).Scan(&id)
 	if err != nil {
 		return ids.Nil, fmt.Errorf("capture: raw store: %w", err)
 	}

@@ -11635,6 +11635,33 @@
               ]
             }
           },
+          "confirmations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "display_name": {
+                  "type": "string"
+                },
+                "side": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "display_name",
+                "side",
+                "state",
+                "user_id"
+              ]
+            }
+          },
           "consequences": {
             "type": "array",
             "items": {

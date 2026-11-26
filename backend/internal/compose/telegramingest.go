@@ -167,7 +167,7 @@ func (w *telegramIngestWorker) fileChatUpdate(actorCtx context.Context, business
 	if businessLinkID == "" {
 		return w.parseAndFile(actorCtx, raw, nil, rawID)
 	}
-	live, err := capture.FileThroughLiveBusinessLink(actorCtx, w.pool, businessLinkID, rawID, func(link telegram.BusinessLink) error {
+	live, err := capture.FileThroughLiveChatLink(actorCtx, w.pool, businessLinkID, rawID, func(link connector.ChatLink) error {
 		return w.parseAndFile(actorCtx, raw, &link, rawID)
 	})
 	if err == nil && !live {
@@ -178,11 +178,12 @@ func (w *telegramIngestWorker) fileChatUpdate(actorCtx context.Context, business
 
 func (w *telegramIngestWorker) parseAndFile(actorCtx context.Context, raw connector.RawRecord, link *telegram.BusinessLink, rawID ids.UUID) error {
 	binding, msg, err := telegram.ParseChatMessage(raw, link)
+	if errors.Is(err, connector.ErrSkip) {
+		// Not a new message. An edit or a deletion goes through the change
+		// path, and any other update kind is never a fault.
+		return w.changeChat(actorCtx, raw, link, rawID)
+	}
 	if err != nil {
-		if errors.Is(err, connector.ErrSkip) {
-			// An update kind that is no message, such as an edited_message: never a fault.
-			return nil
-		}
 		return fmt.Errorf("telegram_ingest: normalizing: %w", err)
 	}
 	// The poll stored the update before this job existed. Naming its row is what
@@ -190,16 +191,52 @@ func (w *telegramIngestWorker) parseAndFile(actorCtx context.Context, raw connec
 	// activity are keyed differently and nothing else joins them.
 	msg.StoredOriginal = rawID
 	if _, err := capture.FileChatMessage(actorCtx, w.sink, binding, msg); err != nil {
-		if errors.Is(err, connector.ErrSkip) {
-			// The Sink refuses a record naming an erased account. That is not a
-			// fault: a job error would retry, then fail differently once the raw
-			// row is purged. The log names the job, never the record.
-			w.log.InfoContext(actorCtx, "telegram_ingest: refused a record naming an erased channel account")
-			return nil
+		return w.settleFilingError(actorCtx, err)
+	}
+	return nil
+}
+
+// settleFilingError answers a refused filing. The Sink skips a record naming an
+// erased account, and one the provider already removed. Neither is a fault: a
+// job error would retry, then fail differently once the raw row is purged. The
+// log names the job, never the record.
+func (w *telegramIngestWorker) settleFilingError(ctx context.Context, err error) error {
+	if errors.Is(err, connector.ErrSkip) {
+		w.log.InfoContext(ctx, "telegram_ingest: refused a record that may not be filed")
+		return nil
+	}
+	// River persists returned job errors, and the natural key holds the
+	// customer's account id, so the key stays out of this error.
+	return fmt.Errorf("telegram_ingest: capturing an update: %w", err)
+}
+
+// changeChat applies an edit or a deletion through the one function every chat
+// network changes a message through. A change to a message that has not landed
+// and could not be restated fails the job, so River retries it after the
+// original.
+func (w *telegramIngestWorker) changeChat(actorCtx context.Context, raw connector.RawRecord, link *telegram.BusinessLink, rawID ids.UUID) error {
+	binding, changes, err := telegram.ParseChatChanges(raw, link)
+	if errors.Is(err, connector.ErrSkip) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("telegram_ingest: normalizing a change: %w", err)
+	}
+	sink, ok := w.sink.(capture.ChatSink)
+	if !ok {
+		return errors.New("telegram_ingest: the sink acts on no chat changes")
+	}
+	for _, change := range changes {
+		// The row the report arrived in is the message's stored original once the
+		// edit lands, and is deleted when it changes nothing.
+		change.StoredOriginal = rawID
+		outcome, err := capture.ChangeChatMessage(actorCtx, sink, binding, change)
+		if err != nil {
+			return w.settleFilingError(actorCtx, err)
 		}
-		// River persists returned job errors, and the natural key holds the
-		// customer's account id, so the key stays out of this error.
-		return fmt.Errorf("telegram_ingest: capturing an update: %w", err)
+		if outcome == connector.ChatChangeNotFiled {
+			return errors.New("telegram_ingest: the message this change is about has not been filed yet")
+		}
 	}
 	return nil
 }
@@ -252,12 +289,17 @@ func (w *telegramIngestWorker) applyMembership(actorCtx context.Context, botID s
 	return nil
 }
 
-// telegramChannelPrincipal keeps channel capture workspace-scoped, without impersonating the admin who connected it.
-// Its grants cover captured activity, contacts and employer resolution.
+// telegramChannelPrincipal is the principal Telegram capture files as.
 func telegramChannelPrincipal() principal.Principal {
+	return chatChannelPrincipal(telegram.CapturedByTelegram)
+}
+
+// chatChannelPrincipal keeps channel capture workspace-scoped, without impersonating the admin who connected it.
+// Its grants cover captured activity, contacts and employer resolution.
+func chatChannelPrincipal(id string) principal.Principal {
 	return principal.Principal{
 		Type: principal.PrincipalConnector,
-		ID:   telegram.CapturedByTelegram,
+		ID:   id,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"channel"},
 			Objects: map[string]principal.ObjectGrant{

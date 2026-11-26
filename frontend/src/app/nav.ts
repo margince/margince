@@ -272,6 +272,7 @@ export const RAIL_LESS_SCREENS: ReadonlySet<Screen> = new Set([
   "preferences",
   "unsubscribe",
   "confirm",
+  "confirm-merge",
   "room",
   "oauth-consent",
 ]);

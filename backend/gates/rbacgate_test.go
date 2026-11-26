@@ -52,7 +52,6 @@ import (
 // and now states what actually bounds the call: a CAS on an id the admitted
 // job carries, a predicate written in the SQL, an aggregate that returns no
 // row, or authentication itself.
-//
 // So an entry here is a security decision. "No row leaves this call" is a
 // reason; "a sweep runs it" is not.
 var ungatedEntryPoints = gatekit.Waive(map[string]string{
@@ -299,6 +298,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/identity:BootstrapInstallation":     "boot-time provisioning under the system principal (ADR-0061); no human principal can exist before it",
 	"internal/modules/identity:FillRbacDefaults":          "boot-time fill of a unit's declared starting grants, admitted to a system principal only: the function refuses any other, so no human reaches it. An admin changes a grant through SetRoleObjectGrant, which is gated, and the fill writes only an entry the document does not have, so it never overrides one",
 	"internal/modules/identity:CreatePasswordReset":       "pre-principal by design (A74): the caller is locked out; enumeration-resistant token mint, authority is control of the mailbox",
+	"internal/modules/identity:ConfirmMemberMerge":        "pre-principal by design: possession of the single-use mailed token IS the authority being verified, and it can do nothing but mark its own confirmation given",
 	"internal/modules/identity:RedeemPasswordReset":       "pre-principal by design (A74): possession of the single-use emailed token IS the authority being verified",
 	"internal/modules/identity:EffectiveRBAC":             "this LOADS the merged role policy the auth gate enforces — gating it on itself would recurse",
 	"internal/modules/identity:SeatType":                  "seat-tier lookup feeding the auth gate (scope ∧ tier); same layer as EffectiveRBAC, not above it",

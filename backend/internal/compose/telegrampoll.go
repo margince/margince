@@ -451,6 +451,7 @@ func (w *telegramPollWorker) storePolledUpdate(
 		SourceSystem: capture.ProviderTelegram,
 		SourceID:     telegram.RawSourceID(target.ChannelID, update.updateID),
 		Payload:      update.raw,
+		Subjects:     telegramSubjectKeys(update.accounts),
 	})
 	if err != nil {
 		return err

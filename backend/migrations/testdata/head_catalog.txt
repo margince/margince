@@ -169,6 +169,8 @@ public.activity.source_activity_id uuid gen=- def=-
 public.activity.source_author_id uuid gen=- def=-
 public.activity.source_author_name text gen=- def=-
 public.activity.source_id text gen=- def=-
+public.activity.source_revision timestamp with time zone gen=- def=-
+public.activity.source_revision_seq bigint NOT NULL gen=- def=0
 public.activity.source_system text gen=- def=-
 public.activity.subject text gen=- def=-
 public.activity.system_text jsonb gen=- def=-
@@ -2011,17 +2013,22 @@ BEGIN
 END;
 
 public.auth_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.auth_token.auth_token_counterpart_check CHECK (((purpose = 'member_merge_confirm'::text) = (counterpart_user_id IS NOT NULL)))
+public.auth_token.auth_token_counterpart_fkey FOREIGN KEY (counterpart_user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.auth_token.auth_token_expires_after_creation CHECK ((expires_at > created_at))
+public.auth_token.auth_token_merge_survivor_check CHECK (((purpose = 'member_merge_confirm'::text) = (merge_survivor IS NOT NULL)))
 public.auth_token.auth_token_pkey PRIMARY KEY (id)
-public.auth_token.auth_token_purpose_check CHECK ((purpose = ANY (ARRAY['password_reset'::text, 'email_verify'::text, 'invite'::text])))
+public.auth_token.auth_token_purpose_check CHECK ((purpose = ANY (ARRAY['password_reset'::text, 'email_verify'::text, 'invite'::text, 'member_merge_confirm'::text])))
 public.auth_token.auth_token_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.auth_token.auth_token_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.auth_token.counterpart_user_id uuid gen=- def=-
 public.auth_token.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.auth_token.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.auth_token.id uuid NOT NULL gen=- def=uuidv7()
 public.auth_token.mail_failed_at timestamp with time zone gen=- def=-
 public.auth_token.mail_queued_at timestamp with time zone gen=- def=-
 public.auth_token.mail_sent_at timestamp with time zone gen=- def=-
+public.auth_token.merge_survivor boolean gen=- def=-
 public.auth_token.purpose text NOT NULL gen=- def=-
 public.auth_token.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.auth_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"purpose": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"purpose":20000,"token_hash":20000}')
 public.auth_token.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.auth_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"purpose": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"purpose":20000,"token_hash":20000}')
@@ -2359,6 +2366,7 @@ public.capture_connection.history_baseline_date date gen=- def=-
 public.capture_connection.history_baseline_set_at timestamp with time zone gen=- def=-
 public.capture_connection.history_baseline_set_by text gen=- def=-
 public.capture_connection.history_baseline_tz text gen=- def=-
+public.capture_connection.history_narrowing_held boolean gen=- def=-
 public.capture_connection.home_read_fence_shared_mailbox_readers CREATE TRIGGER home_read_fence_shared_mailbox_readers AFTER UPDATE OF reader_team_id, mail_posture ON public.capture_connection FOR EACH ROW WHEN (((old.reader_team_id IS DISTINCT FROM new.reader_team_id) OR (old.mail_posture IS DISTINCT FROM new.mail_posture))) EXECUTE FUNCTION advance_home_read_fence()
 public.capture_connection.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_connection.keys_by_provider boolean NOT NULL gen=- def=false
@@ -6417,6 +6425,7 @@ public.idx_audit_log_batch CREATE INDEX idx_audit_log_batch ON public.audit_log 
 public.idx_audit_on_behalf_of CREATE INDEX idx_audit_on_behalf_of ON public.audit_log USING btree (on_behalf_of, occurred_at DESC) WHERE (on_behalf_of IS NOT NULL)
 public.idx_audit_scrub_boundary CREATE INDEX idx_audit_scrub_boundary ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC, id DESC) WHERE (action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))
 public.idx_audit_time CREATE INDEX idx_audit_time ON public.audit_log USING btree (occurred_at DESC)
+public.idx_auth_token_counterpart CREATE INDEX idx_auth_token_counterpart ON public.auth_token USING btree (counterpart_user_id) WHERE (counterpart_user_id IS NOT NULL)
 public.idx_auth_token_hash CREATE UNIQUE INDEX idx_auth_token_hash ON public.auth_token USING btree (token_hash)
 public.idx_auth_token_user CREATE INDEX idx_auth_token_user ON public.auth_token USING btree (user_id, purpose) WHERE (used_at IS NULL)
 public.idx_auth_token_user_cascade CREATE INDEX idx_auth_token_user_cascade ON public.auth_token USING btree (user_id)
@@ -8907,6 +8916,7 @@ public.provider_run_reservation.text_bound_update CREATE TRIGGER text_bound_upda
 public.provider_run_reservation_pkey CREATE UNIQUE INDEX provider_run_reservation_pkey ON public.provider_run_reservation USING btree (run_id, pool)
 public.provider_run_subject_identity CREATE UNIQUE INDEX provider_run_subject_identity ON public.provider_run USING btree (id, contact_id, provider)
 public.raw_capture acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.raw_capture.channel_subjects text[] gen=- def=-
 public.raw_capture.id uuid NOT NULL gen=- def=uuidv7()
 public.raw_capture.parts_slim_outcome text gen=- def=-
 public.raw_capture.parts_slimmed_at timestamp with time zone gen=- def=-
@@ -8921,6 +8931,7 @@ public.raw_capture.raw_original_object_retired CREATE TRIGGER raw_original_objec
 public.raw_capture.received_at timestamp with time zone NOT NULL gen=- def=now()
 public.raw_capture.source_id text NOT NULL gen=- def=-
 public.raw_capture.source_system text NOT NULL gen=- def=-
+public.raw_capture_channel_subjects CREATE INDEX raw_capture_channel_subjects ON public.raw_capture USING gin (channel_subjects) WHERE (channel_subjects IS NOT NULL)
 public.raw_capture_original_legacy_hints CREATE INDEX raw_capture_original_legacy_hints ON public.raw_capture USING btree (id) WHERE ((payload_object IS NOT NULL) AND ((((payload_object -> 'subjects'::text) ->> 'version'::text) IS DISTINCT FROM '1'::text) OR (jsonb_typeof(((payload_object -> 'subjects'::text) -> 'email_bits'::text)) IS DISTINCT FROM 'array'::text) OR (COALESCE(((payload_object -> 'subjects'::text) ->> 'email_saturated'::text), 'false'::text) <> 'false'::text)))
 public.raw_capture_original_subject_hints CREATE INDEX raw_capture_original_subject_hints ON public.raw_capture USING gin (payload_object jsonb_path_ops) WHERE (payload_object IS NOT NULL)
 public.raw_capture_payload_object_key CREATE INDEX raw_capture_payload_object_key ON public.raw_capture USING btree (((payload_object ->> 'key'::text))) WHERE (payload_object IS NOT NULL)

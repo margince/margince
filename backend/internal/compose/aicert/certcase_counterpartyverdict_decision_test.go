@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose_test
+package aicert_test
 
 // An external test because it reads the committed corpus through aicert's own
 // loader, and aicert imports compose.
@@ -26,7 +26,7 @@ func assertEveryScenarioHasADecisionForm(t *testing.T, task ai.Task) {
 	if err != nil {
 		t.Fatalf("building the task census: %v", err)
 	}
-	scenarios, err := aicert.LoadCorpus("aicert/corpus", census)
+	scenarios, err := aicert.LoadCorpus("corpus", census)
 	if err != nil {
 		t.Fatalf("loading the corpus: %v", err)
 	}

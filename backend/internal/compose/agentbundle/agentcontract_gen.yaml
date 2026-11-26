@@ -1937,7 +1937,7 @@ paths:
             type: string
             pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'
           description: >-
-            Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both.
+            Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. `listCompanyTypes` lists the values, and an agent reads them with the `read_workspace` action `company_types`.
         - name: owner_team_id
           in: query
           schema: {type: string, format: uuid}
@@ -4362,7 +4362,7 @@ paths:
         - name: link_type
           in: query
           description: >-
-            A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter.
+            A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. `listLinkTypes` lists the values, and an agent reads them with the `read_workspace` action `link_types`.
           schema: {type: string, maxLength: 68}
         - name: tag_id
           in: query
@@ -6652,6 +6652,41 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/ChannelProviderDirectory'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+  /company-types:
+    get:
+      tags: [Companies]
+      operationId: listCompanyTypes
+      security: [{bearerAuth: []}]
+      summary: Which company types installed extensions add beside core's own.
+      description: |-
+        The values a company can carry in `extension_relationship_types`, and the label a
+        screen shows for each. Which extensions are installed is a fact of the binary, so the
+        contract cannot list the values; this operation does.
+      responses:
+        '200':
+          description: Every declared type, ordered by value.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CompanyTypeDirectory'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /record-kinds:
+    get:
+      tags: [Extensions]
+      operationId: listRecordKinds
+      security: [{bearerAuth: []}]
+      summary: Which kinds of record installed extensions add beside core's own.
+      description: |-
+        The record kinds this caller may read, each named `ext:<unit>:<kind>`, with the label a
+        screen shows, its fields, its natural key, its delete policy and the actions this caller
+        holds on it. Which extensions are installed is a fact of the binary, so the contract
+        cannot list the kinds; this operation does.
+      responses:
+        '200':
+          description: Every readable kind, ordered by name.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RecordKindDirectory'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
   /tasks:
     post:
       tags: [Activities]
@@ -7281,6 +7316,23 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/VersionConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /link-types:
+    get:
+      tags: [Links]
+      operationId: listLinkTypes
+      security: [{bearerAuth: []}]
+      summary: The types a link between two records may have.
+      description: |-
+        Core's types, then each extension's, with the records each may start and end on. An
+        extension's type is named `ext:<unit>:<type>`.
+      responses:
+        '200':
+          description: Every link type.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LinkTypeList'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /activities/{id}/deal-decline:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -10816,7 +10868,8 @@ paths:
         - name: resource
           in: query
           required: true
-          description: The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared.
+          description: >-
+            The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. `listRecordKinds` lists the kinds the caller may read, and an agent reads them with the `read_workspace` action `record_kinds`.
           schema: {$ref: '#/components/schemas/FilterResource'}
       responses:
         '200':
@@ -20166,7 +20219,7 @@ paths:
       operationId: mergeMembers
       summary: Merge a duplicate into the selected surviving member.
       description: |-
-        The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+        An unused source merges at once. A used source merges only after the holder of each side that is not deactivated has confirmed through `requestMemberMerge`; a deactivated side needs no confirmation, so two deactivated accounts merge on an administrator's say alone. The acting administrator can be neither side.
 
         Needs the passport permission Change records.
 
@@ -28932,6 +28985,7 @@ components:
             readable by colleagues the moment it lands. `classified` — held to its participants
             until a classifier judges the thread ordinary. `held` — held whatever any classifier
             concludes.
+        history_narrowing: {$ref: '#/components/schemas/MailHistoryNarrowing'}
         context_tag: {$ref: '#/components/schemas/ConnectorContextTag'}
         history_baseline: {$ref: '#/components/schemas/MailHistoryBaseline'}
         created_at: {type: string, format: date-time, readOnly: true}
@@ -29034,7 +29088,20 @@ components:
             Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
             narrows: a move towards `shared` leaves history where it is, because opening what was
             captured under a stricter answer is a separate decision from what to do next. Rows a
-            human set to `selected` are never touched.
+            human set to `selected` are never touched. A background job does the narrowing after
+            the answer; a narrowing to `held` still pending is never loosened to `classified`.
+    MailHistoryNarrowing:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required: [posture, remaining]
+      description: |-
+        Earlier mail of this mailbox that a background job is still narrowing, after a change
+        asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+        yet keeps the audience it had.
+      properties:
+        posture: {type: string, enum: [classified, held], description: What the earlier mail is narrowed to.}
+        remaining: {type: integer, minimum: 0, description: Messages still to narrow.}
     WorkspaceEmailDomain:
       type: object
       required: [domain, source, verified]
@@ -41793,6 +41860,81 @@ components:
         any extension unit present under `extensions/` — so an enum here would assert that
         the legal set is identical in every installation, which is false. The contract
         states the invariant; `GET /v1/channel-providers` resolves the live set.
+    CompanyTypeDirectory:
+      type: object
+      description: The company types installed extensions add, ordered by value.
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/CompanyTypeOption'}
+    CompanyTypeOption:
+      type: object
+      required: [value, label, unit]
+      properties:
+        value:
+          type: string
+          description: The value a company carries, `ext:<unit>:<type>`.
+        label:
+          type: string
+          description: What a screen shows, in English, as the extension declared it.
+        unit:
+          type: string
+          description: The extension that declared the type.
+    RecordKindDirectory:
+      type: object
+      description: The record kinds installed extensions add that this caller may read, ordered by name.
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/RecordKindOption'}
+    RecordKindOption:
+      type: object
+      required: [name, unit, kind, display_name, fields, natural_key, view, delete_policy, actions]
+      properties:
+        name:
+          type: string
+          description: |-
+            The kind as every table that names a kind stores it, `ext:<unit>:<kind>`. The unit is a
+            unit name and the kind is a lower-case letter followed by up to 31 lower-case letters,
+            digits or underscores.
+        unit:
+          type: string
+          description: The extension that declared the kind.
+        kind:
+          type: string
+          description: The short name inside the unit.
+        display_name:
+          type: string
+          description: What a screen calls one record of the kind, in English.
+        fields:
+          type: array
+          items: {$ref: '#/components/schemas/RecordKindField'}
+        natural_key:
+          type: array
+          description: The fields that together identify one record. The unit's table holds them unique.
+          items: {type: string}
+        view:
+          type: string
+          description: |-
+            The path segment under the unit's screen that shows one record of the kind, as the unit
+            declared it. Absent when the unit's screen itself shows it. A link to a record opens
+            `#/ext/<unit>/<view>` with `record_type` and `record_id` in the query.
+        delete_policy:
+          type: string
+          enum: [archive_only, erasable]
+          description: What removing a record of the kind means. `archive_only` keeps the row.
+        actions:
+          type: array
+          description: The actions this caller holds on the kind. Every other action is denied.
+          items: {type: string, enum: [create, read, update, delete]}
+    RecordKindField:
+      type: object
+      required: [name, label]
+      properties:
+        name: {type: string, description: "The column the unit's table keeps the value in."}
+        label: {type: string, description: "What a screen shows, in English."}
     ChannelProviderDirectory:
       type: object
       description: Every messaging transport this installation has registered.
@@ -42242,6 +42384,29 @@ components:
             Stop following this contact for good, for this reader only. It has no end
             date; the reader resumes it with the DELETE verb. A colleague, or a later
             owner, keeps their own choice.
+    LinkedRecordType:
+      type: string
+      enum: [deal, company, contact]
+    LinkType:
+      type: object
+      additionalProperties: false
+      required: [name, label, from, to]
+      properties:
+        name: {type: string, description: 'A core word, or `ext:<unit>:<type>` for an extension''s.'}
+        label: {type: string}
+        unit:
+          type: [string, 'null']
+          description: The extension that declared it. Absent for core's own.
+        from: {type: array, items: {$ref: '#/components/schemas/LinkedRecordType'}}
+        to: {type: array, items: {$ref: '#/components/schemas/LinkedRecordType'}}
+    LinkTypeList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/LinkType'}
     DeclineActivityDealRequest:
       type: object
       additionalProperties: false
@@ -48089,12 +48254,25 @@ components:
           description: >-
             Moves the member to this legal entity, from `listLegalEntities`, in the same transaction as the rest of the edit. Omit to keep their entity. An unknown or archived entity is refused as 422 `unknown_legal_entity`.
         expected_updated_at: {type: string, format: date-time}
+    MemberUnavailableAction:
+      type: object
+      required: [action, reason]
+      description: One member verb the caller holds the grant for and this member refuses, with why.
+      properties:
+        action:
+          type: string
+          enum: [merge]
+        reason:
+          type: string
+          enum: [sole_admin, self, agent_seat]
+          description: >-
+            Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
     MemberRetirementBlocker:
       type: string
-      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, source_used, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
+      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, confirmation_missing, suspended_side, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
     MemberRetirementConsequence:
       type: string
-      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive]
+      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive, sign_in_dropped]
     MemberRetirementPreview:
       type: object
       required: [owned, signal_count, blockers, token, source_name, source_email, consequences]
@@ -48118,6 +48296,23 @@ components:
         source_email: {type: string, format: email}
         survivor_name: {type: string}
         survivor_email: {type: string, format: email}
+        confirmations:
+          type: array
+          items: {$ref: '#/components/schemas/MemberMergeConfirmation'}
+          description: >-
+            Present for a merge whose source account has been used: one entry per side, saying whether that side's holder has confirmed. `confirmation_missing` is in `blockers` while any side is `requested` or `not_requested`.
+    MemberMergeConfirmation:
+      type: object
+      required: [user_id, side, display_name, state]
+      properties:
+        user_id: {type: string, format: uuid}
+        side: {type: string, enum: [source, survivor]}
+        display_name: {type: string}
+        state:
+          type: string
+          enum: [confirmed, requested, not_requested, not_needed]
+          description: >-
+            `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
     MemberRetirementBlockingRecords:
       type: object
       description: |-
@@ -48265,6 +48460,15 @@ components:
             enum: [change_role, issue_password_link, resend_invite, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
           description: >-
             The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+        merge_needs_confirmation:
+          type: boolean
+          description: >-
+            True when `merge` is in `allowed_actions` and this account has been used (a password, a sign-in or a linked provider), so merging it waits for the holder of each side that can still sign in to confirm. Absent otherwise, and on the same views as `allowed_actions`.
+        unavailable_actions:
+          type: array
+          items: {$ref: '#/components/schemas/MemberUnavailableAction'}
+          description: >-
+            The member verbs the caller holds the `user_admin` grant for and this member refuses, each with the reason, so a client explains the missing button instead of hiding it. An action never appears here and in `allowed_actions`. Present wherever `allowed_actions` is; empty when nothing is refused.
         last_active_at:
           type: [string, 'null']
           format: date-time

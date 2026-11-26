@@ -118,8 +118,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   Workspace for a mailbox one team reads, and connect it.
 - [measure-mail-import.md](how-to/measure-mail-import.md): measure a mail import.
 - [profile-mail-import.md](how-to/profile-mail-import.md): profile a mail import.
-- [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local model on Ollama or
-  vLLM, with no cloud key.
+- [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local model on Ollama or vLLM.
 - [read-what-a-company-runs.md](how-to/read-what-a-company-runs.md): turn on the public lookup of what
   a company runs.
 - [check-a-vat-number.md](how-to/check-a-vat-number.md): turn on VAT number checks against the EU
@@ -127,6 +126,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [set-up-outbound-mail.md](how-to/set-up-outbound-mail.md): which mail goes out through which server.
 - [connect-telegram.md](how-to/connect-telegram.md): set up the Telegram bot, and read what each error means.
 - [connect-dispact.md](how-to/connect-dispact.md): connect the Dispact bot, and read what each error means.
+- [connect-whatsapp.md](how-to/connect-whatsapp.md): connect a WhatsApp Business number, and set up its webhook.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md): import a CSV file of
   companies over MCP or REST.
 - [run-import-jobs.md](how-to/run-import-jobs.md): run the import worker, and read an import that

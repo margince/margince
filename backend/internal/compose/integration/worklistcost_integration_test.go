@@ -44,8 +44,8 @@ const worklistOutsideStatements = 10
 // batch or empty-set shortcut removes calls.
 // waiting_customers reads the private_mail_requests setting once a transaction.
 // needs_you reads the reader's duplicate pairs and their count in one statement.
-// The reader's own time zone is looked up once a read: two exchanges.
-const worklistExchangeBudget = 77
+// The reader's time zone takes two exchanges, and so does the introductions lane.
+const worklistExchangeBudget = 79
 
 const worklistRoundTripBudget = worklistExchangeBudget
 
@@ -192,11 +192,11 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 // ceilings. Lower them in the diff that removes statements or exchanges. The
 // read is the assembly a cache miss pays; the cache's own lookup and store are
 // outside it.
-// Both count the reader's time zone, the private_mail_requests read, needs_you's
-// pairs, and the planned, row_names and subject_labels reads of undated tasks.
+// Both count the time zone, private_mail_requests, needs_you's pairs, the
+// introductions lane, and the planned, row_names and subject_labels task reads.
 const (
-	homeReadStatementCeiling = 104
-	homeReadRoundTripCeiling = 71
+	homeReadStatementCeiling = 107
+	homeReadRoundTripCeiling = 73
 )
 
 // homeStages are the stages Home's read runs. A lane that stops running lowers

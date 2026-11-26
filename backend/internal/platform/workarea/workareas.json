@@ -521,6 +521,7 @@
     "listCompanyLinkCandidates": "business",
     "listCompanyOfferedValues": "business",
     "listCompanyProfileFields": "business",
+    "listCompanyTypes": "business",
     "listConfirmSubmissions": "compliance",
     "listConnectorContainers": "capture",
     "listConnectors": "capture",
@@ -579,6 +580,7 @@
     "listLegalEntityMembers": "workspace_settings",
     "listLegalHolds": "compliance",
     "listLegalReviews": "business",
+    "listLinkTypes": "business",
     "listListHistory": "business",
     "listListMembers": "business",
     "listLists": "business",
@@ -603,6 +605,7 @@
     "listProviderConnections": "capture",
     "listProviderLocations": "admin_settings",
     "listRecordAssignments": "business",
+    "listRecordKinds": "workspace_settings",
     "listRecordRoles": "workspace_settings",
     "listRelationships": "business",
     "listReportRuns": "business",
@@ -1045,6 +1048,7 @@
     "confirmCompanyFact": "companies",
     "confirmCompanyProfileField": "companies",
     "confirmMeetingReady": "worklist",
+    "confirmMemberMerge": "sign_in",
     "confirmMyTotp": "own_security",
     "confirmSendWithoutLawfulBasis": "consent",
     "connectChannel": "connectors",
@@ -1121,6 +1125,7 @@
     "createVoiceProfile": "voice",
     "createWebForm": "web_forms",
     "createWebhookSubscription": "webhooks",
+    "createWhatsAppConnection": "connectors",
     "createWorkspaceEmailDomain": "capture_rules",
     "deactivateUser": "members",
     "decideCommissionEntry": "commissions",
@@ -1181,6 +1186,7 @@
     "disconnectProvider": "connectors",
     "disconnectSharedMailbox": "connectors",
     "disconnectTelegramBusinessConnection": "connectors",
+    "disconnectWhatsAppConnection": "connectors",
     "dismissCompanySuggestion": "companies",
     "dismissConnectorSilence": "connectors",
     "dismissContactMoment": "contacts",
@@ -1249,6 +1255,7 @@
     "getAiStatus": "ai_models",
     "getAiTaskFlow": "ai_models",
     "getAiTaskOverrides": "ai_models",
+    "getAiTeamRules": "ai_models",
     "getAiUsage": "ai_models",
     "getAiUsageSummary": "ai_models",
     "getAnalyticsContext": "reports",
@@ -1680,6 +1687,7 @@
     "listWebhookDeliveries": "webhooks",
     "listWebhookSubscriptions": "webhooks",
     "listWeeklyReviews": "worklist",
+    "listWhatsAppConnections": "connectors",
     "listWorkspaceCaptureActivity": "capture_triage",
     "listWorkspaceEmailDomains": "capture_rules",
     "logActivity": "activities",
@@ -1776,6 +1784,7 @@
     "readTranscriptForNextSteps": "activities",
     "reassignHandoff": "leads",
     "receiveDispactChannelEvent": "provider_notices",
+    "receiveWhatsAppWebhook": "provider_notices",
     "recordAIFeedback": "ai_help",
     "recordCommunicationContext": "consent",
     "recordConsent": "consent",
@@ -1835,6 +1844,7 @@
     "replaceAiPriceSync": "ai_models",
     "replaceAiRouting": "ai_models",
     "replaceAiTaskOverrides": "ai_models",
+    "replaceAiTeamRules": "ai_models",
     "replaceChannelToken": "connectors",
     "replaceDealProducts": "deals",
     "replaceIntroRequest": "contacts",
@@ -1850,6 +1860,7 @@
     "requestDetailsConfirmation": "consent",
     "requestEditAccess": "sharing",
     "requestLegalReview": "legal_reviews",
+    "requestMemberMerge": "members",
     "requestOwnershipTransfer": "sharing",
     "requestPasswordReset": "sign_in",
     "rescheduleScheduledSend": "activities",
@@ -2062,6 +2073,7 @@
     "updateVoiceProfile": "voice",
     "updateWebForm": "web_forms",
     "updateWebhookSubscription": "webhooks",
+    "updateWhatsAppConnectionVisibility": "connectors",
     "uploadAnchorCompanyLogo": "company_profile",
     "uploadAnchorCompanyLogoIcon": "company_profile",
     "uploadAttachment": "documents",
@@ -2072,6 +2084,7 @@
     "upsertPartner": "companies",
     "useDealEstimate": "deals",
     "validateImportRun": "imports",
+    "verifyWhatsAppWebhook": "provider_notices",
     "visitList": "lists",
     "waitInputCheck": "forecast",
     "withdrawEditAccessRequest": "sharing",
@@ -3534,6 +3547,9 @@
     "read_card_photo": [
       "contacts"
     ],
+    "read_company_types": [
+      "companies"
+    ],
     "read_corpus": [
       "knowledge"
     ],
@@ -3557,6 +3573,9 @@
     ],
     "read_job_health_history": [
       "system_health"
+    ],
+    "read_link_types": [
+      "search"
     ],
     "read_lists": [
       "lists"
@@ -3587,6 +3606,9 @@
       "leads",
       "offers",
       "projects"
+    ],
+    "read_record_kinds": [
+      "extensions"
     ],
     "read_recovery_health": [
       "system_health"
@@ -5666,6 +5688,9 @@
     "read_card_photo": [
       "business"
     ],
+    "read_company_types": [
+      "business"
+    ],
     "read_corpus": [
       "business"
     ],
@@ -5690,6 +5715,9 @@
     "read_job_health_history": [
       "operator"
     ],
+    "read_link_types": [
+      "business"
+    ],
     "read_lists": [
       "business"
     ],
@@ -5710,6 +5738,9 @@
     ],
     "read_record": [
       "business",
+      "workspace_settings"
+    ],
+    "read_record_kinds": [
       "workspace_settings"
     ],
     "read_recovery_health": [

@@ -1,0 +1,8 @@
+{"object":"whatsapp_business_account","entry":[{"id":"WABA1","changes":[{"field":"messages","value":{"messaging_product":"whatsapp","metadata":{"display_phone_number":"15550001111","phone_number_id":"PNID1"},"contacts":[{"profile":{"name":"Ada Customer"},"wa_id":"491701234567"}],"messages":[
+{"from":"491701234567","id":"wamid.REACT","timestamp":"1764000020","type":"reaction","reaction":{"message_id":"wamid.OUT0","emoji":"👍"}},
+{"from":"491701234567","id":"wamid.BTN","timestamp":"1764000021","type":"button","button":{"text":"Yes","payload":"p"}},
+{"from":"491701234567","id":"wamid.INT","timestamp":"1764000022","type":"interactive","interactive":{"type":"button_reply","button_reply":{"id":"1","title":"Call me"}}},
+{"from":"491701234567","id":"wamid.LOC","timestamp":"1764000023","type":"location","location":{"latitude":1.5,"longitude":2.5}},
+{"from":"491701234567","id":"wamid.UNS","timestamp":"1764000024","type":"unsupported","errors":[{"code":131060,"title":"Message type is not supported"}]},
+{"from":"491701234567","id":"wamid.FUT","timestamp":"1764000025","type":"order","order":{"x":1}}
+]}}]}]}
