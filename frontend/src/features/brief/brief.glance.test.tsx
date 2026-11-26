@@ -104,8 +104,6 @@ describe("BriefGlance — the greeting stands over the reader's name", () => {
     return {
       lead: heading.querySelector(".glance-greeting-lead")?.textContent,
       name: heading.querySelector(".glance-greeting-name")?.textContent,
-      accent: heading.querySelector(".glance-greeting-name > .greeting-name")
-        ?.textContent,
     };
   }
 
@@ -115,15 +113,11 @@ describe("BriefGlance — the greeting stands over the reader's name", () => {
     expect(head.name).toBe("Ada");
   });
 
-  it("draws the name alone in the accent ink", () => {
-    expect(headOf("en", "Ada").accent).toBe("Ada");
-  });
-
   // "Guten Tag, Tag": the first "Tag" is the greeting's own word.
   it("cuts at the last place the name stands in the line", () => {
     const head = headOf("de", "Tag");
     expect(head.lead).toBe("Guten Tag, ");
-    expect(head.accent).toBe("Tag");
+    expect(head.name).toBe("Tag");
   });
 
   it("gives the whole greeting to the name line when there is no name", () => {
@@ -132,13 +126,12 @@ describe("BriefGlance — the greeting stands over the reader's name", () => {
       expect(head).toEqual({
         lead: "",
         name: "Good afternoon",
-        accent: undefined,
       });
       cleanup();
     }
   });
 
-  it("keeps a line that does not hold the name whole, out of the accent", () => {
+  it("keeps a line that does not hold the name whole, on the name line", () => {
     rtlRender(
       <Heading size="large" as="h1" className="glance-greeting">
         <Greeting text="Welcome back" firstName="Ada" />
@@ -148,7 +141,6 @@ describe("BriefGlance — the greeting stands over the reader's name", () => {
     expect(heading.querySelector(".glance-greeting-name")?.textContent).toBe(
       "Welcome back",
     );
-    expect(heading.querySelector(".greeting-name")).toBeNull();
   });
 });
 
@@ -285,10 +277,10 @@ describe("BriefGlance — the chips in the morning's sentence", () => {
 
   it("says the agent wrote the brief only when it was given the run", () => {
     renderMorning("2026-09-03T05:30:00Z");
-    expect(screen.getByText(/^Briefed by Margince at /)).toBeTruthy();
+    expect(screen.getByText(/^Prepared by Margince at /)).toBeTruthy();
     cleanup();
     renderMorning();
-    expect(screen.queryByText(/^Briefed by Margince at /)).toBeNull();
+    expect(screen.queryByText(/^Prepared by Margince at /)).toBeNull();
   });
 });
 
