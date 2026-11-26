@@ -33,6 +33,11 @@ import (
 // is destroyed and nothing is filed.
 var ErrChatMessageConsumed = fmt.Errorf("capture: the message answers or echoes a question about forwarded messages: %w", connector.ErrSkip)
 
+// ErrHeldForwardGone answers a filing of a held forward that was archived, erased
+// or filed already when the ensure took its lock. Nothing was written, and the
+// caller skips the forward.
+var ErrHeldForwardGone = errors.New("capture: the forward is no longer held")
+
 // clarificationHandler is implemented by a Sink that can recognise a question's
 // answer or echo.
 type clarificationHandler interface {
@@ -300,8 +305,8 @@ func (s *Sink) fileAnswered(ctx context.Context, binding connector.ChatBinding, 
 			continue
 		}
 		if _, err := s.channelEnsurer.EnsureChannelCounterparty(ctx, EnsureChannelRequest{
-			Identity: identity, DisplayName: name, ActivityID: m.activity, Source: m.source, CapturedBy: m.capturedBy,
-		}); err != nil {
+			Identity: identity, DisplayName: name, ActivityID: m.activity, Source: m.source, CapturedBy: m.capturedBy, RequireHeld: true,
+		}); err != nil && !errors.Is(err, ErrHeldForwardGone) {
 			return fmt.Errorf("capture: filing a held forward on the customer the member named: %w", err)
 		}
 	}

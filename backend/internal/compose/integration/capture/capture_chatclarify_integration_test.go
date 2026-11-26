@@ -32,10 +32,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/chatclarify"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/tracesweep"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/capture/whatsapp"
 	"github.com/margince/margince/backend/internal/modules/capture/zalo"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -723,25 +725,31 @@ func TestAnAnswerIsStillRecognisedWhenTheRecordOfASuccessfulSendWasLost(t *testi
 	})
 }
 
-// archivingEnsurer notes each activity it is asked to file, and archives the
-// others of the batch on the first, as an expiry running meanwhile would.
+// archivingEnsurer is the production ensure with an expiry in front of it. The
+// expiry runs between the answer's check and the ensure. On the first call it
+// archives the forward being filed, as a purge would.
 type archivingEnsurer struct {
-	t      *testing.T
-	e      *integration.SearchEnv
-	others []ids.UUID
-	filed  []ids.UUID
+	t     *testing.T
+	e     *integration.SearchEnv
+	store *contacts.Store
+	calls []ids.UUID
+	gone  []ids.UUID
 }
 
-func (r *archivingEnsurer) EnsureChannelCounterparty(_ context.Context, req capturemod.EnsureChannelRequest) (capturemod.EnsureOutcome, error) {
-	r.filed = append(r.filed, req.ActivityID)
-	if len(r.filed) == 1 {
-		for _, id := range r.others {
-			if id != req.ActivityID {
-				wsExec(r.t, r.e, `UPDATE activity SET archived_at = now() WHERE id = $1`, id)
-			}
-		}
+func (r *archivingEnsurer) EnsureChannelCounterparty(ctx context.Context, req capturemod.EnsureChannelRequest) (capturemod.EnsureOutcome, error) {
+	r.calls = append(r.calls, req.ActivityID)
+	if len(r.calls) == 1 {
+		wsExec(r.t, r.e, `UPDATE activity SET archived_at = now() WHERE id = $1`, req.ActivityID)
 	}
-	return capturemod.EnsureOutcome{}, nil
+	_, err := r.store.EnsureHeldChannelCounterparty(ctx, contacts.EnsureChannelCounterpartyInput{
+		Identity: req.Identity, DisplayName: req.DisplayName, ActivityID: ids.From[ids.ActivityKind](req.ActivityID),
+		Source: req.Source, CapturedBy: req.CapturedBy,
+	})
+	if errors.Is(err, contacts.ErrActivityNotHeld) {
+		r.gone = append(r.gone, req.ActivityID)
+		return capturemod.EnsureOutcome{}, capturemod.ErrHeldForwardGone
+	}
+	return capturemod.EnsureOutcome{}, err
 }
 
 func TestAHeldForwardThatWentAwayWhileTheAnswerWasFilingIsLeftAlone(t *testing.T) {
@@ -749,17 +757,28 @@ func TestAHeldForwardThatWentAwayWhileTheAnswerWasFilingIsLeftAlone(t *testing.T
 		a, b := c.forward("f1", "one"), c.forward("f2", "two")
 		c.settle(a, b)
 		c.sweep()
-		ensurer := &archivingEnsurer{t: t, e: c.e, others: []ids.UUID{a, b}}
+		ensurer := &archivingEnsurer{t: t, e: c.e, store: contacts.NewStore(compose.InstallationDB(c.e.Pool)).WithConsumerMail(capturemod.MatcherTx).WithFloorCarry(compose.EntityFloorCarry(c.e.Pool)).WithSenderStamp(activities.StampProvenSendersTx)}
 		sink, ok := c.sink.(*capturemod.Sink)
 		if !ok {
 			t.Fatalf("the sink is a %T", c.sink)
 		}
 		c.sink = sink.WithChannelEnsurer(ensurer)
+		participantsBefore := wsCount(t, c.e, `SELECT count(*) FROM activity_participant WHERE activity_id = ANY($1)`, []ids.UUID{a, b})
 		if err := c.reply("r1", c.n.askID(1), "[contacts]", c.n.card); !errors.Is(err, capturemod.ErrChatMessageConsumed) {
 			t.Fatalf("filing the answer = %v, want it consumed", err)
 		}
-		if len(ensurer.filed) != 1 {
-			t.Fatalf("held forwards filed = %d, want the one still held", len(ensurer.filed))
+		if len(ensurer.calls) != 2 || len(ensurer.gone) != 1 {
+			t.Fatalf("ensure calls = %d, found gone = %d, want 2 and 1", len(ensurer.calls), len(ensurer.gone))
+		}
+		gone := ensurer.gone[0]
+		if n := wsCount(t, c.e, `SELECT count(*) FROM activity_link WHERE activity_id = $1`, gone); n != 0 {
+			t.Fatalf("the archived forward was linked %d times", n)
+		}
+		if n := wsCount(t, c.e, `SELECT count(*) FROM activity_participant WHERE activity_id = ANY($1)`, []ids.UUID{a, b}); n != participantsBefore {
+			t.Fatalf("participants went from %d to %d, want none written", participantsBefore, n)
+		}
+		if n := wsCount(t, c.e, `SELECT count(*) FROM contact_channel_identity WHERE channel_user_id = $1`, c.n.customerID); n != 1 {
+			t.Fatalf("customer identities = %d, want the one the still-held forward made", n)
 		}
 	})
 }
