@@ -61,10 +61,29 @@ const (
 	seatLock = "holdLiveSeat"
 )
 
+// companyEvidenceRace is why a company's evidence writer holds the company and
+// not a contact. Erasure clears a contact's field_provenance rows, and the
+// company facts that repeat a subject's address or number.
+const companyEvidenceRace = "it writes a company's evidence, never a contact's, under the company it probes. An erasure " +
+	"deletes the company facts that repeat the subject's address or number, and a site read racing it can write " +
+	"such a fact back, as a feed can an offer. That row is the site's own current statement about the company, " +
+	"and the subject's next erasure or a user's correction removes it"
+
 // unlockedLiveWrites records exceptions to holding an erasure-cleared subject.
 var unlockedLiveWrites = gatekit.Waive(map[string]string{
 
-	"internal/modules/contacts:Store.RecordOfferedValues": "the erasure of an employee deletes a company's offered values by the employment edge, and a feed call racing it can write an offer back. That offer is the feed's own current value for the company and names no subject the erasure was clearing; the company row is the one locked live, and the next feed run would write the same offer",
+	"internal/modules/contacts:ApplyMeetingProfileTx":               companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyColdStartProfile":         companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyColdStartProfileTx":       companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyDeepRead":                 companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyDeepReadTx":               companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyEnrichment":               companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyEnrichmentTx":             companyEvidenceRace,
+	"internal/modules/contacts:Store.ResolveDomainTriage":           companyEvidenceRace,
+	"internal/modules/contacts:Store.ResolveUnreadableDomainTriage": companyEvidenceRace,
+	"internal/modules/contacts:Store.resolveDomainTriageTx":         companyEvidenceRace,
+	"internal/modules/contacts:applyColdStartTx":                    companyEvidenceRace,
+	"internal/modules/contacts:Store.RecordOfferedValues":           "the erasure of an employee deletes a company's offered values by the employment edge, and a feed call racing it can write an offer back. That offer is the feed's own current value for the company and names no subject the erasure was clearing; the company row is the one locked live, and the next feed run would write the same offer",
 })
 
 func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {

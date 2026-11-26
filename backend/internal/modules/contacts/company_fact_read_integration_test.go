@@ -36,18 +36,18 @@ func seedCompanyWithEvidence(ctx context.Context, t *testing.T, e *dedupeEnv) id
 		// human-set legal_name (evidence columns null — the read must map
 		// them to nil, not the zero string).
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url, confidence, source, captured_by)
-			VALUES ($1,'icp','Energy-intensive manufacturers','"…for energy-intensive manufacturers"','https://voltaq.test/about',0.9,'site_read','agent:deepread'),
-			       ($1,'legal_name','Voltaq Systems GmbH',NULL,NULL,NULL,'human','human:'||$2)`,
+			INSERT INTO field_provenance (object_type, object_id, field_name, value, evidence_snippet, evidence_ref, confidence, source, captured_by)
+			VALUES ('company', $1,'icp','Energy-intensive manufacturers','"…for energy-intensive manufacturers"','https://voltaq.test/about',0.9,'site_read','agent:deepread'),
+			       ('company', $1,'legal_name','Voltaq Systems GmbH',NULL,NULL,NULL,'human','human:'||$2)`,
 			companyID, e.rep); err != nil {
 			return err
 		}
 		// Two facts across two categories: a company/phone (value_key '')
 		// and a signal/certification (value_key non-empty).
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO company_fact (company_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by)
-			VALUES ($1,'company','phone','+49 30 1234','','"+49 30 1234"','https://voltaq.test/impressum',0.95,'site_read','agent:deepread'),
-			       ($1,'signal','certification','ISO 9001','iso 9001','"ISO 9001 certified"','https://voltaq.test/quality',0.8,'site_read','agent:deepread')`,
+			INSERT INTO field_provenance (object_type, object_id, field_name, value, value_key, evidence_snippet, evidence_ref, confidence, source, captured_by)
+			VALUES ('company', $1,'phone','+49 30 1234','','"+49 30 1234"','https://voltaq.test/impressum',0.95,'site_read','agent:deepread'),
+			       ('company', $1,'certification','ISO 9001','iso 9001','"ISO 9001 certified"','https://voltaq.test/quality',0.8,'site_read','agent:deepread')`,
 			companyID); err != nil {
 			return err
 		}

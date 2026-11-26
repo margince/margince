@@ -104,18 +104,16 @@ func WithHomeRefreshSettlerForTest(into *func()) Option {
 // waits for its test's report. The harness works jobs by hand, so a real wait
 // would only spend the bound.
 func WithImportPreviewWaitForTest(clock agents.WaitClock, within time.Duration) Option {
-	return func(s *Server, pool *pgxpool.Pool) {
+	return func(s *Server, _ *pgxpool.Pool) {
 		s.registryForTest = append(s.registryForTest, agents.WithImportWait(clock, within))
-		s.rebuildToolRegistry(pool)
 	}
 }
 
 // WithToolChecksRecordedForTest hands sink, after each tool call, the verb that
 // ran and what the gates asked of the caller on its way.
 func WithToolChecksRecordedForTest(sink func(verb string, call auth.RecordedCall)) Option {
-	return func(s *Server, pool *pgxpool.Pool) {
+	return func(s *Server, _ *pgxpool.Pool) {
 		s.registryForTest = append(s.registryForTest, agents.WithChecksRecordedForTest(sink))
-		s.rebuildToolRegistry(pool)
 	}
 }
 

@@ -46,6 +46,12 @@ func AssignableCurrency(s string) bool {
 	return listed && ValidCurrency(s)
 }
 
+// NamesMoney answers whether an assignable code names money. ISO assigns XXX to
+// "no currency" and XTS to tests, so an amount written in either prices nothing.
+func NamesMoney(s string) bool {
+	return AssignableCurrency(s) && s != "XXX" && s != "XTS"
+}
+
 // RequireAssignableCurrency is AssignableCurrency as the ParseError a writer
 // returns for a currency it is setting.
 func RequireAssignableCurrency(s string) error {

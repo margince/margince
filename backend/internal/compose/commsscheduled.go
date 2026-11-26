@@ -61,9 +61,8 @@ func (a ScheduledSendArgs) WorkspaceID() ids.UUID { return a.Workspace }
 // nothing to wake the message is a promise this surface cannot keep, and the
 // rep would only discover it on Monday.
 func WithScheduleTimer(timer activities.ScheduleTimer) Option {
-	return func(s *Server, pool *pgxpool.Pool) {
+	return func(s *Server, _ *pgxpool.Pool) {
 		s.send.ScheduleTimer = timer
-		s.rebuildToolRegistry(pool)
 	}
 }
 
