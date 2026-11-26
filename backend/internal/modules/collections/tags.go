@@ -34,8 +34,8 @@ type tagRow struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	ArchivedAt  *time.Time
-	// MergedIntoID is the tag a merge folded this one into; nil on a tag
-	// retired by hand, which is what lets the two be told apart.
+	// MergedIntoID is the tag a merge folded this one into. It is nil on a tag
+	// retired by hand, which is what tells the two apart.
 	MergedIntoID   *ids.TagID
 	MergedIntoName *string
 }

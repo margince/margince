@@ -38,8 +38,8 @@ type MergeResult struct {
 	Collapsed int
 }
 
-// MergeTags folds one tag into another: every record carrying the source ends
-// up carrying the target, the source is archived naming the target, and its
+// MergeTags folds one tag into another. Every record carrying the source ends
+// up carrying the target. The source is archived naming the target, and its
 // name is released.
 //
 // Moved and collapsed are counted separately because they are different facts.
