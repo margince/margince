@@ -103,8 +103,8 @@ func holdsNoNode(typ reflect.Type, seen map[reflect.Type]bool) bool {
 	case reflect.Map:
 		return holdsNoNode(typ.Key(), seen) && holdsNoNode(typ.Elem(), seen)
 	case reflect.Struct:
-		for i := range typ.NumField() {
-			if !holdsNoNode(typ.Field(i).Type, seen) {
+		for field := range typ.Fields() {
+			if !holdsNoNode(field.Type, seen) {
 				return false
 			}
 		}
@@ -217,7 +217,7 @@ func TestANodeHoldingValueIsNeverDecodedFromTheHeldTree(t *testing.T) {
 			t.Errorf("%T holds a yaml.Node, so a shared decode would hand every caller the same node", out)
 		}
 	}
-	if !decodesWithoutNodes(reflect.TypeOf(&map[string]any{})) {
+	if !decodesWithoutNodes(reflect.TypeFor[*map[string]any]()) {
 		t.Error("a map of plain values holds no node, and should decode from the held tree")
 	}
 }
