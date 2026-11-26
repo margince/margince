@@ -228,7 +228,7 @@ func firstUse(claim Claim) string {
 func (r *Registry) refuseUnkeyableCall(spec mcp.ToolSpec) error {
 	if spec.ReadOnly() {
 		return &BadArgsError{Cause: fmt.Errorf(
-			"%s only reads, so it takes no `%s`: a read changes nothing there is anything to repeat",
+			"%s only reads, so it takes no `%s`: a read changes nothing, so there is nothing to repeat",
 			spec.Name, idempotencyKeyArg)}
 	}
 	if r.unitOwnedTool(spec.Name) {
