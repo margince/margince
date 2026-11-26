@@ -63,32 +63,6 @@ must_mention:
   # an answer naming one has done half the job and the other half silently.
   - "Dom Digital"
   - "Aachener"
-  # The batch is reported as a batch. relink_activities answers with the count it
-  # moved, and a contact who asked for all-or-nothing is owed the number.
-  #
-  # THE NUMBER HAS TO BE COUNTING SOMETHING. A bare "3|three|drei" is satisfied
-  # by "on 3 March", by a record id and by any other digit the prose happens to
-  # carry — a green tick for an answer that never reported a count at all, and
-  # nothing failing to say so. So the three either sits on the noun it counts
-  # ("three activities", "3 emails") or is reached from the verb as "all three".
-  # One word may stand between the two, because the seeded calls are "Rückruf …"
-  # and a real answer writes "the three Rückruf calls" — one word, and not a
-  # month, which is what keeps "3 March 2025" out. "3 moved, 0 failed" is the
-  # other shape a batch report takes.
-  # THE WORDS BETWEEN THE COUNT AND THE NOUN are budgeted at three, not one.
-  # A run says "the three Aachener Metallwerke calls" — the company is two
-  # words, and the count-noun pair is four words apart. At one, that natural
-  # sentence missed while "the three Aachener mails" passed, so the pattern was
-  # scoring how long the company's name is. The month lookahead still stands
-  # between "3" and a date, which is the thing this must not read as a count.
-  #
-  # AND THE SEPARATORS ARE NOT ONLY SPACES. A run quoting the subject writes
-  # `the 3 "Rückruf Aachener Metallwerke" mails`, and one compounding the noun
-  # writes `the three-mail move` — both report the count, and a pattern reading
-  # only \s and \w saw neither. Two of three runs missed on punctuation alone
-  # while doing the errand correctly, which is under-recognition: the direction
-  # a guard must never fail in, because it reads as a finding about the product.
-  - "\b(?:3|three|drei)[-\s]+(?:(?!Jan|Feb|Mar|Apr|Ma[iy]|Jun|Jul|Aug|Sep|O[kc]t|Nov|De[czs])[\w\"“”'’-]+[-\s]+){0,3}(?:activit\w*|e-?mails?|mails?|messages?|calls?|items?|records?|entries|Aktivit\w+|Anrufe?|Rückrufe?)|\b(?:3|three|drei)[-\s]+(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)|(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)[^\n]{0,25}\ball (?:3|three|drei)\b|\ball (?:3|three|drei)\b[^\n]{0,30}(?:mov\w*|re-?link\w*|re-?fil\w*|transferr?\w*)"
 
 must_not_mention:
   # CRITERION 3, and the failure this case exists for: re-writing history instead
@@ -118,6 +92,10 @@ must_end_with:
   - activity "Rückruf Aachener Metallwerke (2/3)" on company "Aachener Metallwerke GmbH" records=1
   - activity "Rückruf Aachener Metallwerke (3/3)" on company "Vorort Systeme KG" records=0
   - activity "Rückruf Aachener Metallwerke (3/3)" on company "Aachener Metallwerke GmbH" records=1
+
+# The end state holds where every mail landed; the judge reads that the batch is reported as three, in any wording.
+judge:
+  - "Criterion 2. The answer reports the three Aachener Metallwerke mails moved together to Aachener Metallwerke. Answer no if it reports another number of mails, or a partial move."
 
 runs: 3
 pass_at: 2
