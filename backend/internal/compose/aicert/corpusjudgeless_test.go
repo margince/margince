@@ -290,6 +290,7 @@ func counterpartyProofs() map[string]judgelessProof {
 		"a_department_display_name_is_not_somebodys_name":                      {"role_mailbox", "contact"},
 		"a_private_property_desk_the_owner_wrote_to_is_not_a_contact":          {"personal", "contact"},
 		"courteous_cold_pitch_is_a_vendor_pitch":                               {"vendor_pitch", "contact"},
+		"a_named_vendor_with_a_steering_line_is_a_vendor_pitch_not_spam":       {"vendor_pitch", "spam"},
 		"a_chased_cold_pitch_is_still_a_vendor_pitch":                          {"vendor_pitch", "contact"},
 		"a_fluent_machine_written_pitch_is_still_a_vendor_pitch":               {"vendor_pitch", "contact"},
 		"an_automated_invoice_notice_is_not_a_contact":                         {"transactional", "contact"},
