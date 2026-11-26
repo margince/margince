@@ -112,14 +112,20 @@ export function EditableLineTable({
   const save = (line: OfferLineItem) => (patch: UpdateOfferLineItemRequest) =>
     onSave(line.id, patch);
 
+  // A line with no description is named by its place alone.
   const placeLabel =
-    (key: "offer.lineHandle" | "offer.lineMoved") =>
-    (line: OfferLineItem, position: number, count: number) =>
-      t(key, {
-        name: line.description,
+    (
+      named: "offer.lineHandle" | "offer.lineMoved",
+      unnamed: "offer.lineHandleUnnamed" | "offer.lineMovedUnnamed",
+    ) =>
+    (line: OfferLineItem, position: number, count: number) => {
+      const place = {
         position: formatNumber(position, locale),
         total: formatNumber(count, locale),
-      });
+      };
+      const name = line.description.trim();
+      return name ? t(named, { ...place, name }) : t(unnamed, place);
+    };
 
   const columns = [
     {
@@ -266,8 +272,8 @@ export function EditableLineTable({
           hintId,
           busy: moving,
           labels: {
-            handle: placeLabel("offer.lineHandle"),
-            moved: placeLabel("offer.lineMoved"),
+            handle: placeLabel("offer.lineHandle", "offer.lineHandleUnnamed"),
+            moved: placeLabel("offer.lineMoved", "offer.lineMovedUnnamed"),
           },
           onReorder: (keys, moved) =>
             onMove(moved.id, keys.indexOf(moved.id) + 1),

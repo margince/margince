@@ -253,6 +253,18 @@ describe("a line row", () => {
     ).toBeTruthy();
   });
 
+  it("names the grip of a line with no description by its place", async () => {
+    serve(draft([line1, { ...line2, description: "  " }]), () => ({
+      status: 500,
+      body: {},
+    }));
+    renderOffer();
+
+    expect(
+      await screen.findByRole("button", { name: "Move line 2 of 2" }),
+    ).toBeTruthy();
+  });
+
   it("names each line's own unit box after its line", async () => {
     const crates = { ...line1, unit: "crate" };
     serve(draft([crates, { ...line2, unit: "pallet" }]), () => ({

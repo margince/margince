@@ -6906,6 +6906,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Kéo dòng bằng tay nắm, hoặc đặt tiêu điểm vào tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
   "offer.lineHandle": "Di chuyển {name}, dòng {position} trên {total}",
   "offer.lineMoved": "{name} giờ ở dòng {position} trên {total}",
+  "offer.lineHandleUnnamed": "Di chuyển dòng {position} trên {total}",
+  "offer.lineMovedUnnamed": "Dòng này giờ ở vị trí {position} trên {total}",
   "offer.lapsed":
     "Ngày “Có hiệu lực đến” của báo giá này đã qua. Với bản nháp, đổi ngày trong “Sửa phần đầu”, còn với báo giá đã gửi thì tạo lại phiên bản.",
   "offer.position": "Số thứ tự",
