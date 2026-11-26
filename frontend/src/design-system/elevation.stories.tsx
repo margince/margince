@@ -231,8 +231,9 @@ export const OverlaysAndScrim: Story = {
     <div className={specimenColumn} style={wide}>
       <p className={specimenIntro}>
         What is genuinely above the plane takes a scrim behind it and the pop
-        shadow on it. Use this for a modal, a popover, a menu or a drawer, and
-        for nothing at rest.
+        shadow on it: a modal, a popover, a menu or a drawer, and nothing at
+        rest. A popover or a menu takes the elevated surface below; a modal or a
+        drawer takes level 1.
       </p>
       <div style={stage}>
         <div style={scrim} />

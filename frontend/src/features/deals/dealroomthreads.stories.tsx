@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { within } from "storybook/test";
+import { expect, within } from "storybook/test";
 import { Badge } from "../../design-system/atoms";
+import { de } from "../../i18n/de";
+import { en } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import type {
   BoardDocument,
@@ -233,6 +235,18 @@ const MANY_ROOM_THREADS = Array.from({ length: 1204 }, (_, index) =>
   thread({ id: `thread-${index}`, state: "resolved", comments: [] }),
 );
 
+async function expectRoomBadge(
+  canvasElement: HTMLElement,
+  title: string,
+  count: string,
+) {
+  const room = await within(canvasElement).findByRole("region", {
+    name: title,
+  });
+  const figure = await within(room).findByText(count);
+  await expect(figure.closest(".panel-head .badge")).not.toBeNull();
+}
+
 /**
  * A count wide enough to be written in a notation. The room panel's badge is a
  * magnitude, and four digits is where de-DE first groups — below it the figure
@@ -241,7 +255,7 @@ const MANY_ROOM_THREADS = Array.from({ length: 1204 }, (_, index) =>
 export const ManyRoomThreads: Story = {
   render: board(MANY_ROOM_THREADS),
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByText("1,204");
+    await expectRoomBadge(canvasElement, en["threads.roomTitle"], "1,204");
   },
 };
 
@@ -261,7 +275,7 @@ export const ManyRoomThreadsGerman: Story = {
     </StoryProviders>
   ),
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByText("1.204");
+    await expectRoomBadge(canvasElement, de["threads.roomTitle"], "1.204");
   },
 };
 
