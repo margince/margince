@@ -42,11 +42,7 @@ func scrapeAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals
 		// Redeemed under the DECIDER's context and applied under the executor's:
 		// the redemption is an assertion of that human's authority, and the
 		// write carries the machine provenance the 360 renders.
-		return svc.RedeemAndApply(ctx, approvalID, enrichProposalKind, diffHash, func(tx pgx.Tx) error {
-			execCtx, err := agentForReleaserTx(ctx, tx, "agent:scrape")
-			if err != nil {
-				return err
-			}
+		return redeemForApprover(ctx, svc, approvalID, enrichProposalKind, diffHash, "agent:scrape", func(execCtx context.Context, tx pgx.Tx) error {
 			return store.ApplyEnrichmentTx(execCtx, tx, companyID, contacts.ApplyColdStartProfileInput{
 				SourceURL: sourceURL,
 				Fields:    fields,

@@ -33,11 +33,7 @@ func deepReadAcceptEffect(svc *approvals.Service, store *contacts.Store) approva
 		// The write executes as the deep-read agent acting for the human whose
 		// approval released it, under that human's grants. This row carries
 		// the machine provenance the 360 renders as "read from the company's site".
-		return svc.RedeemAndApply(ctx, approvalID, deepReadProposalKind, diffHash, func(tx pgx.Tx) error {
-			execCtx, err := agentForReleaserTx(ctx, tx, "agent:deepread")
-			if err != nil {
-				return err
-			}
+		return redeemForApprover(ctx, svc, approvalID, deepReadProposalKind, diffHash, "agent:deepread", func(execCtx context.Context, tx pgx.Tx) error {
 			return store.ApplyDeepReadTx(execCtx, tx, proposal)
 		})
 	}

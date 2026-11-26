@@ -143,12 +143,8 @@ func coldstartAcceptEffect(svc *approvals.Service, store *contacts.Store) approv
 		// Redeemed under the DECIDER's context and applied under the executor's:
 		// the redemption asserts that human's authority, the write carries the
 		// machine provenance.
-		return svc.RedeemAndApply(ctx, approvalID, "coldstart", diffHash, func(tx pgx.Tx) error {
-			execCtx, err := agentForReleaserTx(ctx, tx, "agent:coldstart")
-			if err != nil {
-				return err
-			}
-			_, err = store.ApplyColdStartProfileTx(execCtx, tx, contacts.ApplyColdStartProfileInput{
+		return redeemForApprover(ctx, svc, approvalID, "coldstart", diffHash, "agent:coldstart", func(execCtx context.Context, tx pgx.Tx) error {
+			_, err := store.ApplyColdStartProfileTx(execCtx, tx, contacts.ApplyColdStartProfileInput{
 				SourceURL: sourceURL,
 				Fields:    fields,
 			})

@@ -392,15 +392,11 @@ func companyNameAcceptEffect(svc *approvals.Service, store *contacts.Store) appr
 		// signature, and runs under the decider's grants. That is also why the
 		// accepted name stamps name_source='signature' and not 'human': a later
 		// human edit must still win over it.
-		return svc.RedeemAndApply(ctx, approvalID, companyNameProposalKind, diffHash, func(tx pgx.Tx) error {
-			execCtx, err := agentForReleaserTx(ctx, tx, companyNamePromotionActor)
-			if err != nil {
-				return err
-			}
+		return redeemForApprover(ctx, svc, approvalID, companyNameProposalKind, diffHash, companyNamePromotionActor, func(execCtx context.Context, tx pgx.Tx) error {
 			// A false here is the company having been renamed by a
 			// stronger source while the offer waited: the approval is spent,
 			// nothing is written, and the record keeps the better name.
-			_, err = store.PromoteCompanyNameTx(execCtx, tx, proposal.CompanyID,
+			_, err := store.PromoteCompanyNameTx(execCtx, tx, proposal.CompanyID,
 				proposal.ProposedName, contacts.CompanyNameCorroborationNone)
 			return err
 		})

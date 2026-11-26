@@ -357,16 +357,13 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 		// still unconsumed, so deciding it again runs this effect again
 		// (approvals.effectIsStillOwed).
 		var gone string
-		err = svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
-			func(tx pgx.Tx) error {
-				execCtx, err := agentForReleaserTx(ctx, tx, overnightAgent)
-				if err != nil {
-					return err
-				}
+		err = redeemForApprover(ctx, svc, approvalID, deals.FollowUpReconcileKind, diffHash, overnightAgent,
+			func(execCtx context.Context, tx pgx.Tx) error {
 				// Asked again here: a next step or a close landing between the
 				// precheck and this write makes the follow-up unneeded. The
 				// redemption commits with nothing written, and the decider is
 				// told why.
+				var err error
 				if gone, err = stillowed.FollowUpTx(ctx, tx, proposal.DealID.UUID, now().UTC()); err != nil || gone != "" {
 					return err
 				}

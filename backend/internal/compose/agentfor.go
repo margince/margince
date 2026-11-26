@@ -131,6 +131,25 @@ func agentForReleaserTx(ctx context.Context, tx pgx.Tx, actorID string) (context
 	return agentFromAuthorityTx(ctx, tx, member, actorID, rbac, seat)
 }
 
+// redeemForApprover redeems an approved proposal and applies it as actorID
+// acting for the member who approved it. The transaction takes the
+// authorization hold first and the approval row after it, the order identity
+// documents. An effect and a role change on one member then queue, not
+// deadlock.
+func redeemForApprover(ctx context.Context, svc *approvals.Service, id ids.ApprovalID, kind, diffHash, actorID string,
+	apply func(execCtx context.Context, tx pgx.Tx) error,
+) error {
+	return svc.RedeemAndApplyAfter(ctx, id, kind, diffHash,
+		func(tx pgx.Tx) error { return identity.HoldAuthorizationTx(ctx, tx) },
+		func(tx pgx.Tx) error {
+			execCtx, err := agentForReleaserTx(ctx, tx, actorID)
+			if err != nil {
+				return err
+			}
+			return apply(execCtx, tx)
+		})
+}
+
 // colleagueJob names the two principals of a job the product runs for a named
 // colleague. work is the agent that does the job's real work under the
 // colleague's grants. books is the system that keeps the run's own row: claim,

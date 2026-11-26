@@ -102,13 +102,7 @@ func fxRateAcceptEffect(svc *approvals.Service, store *deals.Store) approvals.Ap
 		// The precondition read returns the day it sampled and the write is
 		// pinned to that SAME day, so a cross-midnight apply fails the
 		// past-date guard rather than overwriting the new day's scheduled row.
-		return svc.RedeemAndApply(ctx, approvalID, fxRateProposalKind, diffHash, func(tx pgx.Tx) error {
-			// The approving admin's grants, as this transaction reads them,
-			// decide whether the sheet may be written.
-			execCtx, err := agentForReleaserTx(ctx, tx, rateRefreshAgentID)
-			if err != nil {
-				return err
-			}
+		return redeemForApprover(ctx, svc, approvalID, fxRateProposalKind, diffHash, rateRefreshAgentID, func(execCtx context.Context, tx pgx.Tx) error {
 			// The diff was computed against the rate then in force; if the sheet
 			// moved since (manual write, competing approval), applying would
 			// silently restore a stale value — refuse and roll back instead. The
