@@ -57,6 +57,7 @@
     "acceptAppliedDealChange": "business",
     "acceptAttachmentExtraction": "business",
     "acceptDealSuggestion": "business",
+    "acceptLinkSuggestion": "business",
     "acceptOffer": "business",
     "acceptPartnerLead": "business",
     "acceptTagSuggestion": "business",
@@ -580,6 +581,7 @@
     "listLegalEntityMembers": "workspace_settings",
     "listLegalHolds": "compliance",
     "listLegalReviews": "business",
+    "listLinkSuggestions": "business",
     "listLinkTypes": "business",
     "listListHistory": "business",
     "listListMembers": "business",
@@ -738,6 +740,7 @@
     "regenerateOffer": "business",
     "rejectApproval": "agent_governance",
     "rejectApprovalBundle": "agent_governance",
+    "rejectLinkSuggestion": "business",
     "rejectOffer": "business",
     "rejectVoiceProfileVersion": "business",
     "relinkActivities": "business",
@@ -2117,6 +2120,9 @@
     "accept_deal_suggestion": [
       "deals"
     ],
+    "accept_link_suggestion": [
+      "activities"
+    ],
     "accept_offer": [
       "offers"
     ],
@@ -3236,6 +3242,9 @@
     "list_legal_reviews": [
       "legal_reviews"
     ],
+    "list_link_suggestions": [
+      "activities"
+    ],
     "list_meeting_proposals": [
       "scheduling"
     ],
@@ -3723,6 +3732,9 @@
     ],
     "regenerate_offer": [
       "offers"
+    ],
+    "reject_link_suggestion": [
+      "activities"
     ],
     "reject_offer": [
       "offers"
@@ -4283,6 +4295,9 @@
       "business"
     ],
     "accept_deal_suggestion": [
+      "business"
+    ],
+    "accept_link_suggestion": [
       "business"
     ],
     "accept_offer": [
@@ -5391,6 +5406,9 @@
     "list_legal_reviews": [
       "business"
     ],
+    "list_link_suggestions": [
+      "business"
+    ],
     "list_meeting_proposals": [
       "business"
     ],
@@ -5837,6 +5855,9 @@
       "business"
     ],
     "regenerate_offer": [
+      "business"
+    ],
+    "reject_link_suggestion": [
       "business"
     ],
     "reject_offer": [
