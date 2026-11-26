@@ -82,6 +82,22 @@ describe("KnowledgeCard set verbs", () => {
     expect(await screen.findByText("Runbook")).toBeTruthy();
   });
 
+  it("says a cleared name is required on Save, and sends nothing", async () => {
+    const backend = backendFor(ADMIN);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<KnowledgeCard />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for How-to" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Edit set" }));
+    const dialog = screen.getByRole("dialog");
+    await user.clear(within(dialog).getByRole("textbox", { name: /^name/i }));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(await within(dialog).findByText(/Name is required/)).toBeTruthy();
+    expect(backend.patches).toEqual([]);
+  });
+
   it("shows an archived set under Show archived sets and restores it", async () => {
     const backend = backendFor(ADMIN);
     vi.stubGlobal("fetch", backend.fetchMock);

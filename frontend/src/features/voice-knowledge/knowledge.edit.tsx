@@ -7,7 +7,9 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Field, Textarea, TextInput } from "../../design-system/field";
-import { useT } from "../../i18n";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
+import { blankRequired } from "../../lib/blankrequired";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { SETS_KEY } from "./knowledge.documents";
@@ -57,13 +59,20 @@ function changesOf(set: Corpus, draft: Draft) {
   };
 }
 
+// Save stays off until a field differs; a blank required field is said on Save.
+function changeCount(changes: Readonly<Record<string, unknown>>): number {
+  return Object.keys(changes).length;
+}
+
 /** The set's name, description and covers sentence, edited in one form. */
 export function EditDocumentSet({
   set,
   onClose,
 }: Readonly<{ set: Corpus; onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const client = useQueryClient();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [draft, setDraft] = useState(() => draftOf(set));
   const changes = changesOf(set, draft);
   const save = useMutation({
@@ -79,7 +88,6 @@ export function EditDocumentSet({
       onClose();
     },
   });
-  const blank = !draft.name.trim() || !draft.topic.trim();
   return (
     <ConfirmModal
       open
@@ -87,21 +95,32 @@ export function EditDocumentSet({
       onClose={onClose}
       title={t("knowledge.edit.title", { name: set.name })}
       confirmLabel={t("knowledge.edit.save")}
-      confirmDisabled={blank || Object.keys(changes).length === 0}
+      confirmDisabled={changeCount(changes) === 0}
       pending={save.isPending}
       error={save.isError ? problemMessageOf(save.error, t) : null}
-      onConfirm={() => save.mutate()}
+      onConfirm={() => {
+        const blank = blankRequired(locale, {
+          name: [t("knowledge.new.name"), draft.name],
+          topic_statement: [t("knowledge.new.topic"), draft.topic],
+        });
+        if (!faults.show(blank)) save.mutate();
+      }}
     >
-      <div className="form-stack">
-        <Field label={t("knowledge.new.name")} required>
+      <div className="form-stack" ref={faultsRoot}>
+        <Field
+          label={t("knowledge.new.name")}
+          required
+          error={faults.of("name")}
+        >
           {(control) => (
             <TextInput
               {...control}
               value={draft.name}
               maxLength={TEXT_LIMITS.label}
-              onChange={(event) =>
-                setDraft({ ...draft, name: event.target.value })
-              }
+              onChange={(event) => {
+                setDraft({ ...draft, name: event.target.value });
+                faults.edited("name", save);
+              }}
             />
           )}
         </Field>
@@ -120,14 +139,16 @@ export function EditDocumentSet({
           label={t("knowledge.new.topic")}
           hint={t("knowledge.new.topicHint")}
           required
+          error={faults.of("topic_statement")}
         >
           {(control) => (
             <Textarea
               {...control}
               value={draft.topic}
-              onChange={(event) =>
-                setDraft({ ...draft, topic: event.target.value })
-              }
+              onChange={(event) => {
+                setDraft({ ...draft, topic: event.target.value });
+                faults.edited("topic_statement", save);
+              }}
             />
           )}
         </Field>

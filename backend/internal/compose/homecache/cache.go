@@ -121,7 +121,7 @@ func NoWalk[A Answer]() Walk[A] {
 // and says so in Kept.Written, and one whose walk has ended says so in
 // Kept.WalkEnded. The access fence, expiry and a lifted snooze end it.
 func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read, key string) (A, Kept, bool, error) {
-	out, standing, found, err := lookup[A](ctx, c, reader, read, key)
+	out, standing, found, err := readKept[A](ctx, c, reader, read, key)
 	return out, standing, found == foundValid, err
 }
 
@@ -135,7 +135,7 @@ const (
 	foundValid
 )
 
-func lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read, key string) (A, Kept, found, error) {
+func readKept[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read, key string) (A, Kept, found, error) {
 	var out A
 	var payload []byte
 	var ageSeconds float64
@@ -183,7 +183,7 @@ func Serve[A Answer](
 	ctx context.Context, c *Cache, reader ids.UUID, read Read, key string,
 	fresh func(context.Context) (A, error), walk Walk[A],
 ) (answer A, stale bool, err error) {
-	kept, standing, found, err := lookup[A](ctx, c, reader, read, key)
+	kept, standing, found, err := readKept[A](ctx, c, reader, read, key)
 	hit := found == foundValid
 	if err != nil {
 		logFault(ctx, "a kept Home answer could not be read; reading it fresh", read, err)

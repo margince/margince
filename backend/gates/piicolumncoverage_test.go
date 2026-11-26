@@ -35,7 +35,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -833,20 +832,6 @@ func assignsColumn(statement, column string) bool {
 		}
 	}
 	return false
-}
-
-// redactedTables are the registered PII tables the cascade REDACTS — the ones
-// this census has something to say about. A table the cascade only deletes
-// from loses the whole row, so there is no column set to account for.
-func redactedTables(redacted map[string]map[string]bool) []string {
-	out := make([]string, 0, len(redacted))
-	for table := range redacted {
-		if _, registered := piiTables[table]; registered {
-			out = append(out, table)
-		}
-	}
-	sort.Strings(out)
-	return out
 }
 
 // The reader that places a write, driven over the shapes the cascade actually
