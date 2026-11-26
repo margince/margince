@@ -74,8 +74,8 @@
     box-shadow 0.15s;
 }
 .ob-gate-field:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 /* A refused field wears the danger boundary, focused or not. The accent ring
    means "this is where you are", which on the value the gate just rejected
@@ -86,11 +86,15 @@
   border-color: var(--danger);
 }
 .ob-gate-field:has([aria-invalid="true"]):focus-within {
-  box-shadow: var(--focus-glow-danger);
+  box-shadow: var(--focus-field-danger);
+}
+.ob-gate-field:has(.ob-gate-input:disabled) {
+  background: var(--bgInset);
+  border-color: var(--borderStrong);
 }
 /* The shell above owns the box and the leading inset, so this owns the rest of
    the inset and the type — the field's own, not the engine's. */
-.ob-gate-input {
+.ob-gate-field .ob-gate-input {
   flex: 1;
   min-width: 0;
   border: 0;
@@ -522,7 +526,7 @@
     align-items: stretch;
     padding: var(--space-2);
   }
-  .ob-gate-input {
+  .ob-gate-field .ob-gate-input {
     padding: var(--space-2);
   }
   .ob-gate-submit {
