@@ -43411,7 +43411,8 @@ components:
             `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
             conversation arrived in, and a new message from the sender's default mailbox. A mailbox
             that is not the sender's, or cannot send, is refused with 422
-            `mailbox_not_send_capable`.
+            `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+            its id, and only by a member of its reader team.
         subject: {type: string, description: The subject line. Blank or only white space is refused with 422 `required`.}
         body: {type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.}
         html_body:

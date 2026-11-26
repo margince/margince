@@ -97,7 +97,7 @@ components:
         Addresses, readers and credentials are omitted; consumers re-read the connection.
       required: [change]
       properties:
-        change: { type: string, enum: [connected, reconnected, readers_changed, visibility_changed, backup_owner_changed, disconnected, history_import_started] }
+        change: { type: string, enum: [connected, reconnected, readers_changed, visibility_changed, backup_owner_changed, reply_changed, disconnected, history_import_started] }
       additionalProperties: false
 
     InternalEventCaptureSettingsUpdated:

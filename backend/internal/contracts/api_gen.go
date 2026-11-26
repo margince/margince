@@ -69203,7 +69203,8 @@ type SendEmailRequest struct {
 	// `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
 	// conversation arrived in, and a new message from the sender's default mailbox. A mailbox
 	// that is not the sender's, or cannot send, is refused with 422
-	// `mailbox_not_send_capable`.
+	// `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+	// its id, and only by a member of its reader team.
 	FromConnectionId *openapi_types.UUID `json:"from_connection_id,omitempty"`
 
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
@@ -69929,7 +69930,10 @@ type SharedMailbox struct {
 	Provider       SharedMailboxProvider       `json:"provider"`
 
 	// ReaderTeamId The team that reads every message this mailbox captured.
-	ReaderTeamId openapi_types.UUID  `json:"reader_team_id"`
+	ReaderTeamId openapi_types.UUID `json:"reader_team_id"`
+
+	// ReplyEnabled True when an admin let the reader team reply as this mailbox. A member then names the mailbox id as `from_connection_id` of a send. Always false for an `imap` mailbox, which only captures.
+	ReplyEnabled bool                `json:"reply_enabled"`
 	Status       SharedMailboxStatus `json:"status"`
 
 	// UnreadPeriod A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none.
@@ -73286,6 +73290,9 @@ type UpdateSharedMailboxRequest struct {
 
 	// ReaderTeamId The team that reads the mailbox from now on, its whole history included.
 	ReaderTeamId *openapi_types.UUID `json:"reader_team_id,omitempty"`
+
+	// ReplyEnabled True lets every live member of the reader team send mail with this mailbox as its From address. The installation's own grant must already allow it: an application permission to send for a Microsoft mailbox, a delegation that includes the send scope for a Google one. False ends it. An `imap` mailbox is refused with `422` `shared_mailbox_cannot_send`.
+	ReplyEnabled *bool `json:"reply_enabled,omitempty"`
 }
 
 // UpdateSharedMailboxRequestMailVisibility `classified` is refused with `422`.

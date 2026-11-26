@@ -177,6 +177,9 @@ func (d *Dispatcher) dispositionForUnresolvedSeam(ctx context.Context, del Deliv
 	case errors.Is(err, ErrNoMailbox):
 		return d.park(ctx, del.ID, fmt.Sprintf(
 			"nothing is connected for %s to transmit through; connect it to enable sending", del.Provider))
+	case errors.Is(err, ErrNotMailboxReader):
+		return d.park(ctx, del.ID,
+			"the sender no longer reads the shared mailbox this reply was staged for, or replies were turned off; ask an admin, then write it again")
 	case errors.Is(err, ErrCannotSend):
 		return d.park(ctx, del.ID, fmt.Sprintf("the %s connection cannot transmit messages", del.Provider))
 	case errors.Is(err, ErrNoControllerRelay):

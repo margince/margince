@@ -251,6 +251,10 @@ func (r commsResolver) Resolve(ctx context.Context, userID ids.UserID, provider 
 		return nil, nil, nil, fmt.Errorf("%w: %w", comms.ErrCannotSend, err)
 	case errors.Is(err, capture.ErrConnectorNotConfigured):
 		return nil, nil, nil, fmt.Errorf("%w: %w", comms.ErrProviderNotConfigured, err)
+	case errors.Is(err, capture.ErrSharedReplyRefused):
+		return nil, nil, nil, fmt.Errorf("%w: %w", comms.ErrNotMailboxReader, err)
+	case errors.As(err, new(*capture.SharedReplyUnsupportedError)):
+		return nil, nil, nil, fmt.Errorf("%w: %w", comms.ErrCannotSend, err)
 	case err != nil:
 		// Unchanged, and therefore transient: a vault blip, a database
 		// timeout, or a connector this role did not register are all reasons
@@ -258,6 +262,15 @@ func (r commsResolver) Resolve(ctx context.Context, userID ids.UserID, provider 
 		return nil, nil, nil, err
 	}
 	return sender, auth, granted, nil
+}
+
+// NewSendConnectionResolver builds the mailbox resolver the dispatcher
+// transmits through. Exported for the reason NewSendSeatAuthority is: tests
+// drive the dispatcher with the translation the product ships.
+//
+//nolint:ireturn // returns the comms.ConnectionResolver seam by design: the concrete type is unexported
+func NewSendConnectionResolver(registry *capture.Registry) comms.ConnectionResolver {
+	return commsResolver{registry: registry, channels: registry}
 }
 
 // seatResolver is the live-seat half of the authority the dispatcher re-reads

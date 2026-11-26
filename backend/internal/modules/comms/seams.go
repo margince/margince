@@ -190,6 +190,11 @@ type AttachmentAuthority interface {
 // staged against. There is nothing to retry against, so it parks.
 var ErrNoMailbox = errors.New("comms: no mailbox is connected for this provider")
 
+// ErrNotMailboxReader marks a delivery staged as a shared mailbox by a seat
+// that no longer reads it, or for a mailbox that no longer replies. The reply
+// is parked, since no retry returns the seat to the team.
+var ErrNotMailboxReader = errors.New("comms: the sender may no longer reply as this shared mailbox")
+
 // ErrCannotSend marks a connected provider whose connector cannot transmit —
 // it implements capture only. No retry turns a capture-only connector into a
 // sender, so this parks too.

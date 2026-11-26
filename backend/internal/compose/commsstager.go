@@ -105,6 +105,9 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 	if err != nil {
 		return err
 	}
+	if err := capture.AuditSharedReplyTx(ctx, tx, in.ConnectionID, in.ActivityID, id); err != nil {
+		return err
+	}
 	if in.SplitFromThread != "" {
 		if err := capture.CarryThreadVerdictsTx(ctx, tx, in.SplitFromThread, in.ThreadKey); err != nil {
 			return err

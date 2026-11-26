@@ -135,7 +135,7 @@ func (h Handlers) Update(w http.ResponseWriter, r *http.Request, id openapi_type
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	change := capture.SharedChange{Confirmed: req.Confirm, ApplyToHistory: req.ApplyToHistory != nil && *req.ApplyToHistory}
+	change := capture.SharedChange{Confirmed: req.Confirm, ApplyToHistory: req.ApplyToHistory != nil && *req.ApplyToHistory, ReplyEnabled: req.ReplyEnabled}
 	if req.ReaderTeamId != nil {
 		team := ids.UUID(*req.ReaderTeamId)
 		change.ReaderTeam = &team
@@ -184,7 +184,7 @@ func sharedMailboxOnWire(v capture.SharedMailboxView) crmcontracts.SharedMailbox
 	out := crmcontracts.SharedMailbox{
 		Id: openapi_types.UUID(v.ID), Provider: crmcontracts.SharedMailboxProvider(v.Provider), Address: v.Address,
 		ReaderTeamId: openapi_types.UUID(v.ReaderTeam), MailVisibility: crmcontracts.SharedMailboxMailVisibility(v.Posture),
-		Status: crmcontracts.SharedMailboxStatus(v.Status), ConnectedAt: v.ConnectedAt,
+		Status: crmcontracts.SharedMailboxStatus(v.Status), ConnectedAt: v.ConnectedAt, ReplyEnabled: v.ReplyEnabled,
 	}
 	if v.ConnectedBy != nil {
 		by := openapi_types.UUID(*v.ConnectedBy)
