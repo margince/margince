@@ -264,13 +264,17 @@ func TestTheToolMinorUnitDetectorSeesWhatItClaimsTo(t *testing.T) {
 		return gatekit.ParseFile(path, parser.SkipObjectResolution)
 	})
 	agents := filepath.Join(root, toolResultDir)
-	want := []string{agents + ".Bare.CostMinor", agents + ".Hidden.AmountMinor", agents + ".Line.NetMinor",
-		agents + ".Numbered.AmountMinor", agents + ".Unspelled.FeeMinor"}
+	want := []string{
+		agents + ".Bare.CostMinor", agents + ".Hidden.AmountMinor", agents + ".Line.NetMinor",
+		agents + ".Numbered.AmountMinor", agents + ".Unspelled.FeeMinor",
+	}
 	if got := fmt.Sprint(findings); got != fmt.Sprint(want) {
 		t.Errorf("findings = %v, want %v", findings, want)
 	}
-	wantRoots := []string{agents + ".Bare", agents + ".Hidden", agents + ".Numbered", agents + ".Readings", agents + ".Row",
-		agents + ".Unspelled"}
+	wantRoots := []string{
+		agents + ".Bare", agents + ".Hidden", agents + ".Numbered", agents + ".Readings", agents + ".Row",
+		agents + ".Unspelled",
+	}
 	if fmt.Sprint(resolved) != fmt.Sprint(wantRoots) || fmt.Sprint(unresolved) != "[Missing]" {
 		t.Errorf("resolved %v and missed %v, want %v and [Missing]", resolved, unresolved, wantRoots)
 	}

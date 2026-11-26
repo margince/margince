@@ -252,8 +252,10 @@ func reads(fset *token.FileSet, src []byte) {
 		direct = append(direct, read.call)
 	}
 	slices.Sort(direct)
-	want := []string{"filepath.Glob", "filepath.Walk", "filepath.WalkDir", "os.Open", "os.ReadDir", "os.ReadFile",
-		"parser.ParseDir", "parser.ParseFile"}
+	want := []string{
+		"filepath.Glob", "filepath.Walk", "filepath.WalkDir", "os.Open", "os.ReadDir", "os.ReadFile",
+		"parser.ParseDir", "parser.ParseFile",
+	}
 	if !slices.Equal(direct, want) {
 		t.Errorf("the census saw the disk reads %v, want %v: a parse of source the gate already holds is no read", direct, want)
 	}

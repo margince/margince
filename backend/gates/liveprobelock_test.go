@@ -71,7 +71,6 @@ const companyEvidenceRace = "it writes a company's evidence, never a contact's, 
 
 // unlockedLiveWrites records exceptions to holding an erasure-cleared subject.
 var unlockedLiveWrites = gatekit.Waive(map[string]string{
-
 	"internal/modules/contacts:ApplyMeetingProfileTx":               companyEvidenceRace,
 	"internal/modules/contacts:Store.ApplyColdStartProfile":         companyEvidenceRace,
 	"internal/modules/contacts:Store.ApplyColdStartProfileTx":       companyEvidenceRace,
