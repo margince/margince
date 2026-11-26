@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 
 // The screen-acceptance harness (B-EP09.22a): AC-<screen>-N criteria run as
 // named tests against the built app with the coherent seed fixture mocked at
@@ -22,6 +22,18 @@ const benchMobile = process.env.MARGINCE_BENCH_MOBILE === "1";
 const benchHome = process.env.MARGINCE_BENCH_HOME === "1";
 const benchSpecs = ["**/perf-mobile.spec.ts", "**/bench-home.spec.ts"];
 
+// The secondary-engine smoke run (`make e2e-secondary`): the specs tagged
+// `@smoke` in WebKit and Firefox, on Playwright's own engine builds. It is a
+// switch rather than always-on projects because a project present in every run
+// would put the other two engines into `pnpm e2e` and the pull request lane,
+// which stay on Chromium. With the switch set, the Chromium project is not
+// defined, so the run collects nothing else.
+const secondary = process.env.MARGINCE_E2E_SECONDARY === "1";
+const smoke = /@smoke/;
+// A device descriptor carries its own viewport, which beats the one in `use`
+// below, so it is set again here to keep the layout the specs are written at.
+const desktop = { width: 1280, height: 800 };
+
 export default defineConfig({
   testDir: "./e2e",
   ...(benchMobile
@@ -34,6 +46,22 @@ export default defineConfig({
   // reasons that are the point rather than a fault.
   timeout: benchMobile || benchHome ? 300_000 : 30_000,
   fullyParallel: true,
+  ...(secondary
+    ? {
+        projects: [
+          {
+            name: "webkit",
+            grep: smoke,
+            use: { ...devices["Desktop Safari"], viewport: desktop },
+          },
+          {
+            name: "firefox",
+            grep: smoke,
+            use: { ...devices["Desktop Firefox"], viewport: desktop },
+          },
+        ],
+      }
+    : {}),
   use: {
     baseURL: process.env.BASE_URL ?? "http://localhost:4317",
     // MOBILE-AC-2 measures the mobile viewport (§3.8's 390px), so the benchmark
