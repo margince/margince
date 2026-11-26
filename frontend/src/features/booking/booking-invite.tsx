@@ -59,6 +59,7 @@ export function BookingInviteScreen({
     enabled: !!selectedId,
   });
   const activity = useActivityGate(
+    "contact",
     contact.isError ? null : (contact.data ?? null),
   );
   const saved = profile.data;

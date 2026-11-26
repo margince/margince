@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -19,7 +20,7 @@ func TestAcceptingAnOfferRecordsTheDealsOldAndNewValueInItsHistory(t *testing.T)
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Repriced by offer", pipeline, open, &e.Rep1)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 
 	amount, currency := int64(100000), "EUR"
 	if _, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](deal), deals.UpdateDealInput{
@@ -45,7 +46,7 @@ func TestAcceptingAnOfferRecordsTheDealsOldAndNewValueInItsHistory(t *testing.T)
 	if err != nil {
 		t.Fatalf("accept offer: %v", err)
 	}
-	gross := *accepted.GrossMinor
+	net := *accepted.NetMinor
 
 	field := "amount_minor"
 	changes, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
@@ -55,8 +56,8 @@ func TestAcceptingAnOfferRecordsTheDealsOldAndNewValueInItsHistory(t *testing.T)
 		t.Fatalf("reading the deal's changes: %v", err)
 	}
 	newest := changes.Entries[0]
-	if newest.OldValue == nil || *newest.OldValue != "100000" || newest.NewValue == nil || *newest.NewValue == "100000" {
-		t.Fatalf("the newest change is %v -> %v, want 100000 -> the accepted gross %d", newest.OldValue, newest.NewValue, gross)
+	if newest.OldValue == nil || *newest.OldValue != "100000" || newest.NewValue == nil || *newest.NewValue != strconv.FormatInt(net, 10) {
+		t.Fatalf("the newest change is %v -> %v, want 100000 -> the accepted net %d", newest.OldValue, newest.NewValue, net)
 	}
 
 	full, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{

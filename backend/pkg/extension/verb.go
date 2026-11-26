@@ -204,12 +204,9 @@ const APIBasePath = "/v1"
 
 // routeGrammar: an extension route as the CONTRACT spells it —
 // /ext/<unit>/<segment>[/<segment>…], each segment lower-case [a-z0-9] with
-// single hyphens or underscores. No path parameters ({id}) today: a served
-// operation's arguments are its body or its query string (see CarriesBody), both
-// of which the seam already decodes, and admitting a template would mean it had
-// to route and decode a third place. An operation addressing one record takes
-// the id as an argument — a removal is DELETE /ext/<unit>/remove?id=…,
-// not /ext/<unit>/{id}.
+// single hyphens or underscores, or a path argument `{name}` (see
+// PathArguments). The first segment after the unit is never an argument, so a
+// unit cannot route its whole namespace to one operation.
 //
 // Anchored at /ext, which also makes the one mistake this convention exists to
 // prevent a loud refusal rather than a silent double prefix: a fragment that
@@ -217,7 +214,8 @@ const APIBasePath = "/v1"
 // does not match, and is told so at generation time. The merged document would
 // otherwise publish https://host/v1/v1/ext/… to every generated client, every
 // SDK and the docs.
-var routeGrammar = regexp.MustCompile(`^/ext/[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+([-_][a-z0-9]+)*)+$`)
+var routeGrammar = regexp.MustCompile(`^/ext/[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+([-_][a-z0-9]+)*` +
+	`(/([a-z0-9]+([-_][a-z0-9]+)*|\{[a-z][a-z0-9]*(_[a-z0-9]+)*\}))*$`)
 
 // Validate enforces everything about a declared operation that must hold
 // wherever it is read — the generator that derives it from the merged
@@ -249,7 +247,7 @@ func (v Verb) validateSurface() error {
 		return fmt.Errorf("%s %s declares no operationId — the identity clients, docs and the manifest agree on", v.Method, v.Route)
 	}
 	if !routeGrammar.MatchString(v.Route) {
-		return fmt.Errorf("route %q is not an extension route — a contract path is relative to the contract's own servers url (which already ends in %s), so an extension writes /ext/<unit>/<segment>, no path templates", v.Route, APIBasePath)
+		return fmt.Errorf("route %q is not an extension route — a contract path is relative to the contract's own servers url (which already ends in %s), so an extension writes /ext/<unit>/<segment>[/{argument}]", v.Route, APIBasePath)
 	}
 	// The route must be the DECLARING unit's. gen-composition already refuses
 	// a fragment targeting another namespace, but this value also arrives at
@@ -296,6 +294,9 @@ func (v Verb) validateGovernance() error {
 		if err := validateQueryEncodable(v.Method, v.InputSchema); err != nil {
 			return fmt.Errorf("operation %s: %w", v.OperationID, err)
 		}
+	}
+	if err := v.validatePathArguments(); err != nil {
+		return err
 	}
 	if v.HumanOnly {
 		return v.validateHumanOnlyGovernance()

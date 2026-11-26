@@ -35,7 +35,7 @@ must_not_call_with:
   - send_outbound~.
 
 must_mention:
-  - "(?i)already|your own|existing|unsent|not saved|wasn't saved|could not save|couldn't save"
+  - "(?i)already|your own|existing|unsent|not saved|wasn't saved|could not save|couldn't save|refus|a draft of yours|could(?: not|n['’]t) (?:put|leave|store|add)"
 
 must_not_mention:
   - "(?i)\b(?:i|we)(?:\s+have|['’]ve)?\s+(?:saved|replaced|overwr\w*|discarded|sent)\b"

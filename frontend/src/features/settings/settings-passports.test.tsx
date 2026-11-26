@@ -168,7 +168,7 @@ async function openUnnamedMintDialog(user: ReturnType<typeof userEvent.setup>) {
   return screen.findByRole("dialog");
 }
 
-// Mint passport waits for a name, so most dialogs here start with one typed.
+// Create passport waits for a name, so most dialogs here start with one typed.
 async function openMintDialog(user: ReturnType<typeof userEvent.setup>) {
   const dialog = await openUnnamedMintDialog(user);
   await user.type(within(dialog).getByLabelText(/^Agent name/), "Scout");
@@ -176,12 +176,12 @@ async function openMintDialog(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("PassportCard — minting", () => {
-  it("keeps Mint passport closed until the agent has a name, and caps the name", async () => {
+  it("keeps Create passport closed until the agent has a name, and caps the name", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openUnnamedMintDialog(user);
     const submit = within(dialog).getByRole("button", {
-      name: "Mint passport",
+      name: "Create passport",
     });
     expect(submit).toBeDisabled();
     expect(
@@ -203,7 +203,7 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openUnnamedMintDialog(user);
     const submit = within(dialog).getByRole("button", {
-      name: "Mint passport",
+      name: "Create passport",
     });
     const name = within(dialog).getByLabelText(/^Agent name/);
     fireEvent.change(name, { target: { value: `  ${"😀".repeat(120)}  ` } });
@@ -255,7 +255,7 @@ describe("PassportCard — minting", () => {
     }
 
     const submit = within(dialog).getByRole("button", {
-      name: "Mint passport",
+      name: "Create passport",
     });
     expect(submit).toBeDisabled();
     // Refused, and the reason is attached to the control rather than left in a
@@ -272,7 +272,7 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Mint passport" }),
+      within(dialog).getByRole("button", { name: "Create passport" }),
     );
 
     const token = await within(dialog).findByText("mgp_live_0f3a91c4");
@@ -291,7 +291,7 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend({ refuse: true }));
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Mint passport" }),
+      within(dialog).getByRole("button", { name: "Create passport" }),
     );
 
     const alert = await within(dialog).findByRole("alert");
@@ -351,7 +351,7 @@ describe("PassportCard — minting", () => {
     ).length;
 
     await user.click(
-      within(dialog).getByRole("button", { name: "Mint passport" }),
+      within(dialog).getByRole("button", { name: "Create passport" }),
     );
 
     // The refusal is still shown where every other mint failure is shown.
@@ -382,7 +382,7 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend({ hang: true }));
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Mint passport" }),
+      within(dialog).getByRole("button", { name: "Create passport" }),
     );
 
     const cancel = await within(dialog).findByRole("button", {
@@ -401,7 +401,7 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Mint passport" }),
+      within(dialog).getByRole("button", { name: "Create passport" }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
 
@@ -424,7 +424,7 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Mint passport" }),
+      within(dialog).getByRole("button", { name: "Create passport" }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
     await user.click(within(dialog).getByRole("button", { name: "Done" }));
@@ -472,9 +472,7 @@ describe("PassportCard — using a passport", () => {
     vi.stubGlobal("fetch", mintBackend());
     render("agents");
     expect(
-      await screen.findByText(
-        /a passport is your personal API key for scripts/i,
-      ),
+      await screen.findByText(/a passport is for scripts and your own code/i),
     ).toBeTruthy();
     expect(screen.getByText("In a script or another AI tool")).toBeTruthy();
     expect(await screen.findByText("In your own code")).toBeTruthy();
@@ -547,7 +545,7 @@ describe("PassportCard — using a passport", () => {
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Mint passport" }),
+      within(dialog).getByRole("button", { name: "Create passport" }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
 
@@ -574,7 +572,7 @@ describe("PassportCard — using a passport", () => {
     const saved = captureDownloads();
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Mint passport" }),
+      within(dialog).getByRole("button", { name: "Create passport" }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
     await user.click(

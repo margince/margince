@@ -31,6 +31,7 @@ function draw(data: unknown[]) {
 const base = {
   unit: "demo",
   population: "ext:demo:visit",
+  status: "ok",
   excluded_by_permission: null,
 };
 
@@ -86,6 +87,41 @@ describe("ExtensionReports", () => {
         "13 records are hidden from you by a field permission.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("says a report could not be loaded and still draws the ones that could", async () => {
+    draw([
+      {
+        ...base,
+        name: "ext:demo:by_site",
+        label: "Visits by site",
+        kind: "breakdown",
+        by: "site",
+        status: "unavailable",
+        withheld: false,
+        total: null,
+        groups: [],
+      },
+      {
+        ...base,
+        name: "ext:demo:visits",
+        label: "Visits",
+        kind: "count",
+        withheld: false,
+        total: 13,
+        groups: [{ key: null, count: 13, withheld: false }],
+      },
+    ]);
+    expect(await screen.findByText("Visits by site")).toBeInTheDocument();
+    expect(
+      screen.getByText("This report could not be loaded."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("13")).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "The reports your extensions add could not be loaded.",
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("draws nothing when no extension registers a report", async () => {

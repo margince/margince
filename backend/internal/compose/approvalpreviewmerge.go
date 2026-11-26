@@ -129,5 +129,5 @@ func (r approvalPreviewReader) mergeFieldChanges(ctx context.Context, request re
 	if err != nil {
 		return nil, err
 	}
-	return r.changedValues(ctx, "merge_records", current, changes)
+	return r.changedValues(ctx, "merge_records", request.RecordType, current, changes)
 }

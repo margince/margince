@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -546,6 +547,43 @@ func TestWithdrawingAClaimPutsTheContactAndItsMailBack(t *testing.T) {
 	}
 	if got := claimText(t, e, audiences); got != audience {
 		t.Errorf("the withdrawal changed who may read the mail:\n before %s\n after  %s", audience, got)
+	}
+}
+
+// A claim made on rows stored before addresses were held lowercase keeps their
+// images as typed. Withdrawing it puts each row back with its address lowercase.
+func TestWithdrawingAClaimPutsAnOlderAddressBackInLowercase(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	contact := claimMintFormerContact(t, env)
+	testdb.WithParticipantAddressCheckLifted(t, func(tx pgx.Tx) error {
+		for _, statement := range []string{
+			`ALTER TABLE activity_participant DISABLE TRIGGER address_is_stored_lowercase`,
+			`UPDATE activity_participant SET address = upper(address) WHERE address IS NOT NULL AND contact_id = '` + contact.String() + `'`,
+			`ALTER TABLE activity_participant ENABLE TRIGGER address_is_stored_lowercase`,
+		} {
+			if _, err := tx.Exec(t.Context(), statement); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	const typed = `SELECT count(*) FROM activity_participant WHERE contact_id = $1 AND address <> lower(address)`
+	older := claimCount(t, e, typed, contact)
+	if older == 0 {
+		t.Fatal("the fixture planted no older row, so the withdrawal restores nothing as typed")
+	}
+	participants := claimCount(t, e, `SELECT count(*) FROM activity_participant WHERE contact_id = $1`, contact)
+	identity := claimProvenFormer(t, e)
+
+	if err := claimStore(e).Remove(claimSeat(e, e.Rep1), identity.ID); err != nil {
+		t.Fatalf("withdrawing a claim over older rows: %v", err)
+	}
+	if n := claimCount(t, e, `SELECT count(*) FROM activity_participant WHERE contact_id = $1`, contact); n != participants {
+		t.Errorf("%d participant rows after the withdrawal, want %d", n, participants)
+	}
+	if n := claimCount(t, e, typed, contact); n != 0 {
+		t.Errorf("%d restored row(s) hold an address that is not lowercase", n)
 	}
 }
 

@@ -100,6 +100,9 @@ const KindMeetingInvitationAttention = "meeting_invitation_attention"
 // KindMeetingTeamRequest tells a colleague a host named them on a booking link.
 const KindMeetingTeamRequest = "meeting_team_request"
 
+// KindDealValueNetBasis tells a deal's owner its value was re-stated without tax.
+const KindDealValueNetBasis = "deal_value_net_basis"
+
 var classByKind = map[string]string{
 	"data_task_failed":             classSystem,
 	KindPrivacyReviewRequired:      classSystem,
@@ -112,6 +115,7 @@ var classByKind = map[string]string{
 	KindApprovalPending:            ClassApprovalPending,
 	KindMeetingTeamRequest:         ClassApprovalPending,
 	KindExtension:                  classSystem,
+	KindDealValueNetBasis:          classSystem,
 	KindProjectHealthAI:            classProjectHealth,
 	// The answer to a colleague's own request to be handed a record.
 	"ownership_request_accepted":  classSystem,

@@ -65,7 +65,9 @@ export function LeadEnquiryCard({
   // Their words go in quotes; a subject line standing in for them does not.
   const body = message.body?.trim();
   const words = body
-    ? t("lead.card.askedQuote", { text: emailSummaryText(body) })
+    ? t("lead.card.askedQuote", {
+        text: emailSummaryText(body, message.subject ?? ""),
+      })
     : (message.subject ?? "");
   return (
     <OverviewCard

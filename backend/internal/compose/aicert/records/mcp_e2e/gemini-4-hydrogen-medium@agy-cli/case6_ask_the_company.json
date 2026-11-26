@@ -15,20 +15,24 @@
   "self_judged": false,
   "stamp": {
     "scenario": "3cb0eb37172e4699",
-    "tools": "7a14698dd9fb4211",
-    "instructions": "c5c644eee9719be0",
+    "tools": "203ffd92fd821458",
+    "instructions": "4eab26d5fff0793f",
     "judge": "claude-haiku-5-5",
-    "harness": "024566e70b0c3db3",
-    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
-    "ran_at": "2026-11-21T18:51:43Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:34:45Z"
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T10:08:04Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T10:08:04Z"
   },
   "usage": {
-    "input_tokens": 237400,
-    "output_tokens": 28825,
+    "input_tokens": 220646,
+    "output_tokens": 29991,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 1026294,
+    "cache_read_input_tokens": 871433,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -37,20 +41,15 @@
     {
       "passed": true,
       "tools": [
-        "at_risk_relationships",
         "catch_me_up_on",
         "find_records",
         "get_record_history",
-        "list_colleagues",
         "list_documents",
         "list_records",
-        "read_attention",
         "read_context",
-        "read_record",
         "read_workspace",
         "search_context",
-        "search_records",
-        "whats_slipping_this_week"
+        "search_records"
       ]
     },
     {
@@ -58,12 +57,14 @@
       "tools": [
         "catch_me_up_on",
         "find_records",
+        "get_company_dossier",
         "get_field_history",
+        "list_colleagues",
         "list_records",
         "read_context",
         "read_details",
         "read_record",
-        "read_relationships",
+        "read_workspace",
         "search_context",
         "search_records"
       ]
@@ -72,29 +73,29 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 29.5,
-      "min": 22,
-      "max": 37
+      "median": 29,
+      "min": 20,
+      "max": 38
     },
     "turns": {
-      "median": 9.5,
-      "min": 8,
+      "median": 9,
+      "min": 7,
       "max": 11
     },
     "refused": {
-      "median": 2,
+      "median": 1.5,
       "min": 0,
-      "max": 4
+      "max": 3
     },
     "prompt_tokens": {
-      "median": 631847,
-      "min": 453368,
-      "max": 810326
+      "median": 546039.5,
+      "min": 300229,
+      "max": 791850
     },
     "output_tokens": {
-      "median": 14412.5,
-      "min": 13493,
-      "max": 15332
+      "median": 14995.5,
+      "min": 13910,
+      "max": 16081
     }
   }
 }

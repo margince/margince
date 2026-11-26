@@ -2,17 +2,56 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId } from "react";
+import { Badge } from "../../design-system/atoms";
 import { describedByIds } from "../../design-system/describedby";
 import { TextInput } from "../../design-system/field";
 import { PanelBody } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
-import { useT } from "../../i18n";
+import { listFormat } from "../../format/formatters";
+import { useLocale, useT } from "../../i18n";
 import {
+  type ExtensionUnit,
   useExtensionSettings,
   useUpdateExtensionSettings,
 } from "../../lib/extensions.queries";
+
+// Whether the unit can work yet, and what an admin still has to set for it.
+// The server works it out on each read. An older server sends no list, and the
+// card then says nothing instead of a "ready" nobody checked.
+export function UnitSetup({
+  missing,
+}: Readonly<{ missing: ExtensionUnit["setup_missing"] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (missing === undefined) {
+    return null;
+  }
+  if (missing.length === 0) {
+    return (
+      <p data-testid="ext-unit-setup">
+        <Badge tone="success">{t("extAccess.setupReady")}</Badge>
+      </p>
+    );
+  }
+  // The kind list is open: a kind a newer server adds is named as it is.
+  const items = missing.map((item) => {
+    if (item.kind === "oauth_app") {
+      return t("extAccess.setupApp", { name: item.name });
+    }
+    if (item.kind === "workspace_secret") {
+      return t("extAccess.setupSecret", { name: item.name });
+    }
+    return item.name;
+  });
+  return (
+    <p data-testid="ext-unit-setup">
+      <Badge tone="warning">{t("extAccess.needsSetup")}</Badge>{" "}
+      {t("extAccess.setupMissing", { items: listFormat(locale).format(items) })}
+    </p>
+  );
+}
 
 // What the core does with one unit's feed. Today that is one decision. When a
 // feed offers a value for a field a user last edited, it leaves the field

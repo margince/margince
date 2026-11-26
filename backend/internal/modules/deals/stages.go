@@ -30,7 +30,11 @@ import (
 // runes are dropped before the name is judged, so "\u200bAlpha" cannot sit beside
 // "Alpha" and read as a free name.
 func cleanLadderName(field, raw string) (string, error) {
-	return httperr.RequireNonBlank(field, values.WithoutZeroWidth(raw))
+	name, err := httperr.RequireNonBlank(field, values.WithoutZeroWidth(raw))
+	if err != nil {
+		return "", err
+	}
+	return name, httperr.RequireWithin(field, name, values.TextLabelCharacters)
 }
 
 type UpdatePipelineInput struct {
@@ -170,8 +174,8 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 			RETURNING id`,
 			in.PipelineID, in.Name, in.Position, in.Semantic, probability, translations).Scan(&stageID)
 		if err != nil {
-			if storekit.IsUniqueViolation(err) {
-				return stagePositionTaken(in.Position)
+			if refused := stageUniqueRefusal(err, &in.Name, &in.Position); refused != nil {
+				return refused
 			}
 			return fmt.Errorf("insert stage: %w", err)
 		}
@@ -363,11 +367,8 @@ func writeStageUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 	id ids.StageID, pipelineID ids.PipelineID, patch *storekit.Patch, in UpdateStageInput,
 ) (ids.UUID, error) {
 	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-		if storekit.IsUniqueViolation(err) && in.Position != nil {
-			return ids.UUID{}, stagePositionTaken(*in.Position)
-		}
-		if storekit.IsUniqueViolation(err) {
-			return ids.UUID{}, apperrors.ErrConflict
+		if refused := stageUniqueRefusal(err, in.Name, in.Position); refused != nil {
+			return ids.UUID{}, refused
 		}
 		return ids.UUID{}, fmt.Errorf("update stage: %w", err)
 	}

@@ -10,12 +10,12 @@ import (
 )
 
 var roleWords = map[string]langcopy.Phrase{
-	Champion:            {En: "champion", De: "Fürsprecher", Vi: "người ủng hộ"},
-	EconomicBuyer:       {En: "economic buyer", De: "Budgetverantwortliche Person", Vi: "người quyết định ngân sách"},
-	LegacyDecisionMaker: {En: "decision-maker", De: "Entscheidungsträger", Vi: "người ra quyết định"},
-	Influencer:          {En: "influencer", De: "Einflussperson", Vi: "người có ảnh hưởng"},
-	Blocker:             {En: "blocker", De: "Gegenspieler", Vi: "người cản trở"},
-	User:                {En: "user", De: "Nutzer", Vi: "người dùng"},
+	Champion:            {En: "champion", De: "Champion", Vi: "người ủng hộ"},
+	EconomicBuyer:       {En: "economic buyer", De: "Economic Buyer", Vi: "người quyết định ngân sách"},
+	LegacyDecisionMaker: {En: "decision-maker", De: "Entscheidungstragende", Vi: "người ra quyết định"},
+	Influencer:          {En: "influencer", De: "Influencer", Vi: "người có ảnh hưởng"},
+	Blocker:             {En: "blocker", De: "Blocker", Vi: "người cản trở"},
+	User:                {En: "user", De: "Endnutzende", Vi: "người dùng"},
 }
 
 // Recorded is the stored role as its vocabulary key, or "" when it is not one.

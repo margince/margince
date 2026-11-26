@@ -142,13 +142,14 @@ const (
 var updateCitationRegister = flag.Bool("update-citations", false,
 	"prune danglingcitations.txt of entries the tree no longer has")
 
-// Deliberately NOT parallel, and named in parallelExempt for the reason: under
-// -update-citations this REWRITES danglingcitations.txt, which
-// TestTheCitationRegisterIsSortedAndUnique reads. Go resumes parallel tests
-// only once every sequential one has finished, so staying sequential orders
-// this write after every read — including reads nobody has added yet, which
-// holding the reader back instead would not cover.
+// Sequential under -update-citations, which makes it rewrite danglingcitations.txt
+// for TestTheCitationRegisterIsSortedAndUnique to read. Go resumes paused parallel
+// tests only after every sequential one has finished, so the write comes before
+// every read.
 func TestEveryCitedMigrationExists(t *testing.T) {
+	if !*updateCitationRegister {
+		t.Parallel()
+	}
 	known := knownMigrationVersions(t)
 	found, unread, scanned, skipped := scanTreeForCitations(t, known)
 	// A census that read a fraction of the tree must not report the same word
@@ -405,6 +406,11 @@ func danglingCitationsIn(rel, body string, known map[string]map[string]bool) []c
 	}
 
 	for i, line := range lines {
+		// Every pattern needs a version, so a window with no digit run cannot match.
+		// The continuation prefix holds no digit, so stripping it keeps every run.
+		if !holdsVersionDigits(line) && (i+1 == len(lines) || !holdsVersionDigits(lines[i+1])) {
+			continue
+		}
 		window := line
 		if i+1 < len(lines) {
 			window = line + " " + commentContinuation.ReplaceAllString(lines[i+1], "")
@@ -439,6 +445,22 @@ func danglingCitationsIn(rel, body string, known map[string]map[string]bool) []c
 		}
 	}
 	return found
+}
+
+// holdsVersionDigits reports whether text has the four ASCII digits in a row
+// that the shortest migration version is.
+func holdsVersionDigits(text string) bool {
+	run := 0
+	for i := 0; i < len(text); i++ {
+		if text[i] < '0' || text[i] > '9' {
+			run = 0
+			continue
+		}
+		if run++; run == 4 {
+			return true
+		}
+	}
+	return false
 }
 
 // versionAlreadyClaimed reports whether a namespaced match already consumed the
@@ -660,14 +682,13 @@ func citationExcerpt(line string) string {
 // Task identities share a namespace with migrations, but name a different catalog.
 // Mask only the typed ID value; requirements and surrounding prose remain citations.
 func withoutDataTaskIdentity(body string) string {
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "citation.go", body, 0)
+	owner := reflect.TypeFor[datatask.Task]()
+	header, err := parser.ParseFile(token.NewFileSet(), "citation.go", body, parser.ImportsOnly)
 	if err != nil {
 		return body
 	}
-	owner := reflect.TypeFor[datatask.Task]()
 	alias := ""
-	for _, spec := range file.Imports {
+	for _, spec := range header.Imports {
 		path, err := strconv.Unquote(spec.Path.Value)
 		if err != nil || path != owner.PkgPath() {
 			continue
@@ -678,6 +699,11 @@ func withoutDataTaskIdentity(body string) string {
 		}
 	}
 	if alias == "" {
+		return body
+	}
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "citation.go", body, 0)
+	if err != nil {
 		return body
 	}
 	masked := []byte(body)

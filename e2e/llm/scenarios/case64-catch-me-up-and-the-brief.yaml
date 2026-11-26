@@ -23,9 +23,10 @@ must_not_call_with:
 # the Aufstellung the user promised.
 must_mention:
   - "Mai Nguyen|Aufstellung|appendix|Anhang"
-  # "The generated brief is missing" and "the brief hasn't been generated" say
-  # it too, with the brief first and the negation contracted.
-  - "(?i)\bno\b[^.]{0,40}\bbrief\b|\bbrief\b[^.]{0,60}(?:\bnever|\bnot|n['’]t) (?:yet )?(?:been )?(?:generated|made|run|built|created)|\bbrief\b[^.]{0,30}\b(?:is|was)(?: still)?(?: missing| unavailable|(?: not|n['’]t) (?:there|available|ready))\b"
+
+# No brief in any wording: "there isn't one yet" says it as well as "no brief".
+judge:
+  - "Criterion 1. The answer says the user has no morning brief for today yet. Answer no if it reports what a brief for today contains, or never says whether there is one."
 
 may_call:
   - catch_me_up_on

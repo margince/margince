@@ -22,10 +22,11 @@ type lineLockFlow struct {
 	locals    map[string]map[string]bool
 	external  map[string]bool
 	changed   bool
+	texts     map[ast.Expr]string
 }
 
 func lineLocksOf(files []*ast.File) *lineLockFlow {
-	flow := &lineLockFlow{corpus: files, methods: map[string][]string{}, functions: map[string]*ast.FuncDecl{}, files: map[string]*ast.File{}, values: map[string]map[string]map[string]bool{}, constants: stringConstants(files), locals: map[string]map[string]bool{}, external: map[string]bool{}}
+	flow := &lineLockFlow{corpus: files, methods: map[string][]string{}, functions: map[string]*ast.FuncDecl{}, files: map[string]*ast.File{}, values: map[string]map[string]map[string]bool{}, constants: stringConstants(files), locals: map[string]map[string]bool{}, external: map[string]bool{}, texts: map[ast.Expr]string{}}
 	for _, file := range files {
 		functions, literals := lineFunctions(file)
 		for _, fn := range functions {
@@ -50,7 +51,22 @@ func lineLocksOf(files []*ast.File) *lineLockFlow {
 			flow.readFunction(name, fn)
 		}
 	}
+	// Dropped, so a built flow is never written and readers may share it.
+	flow.texts = nil
 	return flow
+}
+
+// text is exprText, held per node while the fixed point runs, because that reads
+// every function once per pass.
+func (f *lineLockFlow) text(expr ast.Expr) string {
+	if text, ok := f.texts[expr]; ok {
+		return text
+	}
+	text := exprText(gatekit.SourceFileSet(), expr)
+	if f.texts != nil {
+		f.texts[expr] = text
+	}
+	return text
 }
 
 func (f *lineLockFlow) add(fn, key string, tables map[string]bool) {
@@ -104,7 +120,7 @@ func (f *lineLockFlow) origins(fn string, expr ast.Expr, result int) map[string]
 	if selector, ok := expr.(*ast.SelectorExpr); ok && f.origins(fn, selector.X, 0)["?"] {
 		return map[string]bool{"?": true}
 	}
-	key := exprText(gatekit.SourceFileSet(), expr)
+	key := f.text(expr)
 	if tables := f.values[fn][key]; len(tables) > 0 {
 		return tables
 	}
@@ -125,7 +141,7 @@ func (f *lineLockFlow) bind(targetFn, target, sourceFn string, expr ast.Expr, re
 			}
 		}
 	}
-	source := exprText(gatekit.SourceFileSet(), expr)
+	source := f.text(expr)
 	if call, ok := expr.(*ast.CallExpr); ok {
 		sourceFn = f.called(sourceFn, call)
 		if sourceFn == "" {
@@ -168,14 +184,14 @@ func (f *lineLockFlow) readFunction(name string, fn *ast.FuncDecl) {
 			}
 		case *ast.UnaryExpr:
 			if n.Op == token.AND {
-				f.add(name, exprText(gatekit.SourceFileSet(), n.X), map[string]bool{"?": true})
+				f.add(name, f.text(n.X), map[string]bool{"?": true})
 			}
 		case *ast.AssignStmt:
 			for i, lhs := range n.Lhs {
 				if len(n.Rhs) == 1 {
-					f.bind(name, exprText(gatekit.SourceFileSet(), lhs), name, n.Rhs[0], i)
+					f.bind(name, f.text(lhs), name, n.Rhs[0], i)
 				} else if i < len(n.Rhs) {
-					f.bind(name, exprText(gatekit.SourceFileSet(), lhs), name, n.Rhs[i], 0)
+					f.bind(name, f.text(lhs), name, n.Rhs[i], 0)
 				}
 			}
 		case *ast.ValueSpec:

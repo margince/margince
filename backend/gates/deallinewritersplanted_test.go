@@ -143,7 +143,7 @@ func TestLineProductCensusRefusesPlantedGuardBypasses(t *testing.T) {
 
 func TestLineSettlementSeamHasOnlyItsClosedCallers(t *testing.T) {
 	t.Parallel()
-	base := `func applyDealLineValueLocked(){};func(s *Store) settleDealLines(){applyDealLineValueLocked()};func(s *Store) leaveLinesMode(){applyDealLineValueLocked()};`
+	base := `func applyDealLineValueLocked(){};func(s *Store) settleDealLines(){applyDealLineValueLocked()};func(s *Store) leaveLinesMode(){applyDealLineValueLocked()};func(s *Store) releaseMergedDealPin(){applyDealLineValueLocked()};`
 	constants := map[string]string{"commercialModeColumn": "commercial_mode", "commercialRevisionColumn": "commercial_revision"}
 	for _, test := range []struct {
 		name, source string

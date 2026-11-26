@@ -96,7 +96,7 @@ var resourceScopesSupported = func() []string {
 // last. offline_access is no member of the closed vocabulary and never appears
 // on the resource: it asks for the connection's lifetime, not authority over
 // any record, and its durable home is oauth_grant.refresh_allowed.
-var oauthScopesSupported = append(slices.Clone(resourceScopesSupported), scopeOfflineAccess)
+var oauthScopesSupported = append(slices.Clone(resourceScopesSupported), ScopeOfflineAccess)
 
 // oauthAuthMethodsSupported lists none first. Claude, Codex and ChatGPT pick a
 // metadata document only when none is offered, and every DCR and CIMD client

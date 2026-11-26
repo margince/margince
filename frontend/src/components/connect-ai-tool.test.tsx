@@ -14,7 +14,7 @@ import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { AI_CHOICE_MARKS, AI_PLACES } from "../lib/aiconnect";
 import * as download from "../lib/download";
-import { ConnectAiToolCard } from "./connect-ai-tool";
+import { ConnectAiTool, ConnectAiToolCard } from "./connect-ai-tool";
 
 const MCP_URL = "https://crm.acme.test/mcp";
 
@@ -312,6 +312,29 @@ describe("ConnectAiToolCard", () => {
     ).toBe(MCP_URL);
     expect(screen.getByText(/OAuth in your browser/)).toBeTruthy();
     expect(screen.getByText(/Authorization: Bearer/)).toBeTruthy();
+    // The card stands on AI assistants, so it points down the page.
+    expect(
+      screen.getByText(/No sign-in in the tool\? Create a passport under/),
+    ).toBeTruthy();
+  });
+
+  it("sends a dialog away from settings to where passports are created", async () => {
+    vi.stubGlobal("fetch", discovery(200));
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <LocaleProvider initial="en">
+          <ConnectAiTool />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await pick(userEvent.setup(), "Another AI tool");
+    expect(
+      screen.getByText(/in Settings under AI assistants, For developers/),
+    ).toBeTruthy();
   });
 
   it("says AI tools cannot connect yet instead of giving steps", async () => {

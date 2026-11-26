@@ -133,9 +133,12 @@ export const CreateFormOpen: Story = {
     );
   },
   play: async () => {
+    const dialog = await screen.findByRole("dialog", { name: "New project" });
+    await expect(dialog).toBeInTheDocument();
+    // The form opens on Initiative, the phase a new project starts in.
     await expect(
-      await screen.findByRole("dialog", { name: "New project" }),
-    ).toBeInTheDocument();
+      within(dialog).getByRole("combobox", { name: /Starting phase/ }),
+    ).toHaveTextContent("Initiative");
   },
 };
 

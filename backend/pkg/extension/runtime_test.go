@@ -58,6 +58,7 @@ func (r *fakeRuntime) Companies() Companies      { return nil }
 func (r *fakeRuntime) MailContent() MailContents { return nil }
 func (r *fakeRuntime) Models() Models            { return nil }
 func (r *fakeRuntime) Objects() Objects          { return nil }
+func (r *fakeRuntime) Knowledge() Knowledge      { return nil }
 
 func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, Tx) error) error {
 	if !r.live {
@@ -86,6 +87,14 @@ func (r *fakeRuntime) IngestBatch(context.Context, UserID, SourceName, []Record,
 
 func (r *fakeRuntime) IngestPosition(context.Context, SourceName) (BatchPosition, error) {
 	return "", nil
+}
+
+func (r *fakeRuntime) IngestMemberBatch(context.Context, UserID, SourceName, []Record, BatchPosition, PositionVersion) (MemberBatchResult, error) {
+	return MemberBatchResult{}, nil
+}
+
+func (r *fakeRuntime) MemberIngestPosition(context.Context, UserID, SourceName) (MemberPosition, error) {
+	return MemberPosition{}, nil
 }
 
 // ingestCall is one recorded Ingest, so a test can assert WHAT was handed over

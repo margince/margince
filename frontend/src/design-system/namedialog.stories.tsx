@@ -139,6 +139,26 @@ export const DuplicateName: Story = {
   },
 };
 
+// The server refused the name as too long.
+export const NameTooLong: Story = {
+  args: {
+    title: "Rename reason",
+    initial: "Went quiet",
+    confirmLabel: "Save name",
+    maxLength: 120,
+    nameProblem: "Reason: at most 120 characters.",
+  },
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    const field = dialog.getByLabelText("Reason");
+    await expect(field).toHaveAttribute("data-character-limit", "120");
+    await userEvent.type(field, " after the demo{Enter}");
+    await expect(field).toHaveAccessibleDescription(
+      "Reason: at most 120 characters.",
+    );
+  },
+};
+
 export const DuplicateNamePhone: Story = {
   ...DuplicateName,
   globals: { viewport: { value: "phone" } },

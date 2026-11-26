@@ -394,7 +394,7 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 	silent := Subject{
 		DealID: e.seedDeal(t), Owner: e.rep.String(),
 		AmountMinor: &amount, Currency: "EUR", WinProbability: 90, Likely: true,
-		OfferTotalMinor: &offered, HasNextStep: true, HasEconomicBuyer: true,
+		OfferNetMinor: &offered, HasNextStep: true, HasEconomicBuyer: true,
 	}
 	subjects := []Subject{silent}
 	coverage := checkedCoverage
@@ -409,8 +409,8 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 	}
 
 	// Tonight the offers cannot be read, and the deal row alone no longer
-	// shows the gap: OfferTotalMinor is what the offers source feeds.
-	subjects[0].OfferTotalMinor = nil
+	// shows the gap: OfferNetMinor is what the offers source feeds.
+	subjects[0].OfferNetMinor = nil
 	coverage = func(context.Context, pgx.Tx, time.Time) []SourceCoverage {
 		now := time.Now().UTC()
 		return []SourceCoverage{
@@ -437,7 +437,7 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 
 	// The admit arm: the NEXT night the offers are read again and agree. Now
 	// absence is a looked-at fact, and the finding clears.
-	subjects[0].OfferTotalMinor = &amount
+	subjects[0].OfferNetMinor = &amount
 	coverage = checkedCoverage
 	got, err := scanner.Scan(ctx, time.Now().UTC())
 	if err != nil {

@@ -72,6 +72,8 @@ seeds:
       agent_loop: [premium, cheap_cloud]
       nl_search: [premium, cheap_cloud]
       voice_build: [premium, cheap_cloud]
+      rewrite: [premium, cheap_cloud]
+      growth_fit: [premium, cheap_cloud]
     # The embed lane rides the SAME provider as the tiers above, so a dev
     # stack needs one credential (GEMINI_API_KEY) rather than two.
     #

@@ -81,7 +81,7 @@ func DueChannelConnections(ctx context.Context, pool *pgxpool.Pool, provider str
 		err := database.WithWorkspaceTx(wsCtx, pool, func(tx pgx.Tx) error {
 			rows, err := tx.Query(ctx, `
 				SELECT id FROM channel_connection
-				 WHERE provider = $1 AND status = $2 AND archived_at IS NULL`,
+				 WHERE provider = $1 AND status = $2 AND archived_at IS NULL AND `+botConnectionRow,
 				provider, channelStatusConnected)
 			if err != nil {
 				return err
@@ -130,7 +130,7 @@ func LoadChannelPollTarget(ctx context.Context, pool *pgxpool.Pool, provider str
 		return tx.QueryRow(ctx, `
 			SELECT id, channel_id, credential_ref, poll_offset
 			  FROM channel_connection
-			 WHERE id = $1 AND provider = $2 AND status = $3 AND archived_at IS NULL`,
+			 WHERE id = $1 AND provider = $2 AND status = $3 AND archived_at IS NULL AND `+botConnectionRow,
 			id, provider, channelStatusConnected).
 			Scan(&out.ID, &out.ChannelID, &credentialRef, &out.PollOffset)
 	})

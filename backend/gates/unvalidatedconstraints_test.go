@@ -65,11 +65,19 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 		"precision data task fills in only the rows the noon repair's audit proves; the rest stay " +
 		"unknown on purpose, and the rule binds every row written since",
 	"finance_invoice.finance_invoice_names_its_customer_link": unnamedCustomerLink,
+	"company.company_source_check":                            unlistedRecordSource,
+	"contact.contact_source_check":                            unlistedRecordSource,
 	"deal.deal_source_check":                                  unlistedRecordSource,
 	"offer.offer_source_check":                                unlistedRecordSource,
 	"project.project_source_check":                            unlistedRecordSource,
 	"signal.signal_source_check":                              unlistedRecordSource,
 	"finance_payment.finance_payment_names_its_customer_link": unnamedCustomerLink,
+	"activity_participant.activity_participant_address_is_canonical": "" +
+		"rows written before the check hold the address as typed, and the participant address data " +
+		"task lowercases them after the migrations ran. A VALIDATE would fail the upgrade of an " +
+		"installation whose task has not finished, and no migration may wait for a data task. The " +
+		"check binds every row written since; validating it needs a minimum upgrade-from release " +
+		"that guarantees the task ran",
 })
 
 // unlistedRecordSource is the cost shared by the source checks whose older rows

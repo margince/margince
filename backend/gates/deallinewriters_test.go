@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -109,7 +110,22 @@ func TestEveryLinesDealMoneyWriterUsesItsGuard(t *testing.T) {
 	}
 }
 
+var (
+	linePackageFlowsOnce  sync.Once
+	linePackageFlowsValue map[string]*lineLockFlow
+)
+
+// linePackageFlows is built once per test binary; its readers never write it.
 func linePackageFlows(t *testing.T) map[string]*lineLockFlow {
+	t.Helper()
+	linePackageFlowsOnce.Do(func() { linePackageFlowsValue = buildLinePackageFlows(t) })
+	if linePackageFlowsValue == nil {
+		t.Fatal("the product lock flows were not built: the gate that built them first reports why")
+	}
+	return linePackageFlowsValue
+}
+
+func buildLinePackageFlows(t *testing.T) map[string]*lineLockFlow {
 	t.Helper()
 	groups := map[string][]*ast.File{}
 	for _, source := range parseProductGoFiles(t) {
@@ -200,7 +216,7 @@ func hasSQLSequence(statement string, words ...string) bool {
 }
 
 func lineSeamProblems(flow *lineLockFlow, constants map[string]string) []string {
-	allowed := map[string]bool{"Store.settleDealLines": true, "Store.leaveLinesMode": true}
+	allowed := map[string]bool{"Store.settleDealLines": true, "Store.leaveLinesMode": true, "Store.releaseMergedDealPin": true}
 	seen := map[string]bool{}
 	var problems []string
 	if flow.external[lineValueSeam] {

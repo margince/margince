@@ -35,7 +35,7 @@ func seedFollowUps(t *testing.T, e *integration.Env) (sent, met ids.UUID) {
 				`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Contact A', 'seed', 'system')`,
 				[]any{contact},
 			},
-			{`INSERT INTO company (id, display_name, lifecycle, source, captured_by)
+			{`INSERT INTO company (id, display_name, status, source, captured_by)
 			  VALUES ($1, 'Company A', 'customer', 'seed', 'system')`, []any{company}},
 			{`INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 			  VALUES ('employment', $1, $2, 'seed', 'system')`, []any{contact, company}},

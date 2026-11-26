@@ -81,7 +81,7 @@ const longNames = LONG_NAMES.map((display_name, i) => ({
   ...company,
   id: `o-long-${i}`,
   display_name,
-  lifecycle: i === 1 ? "unknown" : "customer",
+  status: i === 1 ? "unknown" : "customer",
   website_url: i === 2 ? null : `https://www.brandt-${i}.example/fleet`,
   archived_at: i === 2 ? "2026-06-20T09:00:00Z" : undefined,
 }));

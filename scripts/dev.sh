@@ -39,6 +39,8 @@ case " ${GOFLAGS:-} " in
 	*" -trimpath "*) ;;
 	*) [ -n "${CI:-}" ] || export GOFLAGS="${GOFLAGS:+$GOFLAGS }-trimpath" ;;
 esac
+# -trimpath leaves runtime.GOROOT empty in gen-composition, as the Makefiles say.
+[ -n "${CI:-}" ] || [ -n "${GOROOT:-}" ] || export GOROOT="$(go env GOROOT)"
 # Runtime state (logs, pids, claims) lives under dev_state_root below, one
 # directory per machine rather than per worktree — keep everything this script
 # writes owner-only.
@@ -1701,8 +1703,15 @@ restore)
   psql_owner postgres -c "CREATE DATABASE \"${db}\" TEMPLATE \"${db}_tmpl\"" </dev/null
   ;;
 
+query)
+  # SQL from stdin against this stack's database, as its owner, tab-separated.
+  # The e2e lane reads what a run left before the next restore takes it away.
+  ensure_infra
+  psql_owner "$db" -X -q -A -F $'\t' -P footer=off -v ON_ERROR_STOP=1
+  ;;
+
 *)
-  echo "usage: dev.sh {up|stop|sweep|snapshot|restore} [slug] [--drop]" >&2
+  echo "usage: dev.sh {up|stop|sweep|snapshot|restore|query} [slug] [--drop]" >&2
   exit 2
   ;;
 esac

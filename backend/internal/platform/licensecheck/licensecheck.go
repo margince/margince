@@ -3,8 +3,8 @@
 
 // Package licensecheck answers what this installation is entitled to, offline.
 //
-// It runs the license-validation WebAssembly module margince-constellation
-// publishes — bundled under module/ byte-for-byte as published — inside a
+// It runs the license-validation WebAssembly module the publisher
+// releases, bundled under module/ byte-for-byte as published, inside a
 // wazero runtime in this process. The module embeds the public keyset it trusts
 // and verifies the operator's token against it with no callout of any kind, so
 // an air-gapped installation proves its entitlement exactly the way a connected
@@ -54,16 +54,16 @@ const (
 )
 
 // The bundled module and the release it came from, installed as a set by the
-// publisher's own tooling in margince-constellation and never by hand — this
-// repository holds the artifact, not the machinery for fetching it.
+// publisher's own tooling and never by hand. This repository holds the artifact,
+// not the machinery for fetching it.
 // module_test.go holds the blob to the recorded digest, so a swapped or truncated
 // one fails the build gate rather than a boot.
 //
 // The file name says nothing about compression on purpose. Upstream's framing is
-// upstream's to change — it moved from gzip to brotli once already — and the host
+// upstream's to change (it moved from gzip to brotli once already). The host
 // reads the format out of the bytes, so a refresh that changes it stays a
-// data-only diff instead of also editing this directive. Which artifact was
-// fetched is recorded in the digest file beside the blob.
+// data-only diff and does not edit this directive. Which artifact was fetched
+// is recorded in the digest file beside the blob.
 var (
 	//go:embed module/licensecheck.wasm.module
 	bundledModule []byte
@@ -80,7 +80,23 @@ const ProductionIssuer = issuer
 // was refused" and "the module that refused it is three releases old" are
 // different problems and an operator can only tell them apart if the boot log
 // names the module.
-func ModuleVersion() string { return strings.TrimSpace(moduleVersion) }
+func ModuleVersion() string {
+	tag, _ := parseModuleVersion(moduleVersion)
+	return tag
+}
+
+// parseModuleVersion splits module/VERSION into the release tag and the digest
+// from its `for <sha256>` line, which names the blob the tag was written for.
+// That line lets a test notice a blob swapped without the tag. The digest is
+// empty when the line is missing or malformed.
+func parseModuleVersion(raw string) (tag, forDigest string) {
+	first, rest, _ := strings.Cut(strings.TrimSpace(raw), "\n")
+	digest, ok := strings.CutPrefix(strings.TrimSpace(rest), "for ")
+	if !ok {
+		return strings.TrimSpace(first), ""
+	}
+	return strings.TrimSpace(first), strings.TrimSpace(digest)
+}
 
 // State is what a check concluded.
 type State string

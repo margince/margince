@@ -3,8 +3,8 @@
   "criteria": [
     1
   ],
-  "passed": 1,
-  "runs": 3,
+  "passed": 2,
+  "runs": 2,
   "pass_at": 2,
   "driver": "claude:cli",
   "effort": "thinking off",
@@ -13,65 +13,61 @@
   "door": "mcp",
   "self_judged": true,
   "stamp": {
-    "scenario": "c18314eef9aea15e",
-    "tools": "6e82141203cec7ea",
-    "instructions": "c5c644eee9719be0",
+    "scenario": "87bf361416fe5a25",
+    "tools": "fc9202e3b0983776",
+    "instructions": "d707a123fe53827f",
     "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:59:07Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:31:31Z"
+    "harness": "0fe690d35efcc703",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "63922f0d5214101ce8fd648757b5dce3558da74d",
+    "ran_at": "2026-11-26T03:31:43Z",
+    "graded_commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "graded_at": "2026-11-26T04:04:16Z"
   },
   "usage": {
-    "input_tokens": 20,
-    "output_tokens": 3339,
-    "cache_creation_input_tokens": 8993,
-    "cache_read_input_tokens": 771622,
-    "runs_measured": 3,
-    "runs_costed": 3,
-    "cost_usd": 0.1466
+    "input_tokens": 12,
+    "output_tokens": 2186,
+    "cache_creation_input_tokens": 6801,
+    "cache_read_input_tokens": 437508,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.0928
   },
   "tools_by_run": [
     {
       "passed": true,
       "tools": [
-        "get_member",
         "get_user_handover",
         "list_colleagues",
+        "preview_member_retirement",
         "read_workspace"
-      ]
+      ],
+      "refused": []
     },
     {
-      "passed": false,
+      "passed": true,
       "tools": [
         "get_user_handover",
         "list_colleagues",
         "preview_member_retirement",
         "read_workspace",
         "whoami"
-      ]
-    },
-    {
-      "passed": false,
-      "tools": [
-        "get_user_handover",
-        "list_colleagues",
-        "preview_member_retirement",
-        "read_workspace",
-        "whoami"
-      ]
+      ],
+      "refused": []
     }
   ],
   "efficiency": {
-    "runs": 3,
+    "runs": 2,
     "calls": {
-      "median": 4,
+      "median": 3.5,
       "min": 3,
       "max": 4
     },
     "turns": {
-      "median": 5,
+      "median": 4.5,
       "min": 4,
       "max": 5
     },
@@ -80,20 +76,25 @@
       "min": 0,
       "max": 0
     },
+    "retries": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
     "prompt_tokens": {
-      "median": 234479,
-      "min": 234448,
-      "max": 311708
+      "median": 222160.5,
+      "min": 221786,
+      "max": 222535
     },
     "output_tokens": {
-      "median": 1134,
-      "min": 1015,
-      "max": 1190
+      "median": 1093,
+      "min": 1057,
+      "max": 1129
     },
     "duration_ms": {
-      "median": 11484,
-      "min": 11155,
-      "max": 11508
+      "median": 11371,
+      "min": 10986,
+      "max": 11756
     }
   }
 }

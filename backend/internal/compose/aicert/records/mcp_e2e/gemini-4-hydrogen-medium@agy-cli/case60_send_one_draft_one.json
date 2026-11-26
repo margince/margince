@@ -14,20 +14,24 @@
   "self_judged": false,
   "stamp": {
     "scenario": "5551ebf05ff463ba",
-    "tools": "2e623af7f8e2b864",
-    "instructions": "c5c644eee9719be0",
+    "tools": "52fa92fe7510a6d9",
+    "instructions": "4eab26d5fff0793f",
     "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
-    "ran_at": "2026-11-21T18:53:54Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:34:18Z"
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T10:17:04Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T10:17:04Z"
   },
   "usage": {
-    "input_tokens": 57775,
-    "output_tokens": 16121,
+    "input_tokens": 64908,
+    "output_tokens": 20581,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 205397,
+    "cache_read_input_tokens": 219991,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -40,8 +44,8 @@
         "draft_email",
         "draft_outbound",
         "find_records",
+        "list_records",
         "read_context",
-        "read_record",
         "search_records",
         "whoami"
       ]
@@ -53,6 +57,7 @@
         "draft_email",
         "draft_outbound",
         "find_records",
+        "list_documents",
         "list_records",
         "read_context",
         "read_record",
@@ -64,9 +69,9 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 15.5,
-      "min": 15,
-      "max": 16
+      "median": 17,
+      "min": 17,
+      "max": 17
     },
     "turns": {
       "median": 7.5,
@@ -79,14 +84,14 @@
       "max": 1
     },
     "prompt_tokens": {
-      "median": 131586,
-      "min": 114626,
-      "max": 148546
+      "median": 142449.5,
+      "min": 134260,
+      "max": 150639
     },
     "output_tokens": {
-      "median": 8060.5,
-      "min": 7480,
-      "max": 8641
+      "median": 10290.5,
+      "min": 10050,
+      "max": 10531
     }
   }
 }

@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { en } from "../i18n/en";
 import {
   installFetchStub,
   meRoute,
@@ -121,4 +122,36 @@ export const RefusedByArchive: Story = {
       </p>
     </>
   ),
+};
+
+// A read seat is told about its seat, whatever its role holds.
+export const RefusedBySeat: Story = {
+  beforeEach: () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "read" }),
+    });
+  },
+  args: SOURCE,
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(
+        within(canvasElement).getByTestId("merge-record"),
+      ).toHaveAccessibleDescription(en["settings.seatRefused"]),
+    );
+  },
+};
+
+// A role that only reads is told to ask for another role.
+export const RefusedByRole: Story = {
+  beforeEach: () => {
+    installFetchStub({ "GET /me": meRoute({ contact: ["read"] }) });
+  },
+  args: SOURCE,
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(
+        within(canvasElement).getByTestId("merge-record"),
+      ).toHaveAccessibleDescription(en["record.roleReadsOnly"]),
+    );
+  },
 };

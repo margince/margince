@@ -19,6 +19,7 @@ import { QueryStates } from "../../design-system/querystates";
 import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { TagPill } from "../../design-system/tagpill";
+import { ABSENT } from "../../format/absent";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
@@ -156,7 +157,7 @@ function TagTable({
       align: "end",
       render: (tag) =>
         tag.carried_by === undefined
-          ? "—"
+          ? ABSENT
           : plural("tagAdmin.usedBy", tag.carried_by, {
               count: formatNumber(tag.carried_by, locale),
             }),

@@ -13,9 +13,12 @@ package compose
 
 import (
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/mcpe2e"
 )
 
 func renderMCPToolCoveragePage(r mcpToolCoverage) []byte {
@@ -92,14 +95,13 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 
 	p.WriteString("## By model\n\n")
 	p.WriteString("Which model drove the lane, and how it went. The tool columns further down are " +
-		"the same for every model, because what a case requires belongs to the scenario. " +
-		"What changes here is whether the driving succeeded.\n\n")
+		"the same for every model, because what a case requires belongs to the scenario. What changes here is whether the driving succeeded.\n\n")
 	p.WriteString("| Model | Cases run | Reached their bar | Below it | Runs passed | Reliability | " +
-		"Calls per case (median) | Slow |\n|---|---:|---:|---:|---:|---:|---:|---:|\n")
+		"Calls per case (median) | Refused per case | Retries per case | Slow |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, m := range r.Models {
-		fmt.Fprintf(p, "| `%s` | %d of %d | %d | %d | %d/%d | %.0f%% | %s | %d |\n",
+		fmt.Fprintf(p, "| `%s` | %d of %d | %d | %d | %d/%d | %.0f%% | %s | %s | %s | %d |\n",
 			m.Model, m.CasesRecorded, r.Totals.Cases, m.CasesHeld, m.CasesBelowBar,
-			m.Passed, m.Runs, 100*m.Reliability, m.CallsPerCase, len(m.Slow))
+			m.Passed, m.Runs, 100*m.Reliability, m.CallsPerCase, m.MedianRefused, m.MedianRetries, len(m.Slow))
 	}
 	p.WriteString("\n")
 	for _, m := range r.Models {
@@ -122,10 +124,9 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## The use cases\n\n")
 	p.WriteString("One row per case per model that ran it. A case nobody has run appears once, " +
-		"marked `not run`, rather than being dropped: a case missing from this table would read " +
-		"as a case that does not exist.\n\n")
-	p.WriteString("| Case | Model | Result | Passed | Bar | Calls (median) | Turns (median) | Criteria | Requires |\n" +
-		"|---|---|---|---:|---:|---:|---:|---|---|\n")
+		"marked `not run`, rather than being dropped: a case missing from this table would read as a case that does not exist.\n\n")
+	p.WriteString("| Case | Model | Result | Passed | Bar | Calls (median) | Turns (median) | Refused | Retries | Criteria | Requires |\n" +
+		"|---|---|---|---:|---:|---:|---:|---:|---:|---|---|\n")
 	for _, c := range r.Cases {
 		criteria := criteriaNames(c.Name, c.Criteria, r.Criteria)
 		link := fmt.Sprintf("[%s](../../e2e/llm/scenarios/%s)", c.Name, c.File)
@@ -145,9 +146,12 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 			if run.Regraded {
 				result += ", re-graded"
 			}
-			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s | %s | %s |\n",
-				link, run.Model, result, run.Passed, run.Runs, run.PassAt,
-				run.Efficiency.CallsCell(), run.Efficiency.TurnsCell(), criteria, requiresColumn(c))
+			if len(run.EarlierListing) > 0 {
+				result += ", on an earlier listing (" + strings.Join(run.EarlierListing, ", ") + ")"
+			}
+			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s | %s | %s | %s | %s |\n",
+				link, run.Model, result, run.Passed, run.Runs, run.PassAt, run.Efficiency.CallsCell(), run.Efficiency.TurnsCell(),
+				run.Efficiency.RefusedCell(), run.Efficiency.RetriesCell(), criteria, requiresColumn(c))
 		}
 	}
 	p.WriteString("\n")
@@ -521,4 +525,19 @@ func calledInHeldRuns(cases []caseRow, tool string) []string {
 		}
 	}
 	return named
+}
+
+// earlierListings is what changed since each verdict of one tree ran, per `make e2e-llm-report`.
+func earlierListings(recordDir string) (map[verdictKey][]string, error) {
+	lines, err := mcpe2e.Report(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+	out := map[verdictKey][]string{}
+	for _, line := range lines {
+		if line.Tree == filepath.Base(recordDir) && len(line.Why) > 0 {
+			out[verdictKey{model: line.Folder, scenario: line.Scenario}] = line.Why
+		}
+	}
+	return out, nil
 }

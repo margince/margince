@@ -28,7 +28,7 @@ func New() extension.Extension {
 
 func TestSettingsDeriveIntoTheManifestSortedByKey(t *testing.T) {
 	derived, err := deriveSynthetic(t, "x", settingUnitSource(
-		"\t\t\t{Key: \"region\", Label: \"Region\", Kind: extension.SettingText},\n"+
+		"\t\t\t{Key: \"region\", Label: \"Region\", Kind: extension.SettingText, Initial: \"eu-west\"},\n"+
 			"\t\t\t{Key: \"live\", Label: \"Live\", Hint: \"Send for real\", Kind: extension.SettingSwitch},\n"))
 	if err != nil {
 		t.Fatal(err)
@@ -38,8 +38,8 @@ func TestSettingsDeriveIntoTheManifestSortedByKey(t *testing.T) {
 	if live < 0 || region < 0 || live > region {
 		t.Fatalf("the manifest misses a setting or does not sort them by key:\n%s", s)
 	}
-	if !strings.Contains(s, `"kind": "switch"`) || !strings.Contains(s, `"hint": "Send for real"`) {
-		t.Errorf("the manifest misses the kind or the hint:\n%s", s)
+	if !strings.Contains(s, `"kind": "switch"`) || !strings.Contains(s, `"hint": "Send for real"`) || !strings.Contains(s, `"initial": "eu-west"`) {
+		t.Errorf("the manifest misses the kind, the hint or the initial value:\n%s", s)
 	}
 }
 
@@ -50,7 +50,8 @@ func TestASettingTheBootWouldRefuseIsRefusedAtGeneration(t *testing.T) {
 		"no label":             "\t\t\t{Key: \"live\", Kind: extension.SettingSwitch},\n",
 		"one key twice": "\t\t\t{Key: \"live\", Label: \"A\", Kind: extension.SettingSwitch},\n" +
 			"\t\t\t{Key: \"live\", Label: \"B\", Kind: extension.SettingSwitch},\n",
-		"an unknown field": "\t\t\t{Key: \"live\", Label: \"Live\", Kind: extension.SettingSwitch, Default: \"on\"},\n",
+		"an unknown field":                      "\t\t\t{Key: \"live\", Label: \"Live\", Kind: extension.SettingSwitch, Default: \"true\"},\n",
+		"an initial value its kind cannot hold": "\t\t\t{Key: \"live\", Label: \"Live\", Kind: extension.SettingSwitch, Initial: \"on\"},\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := deriveSynthetic(t, "x", settingUnitSource(setting)); err == nil {

@@ -29,6 +29,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/assurancefloor"
+	"github.com/margince/margince/backend/internal/compose/assurancepair"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -200,7 +201,11 @@ func assuranceDealExceptionsOwnedBy(
 	}
 	defer rows.Close()
 
-	return pgx.CollectRows(rows, scanLabelledException)
+	found, err := pgx.CollectRows(rows, scanLabelledException)
+	if err != nil {
+		return nil, err
+	}
+	return assurancepair.WithholdHidden(ctx, tx, found)
 }
 
 // findingPricedJoin renames a finding's amount and currency, as rendered, to

@@ -41,6 +41,7 @@ import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import { isPricedProvider } from "./rate-manual";
 import { RefreshFromSources } from "./rate-refresh";
+import { useRemoveFxRate } from "./rate-remove";
 import "./rates.css";
 
 type FxRate = components["schemas"]["FxRate"];
@@ -99,6 +100,7 @@ export function FxRatesCard() {
   // principal the server would have let write.
   const canManage = useCanUpsert("fx_rate");
   const [open, setOpen] = useState(false);
+  const remove = useRemoveFxRate();
   const query = useQuery({
     queryKey: ["fx-rates"],
     enabled: canRead,
@@ -168,6 +170,7 @@ export function FxRatesCard() {
           </QueryGate>
         )}
         {open ? <FxRateModal onClose={() => setOpen(false)} /> : null}
+        {remove.dialog}
       </PanelBody>
       {/* The sheet is the panel's subject, so it runs edge to edge. */}
       {rates?.length ? (
@@ -195,6 +198,7 @@ export function FxRatesCard() {
               render: (row) =>
                 formatDate(row.effective_date, locale, readerZone),
             },
+            ...remove.columns,
           ]}
         />
       ) : null}
