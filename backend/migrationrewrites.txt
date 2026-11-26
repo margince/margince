@@ -299,3 +299,6 @@
 1795648399_the_ai_team_rules_have_their_own_grant.up.sql | role | updates only the fixed set of system roles, one grant each, at most six rows per workspace
 1795648399_the_ai_team_rules_have_their_own_grant.down.sql | role | removes that one grant from the same fixed set of system roles
 1795650957_a_member_merge_confirmation_names_its_pair.down.sql | auth_token | holds only live single-use mail tokens, a few per account, and the rollback deletes the confirmation tokens, which are all of one purpose and expire in three days
+1795665583_a_zalo_message_can_name_its_channel.down.sql | * | the down migration is a single SELECT 1; the provider remains available to historical foreign keys and no row changes
+1795672904_the_edge_precision_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795675479_an_extension_counts_its_stored_objects.up.sql | * | creates a new empty table and its two text guards; the guards act on later writes only, and no row exists to change

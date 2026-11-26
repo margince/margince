@@ -221,6 +221,11 @@ func (s *Store) writeFxRate(ctx context.Context, tx pgx.Tx, from string, in SetF
 		out  FxRateRow
 		fxID ids.UUID
 	)
+	// The day's rate sent again appends no version: older figures need no
+	// second copy of the one they already price from.
+	if same, held, err := heldFxRate(ctx, tx, from, base, effDate, rate); err != nil || held {
+		return same, err
+	}
 	// A correction supersedes the day's row and appends a version, so older
 	// figures stay reproducible. One instant stamps both, so no read sees neither.
 	var changedAt time.Time
@@ -253,28 +258,6 @@ func (s *Store) writeFxRate(ctx context.Context, tx pgx.Tx, from string, in SetF
 		return FxRateRow{}, fmt.Errorf("audit fx_rate %s: %w", action, err)
 	}
 	return out, nil
-}
-
-// refuseRewritingHistory keeps the sheet append-forward with one exception: a
-// past date strictly earlier than every stored rate for the currency. Such a
-// row only prices days that had no rate, so no figure already computed moves.
-// The caller holds the currency's write-identity lock, so the earliest date
-// cannot change between this read and the write.
-func refuseRewritingHistory(ctx context.Context, tx pgx.Tx, from string, effDate, today time.Time) error {
-	if !effDate.Before(today) {
-		return nil
-	}
-	var earliest *time.Time
-	if err := tx.QueryRow(ctx,
-		`SELECT min(rate_date) FROM fx_rate /* every version */ WHERE from_currency = $1`, from).Scan(&earliest); err != nil {
-		return fmt.Errorf("read the earliest fx_rate for %s: %w", from, err)
-	}
-	if earliest == nil || effDate.Before(*earliest) {
-		return nil
-	}
-	return fxInvalid("effective_date", "fx_rate_past", fmt.Sprintf(
-		"effective_date cannot be in the past unless it is before the earliest %s rate (%s)",
-		from, earliest.Format(time.DateOnly)))
 }
 
 // normalizeFxCurrencyRate validates and upper-cases the currency and checks the

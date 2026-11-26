@@ -224,7 +224,7 @@ var rowScopeSpellings = map[string]bool{
 	"ActivityDiscoverClause": true, "ActivityContentClause": true, "ActivityMessageContentClause": true,
 	"EnsureActivityVisible": true, "EnsureActivityVisibleLive": true,
 	"EnsureActivityContentVisible": true, "EnsureActivityContentVisibleLive": true,
-	"SignalScopeClause": true, "EnsureSignalVisible": true, "EnsureSignalVisibleLive": true,
+	"DealChildScopeClause": true, "SignalScopeClause": true, "EnsureSignalVisible": true, "EnsureSignalVisibleLive": true,
 	"RelationshipEndpointScope": true, "EnsureRelationshipVisible": true,
 	// EdgeReadScope returns RelationshipEndpointScope's clause behind the
 	// object gate. A read reaching it applies the endpoint bound as surely as

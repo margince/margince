@@ -11809,6 +11809,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/channel-connections/zalo-oa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the Zalo Official Accounts connected to the workspace.
+         * @description Newest first. No secret is returned.
+         */
+        get: operations["listZaloOAConnections"];
+        put?: never;
+        /**
+         * Connect a Zalo Official Account to the workspace.
+         * @description Seals the access and refresh tokens, the app secret and the OA secret key in the credential
+         *     store and makes a live connection for the Official Account, with a team seat that the team in
+         *     `readerTeamId` reads. The seat starts `held`. No call to Zalo is made. Set the webhook URL of
+         *     the Zalo app to `<public_base_url>/v1/channel-events/zalo-oa`. A background job replaces the
+         *     token pair before the access token expires.
+         *
+         *     One live connection exists per Official Account: connecting one that is already connected
+         *     is a `409`.
+         */
+        post: operations["createZaloOAConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-connections/zalo-oa/{id}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change who may read a Zalo Official Account's messages.
+         * @description Sets the mail visibility of the account's seat, as `PATCH /shared-mailboxes/{id}` does for a
+         *     shared mailbox and the WhatsApp route does for its numbers: the next message follows it.
+         *     `shared` needs `capture.shared_posture_allowed` and `classified` is refused, both with `422`.
+         *     The request must carry `confirm: true`. Admin only, in a signed-in session.
+         */
+        patch: operations["updateZaloOAConnectionVisibility"];
+        trace?: never;
+    };
+    "/channel-connections/zalo-oa/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect a Zalo Official Account from the workspace.
+         * @description Archives the connection and destroys the sealed secrets. From then on the webhook route
+         *     stores nothing for the Official Account. What its chats already filed stays.
+         */
+        delete: operations["disconnectZaloOAConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channel-links/{record_type}/{id}": {
         parameters: {
             query?: never;
@@ -11995,6 +12076,34 @@ export interface paths {
          *     once.
          */
         post: operations["receiveWhatsAppWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/zalo-oa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take a signed Zalo Official Account webhook event (anonymous).
+         * @description Zalo posts one event per call, signed in `X-ZEvent-Signature` (`mac=<hex SHA-256 of app_id,
+         *     raw body, timestamp and the OA secret key>`). The signature is checked against every
+         *     connected Official Account's secret key before any field but the two it covers is read.
+         *     A message event for an Official Account whose own secret verified, and that is still live, is
+         *     stored once and queued for filing, in one transaction. Follow, unfollow, seen and reaction events, a message for
+         *     an Official Account that is not connected, and a message of an erased customer are
+         *     acknowledged with `200` and stored nowhere, so Zalo does not retry them. A retried
+         *     delivery is stored once. The call makes no request to Zalo, because Zalo expects the
+         *     answer within two seconds.
+         */
+        post: operations["receiveZaloOAWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -33895,6 +34004,73 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        /** @description One Zalo Official Account connected to the workspace. No secret is part of it. */
+        ZaloOAConnection: {
+            /** Format: uuid */
+            id: string;
+            /** @description Zalo's id of the Official Account, the key a webhook event is matched to its connection by. */
+            oaId: string;
+            /** @description The Zalo app that serves the Official Account. */
+            appId: string;
+            displayName: string;
+            /**
+             * @description `reauth_required` when Zalo refused the refresh token, so the Official Account must be disconnected and connected again with fresh tokens.
+             * @enum {string}
+             */
+            status: "connected" | "reauth_required" | "disconnected";
+            /** Format: date-time */
+            connectedAt: string;
+            /**
+             * Format: uuid
+             * @description The seat the account's messages file through.
+             */
+            seatId?: string | null;
+            /**
+             * Format: uuid
+             * @description The team that reads the account's messages.
+             */
+            readerTeamId?: string | null;
+            /**
+             * @description What the seat asks of the account's messages. Changed with `PATCH /channel-connections/zalo-oa/{id}/visibility`.
+             * @enum {string|null}
+             */
+            mailVisibility?: "held" | "shared" | null;
+        };
+        ZaloOAConnectionListResponse: {
+            data: components["schemas"]["ZaloOAConnection"][];
+        };
+        CreateZaloOAConnectionRequest: {
+            /**
+             * Format: uuid
+             * @description The team that reads the account's messages. The account's seat starts `held`: only this team reads them until an admin shares them.
+             */
+            readerTeamId: string;
+            oaId: string;
+            appId: string;
+            displayName: string;
+            /** @description The Zalo app's secret key, used to renew the tokens. Sealed into the credential store on arrival and never echoed back. */
+            appSecret: string;
+            /** @description The OA secret key that signs each webhook event. Sealed into the credential store on arrival and never echoed back. */
+            oaSecretKey: string;
+            /** @description The Official Account's access token. Sealed into the credential store on arrival and never echoed back. */
+            accessToken: string;
+            /** @description The Official Account's refresh token. It is single use; the renewal job replaces it. Sealed into the credential store on arrival and never echoed back. */
+            refreshToken: string;
+        };
+        /** @description One event from Zalo, as the signature covers it. The route reads the raw body and the server decodes it, so only the fields every event carries are named here. */
+        ZaloWebhookEvent: {
+            app_id?: string;
+            /** @description For example `user_send_text` or `oa_send_text`. */
+            event_name: string;
+            /** @description Milliseconds since the epoch, as the text the signature covers. */
+            timestamp: string;
+        };
+        ZaloWebhookReceipt: {
+            /** @description Messages kept and queued for filing. A retried delivery counts again and is stored once. */
+            stored: number;
+            /** @description Events not kept: a follow, unfollow, seen or reaction event, an Official Account that is not connected, an erased customer, or an event that could not be decoded. */
+            skipped: number;
+        };
         /** @description One Telegram Business account the owner linked to the workspace's bot. Nothing from the account is stored until an admin approves it. */
         TelegramBusinessConnection: {
             /** Format: uuid */
@@ -35146,6 +35322,18 @@ export interface components {
             details?: {
                 [key: string]: unknown;
             };
+        };
+        /** @description What the caller's row scope withheld from one list on a record page, so a short list never reads as the whole one. It states how many entries were withheld and which live colleagues own them, so the reader knows whom to ask. A withheld record's name, value and every other field stay withheld. Count 0 with no holders when nothing was withheld. */
+        HiddenRecords: {
+            /** @description How many entries the list would have shown under an unbounded scope and did not. It includes entries owned by a colleague who has left, who is not in `holders`. */
+            count: number;
+            /** @description The live colleagues who own at least one withheld entry, each once, by name. */
+            holders: components["schemas"]["HiddenRecordHolder"][];
+        };
+        HiddenRecordHolder: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string;
         };
         PageInfo: {
             /** @description Opaque cursor for the next page, or null if none. */
@@ -37300,9 +37488,11 @@ export interface components {
             state: components["schemas"]["FinanceSummaryState"];
             /**
              * @description Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
-             *     Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
+             *     Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
              */
             billing_contacts?: components["schemas"]["BillingContact"][];
+            /** @description The billing entries the caller's contact row scope withheld from `billing_contacts`, the same answer the company page gives. Absent exactly when `billing_contacts` is. */
+            billing_contacts_hidden?: components["schemas"]["HiddenRecords"];
             /** @description Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected. */
             provider?: string | null;
             /** @description The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key. */
@@ -37678,6 +37868,8 @@ export interface components {
             strength_bucket: "strong" | "developing" | "cold";
             /** Format: date-time */
             last_interaction_at?: string | null;
+            /** @description How to read `last_interaction_at`, from the activity it names. Absent when that is null. */
+            readonly last_interaction_precision?: components["schemas"]["OccurredPrecision"];
         };
         /** @description One contact's stakeholder role on one of the account's deals. */
         Company360DealRole: {
@@ -38144,8 +38336,12 @@ export interface components {
                 data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
             };
-            /** @description Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld. */
+            /** @description The account's current employees the caller may not see, by the contact row scope or by the employment tie's own read scope. Absent exactly when `contacts` is. */
+            contacts_hidden?: components["schemas"]["HiddenRecords"];
+            /** @description Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`. A contact outside the caller's row scope is not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them. */
             billing_contacts?: components["schemas"]["BillingContact"][];
+            /** @description The billing entries the caller's contact row scope withheld from `billing_contacts`. Absent exactly when `billing_contacts` is. */
+            billing_contacts_hidden?: components["schemas"]["HiddenRecords"];
             deals?: components["schemas"]["Company360Deals"];
             /** @description The company's unarchived projects, work in motion first (delivering, pursuing, initiative, then closed), under the caller's project row scope. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
             projects?: components["schemas"]["Company360Project"][];
@@ -39274,6 +39470,8 @@ export interface components {
              * @description The newest `occurred_at` among the activities the edge counts. A client orders edges by it.
              */
             last_at?: string | null;
+            /** @description How to read `last_at`, from the activity it names. Absent when that is null. */
+            readonly last_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows. */
             receipts?: components["schemas"]["ContactGraphReceipt"][];
         };
@@ -39363,6 +39561,8 @@ export interface components {
             two_way: boolean;
             /** Format: date-time */
             last_at?: string | null;
+            /** @description How to read `last_at`, from the activity it names. Absent when that is null. */
+            readonly last_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Whole days from the last interaction to now, so a client renders "2 days ago" without re-deriving today from a timestamp. */
             days_since_last?: number | null;
         };
@@ -39819,6 +40019,8 @@ export interface components {
             two_way?: boolean;
             /** Format: date-time */
             last_at?: string | null;
+            /** @description How to read `last_at`, from the activity it names. Absent when that is null. */
+            readonly last_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Interactions in the last 90 days where they wrote to this colleague. */
             inbound_90d?: number;
             /** @description Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent. */
@@ -42573,6 +42775,8 @@ export interface components {
              * @description The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
              */
             last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off. */
             readonly stalled?: boolean;
             /** @description The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant. */
@@ -43214,6 +43418,8 @@ export interface components {
              * @description The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
@@ -43528,6 +43734,8 @@ export interface components {
              * @description The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
              */
             last_activity_at: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Every live activity filed under the project. */
             activity_count: number;
         };
@@ -44322,6 +44530,18 @@ export interface components {
              * @enum {string}
              */
             relevance_source?: "human" | "classifier";
+            filed_by?: components["schemas"]["LinkFiler"];
+        };
+        /** @description On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again. */
+        LinkFiler: {
+            actor: string;
+            /**
+             * @description Which hook point filed it, for an extension actor. Absent for `core`.
+             * @enum {string}
+             */
+            hook?: "parties" | "deal";
+            /** @description For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations. Absent for `core`. */
+            reason?: string;
         };
         /**
          * @description The destination for every writable, non-archived activity of one conversation thread.
@@ -54854,6 +55074,11 @@ export interface components {
             carried_by?: number | null;
             /** @description On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included. */
             readonly works_at?: components["schemas"]["SearchHitEmployer"] | null;
+            /**
+             * Format: uuid
+             * @description For a `deal_room` hit only: the deal the room belongs to, which is the record a client opens to reach the room. Absent on every other hit type.
+             */
+            readonly deal_id?: string | null;
             /** @description For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type. */
             readonly logo_url?: string | null;
             /** @description Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type. */
@@ -54893,6 +55118,8 @@ export interface components {
              * @description When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
              */
             last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The fields above a field mask withheld from this caller, by their wire names. */
             masked_fields?: string[];
         };
@@ -86401,6 +86628,149 @@ export interface operations {
             };
         };
     };
+    listZaloOAConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Zalo Official Account connections. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZaloOAConnectionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createZaloOAConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateZaloOAConnectionRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZaloOAConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal the secrets in (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateZaloOAConnectionVisibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTelegramBusinessConnectionVisibilityRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZaloOAConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnectZaloOAConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getChannelLink: {
         parameters: {
             query?: never;
@@ -86883,6 +87253,66 @@ export interface operations {
                 };
             };
             /** @description This deployment takes no WhatsApp events, or could not store the delivery (`code: channel_events_unavailable`); Meta retries. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveZaloOAWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZaloWebhookEvent"];
+            };
+        };
+        responses: {
+            /** @description The event was taken. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZaloWebhookReceipt"];
+                };
+            };
+            /** @description The body is signed by no connected Official Account (`code: channel_event_rejected`). The answer is the same for each cause. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The body is larger than an event can be (`code: channel_event_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate-limited; Zalo retries. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment takes no Zalo events, or could not store the event (`code: channel_events_unavailable`); Zalo retries. */
             503: {
                 headers: {
                     [name: string]: unknown;

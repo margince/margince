@@ -19,11 +19,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
@@ -144,7 +142,7 @@ func readThread(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, threadID 
 // GetThread reads one thread by its own id, under its room's read. The room is
 // what the caller's deal scope admits; a thread of a hidden room is absent.
 func (s *Store) GetThread(ctx context.Context, threadID ids.UUID) (crmcontracts.DealRoomThread, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
+	if err := requireRoomRead(ctx); err != nil {
 		return crmcontracts.DealRoomThread{}, err
 	}
 	var out crmcontracts.DealRoomThread
@@ -168,7 +166,7 @@ func (s *Store) GetThread(ctx context.Context, threadID ids.UUID) (crmcontracts.
 
 // ListThreads is the seller's read.
 func (s *Store) ListThreads(ctx context.Context, roomID ids.DealRoomID, documentID *ids.UUID) ([]crmcontracts.DealRoomThread, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
+	if err := requireRoomRead(ctx); err != nil {
 		return nil, err
 	}
 	var out []crmcontracts.DealRoomThread

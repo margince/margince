@@ -17467,6 +17467,24 @@ func (e LinkChannelRequestMode) Valid() bool {
 	}
 }
 
+// Defines values for LinkFilerHook.
+const (
+	LinkFilerHookDeal    LinkFilerHook = "deal"
+	LinkFilerHookParties LinkFilerHook = "parties"
+)
+
+// Valid indicates whether the value is a known member of the LinkFilerHook enum.
+func (e LinkFilerHook) Valid() bool {
+	switch e {
+	case LinkFilerHookDeal:
+		return true
+	case LinkFilerHookParties:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LinkSuggestionEntityType.
 const (
 	LinkSuggestionEntityTypeCompany LinkSuggestionEntityType = "company"
@@ -30016,6 +30034,45 @@ func (e WrittenBy) Valid() bool {
 	}
 }
 
+// Defines values for ZaloOAConnectionMailVisibility.
+const (
+	ZaloOAConnectionMailVisibilityHeld   ZaloOAConnectionMailVisibility = "held"
+	ZaloOAConnectionMailVisibilityShared ZaloOAConnectionMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the ZaloOAConnectionMailVisibility enum.
+func (e ZaloOAConnectionMailVisibility) Valid() bool {
+	switch e {
+	case ZaloOAConnectionMailVisibilityHeld:
+		return true
+	case ZaloOAConnectionMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ZaloOAConnectionStatus.
+const (
+	ZaloOAConnectionStatusConnected      ZaloOAConnectionStatus = "connected"
+	ZaloOAConnectionStatusDisconnected   ZaloOAConnectionStatus = "disconnected"
+	ZaloOAConnectionStatusReauthRequired ZaloOAConnectionStatus = "reauth_required"
+)
+
+// Valid indicates whether the value is a known member of the ZaloOAConnectionStatus enum.
+func (e ZaloOAConnectionStatus) Valid() bool {
+	switch e {
+	case ZaloOAConnectionStatusConnected:
+		return true
+	case ZaloOAConnectionStatusDisconnected:
+		return true
+	case ZaloOAConnectionStatusReauthRequired:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AnchorRecordType.
 const (
 	AnchorRecordTypeActivity AnchorRecordType = "activity"
@@ -34393,7 +34450,10 @@ type ActivityLink struct {
 	DealRelevance *ActivityLinkDealRelevance `json:"deal_relevance,omitempty"`
 	EntityId      openapi_types.UUID         `json:"entity_id"`
 	EntityType    ActivityLinkEntityType     `json:"entity_type"`
-	Id            *openapi_types.UUID        `json:"id,omitempty"`
+
+	// FiledBy On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again.
+	FiledBy *LinkFiler          `json:"filed_by,omitempty"`
+	Id      *openapi_types.UUID `json:"id,omitempty"`
 
 	// RelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
 	RelevanceSource *ActivityLinkRelevanceSource `json:"relevance_source,omitempty"`
@@ -42316,8 +42376,11 @@ type Company360 struct {
 	// AttentionWithheld The reader may not read this account's activities, so no `attention` was derived on any deal or project row. The rows themselves are still listed and still true — this says the reasons behind them are missing, which a card must show rather than let an unexplained row read as a settled one.
 	AttentionWithheld *bool `json:"attention_withheld,omitempty"`
 
-	// BillingContacts Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld.
+	// BillingContacts Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`. A contact outside the caller's row scope is not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
 	BillingContacts *[]BillingContact `json:"billing_contacts,omitempty"`
+
+	// BillingContactsHidden The billing entries the caller's contact row scope withheld from `billing_contacts`. Absent exactly when `billing_contacts` is.
+	BillingContactsHidden *HiddenRecords `json:"billing_contacts_hidden,omitempty"`
 
 	// Company A company. Mirrors the `company` table.
 	Company  Company `json:"company"`
@@ -42325,6 +42388,9 @@ type Company360 struct {
 		Data []Company360Contact `json:"data"`
 		Page PageInfo            `json:"page"`
 	} `json:"contacts,omitempty"`
+
+	// ContactsHidden The account's current employees the caller may not see, by the contact row scope or by the employment tie's own read scope. Absent exactly when `contacts` is.
+	ContactsHidden *HiddenRecords `json:"contacts_hidden,omitempty"`
 
 	// Deals The account's open deals plus the two lifetime figures the header needs.
 	Deals *Company360Deals `json:"deals,omitempty"`
@@ -42782,6 +42848,9 @@ type Company360ProjectPhase string
 type Company360Route struct {
 	DisplayName       string     `json:"display_name"`
 	LastInteractionAt *time.Time `json:"last_interaction_at,omitempty"`
+
+	// LastInteractionPrecision How to read `last_interaction_at`, from the activity it names. Absent when that is null.
+	LastInteractionPrecision *OccurredPrecision `json:"last_interaction_precision,omitempty"`
 
 	// StrengthBucket The band, never the number — the score is a decayed count, and showing it invites a precision it does not have.
 	StrengthBucket Company360RouteStrengthBucket `json:"strength_bucket"`
@@ -43774,9 +43843,12 @@ type CompanyFactListResponse struct {
 // account is healthy on the strength of a missing connector.
 type CompanyFinanceSummary struct {
 	// BillingContacts Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
-	// Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
-	BillingContacts *[]BillingContact  `json:"billing_contacts,omitempty"`
-	CompanyId       openapi_types.UUID `json:"company_id"`
+	// Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
+	BillingContacts *[]BillingContact `json:"billing_contacts,omitempty"`
+
+	// BillingContactsHidden The billing entries the caller's contact row scope withheld from `billing_contacts`, the same answer the company page gives. Absent exactly when `billing_contacts` is.
+	BillingContactsHidden *HiddenRecords     `json:"billing_contacts_hidden,omitempty"`
+	CompanyId             openapi_types.UUID `json:"company_id"`
 
 	// CoverageEnd The issue date of the NEWEST mirrored invoice. On a live account it is recent and the trailing windows below mean what they say; on an account that stopped buying it is the answer to "when did this end", and it is what makes a 365-day figure readable as the historical number it is.
 	CoverageEnd *openapi_types.Date `json:"coverage_end,omitempty"`
@@ -46525,8 +46597,11 @@ type ContactGraphEdge struct {
 	Interactions90d int    `json:"interactions_90d"`
 
 	// LastAt The newest `occurred_at` among the activities the edge counts. A client orders edges by it.
-	LastAt      *time.Time `json:"last_at,omitempty"`
-	Outbound90d *int       `json:"outbound_90d,omitempty"`
+	LastAt *time.Time `json:"last_at,omitempty"`
+
+	// LastPrecision How to read `last_at`, from the activity it names. Absent when that is null.
+	LastPrecision *OccurredPrecision `json:"last_precision,omitempty"`
+	Outbound90d   *int               `json:"outbound_90d,omitempty"`
 
 	// Receipts The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows.
 	Receipts *[]ContactGraphReceipt `json:"receipts,omitempty"`
@@ -46654,7 +46729,10 @@ type ContactGraphRouteEvidence struct {
 	Inbound90d      *int       `json:"inbound_90d,omitempty"`
 	Interactions90d int        `json:"interactions_90d"`
 	LastAt          *time.Time `json:"last_at,omitempty"`
-	Outbound90d     *int       `json:"outbound_90d,omitempty"`
+
+	// LastPrecision How to read `last_at`, from the activity it names. Absent when that is null.
+	LastPrecision *OccurredPrecision `json:"last_precision,omitempty"`
+	Outbound90d   *int               `json:"outbound_90d,omitempty"`
 
 	// Sent90d Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on.
 	Sent90d *int `json:"sent_90d,omitempty" minimum:"0"`
@@ -46911,6 +46989,9 @@ type ContactNetworkColleague struct {
 
 	// LastOutboundAt When this colleague last wrote to them.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastPrecision How to read `last_at`, from the activity it names. Absent when that is null.
+	LastPrecision *OccurredPrecision `json:"last_precision,omitempty"`
 
 	// Outbound90d Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent.
 	Outbound90d *int `json:"outbound_90d,omitempty" minimum:"0"`
@@ -49108,6 +49189,27 @@ type CreateWorkspaceEmailDomainRequest struct {
 	Domain string `json:"domain"`
 }
 
+// CreateZaloOAConnectionRequest defines model for CreateZaloOAConnectionRequest.
+type CreateZaloOAConnectionRequest struct {
+	// AccessToken The Official Account's access token. Sealed into the credential store on arrival and never echoed back.
+	AccessToken string `json:"accessToken"`
+	AppId       string `json:"appId"`
+
+	// AppSecret The Zalo app's secret key, used to renew the tokens. Sealed into the credential store on arrival and never echoed back.
+	AppSecret   string `json:"appSecret"`
+	DisplayName string `json:"displayName"`
+	OaId        string `json:"oaId"`
+
+	// OaSecretKey The OA secret key that signs each webhook event. Sealed into the credential store on arrival and never echoed back.
+	OaSecretKey string `json:"oaSecretKey"`
+
+	// ReaderTeamId The team that reads the account's messages. The account's seat starts `held`: only this team reads them until an admin shares them.
+	ReaderTeamId openapi_types.UUID `json:"readerTeamId"`
+
+	// RefreshToken The Official Account's refresh token. It is single use; the renewal job replaces it. Sealed into the credential store on arrival and never echoed back.
+	RefreshToken string `json:"refreshToken"`
+}
+
 // CustomField A workspace-defined runtime field on an existing core object. Mirrors the
 // `custom_field` catalog table — the system-of-record for every runtime-added
 // column (CUSTOM-FIELDS-SCHEMA-1). `column_name` is the physical `cf_`-prefixed
@@ -49545,6 +49647,9 @@ type Deal struct {
 	// LastActivityAt The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
 
@@ -49723,6 +49828,9 @@ type DealAdvanced struct {
 
 	// LastActivityAt The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
@@ -54562,6 +54670,21 @@ type HiddenBacklogRows struct {
 // HiddenBacklogRowsRule Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
 type HiddenBacklogRowsRule string
 
+// HiddenRecordHolder defines model for HiddenRecordHolder.
+type HiddenRecordHolder struct {
+	DisplayName string             `json:"display_name"`
+	UserId      openapi_types.UUID `json:"user_id"`
+}
+
+// HiddenRecords What the caller's row scope withheld from one list on a record page, so a short list never reads as the whole one. It states how many entries were withheld and which live colleagues own them, so the reader knows whom to ask. A withheld record's name, value and every other field stay withheld. Count 0 with no holders when nothing was withheld.
+type HiddenRecords struct {
+	// Count How many entries the list would have shown under an unbounded scope and did not. It includes entries owned by a colleague who has left, who is not in `holders`.
+	Count int `json:"count" minimum:"0"`
+
+	// Holders The live colleagues who own at least one withheld entry, each once, by name.
+	Holders []HiddenRecordHolder `json:"holders"`
+}
+
 // HistoryEdge Set when this history entry changed a LINK between two records rather than a field
 // of this one, and null on every ordinary row.
 //
@@ -58218,6 +58341,20 @@ type LinkContactEmployerResult struct {
 	// RelationshipId The employment edge written.
 	RelationshipId openapi_types.UUID `json:"relationship_id"`
 }
+
+// LinkFiler On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again.
+type LinkFiler struct {
+	Actor string `json:"actor"`
+
+	// Hook Which hook point filed it, for an extension actor. Absent for `core`.
+	Hook *LinkFilerHook `json:"hook,omitempty"`
+
+	// Reason For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations. Absent for `core`.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// LinkFilerHook Which hook point filed it, for an extension actor. Absent for `core`.
+type LinkFilerHook string
 
 // LinkFinanceSourceCustomerRequest defines model for LinkFinanceSourceCustomerRequest.
 type LinkFinanceSourceCustomerRequest struct {
@@ -62640,6 +62777,9 @@ type Project struct {
 	// LastActivityAt The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool `json:"legal_hold,omitempty"`
 
@@ -62853,6 +62993,9 @@ type Project360Rollups struct {
 
 	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
 	LastActivityAt *time.Time `json:"last_activity_at"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
 	// OpenCommitments Open tasks filed under the project, whole lifecycle.
 	OpenCommitments int `json:"open_commitments" minimum:"0"`
@@ -68407,6 +68550,9 @@ type SearchHitStanding struct {
 	// LastActivityAt When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// MaskedFields The fields above a field mask withheld from this caller, by their wire names.
 	MaskedFields *[]string `json:"masked_fields,omitempty"`
 
@@ -68449,6 +68595,9 @@ type SearchResponse struct {
 type SearchResult struct {
 	// CarriedBy For a `tag` hit only: how many contacts, companies, deals and leads carry this word, as THIS caller may see them — the same types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken.
 	CarriedBy *int `json:"carried_by,omitempty" minimum:"0"`
+
+	// DealId For a `deal_room` hit only: the deal the room belongs to, which is the record a client opens to reach the room. Absent on every other hit type.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
 
 	// EmailSummary The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not.
 	EmailSummary *EmailSummary      `json:"email_summary,omitempty"`
@@ -77116,6 +77265,61 @@ type WorkspaceQueryResult struct {
 // surface runs refuse the model's answer. Never silently interchangeable: a reader
 // deciding how much to trust a sentence needs to know which wrote it.
 type WrittenBy string
+
+// ZaloOAConnection One Zalo Official Account connected to the workspace. No secret is part of it.
+type ZaloOAConnection struct {
+	// AppId The Zalo app that serves the Official Account.
+	AppId       string             `json:"appId"`
+	ConnectedAt time.Time          `json:"connectedAt"`
+	DisplayName string             `json:"displayName"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// MailVisibility What the seat asks of the account's messages. Changed with `PATCH /channel-connections/zalo-oa/{id}/visibility`.
+	MailVisibility *ZaloOAConnectionMailVisibility `json:"mailVisibility,omitempty"`
+
+	// OaId Zalo's id of the Official Account, the key a webhook event is matched to its connection by.
+	OaId string `json:"oaId"`
+
+	// ReaderTeamId The team that reads the account's messages.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
+
+	// SeatId The seat the account's messages file through.
+	SeatId *openapi_types.UUID `json:"seatId,omitempty"`
+
+	// Status `reauth_required` when Zalo refused the refresh token, so the Official Account must be disconnected and connected again with fresh tokens.
+	Status ZaloOAConnectionStatus `json:"status"`
+}
+
+// ZaloOAConnectionMailVisibility What the seat asks of the account's messages. Changed with `PATCH /channel-connections/zalo-oa/{id}/visibility`.
+type ZaloOAConnectionMailVisibility string
+
+// ZaloOAConnectionStatus `reauth_required` when Zalo refused the refresh token, so the Official Account must be disconnected and connected again with fresh tokens.
+type ZaloOAConnectionStatus string
+
+// ZaloOAConnectionListResponse defines model for ZaloOAConnectionListResponse.
+type ZaloOAConnectionListResponse struct {
+	Data []ZaloOAConnection `json:"data"`
+}
+
+// ZaloWebhookEvent One event from Zalo, as the signature covers it. The route reads the raw body and the server decodes it, so only the fields every event carries are named here.
+type ZaloWebhookEvent struct {
+	AppId *string `json:"app_id,omitempty"`
+
+	// EventName For example `user_send_text` or `oa_send_text`.
+	EventName string `json:"event_name"`
+
+	// Timestamp Milliseconds since the epoch, as the text the signature covers.
+	Timestamp string `json:"timestamp"`
+}
+
+// ZaloWebhookReceipt defines model for ZaloWebhookReceipt.
+type ZaloWebhookReceipt struct {
+	// Skipped Events not kept: a follow, unfollow, seen or reaction event, an Official Account that is not connected, an erased customer, or an event that could not be decoded.
+	Skipped int `json:"skipped" minimum:"0"`
+
+	// Stored Messages kept and queued for filing. A retried delivery counts again and is stored once.
+	Stored int `json:"stored" minimum:"0"`
+}
 
 // AiWritten defines model for AiWritten.
 type AiWritten = bool
@@ -87150,6 +87354,12 @@ type CreateWhatsAppConnectionJSONRequestBody = CreateWhatsAppConnectionRequest
 // UpdateWhatsAppConnectionVisibilityJSONRequestBody defines body for UpdateWhatsAppConnectionVisibility for application/json ContentType.
 type UpdateWhatsAppConnectionVisibilityJSONRequestBody = UpdateTelegramBusinessConnectionVisibilityRequest
 
+// CreateZaloOAConnectionJSONRequestBody defines body for CreateZaloOAConnection for application/json ContentType.
+type CreateZaloOAConnectionJSONRequestBody = CreateZaloOAConnectionRequest
+
+// UpdateZaloOAConnectionVisibilityJSONRequestBody defines body for UpdateZaloOAConnectionVisibility for application/json ContentType.
+type UpdateZaloOAConnectionVisibilityJSONRequestBody = UpdateTelegramBusinessConnectionVisibilityRequest
+
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
 
@@ -87158,6 +87368,9 @@ type ReceiveDispactChannelEventJSONRequestBody = DispactChannelEvent
 
 // ReceiveWhatsAppWebhookJSONRequestBody defines body for ReceiveWhatsAppWebhook for application/json ContentType.
 type ReceiveWhatsAppWebhookJSONRequestBody = WhatsAppWebhookDelivery
+
+// ReceiveZaloOAWebhookJSONRequestBody defines body for ReceiveZaloOAWebhook for application/json ContentType.
+type ReceiveZaloOAWebhookJSONRequestBody = ZaloWebhookEvent
 
 // SetChannelVerbosityJSONRequestBody defines body for SetChannelVerbosity for application/json ContentType.
 type SetChannelVerbosityJSONRequestBody = SetChannelVerbosityRequest
@@ -94227,6 +94440,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
+	}
+
 	if raw, found := object["last_email"]; found {
 		err = json.Unmarshal(raw, &a.LastEmail)
 		if err != nil {
@@ -94669,6 +94890,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 
@@ -95115,6 +95343,14 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'last_activity_at': %w", err)
 		}
 		delete(object, "last_activity_at")
+	}
+
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
 	}
 
 	if raw, found := object["last_email"]; found {
@@ -95567,6 +95803,13 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 
@@ -98672,6 +98915,14 @@ func (a *Project) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
+	}
+
 	if raw, found := object["legal_hold"]; found {
 		err = json.Unmarshal(raw, &a.LegalHold)
 		if err != nil {
@@ -98862,6 +99113,13 @@ func (a Project) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 
@@ -102803,6 +103061,18 @@ type ServerInterface interface {
 	// Change who may read a WhatsApp number's messages.
 	// (PATCH /channel-connections/whatsapp/{id}/visibility)
 	UpdateWhatsAppConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
+	// List the Zalo Official Accounts connected to the workspace.
+	// (GET /channel-connections/zalo-oa)
+	ListZaloOAConnections(w http.ResponseWriter, r *http.Request)
+	// Connect a Zalo Official Account to the workspace.
+	// (POST /channel-connections/zalo-oa)
+	CreateZaloOAConnection(w http.ResponseWriter, r *http.Request)
+	// Disconnect a Zalo Official Account from the workspace.
+	// (DELETE /channel-connections/zalo-oa/{id})
+	DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request, id Id)
+	// Change who may read a Zalo Official Account's messages.
+	// (PATCH /channel-connections/zalo-oa/{id}/visibility)
+	UpdateZaloOAConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
 	// Disconnect a messaging channel (archives the binding and destroys the credential).
 	// (DELETE /channel-connections/{id})
 	DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id)
@@ -102818,6 +103088,9 @@ type ServerInterface interface {
 	// Take a signed WhatsApp Business webhook delivery (anonymous).
 	// (POST /channel-events/whatsapp)
 	ReceiveWhatsAppWebhook(w http.ResponseWriter, r *http.Request)
+	// Take a signed Zalo Official Account webhook event (anonymous).
+	// (POST /channel-events/zalo-oa)
+	ReceiveZaloOAWebhook(w http.ResponseWriter, r *http.Request)
 	// Stop syncing a record with its chat channel.
 	// (DELETE /channel-links/{record_type}/{id})
 	UnlinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
@@ -107141,6 +107414,30 @@ func (_ Unimplemented) UpdateWhatsAppConnectionVisibility(w http.ResponseWriter,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the Zalo Official Accounts connected to the workspace.
+// (GET /channel-connections/zalo-oa)
+func (_ Unimplemented) ListZaloOAConnections(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Connect a Zalo Official Account to the workspace.
+// (POST /channel-connections/zalo-oa)
+func (_ Unimplemented) CreateZaloOAConnection(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disconnect a Zalo Official Account from the workspace.
+// (DELETE /channel-connections/zalo-oa/{id})
+func (_ Unimplemented) DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change who may read a Zalo Official Account's messages.
+// (PATCH /channel-connections/zalo-oa/{id}/visibility)
+func (_ Unimplemented) UpdateZaloOAConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Disconnect a messaging channel (archives the binding and destroys the credential).
 // (DELETE /channel-connections/{id})
 func (_ Unimplemented) DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id) {
@@ -107168,6 +107465,12 @@ func (_ Unimplemented) VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Requ
 // Take a signed WhatsApp Business webhook delivery (anonymous).
 // (POST /channel-events/whatsapp)
 func (_ Unimplemented) ReceiveWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take a signed Zalo Official Account webhook event (anonymous).
+// (POST /channel-events/zalo-oa)
+func (_ Unimplemented) ReceiveZaloOAWebhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -124964,6 +125267,110 @@ func (siw *ServerInterfaceWrapper) UpdateWhatsAppConnectionVisibility(w http.Res
 	handler.ServeHTTP(w, r)
 }
 
+// ListZaloOAConnections operation middleware
+func (siw *ServerInterfaceWrapper) ListZaloOAConnections(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListZaloOAConnections(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateZaloOAConnection operation middleware
+func (siw *ServerInterfaceWrapper) CreateZaloOAConnection(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateZaloOAConnection(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectZaloOAConnection operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectZaloOAConnection(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateZaloOAConnectionVisibility operation middleware
+func (siw *ServerInterfaceWrapper) UpdateZaloOAConnectionVisibility(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateZaloOAConnectionVisibility(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DisconnectChannel operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectChannel(w http.ResponseWriter, r *http.Request) {
 
@@ -125108,6 +125515,20 @@ func (siw *ServerInterfaceWrapper) ReceiveWhatsAppWebhook(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReceiveWhatsAppWebhook(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReceiveZaloOAWebhook operation middleware
+func (siw *ServerInterfaceWrapper) ReceiveZaloOAWebhook(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReceiveZaloOAWebhook(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -164115,6 +164536,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/channel-connections/whatsapp/{id}/visibility", wrapper.UpdateWhatsAppConnectionVisibility)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-connections/zalo-oa", wrapper.ListZaloOAConnections)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-connections/zalo-oa", wrapper.CreateZaloOAConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/channel-connections/zalo-oa/{id}", wrapper.DisconnectZaloOAConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/channel-connections/zalo-oa/{id}/visibility", wrapper.UpdateZaloOAConnectionVisibility)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-connections/{id}", wrapper.DisconnectChannel)
 	})
 	r.Group(func(r chi.Router) {
@@ -164128,6 +164561,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-events/whatsapp", wrapper.ReceiveWhatsAppWebhook)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-events/zalo-oa", wrapper.ReceiveZaloOAWebhook)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.UnlinkChannel)

@@ -312,6 +312,12 @@ func (a *assembly) readContacts() error {
 		Data []crmcontracts.Company360Contact `json:"data"`
 		Page crmcontracts.PageInfo            `json:"page"`
 	}{Data: data, Page: page}
+	withheld, err := contacts.HiddenCompanyContactsTx(a.ctx, a.tx, a.companyID)
+	if err != nil {
+		return err
+	}
+	hidden := withheld.Wire()
+	a.out.ContactsHidden = &hidden
 	return nil
 }
 

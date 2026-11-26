@@ -160,6 +160,9 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 		if hit.LogoURL != nil {
 			result.LogoUrl = new(*hit.LogoURL)
 		}
+		if hit.DealID != nil {
+			result.DealId = new(openapi_types.UUID(*hit.DealID))
+		}
 		if hit.Standing != nil {
 			result.Standing = new(*hit.Standing)
 		}

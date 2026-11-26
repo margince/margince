@@ -27,9 +27,6 @@ func (s *Sink) RemoveCalendarMeeting(ctx context.Context, key connector.NaturalK
 			return err
 		}
 		id, found, err := s.meetingForSeat(ctx, tx, connector.NormalizedRecord{NaturalKey: key, CrossDoorIdentity: identity})
-		if err == nil && !found {
-			id, found, err = s.meetingOfOwnEventID(ctx, tx, key)
-		}
 		if err != nil || !found {
 			return err
 		}

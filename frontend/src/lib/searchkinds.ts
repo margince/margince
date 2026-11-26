@@ -31,6 +31,7 @@ export type CoreSearchHitType =
   | "contact"
   | "company"
   | "deal"
+  | "deal_room"
   | "lead"
   | "project"
   | "product"
@@ -55,6 +56,7 @@ export const SEARCH_GROUP_ORDER = [
   "contact",
   "company",
   "deal",
+  "deal_room",
   "lead",
   "project",
   "product",
@@ -186,6 +188,7 @@ export const SEARCH_HIT_GROUP_KEY: Readonly<
   contact: "search.group.contact",
   company: "search.group.company",
   deal: "search.group.deal",
+  deal_room: "search.group.dealRoom",
   project: "search.group.project",
   product: "search.group.product",
   offer_template: "search.group.offerTemplate",
@@ -231,6 +234,7 @@ export const SEARCH_HIT_KIND_KEY: Readonly<
   contact: "search.kind.contact",
   company: "search.kind.company",
   deal: "search.kind.deal",
+  deal_room: "search.kind.dealRoom",
   project: "search.kind.project",
   product: "search.kind.product",
   offer_template: "search.kind.offerTemplate",
@@ -258,7 +262,16 @@ export const SEARCH_HIT_KIND_KEY: Readonly<
  * about its type, so searchHitDestination below answers it. An extension's
  * kind and a type this build does not know return null as well.
  */
-export function searchHitRoute(type: string, id: string): Route | null {
+export function searchHitRoute(
+  type: string,
+  id: string,
+  dealId?: string | null,
+): Route | null {
+  // A room opens through its deal: the room page is `#/deals/<deal>/room`, and
+  // a room hit with no deal named has nowhere to go.
+  if (type === "deal_room") {
+    return dealId ? { screen: "deals", id: dealId, id2: "room" } : null;
+  }
   if (isEntityKind(type)) {
     return ENTITY[type as EntityKind].route(id);
   }
@@ -320,6 +333,7 @@ export function searchHitDestination(
   hit: Readonly<{
     type: string;
     id: string;
+    deal_id?: string | null;
     email_summary?: Readonly<{ activity_id: string }> | null;
   }>,
   query: string,
@@ -330,7 +344,7 @@ export function searchHitDestination(
   if (hit.type === "activity") {
     return searchActivityRoute(query, hit.id);
   }
-  return searchHitRoute(hit.type, hit.id);
+  return searchHitRoute(hit.type, hit.id, hit.deal_id);
 }
 
 export function bestIdentifierMatch(

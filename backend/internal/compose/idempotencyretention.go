@@ -37,7 +37,7 @@ import (
 )
 
 // idempotencyRetentionActor is the principal the sweep runs as.
-const idempotencyRetentionActor = "agent:idempotency_retention"
+const idempotencyRetentionActor = "system:idempotency_retention"
 
 // IdempotencyRetentionSweeper drops claim rows the replay window has closed on.
 type IdempotencyRetentionSweeper struct {

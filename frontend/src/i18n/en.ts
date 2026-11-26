@@ -2352,7 +2352,7 @@ export const en = {
   "systemJob.technical_lookup": "Company technical lookup",
   "systemJob.vatcheck": "VAT number check",
   "systemJob.weekly_review": "Weekly review",
-  "agentJob.agent_task_retention": "Agent task cleanup",
+  "systemJob.agent_task_retention": "Agent task cleanup",
   "agentJob.attachment_extractor": "Attachment reader",
   "agentJob.auto_apply": "Automatic approval",
   "agentJob.margince": "Margince",
@@ -2369,7 +2369,7 @@ export const en = {
   "agentJob.deepread": "Website reader",
   "agentJob.document_extractor": "Document reader",
   "agentJob.enrich": "Signature reader",
-  "agentJob.idempotency_retention": "Request record cleanup",
+  "systemJob.idempotency_retention": "Request record cleanup",
   "agentJob.knowledge_ingest": "Knowledge import",
   "agentJob.lifecycle_change": "Lifecycle update",
   "agentJob.offer_drafting": "Offer drafting",
@@ -2879,6 +2879,7 @@ export const en = {
   "search.group.contact": "Contacts",
   "search.group.company": "Companies",
   "search.group.deal": "Deals",
+  "search.group.dealRoom": "Deal Rooms",
   "search.group.project": "Projects",
   "search.group.product": "Products",
   "search.group.offerTemplate": "Offer templates",
@@ -2890,6 +2891,7 @@ export const en = {
   "search.kind.contact": "Contact",
   "search.kind.company": "Company",
   "search.kind.deal": "Deal",
+  "search.kind.dealRoom": "Deal Room",
   "search.kind.project": "Project",
   "search.kind.product": "Product",
   "search.kind.offerTemplate": "Offer template",
@@ -3603,6 +3605,10 @@ export const en = {
   "state.staleAsOf": "Last known values, as of {when}",
   "state.partial": "Showing part of the list",
   "state.partialCount": "{count} more not shown",
+  "state.hidden_one": "{count} more you cannot see.",
+  "state.hidden_other": "{count} more you cannot see.",
+  "state.hiddenAsk_one": "{count} more you cannot see. Ask {names}.",
+  "state.hiddenAsk_other": "{count} more you cannot see. Ask {names}.",
   // The opened file. `FilePreview` is a design-system control every surface
   // that draws a file card can open, so its words belong to the control rather
   // than to any one screen â the same three verbs stand over a contract on an
@@ -11437,6 +11443,8 @@ export const en = {
   "jobs.kind.technical_enrich_company": "Company technical lookup",
   "jobs.kind.telegram_ingest": "Telegram message intake",
   "jobs.kind.whatsapp_ingest": "WhatsApp message intake",
+  "jobs.kind.zalo_oa_ingest": "Zalo message intake",
+  "jobs.kind.zalo_token_renew": "Zalo access token renewal",
   "jobs.kind.telegram_poll": "Telegram message fetch",
   "jobs.kind.chat_link_flush": "Chat channel posts",
   "jobs.kind.chat_pull": "Chat channel summaries",
@@ -15114,6 +15122,7 @@ export const en = {
   "audit.kind.deal_suggestion": "Deal suggestion",
   "audit.kind.dedupe_candidate": "Possible duplicate",
   "audit.kind.existing_customer_notice": "Existing customer notice",
+  "audit.kind.extension_object_usage": "Extension storage",
   "audit.kind.field_provenance": "Field source",
   "audit.kind.finance_connection": "Accounting connection",
   "audit.kind.finance_customer_link": "Accounting customer link",
@@ -23669,6 +23678,8 @@ export const en = {
   "aiServing.previewFailed":
     "The server could not check this value: {reason} Save stays off until it can.",
   "dealDecline.action": "Not about this deal",
+  "dealFiling.byUnit": "Filed here by {unit}: {reason}",
+  "dealFiling.byUnitNoReason": "Filed here by {unit}",
   "dealDecline.done":
     "Marked as not about this deal. It no longer keeps the deal active.",
   "dealDecline.doneProjectKept":

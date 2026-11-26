@@ -54,7 +54,8 @@ func (c stubCatalog) ActiveColumns(_ context.Context, object string) ([]fieldcat
 func TestVocabularyIsDerivedFromTheContractNotAList(t *testing.T) {
 	resolver := NewVocabularyResolver()
 	for entity, record := range contractRecords {
-		vocab, err := resolver.Resolve(readerFor(entity), entity)
+		// A room is read through its deal, so its reader holds that grant too.
+		vocab, err := resolver.Resolve(readerFor(entity, "deal"), entity)
 		if err != nil {
 			t.Fatalf("%s: %v", entity, err)
 		}
@@ -247,6 +248,26 @@ func TestARecordTypeTheCallerCannotReadIsAbsentFromTheirVocabulary(t *testing.T)
 	}
 	if slices.Contains(narrow.TargetNames(), "deal") {
 		t.Error("a record type the caller cannot read is advertised in their target list")
+	}
+}
+
+// A room is read through its deal, so a seat that reads rooms and not deals
+// has no room vocabulary.
+func TestARoomVocabularyNeedsTheDealGrantToo(t *testing.T) {
+	resolver := NewVocabularyResolver()
+	roomOnly, err := resolver.Resolve(readerFor("deal_room"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := roomOnly.Target("deal_room"); ok {
+		t.Error("a seat without deal read has a deal_room vocabulary")
+	}
+	both, err := resolver.Resolve(readerFor("deal_room", "deal"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := both.Target("deal_room"); !ok {
+		t.Error("a seat that reads rooms and deals has no deal_room vocabulary")
 	}
 }
 

@@ -5211,6 +5211,7 @@ public.deal_room.deal_room_touch CREATE TRIGGER deal_room_touch BEFORE UPDATE ON
 public.deal_room.deal_room_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_room.expires_at timestamp with time zone gen=- def=-
 public.deal_room.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_room.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(title, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(title, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(welcome_message, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(welcome_message, ''::text))), 'B'::"char"))
 public.deal_room.source text NOT NULL gen=- def=-
 public.deal_room.state text NOT NULL gen=- def='live'::text
 public.deal_room.steward_user_id uuid gen=- def=-
@@ -5729,6 +5730,19 @@ public.extension_ingest_refusal.text_bound_update CREATE TRIGGER text_bound_upda
 public.extension_ingest_refusal.unit text NOT NULL gen=- def=-
 public.extension_ingest_refusal_day_idx CREATE INDEX extension_ingest_refusal_day_idx ON public.extension_ingest_refusal USING btree (day DESC, unit)
 public.extension_ingest_refusal_pkey CREATE UNIQUE INDEX extension_ingest_refusal_pkey ON public.extension_ingest_refusal USING btree (unit, refusal, day)
+public.extension_object_usage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.extension_object_usage.bytes bigint NOT NULL gen=- def=0
+public.extension_object_usage.extension_object_usage_counted CHECK (((objects >= 0) AND (bytes >= 0)))
+public.extension_object_usage.extension_object_usage_pkey PRIMARY KEY (id)
+public.extension_object_usage.extension_object_usage_unit_key UNIQUE (unit)
+public.extension_object_usage.id uuid NOT NULL gen=- def=uuidv7()
+public.extension_object_usage.objects bigint NOT NULL gen=- def=0
+public.extension_object_usage.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.extension_object_usage FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"unit": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"unit":20000}')
+public.extension_object_usage.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.extension_object_usage FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"unit":20000}')
+public.extension_object_usage.unit text NOT NULL gen=- def=-
+public.extension_object_usage.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.extension_object_usage_pkey CREATE UNIQUE INDEX extension_object_usage_pkey ON public.extension_object_usage USING btree (id)
+public.extension_object_usage_unit_key CREATE UNIQUE INDEX extension_object_usage_unit_key ON public.extension_object_usage USING btree (unit)
 public.extension_secret acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.extension_secret.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.extension_secret.extension_name text NOT NULL gen=- def=-
@@ -6213,10 +6227,12 @@ public.graph_contact_edge.count_90d integer NOT NULL gen=- def=0
 public.graph_contact_edge.count_total integer NOT NULL gen=- def=0
 public.graph_contact_edge.deferred_run_id uuid gen=- def=-
 public.graph_contact_edge.graph_contact_edge_deferred_run_id_fkey FOREIGN KEY (deferred_run_id) REFERENCES capture_backfill(id) ON DELETE SET NULL
+public.graph_contact_edge.graph_contact_edge_last_precision_check CHECK ((last_precision = ANY (ARRAY['day'::text, 'instant'::text])))
 public.graph_contact_edge.graph_contact_edge_ordered CHECK ((contact_a < contact_b))
 public.graph_contact_edge.graph_contact_edge_pkey PRIMARY KEY (contact_a, contact_b)
 public.graph_contact_edge.graph_contact_edge_work_generations CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation)))
 public.graph_contact_edge.last_at timestamp with time zone NOT NULL gen=- def=-
+public.graph_contact_edge.last_precision text gen=- def=-
 public.graph_contact_edge.processed_generation bigint NOT NULL gen=- def=0
 public.graph_contact_edge.read_snapshot pg_snapshot gen=- def=-
 public.graph_contact_edge.requested_generation bigint NOT NULL gen=- def=0
@@ -6228,6 +6244,7 @@ public.graph_interaction_edge.count_90d integer NOT NULL gen=- def=0
 public.graph_interaction_edge.count_total integer NOT NULL gen=- def=0
 public.graph_interaction_edge.deferred_run_id uuid gen=- def=-
 public.graph_interaction_edge.graph_interaction_edge_deferred_run_id_fkey FOREIGN KEY (deferred_run_id) REFERENCES capture_backfill(id) ON DELETE SET NULL
+public.graph_interaction_edge.graph_interaction_edge_last_precision_check CHECK ((last_precision = ANY (ARRAY['day'::text, 'instant'::text])))
 public.graph_interaction_edge.graph_interaction_edge_pkey PRIMARY KEY (user_id, contact_id)
 public.graph_interaction_edge.graph_interaction_edge_work_generations CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation)))
 public.graph_interaction_edge.graph_interaction_edge_workspace_id_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
@@ -6237,6 +6254,7 @@ public.graph_interaction_edge.last_at timestamp with time zone NOT NULL gen=- de
 public.graph_interaction_edge.last_inbound_at timestamp with time zone gen=- def=-
 public.graph_interaction_edge.last_met_at timestamp with time zone gen=- def=-
 public.graph_interaction_edge.last_outbound_at timestamp with time zone gen=- def=-
+public.graph_interaction_edge.last_precision text gen=- def=-
 public.graph_interaction_edge.late_count_90d integer gen=- def=-
 public.graph_interaction_edge.late_out_count_90d integer gen=- def=-
 public.graph_interaction_edge.out_count_90d integer NOT NULL gen=- def=0
@@ -6562,6 +6580,7 @@ public.idx_deal_room_document_room CREATE INDEX idx_deal_room_document_room ON p
 public.idx_deal_room_document_room_cascade CREATE INDEX idx_deal_room_document_room_cascade ON public.deal_room_document USING btree (room_id)
 public.idx_deal_room_engagement_participant_room CREATE INDEX idx_deal_room_engagement_participant_room ON public.deal_room_engagement USING btree (participant_id, room_id)
 public.idx_deal_room_participant_room CREATE INDEX idx_deal_room_participant_room ON public.deal_room_participant USING btree (room_id)
+public.idx_deal_room_search CREATE INDEX idx_deal_room_search ON public.deal_room USING gin (search_tsv)
 public.idx_deal_room_session_participant CREATE INDEX idx_deal_room_session_participant ON public.deal_room_session USING btree (participant_id) WHERE (revoked_at IS NULL)
 public.idx_deal_room_session_participant_room CREATE INDEX idx_deal_room_session_participant_room ON public.deal_room_session USING btree (participant_id, room_id)
 public.idx_deal_room_session_room CREATE INDEX idx_deal_room_session_room ON public.deal_room_session USING btree (room_id)

@@ -14,6 +14,8 @@ package auth
 import (
 	"context"
 	"fmt"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ScopeClause renders the own/team/all row-visibility predicate over an
@@ -62,4 +64,26 @@ func clauseFor(ctx context.Context, table, alias string, arg func(any) int, shar
 		return "", nil
 	}
 	return predicateFor(p, table, arg, withCapturePrivacy, asClassified, share)(alias), nil
+}
+
+// DealChildScopeClause renders the row scope of a record that has no owner and
+// is seen when its deal is. The room list, the single room read, search and the
+// retirement preview all render it, so they show a caller the same rooms.
+//
+// The deal is an `EXISTS` and not a `JOIN`. That keeps one `id` and one
+// `created_at` in the caller's keyset. An unbounded caller still gets a clause.
+func DealChildScopeClause(ctx context.Context, childAlias string, arg func(any) int) (string, error) {
+	// The deal's object grant comes first: a seat that may not read deals reads
+	// no row that is seen through one.
+	if err := Require(ctx, tableDeal, principal.ActionRead); err != nil {
+		return "", err
+	}
+	scope, err := ScopeClauseFor(ctx, tableDeal, "d", arg)
+	if err != nil {
+		return "", err
+	}
+	if scope == "" {
+		scope = truePredicate
+	}
+	return fmt.Sprintf(`EXISTS (SELECT 1 FROM deal d WHERE d.id = %s.deal_id AND (%s))`, childAlias, scope), nil
 }

@@ -20,8 +20,10 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/whatsappedge"
+	"github.com/margince/margince/backend/internal/compose/zaloedge"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/whatsapp"
+	"github.com/margince/margince/backend/internal/modules/capture/zalo"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -105,9 +107,10 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// credential (no deployment-wide OAuth app to gate on), so there is nothing
 	// to check for before wiring it up.
 	addDeclaredWorker[TelegramIngestArgs](reg, newTelegramIngestWorker(pool, cfg.CaptureConfig, log))
-	addDeclaredWorker[WhatsAppIngestArgs](reg, &whatsappedge.Worker[WhatsAppIngestArgs]{
-		Bind: workspaceJobCtx, Pool: pool, Sink: newCaptureSink(pool, cfg.CaptureConfig), Actor: chatChannelPrincipal(whatsapp.CapturedBy), Log: log,
-	})
+	addDeclaredWorker[ZaloOAIngestArgs](reg, zaloedge.NewWorker[ZaloOAIngestArgs](workspaceJobCtx, pool, newCaptureSink(pool, cfg.CaptureConfig), chatChannelPrincipal(zalo.CapturedBy), log, cfg.ChatMedia.Zalo))
+	addDeclaredWorker[WhatsAppIngestArgs](reg, whatsappedge.NewWorker[WhatsAppIngestArgs](
+		workspaceJobCtx, pool, newCaptureSink(pool, cfg.CaptureConfig), chatChannelPrincipal(whatsapp.CapturedBy), log,
+		whatsappedge.NewMedia(cfg.ChatMedia.WhatsApp, pool, cfg.ChannelVault)))
 	// The captured-company auto-enrich sweep (ADR-0072): always
 	// registered, it enqueues system deep reads the site worker applies.
 	autoEnrich := newCaptureAutoEnrichSweepWorker(pool, log)

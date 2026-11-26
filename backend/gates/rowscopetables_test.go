@@ -89,6 +89,9 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureActivityContentVisibleLive": {table: "activity"},
 	"ActivityContentSubset":            {table: "activity"},
 
+	// A child record seen when its deal is: the clause renders the deal scope.
+	"DealChildScopeClause": {table: "deal"},
+
 	"SignalScopeClause":       {table: "signal"},
 	"EnsureSignalVisible":     {table: "signal"},
 	"EnsureSignalVisibleLive": {table: "signal"},

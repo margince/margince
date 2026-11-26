@@ -29,7 +29,8 @@ import { PageTitle, Shell } from "./shell";
 // record's, a unit's) could otherwise only ever be exercised on one of them.
 // The descriptor shape is the generator's, the same one App.extscreen.test.tsx
 // hands the same lookup.
-vi.mock("@composition/extensions", () => ({
+vi.mock("@composition/extensions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@composition/extensions")>()),
   extensions: [
     {
       name: "notes",

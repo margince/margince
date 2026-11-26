@@ -76,7 +76,7 @@ func (p closeDatePolicy) CorrectsWithoutAsking(ctx context.Context, tx pgx.Tx, o
 // deal writers do. An owner who no longer holds a seat answers
 // apperrors.ErrNotFound, and the sweep leaves their deal alone.
 func (p closeDatePolicy) ActForOwner(owner ids.UUID) deals.OwnerAuthorityTx {
-	return ownersAgentTx(p.owner.users, owner, marginceActorID)
+	return agentForTx(p.owner.users, owner, marginceActorID)
 }
 
 // quietReviewReader adapts the deals module's QuietReviewReader seam: read one

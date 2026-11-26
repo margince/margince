@@ -51,7 +51,11 @@ import {
 } from "../mail/compose";
 import { ActivityFilesAction } from "./activityfiles";
 import { audienceWords } from "./audiencewords";
-import { DealRelevanceAction, DealRelevanceBadge } from "./dealdecline";
+import {
+  DealFiledBy,
+  DealRelevanceAction,
+  DealRelevanceBadge,
+} from "./dealdecline";
 import { MoveButton } from "./movebutton";
 import { ProjectFilingAction } from "./projectfiling";
 
@@ -138,7 +142,10 @@ export function TimelineActions(props: RowVerbProps) {
     <>
       <RowAnswerActions {...props} />
       {entityType === "deal" && (
-        <DealRelevanceBadge activity={activity} dealId={entityId} />
+        <>
+          <DealRelevanceBadge activity={activity} dealId={entityId} />
+          <DealFiledBy activity={activity} dealId={entityId} />
+        </>
       )}
       {entityType === "contact" && (
         <HeldMailLink activity={activity} contactId={entityId} />
