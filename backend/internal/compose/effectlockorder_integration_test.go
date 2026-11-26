@@ -88,7 +88,7 @@ func TestAnEffectWaitsForARoleChangeBeforeItLocksTheApproval(t *testing.T) {
 	if err := <-decided; err != nil {
 		t.Fatalf("the effect did not complete once the role change committed: %v", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM fx_rate WHERE from_currency = 'USD' AND rate = 0.9`); n != 1 {
+	if n := ratesAt(t, e, "USD", 0.9); n != 1 {
 		t.Errorf("%d USD rows at 0.9 after both finished, want 1", n)
 	}
 }

@@ -66,12 +66,12 @@ func TestEveryAgentPrincipalHasAFrontendLabel(t *testing.T) {
 			continue
 		}
 		_, isBound := bound[name]
-		_, isRetired := retiredAgentPrincipals[name]
-		if !isBound && !isRetired {
+		if !isBound && !retiredAgentPrincipals.Waived(t, name) {
 			t.Errorf("%s labels agentJob.%s, which no agent principal in the backend stamps — delete the message or stamp the principal", frontendCatalogue, name)
 		}
 	}
-	for _, name := range sortedKeys(retiredAgentPrincipals) {
+	retiredAgentPrincipals.AssertAllMatched(t)
+	for _, name := range retiredAgentPrincipals.Subjects() {
 		if !labelled[name] {
 			t.Errorf("agentJob.%[1]s names a retired actor id, so rows written under it still need %[2]s's \"agentJob.%[1]s\" message to name them in History", name, frontendCatalogue)
 		}
@@ -84,16 +84,16 @@ func TestEveryAgentPrincipalHasAFrontendLabel(t *testing.T) {
 // retiredAgentPrincipals are agent ids no code stamps any more, keyed by label
 // key. Rows written under them keep the id in captured_by or proposed_by, and
 // History names them by their old message.
-var retiredAgentPrincipals = map[string]string{
+var retiredAgentPrincipals = gatekit.Waive(map[string]string{
 	"contact_share":   writtenBeforeSystemID,
 	"deal_scout":      writtenBeforeSystemID,
 	"employer_change": writtenBeforeSystemID,
 	"project_health":  writtenBeforeSystemID,
 	"tag_scout":       writtenBeforeSystemID,
 	"task_due_date":   writtenBeforeSystemID,
-}
+})
 
-const writtenBeforeSystemID = "written before the job ran under its system: id"
+const writtenBeforeSystemID = "rows written before the job ran under its system: id still carry it, so its label stays though no code stamps it"
 
 // boundAgentPrincipals reads the named agent principals product code can
 // stamp, keyed by label key, valued by a file that names it. It reads every

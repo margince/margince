@@ -919,6 +919,7 @@ public.knowledge_document.ingest_status document
 public.knowledge_document.managed_source document
 public.knowledge_document.storage_key document
 public.lawful_basis_confirmation.country document
+public.lead.arrival_origin document
 public.lead.candidate_company_key document
 public.lead.captured_by document
 public.lead.company_name label

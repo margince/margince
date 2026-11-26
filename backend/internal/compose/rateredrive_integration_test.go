@@ -11,6 +11,7 @@ package compose
 
 import (
 	"errors"
+	"strconv"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -45,6 +46,27 @@ func approvedRateWhoseEffectFailed(t *testing.T) (*integration.Env, *approvals.S
 	return e, svc, id
 }
 
+// ratesAt counts the current rows that price currency at rate, read through
+// the rate table's own history read.
+func ratesAt(t *testing.T, e *integration.Env, currency string, rate float64) int {
+	t.Helper()
+	rows, err := deals.NewStore(e.DB(), DealsInstallation()).FxRateHistory(e.Admin(), currency)
+	if err != nil {
+		t.Fatalf("reading the %s rate history: %v", currency, err)
+	}
+	n := 0
+	for _, row := range rows {
+		stored, err := strconv.ParseFloat(row.Rate, 64)
+		if err != nil {
+			t.Fatalf("the %s rate %q is not a number: %v", currency, row.Rate, err)
+		}
+		if stored == rate {
+			n++
+		}
+	}
+	return n
+}
+
 func TestARedrivenEffectActsForTheApproverNotForWhoeverRedrivesIt(t *testing.T) {
 	e, svc, id := approvedRateWhoseEffectFailed(t)
 	colleague := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -69,7 +91,7 @@ func TestARedrivenEffectIsRefusedOnceTheApproverWasDemoted(t *testing.T) {
 	if _, err := svc.Decide(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), id, true, nil); err == nil {
 		t.Fatal("the effect ran for an approver whose grants were taken away before it ran")
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM fx_rate WHERE from_currency = 'GBP' AND rate = 1.2`); n != 0 {
+	if n := ratesAt(t, e, "GBP", 1.2); n != 0 {
 		t.Error("the refused effect wrote the rate")
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND status = 'approved' AND consumed_at IS NULL`, id); n != 1 {

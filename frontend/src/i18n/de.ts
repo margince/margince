@@ -2313,7 +2313,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.document_read": "Ablauf des Dokument-Auslesens",
   "systemJob.extraction_accept": "Notiz zur übernommenen Extraktion",
   "systemJob.deep_read": "Website-Analyse",
-  "systemJob.transcript_read": "Lesen des Meeting-Transkripts",
+  "systemJob.transcript_read": "Lesen des Gesprächsprotokolls",
   "systemJob.company_name_promotion": "Aktualisierung des Firmennamens",
   "systemJob.contact_share": "Anfrage zum Teilen eines Kontakts",
   "systemJob.task_due_date": "Frage zum Fälligkeitsdatum",

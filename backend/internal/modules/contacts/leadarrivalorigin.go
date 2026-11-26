@@ -9,8 +9,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // arrivedOriginSQL is the origin each lead in $1 arrived with. That is the
@@ -63,6 +65,9 @@ func BackfillArrivalOriginTx(ctx context.Context, tx pgx.Tx, after ids.UUID, lim
 // CountArrivalOriginBackfills counts what BackfillArrivalOriginTx has yet to
 // inspect, reading at most maximum+1.
 func CountArrivalOriginBackfills(ctx context.Context, q datatask.Querier, maximum int64) (int64, error) {
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
+		return 0, err
+	}
 	var n int64
 	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM lead WHERE arrival_origin IS NULL LIMIT $1) pending`,
 		maximum+1).Scan(&n)
