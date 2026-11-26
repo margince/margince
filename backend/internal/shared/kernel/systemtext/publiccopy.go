@@ -3,10 +3,13 @@
 
 package systemtext
 
-import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+import (
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 var publicDefinitions = map[string]Definition{
-	"booking.lets_meet": {Words: langcopy.Phrase{En: "Meeting", De: "Besprechung", Vi: "Cuộc họp"}},
+	"booking.lets_meet": {Words: langcopy.Phrase{En: "Meeting", De: "Besprechung", Vi: "Cuộc họp"}, Retired: wordings{textlang.English: {"Let's meet"}, textlang.German: {"Treffen wir uns"}, textlang.Vietnamese: {"Hãy gặp nhau"}}},
 	"booking.meeting":   {Words: langcopy.Phrase{En: "Meeting", De: "Besprechung", Vi: "Cuộc họp"}},
 	"booking.proposed":  {Words: langcopy.Phrase{En: "Meeting proposed: %s", De: "Vorgeschlagener Termin: %s", Vi: "Đề xuất cuộc họp: %s"}, Arguments: []string{argumentText}},
 

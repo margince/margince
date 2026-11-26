@@ -3,12 +3,15 @@
 
 package systemtext
 
-import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+import (
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 var automationDefinitions = map[string]Definition{
 	"automation.confirmation":       {Words: langcopy.Phrase{En: "Confirmation requested: %s", De: "Bestätigung erbeten: %s", Vi: "Yêu cầu xác nhận: %s"}, Arguments: []string{argumentText}},
 	"automation.stagedAction":       {Words: langcopy.Phrase{En: "automation wants to %s on %s %s", De: "Eine Automatisierung möchte %s für %s %s ausführen", Vi: "Một tự động hóa muốn thực hiện %s trên %s %s"}, Arguments: []string{argumentText, argumentText, argumentText}},
-	"automation.heldDraft":          {Words: langcopy.Phrase{En: "an automation drafted a reply to %s; read it before it goes", De: "Eine Automatisierung hat eine Antwort an %s entworfen. Lies sie, bevor sie versendet wird.", Vi: "Một tự động hóa đã soạn thư trả lời gửi %s; hãy đọc trước khi thư được gửi đi"}, Arguments: []string{argumentText}},
+	"automation.heldDraft":          {Words: langcopy.Phrase{En: "an automation drafted a reply to %s; read it before it goes", De: "Eine Automatisierung hat eine Antwort an %s entworfen. Lies sie, bevor sie versendet wird.", Vi: "Một tự động hóa đã soạn thư trả lời gửi %s; hãy đọc trước khi thư được gửi đi"}, Arguments: []string{argumentText}, Retired: wordings{textlang.English: {"an automation drafted a reply to %s — read it before it goes"}}},
 	"automation.stage_unavailable":  {Words: langcopy.Phrase{En: "Stage changed. The previous and new stages are unavailable.", De: "Die Phase wurde geändert. Die vorherige und neue Phase sind nicht verfügbar.", Vi: "Giai đoạn đã thay đổi. Không có thông tin giai đoạn cũ và mới."}, Arguments: []string{}},
 	"automation.unnamed_deal":       {Words: langcopy.Phrase{En: dealCaption, De: dealCaption, Vi: dealCaption}, Arguments: []string{}},
 	"automation.list_joined_task":   {Words: langcopy.Phrase{En: "Joined a Live List", De: "Einer Live-Liste beigetreten", Vi: "Đã vào danh sách tự cập nhật"}, Arguments: []string{}},

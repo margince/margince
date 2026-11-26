@@ -102,7 +102,13 @@ type Message struct {
 type Definition struct {
 	Words     langcopy.Phrase
 	Arguments []string
+	// Retired holds earlier words of Words that stored rows still carry, newest first.
+	// Plain strings, not langcopy.Phrase: they are matched, never shown, so no style census reads them.
+	Retired wordings
 }
+
+// wordings are a phrase's words by language.
+type wordings map[textlang.Lang][]string
 
 // Sentence records a catalog template without choosing a reader language.
 func Sentence(code string, args ...Argument) *Component {
@@ -185,7 +191,7 @@ func bindComponent(component Component, text string) (Component, bool, error) {
 	case Template:
 		matches := false
 		for _, language := range textlang.Shipped {
-			for _, spell := range []spelling{ownMarks, goQuoted} {
+			for _, spell := range storedSpellings {
 				rendered, err := component.renderSpelled(language, 0, text, true, spell)
 				if err != nil {
 					return component, false, err

@@ -100,6 +100,72 @@ func TestSchedulingDefaultOriginSurvivesOtherEditsButNeverReclassifiesLegacyTitl
 	}
 }
 
+func TestABookingPageStoredUnderAnEarlierDefaultWordingStaysOnTheDefault(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	store := e.store(nil)
+	first, err := store.SaveSchedulingProfile(ctx, defaultSchedulingProfile())
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored := func(title string, flagged bool) {
+		t.Helper()
+		if _, err := e.owner.Exec(ctx, `UPDATE booking_page SET scheduling_policy=(scheduling_policy-'_default_title') || jsonb_build_object('title',@title::text)
+ || CASE WHEN @flagged::boolean THEN jsonb_build_object('_default_title',true) ELSE '{}'::jsonb END WHERE slug=@slug`, pgx.StrictNamedArgs{"title": title, "flagged": flagged, "slug": *first.Slug}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	onDefault := func(stage string) {
+		t.Helper()
+		for _, language := range textlang.Shipped {
+			read, err := store.SchedulingProfile(systemtext.WithLocale(ctx, language))
+			if err != nil || read.Title != systemtext.Copy("booking.lets_meet", language) || read.UseDefaultTitle == nil || !*read.UseDefaultTitle {
+				t.Fatalf("%s: a %s reader lost the default title: %+v %v", stage, language, read, err)
+			}
+		}
+	}
+	storedTitle := func() string {
+		t.Helper()
+		var title string
+		if err := e.owner.QueryRow(ctx, `SELECT scheduling_policy->>'title' FROM booking_page WHERE slug=@slug AND (scheduling_policy->>'_default_title')::boolean`, pgx.StrictNamedArgs{"slug": *first.Slug}).Scan(&title); err != nil {
+			t.Fatalf("the page left the default title: %v", err)
+		}
+		return title
+	}
+
+	stored("Treffen wir uns", true)
+	onDefault("German earlier wording")
+	read, err := store.SchedulingProfile(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	read.BufferMinutes++
+	if _, err := store.SaveSchedulingProfile(ctx, read); err != nil {
+		t.Fatal(err)
+	}
+	if title := storedTitle(); title != systemtext.Copy("booking.lets_meet", textlang.German) {
+		t.Fatalf("an edit kept the earlier wording or changed its language: %q", title)
+	}
+
+	for language, shown := range map[textlang.Lang]string{textlang.English: "Let's meet", textlang.Vietnamese: "Hãy gặp nhau"} {
+		stale, err := store.SchedulingProfile(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		stale.Title, stale.UseDefaultTitle = shown, nil
+		if _, err := store.SaveSchedulingProfile(systemtext.WithLocale(ctx, language), stale); err != nil {
+			t.Fatal(err)
+		}
+		onDefault(string(language) + " reader sent the earlier wording back")
+	}
+
+	stored("Let's meet", false)
+	legacy, err := store.SchedulingProfile(ctx)
+	if err != nil || legacy.Title != "Let's meet" || legacy.UseDefaultTitle == nil || *legacy.UseDefaultTitle {
+		t.Fatalf("a title saved without the default flag was reclassified: %+v %v", legacy, err)
+	}
+}
+
 func TestAHumanNoteMatchingAnErasureCaptionRetainsItsOwnWords(t *testing.T) {
 	e := setupSend(t)
 	ctx := systemtext.WithLocale(e.as(principal.RowScopeAll), textlang.German)

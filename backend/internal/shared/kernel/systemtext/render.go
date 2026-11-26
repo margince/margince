@@ -14,14 +14,32 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// spelling is how a template quotes an argument. Text stored before the
-// templates took each language's own marks was written with Go's %q.
-type spelling int
+// spelling is a form of a template that stored rows may hold. It quotes with
+// Go's %q or not, and earlier counts back through retired wordings, 0 being today's.
+type spelling struct {
+	goQuoted bool
+	earlier  int
+}
 
-const (
-	ownMarks spelling = iota
-	goQuoted
+var (
+	ownMarks = spelling{}
+	goQuoted = spelling{goQuoted: true}
 )
+
+// storedSpellings are the spellings a stored row may hold, today's first.
+var storedSpellings = func() []spelling {
+	deepest := 0
+	for _, definition := range catalog {
+		for _, words := range definition.Retired {
+			deepest = max(deepest, len(words))
+		}
+	}
+	spellings := make([]spelling, 0, 2*(deepest+1))
+	for earlier := range deepest + 1 {
+		spellings = append(spellings, spelling{earlier: earlier}, spelling{goQuoted: true, earlier: earlier})
+	}
+	return spellings
+}()
 
 // goQuotedCodes are the templates that wrote %q before they took each
 // language's own marks. Text stored then still binds to them; no other
@@ -49,14 +67,17 @@ func (c Component) renderBounded(lang textlang.Lang, original string, bounded bo
 // wordsIn is the template in one language, in the spelling asked for.
 func wordsIn(code string, definition Definition, lang textlang.Lang, spell spelling) string {
 	words := definition.Words.In(lang)
-	if spell == goQuoted && goQuotedCodes[code] {
+	if retired := definition.Retired[lang]; spell.earlier > 0 && spell.earlier <= len(retired) {
+		words = retired[spell.earlier-1]
+	}
+	if spell.goQuoted && goQuotedCodes[code] {
 		return goQuoting.Replace(words)
 	}
 	return words
 }
 
 // renderSpelled writes the sentence in the spelling asked for, so text stored
-// with Go's quoting still binds.
+// with Go's quoting or an earlier wording still binds.
 func (c Component) renderSpelled(lang textlang.Lang, depth int, original string, bounded bool, spell spelling) (string, error) {
 	if len(c.Following) > 8 || depth > 4 || len(c.Args) > 16 {
 		return "", errors.New("system text: sentence sequence exceeds limit")

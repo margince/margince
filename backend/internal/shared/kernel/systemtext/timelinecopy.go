@@ -3,7 +3,10 @@
 
 package systemtext
 
-import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+import (
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 var timelineDefinitions = map[string]Definition{
 	"activity.source_body":             {Words: langcopy.Phrase{En: "%s", De: "%s", Vi: "%s"}, Arguments: []string{argumentText}},
@@ -33,5 +36,5 @@ var timelineDefinitions = map[string]Definition{
 	"lead.arrival_company":  {Words: langcopy.Phrase{En: "Company: %s", De: "Unternehmen: %s", Vi: "Công ty: %s"}, Arguments: []string{argumentText}},
 	"lead.arrival_linkedin": {Words: langcopy.Phrase{En: linkedInText, De: linkedInText, Vi: linkedInText}, Arguments: []string{argumentText}},
 	"lead.arrival_origin":   {Words: langcopy.Phrase{En: "Came from: %s", De: "Herkunft: %s", Vi: "Nguồn: %s"}, Arguments: []string{argumentText}},
-	"lead.arrival_next":     {Words: langcopy.Phrase{En: "No lead was created. If this is new business, open a deal with the contact.", De: "Es wurde kein Lead erstellt. Wenn dies ein neues Geschäft ist, erstelle einen Deal beim Kontakt.", Vi: "Không tạo lead. Nếu đây là nhu cầu mới, hãy mở deal với liên hệ này."}, Arguments: []string{}},
+	"lead.arrival_next":     {Words: langcopy.Phrase{En: "No lead was created. If this is new business, open a deal with the contact.", De: "Es wurde kein Lead erstellt. Wenn dies ein neues Geschäft ist, erstelle einen Deal beim Kontakt.", Vi: "Không tạo lead. Nếu đây là nhu cầu mới, hãy mở deal với liên hệ này."}, Arguments: []string{}, Retired: wordings{textlang.English: {"No lead was created. If this is a new opportunity, open a deal with the contact."}}},
 }

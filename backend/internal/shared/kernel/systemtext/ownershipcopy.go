@@ -3,7 +3,10 @@
 
 package systemtext
 
-import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+import (
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 var ownershipDefinitions = map[string]Definition{
 	"ownership.AskedContact":       {Words: langcopy.Phrase{En: "%s asks you to hand over this contact. Open deals that move with it: %d. Open tasks: %d.", De: "%s bittet dich, diesen Kontakt zu übergeben. Offene Deals, die mitgehen: %d. Offene Aufgaben: %d.", Vi: "%s đề nghị bạn chuyển giao liên hệ này. Số deal đang mở đi kèm: %d. Số việc đang mở: %d."}, Arguments: []string{argumentText, argumentCount, argumentCount}},
@@ -13,7 +16,7 @@ var ownershipDefinitions = map[string]Definition{
 	"ownership.KeptDeals":          {Words: langcopy.Phrase{En: "Open deals that stayed with %s, because they belong to other records too or could not be moved: %d.", De: "Offene Deals, die bei %s geblieben sind, weil sie auch zu anderen Datensätzen gehören oder sich nicht übertragen ließen: %d.", Vi: "Số deal đang mở vẫn ở lại với %s vì còn thuộc hồ sơ khác hoặc không thể chuyển: %d."}, Arguments: []string{argumentText, argumentCount}},
 	"ownership.KeptTasks":          {Words: langcopy.Phrase{En: "Open tasks that stayed with %s, because they belong to other records too or could not be moved: %d.", De: "Offene Aufgaben, die bei %s geblieben sind, weil sie auch zu anderen Datensätzen gehören oder sich nicht übertragen ließen: %d.", Vi: "Số việc đang mở vẫn ở lại với %s vì còn thuộc hồ sơ khác hoặc không thể chuyển: %d."}, Arguments: []string{argumentText, argumentCount}},
 	"ownership.Declined":           {Words: langcopy.Phrase{En: "%s keeps %s", De: "%s behält %s", Vi: "%s giữ lại %s"}, Arguments: []string{argumentText, argumentText}},
-	"ownership.DeclinedBody":       {Words: langcopy.Phrase{En: "Your request to take it over was declined. You can ask again.", De: "Deine Bitte um Übergabe wurde abgelehnt. Du kannst erneut fragen.", Vi: "Đề nghị nhận lại của bạn đã bị từ chối. Bạn có thể hỏi lại."}, Arguments: []string{}},
+	"ownership.DeclinedBody":       {Words: langcopy.Phrase{En: "Your request to take it over was declined. You can ask again.", De: "Deine Bitte um Übergabe wurde abgelehnt. Du kannst erneut fragen.", Vi: "Đề nghị nhận lại của bạn đã bị từ chối. Bạn có thể hỏi lại."}, Arguments: []string{}, Retired: wordings{textlang.English: {"Your request to take it over was Declined. You can ask again."}}},
 	"ownership.Expired":            {Words: langcopy.Phrase{En: "%s did not answer about %s", De: "%s hat deine Anfrage für %s nicht beantwortet", Vi: "%s chưa trả lời về %s"}, Arguments: []string{argumentText, argumentText}},
 	"ownership.ExpiredBody":        {Words: langcopy.Phrase{En: "Your request ran out after 7 days with no answer. You can ask again.", De: "Deine Bitte ist nach 7 Tagen ohne Antwort abgelaufen. Du kannst erneut fragen.", Vi: "Đề nghị của bạn đã hết hạn sau 7 ngày không có trả lời. Bạn có thể hỏi lại."}, Arguments: []string{}},
 	"ownership.Withdrawn":          {Words: langcopy.Phrase{En: "%s no longer owns %s", De: "%s besitzt %s nicht mehr", Vi: "%s không còn chịu trách nhiệm %s"}, Arguments: []string{argumentText, argumentText}},

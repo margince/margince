@@ -3,10 +3,13 @@
 
 package systemtext
 
-import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+import (
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 var dealDefinitions = map[string]Definition{
-	"deals.draftFollowUp":      {Words: langcopy.Phrase{En: "Draft a follow-up on “%s”: the %s on %s left no next step planned", De: "Entwirf ein Follow-up zu „%s“: Nach dem Austausch (%s) am %s ist kein nächster Schritt geplant.", Vi: "Soạn thư liên hệ lại về “%s”: sau tương tác (%s) ngày %s chưa có bước tiếp theo nào được lên kế hoạch"}, Arguments: []string{argumentText, argumentText, argumentText}},
+	"deals.draftFollowUp":      {Words: langcopy.Phrase{En: "Draft a follow-up on “%s”: the %s on %s left no next step planned", De: "Entwirf ein Follow-up zu „%s“: Nach dem Austausch (%s) am %s ist kein nächster Schritt geplant.", Vi: "Soạn thư liên hệ lại về “%s”: sau tương tác (%s) ngày %s chưa có bước tiếp theo nào được lên kế hoạch"}, Arguments: []string{argumentText, argumentText, argumentText}, Retired: wordings{textlang.English: {"Draft a follow-up on “%s” — the %s on %s left no next step planned"}}},
 	"deals.followUpSubject":    {Words: langcopy.Phrase{En: "Follow up on %s", De: "Follow-up zu %s", Vi: "Liên hệ lại về %s"}, Arguments: []string{argumentText}},
 	"deals.followUpBody":       {Words: langcopy.Phrase{En: "Follow up on the %s from %s. No next step is on the timeline yet.", De: "Follow-up zum Austausch (%s) vom %s. Im Verlauf steht noch kein nächster Schritt.", Vi: "Liên hệ lại về tương tác (%s) ngày %s. Lịch sử chưa có bước tiếp theo nào."}, Arguments: []string{argumentText, argumentText}},
 	"deals.followUpBodyQuoted": {Words: langcopy.Phrase{En: "Follow up on the %s “%s” from %s. No next step is on the timeline yet.", De: "Follow-up zum Austausch (%s) „%s“ vom %s. Im Verlauf steht noch kein nächster Schritt.", Vi: "Liên hệ lại về tương tác (%s) “%s” ngày %s. Lịch sử chưa có bước tiếp theo nào."}, Arguments: []string{argumentText, argumentText, argumentText}},
