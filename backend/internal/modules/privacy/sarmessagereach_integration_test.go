@@ -118,9 +118,13 @@ func seedLimitedDerivatives(t *testing.T, e *sarIdentifierEnv, m reachedMail) {
 		VALUES ($1, $2, '{"title":"secret-request"}', 'ref', $3, now() + interval '1 day')`, m.activity, host.UserID, strings.Repeat("a", 64))
 	mustExec(e.ctx, t, e.owner, `INSERT INTO meeting_invitation (activity_id, host_user_id, provider, calendar_id, appointment, status, management_hash, management_ref)
 		VALUES ($1, $2, 'gcal', 'cal', '{"title":"secret-appointment"}', 'pending', $3, 'ref')`, m.activity, host.UserID, strings.Repeat("b", 64))
+	stranger := seedMail(t, e, "participants", "stranger-limited")
 	mustExec(e.ctx, t, e.owner, `INSERT INTO approval (kind, status, decided_at, proposed_by, summary, proposed_change, diff_hash, expires_at, evidence)
 		VALUES ('update_contact', 'rejected', now(), 'test:privacy', 'staged', '{}', 'h', now() + interval '1 day',
-		        jsonb_build_array(jsonb_build_object('source_type', 'activity', 'source_id', $1::text, 'evidence_snippet', 'secret-quote')))`, m.activity)
+		        jsonb_build_array(
+		          jsonb_build_object('source_type', 'activity', 'source_id', $1::text, 'evidence_snippet', 'secret-quote'),
+		          jsonb_build_object('source_type', 'activity', 'source_id', $2::text, 'evidence_snippet', 'snippet-leak ' || $3::text)))`,
+		m.activity, stranger.activity, ident(e.contact, liveEmail))
 	execution, report, edition := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	mustExec(e.ctx, t, e.owner, `SET session_replication_role = replica`)
 	mustExec(e.ctx, t, e.owner, `INSERT INTO report_edition (id, execution_id, report_id, report_revision, publication_audience, owner_id, captured_at, intended_due_at, manifest)
@@ -173,7 +177,8 @@ func TestALimitedMailReachedThroughAParticipantRowIsListedWithoutItsContent(t *t
 	}
 	assertWithheld(t, "reporting contribution", reporting, "value")
 	for _, row := range pkg.StagedMessages {
-		if strings.Contains(fmt.Sprint(row["evidence"]), "secret-quote") {
+		evidence := fmt.Sprint(row["evidence"])
+		if strings.Contains(evidence, "secret-quote") || strings.Contains(evidence, "snippet-leak") {
 			t.Errorf("a staged approval quotes a limited mail in the export: %v", row)
 		}
 	}
@@ -219,6 +224,9 @@ func TestAMailOnAnIdentifierAnotherContactNowHoldsIsNotTheSubjects(t *testing.T)
 	mustExec(e.ctx, t, e.owner, `INSERT INTO activity_participant (activity_id, role, channel_user_id, address) VALUES ($1, 'from', $2, NULL)`, byAccount.activity, movedAccount)
 	byRecord := seedMail(t, e, "workspace", "own-record")
 	seedParticipant(t, e, byRecord, "to", &e.contact, &moved)
+	sent := seedMail(t, e, "workspace", "rival-send")
+	seedOutbound(t, e, sent)
+	mustExec(e.ctx, t, e.owner, `UPDATE comms_outbound SET recipients = to_jsonb(ARRAY[$2::text]) WHERE activity_id = $1`, sent.activity, moved)
 
 	tx, err := e.owner.Begin(e.ctx)
 	if err != nil {
@@ -252,6 +260,15 @@ func TestAMailOnAnIdentifierAnotherContactNowHoldsIsNotTheSubjects(t *testing.T)
 	}
 	if !has(exportedSet(all), byRecord.activity) {
 		t.Error("the export dropped a mail resolved to the subject's own record")
+	}
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
+	if err != nil {
+		t.Fatalf("AssembleSAR: %v", err)
+	}
+	for _, row := range pkg.SentMessages {
+		if row["subject"] == sent.subject {
+			t.Errorf("a send to an address another contact now holds is in the subject's export: %v", row)
+		}
 	}
 }
 

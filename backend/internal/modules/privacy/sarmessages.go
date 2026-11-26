@@ -11,19 +11,20 @@ package privacy
 // sections.
 
 import (
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // sarMessagingSections gather both directions of the messaging boundary: what
 // capture decided about mail arriving from the subject, and what this
 // installation sent out about or to them.
-func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads, messages []ids.UUID) []sarSection {
+func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails, ownEmails []string, leads, messages []ids.UUID) []sarSection {
 	sections := []sarSection{
 		sarPartySourceSection(pkg, emails),
 		{&pkg.CaptureDispositions, `SELECT p.email, p.display_name, p.status, p.disposition_reason, p.created_at, p.resolved_at
 		   FROM capture_pending_counterparty p
 		   WHERE p.email IN (SELECT email FROM contact_email WHERE contact_id = $1)`, nil},
-		sarSentSection(pkg, contactID, messages),
+		sarSentSection(pkg, ownEmails, messages),
 		// The messages nobody has sent yet. They hold the subject's address and
 		// the body BEFORE any activity exists, so none of the three routes the
 		// query above takes can reach them — and a message written to this
@@ -141,15 +142,16 @@ func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 			&pkg.StagedMessages, `SELECT id, kind, status, summary, proposed_change,
 		      (SELECT coalesce(jsonb_agg(item), '[]'::jsonb)
 		         FROM jsonb_array_elements(` + evidenceArray + `) AS item
-		        WHERE item->>'source_id' IN (
-		                SELECT a.id::text FROM activity a WHERE a.id = ANY($4::uuid[]) AND ` + sarContentDisclosed + `)
-		           OR item->>'evidence_snippet' ~* ANY($3::text[])) AS evidence,
+		        WHERE (item->>'source_type' IS DISTINCT FROM 'activity' OR EXISTS (
+		                SELECT 1 FROM activity a WHERE a.id = ` + storekit.CitedActivityID("item") + ` AND ` + sarContentDisclosed + `))
+		          AND (item->>'source_id' IN (SELECT m::text FROM unnest($4::uuid[]) AS m)
+		               OR item->>'evidence_snippet' ~* ANY($5::text[]))) AS evidence,
 		      created_at, expires_at, decided_at
 		   FROM approval
 		   WHERE (` + subjectApprovalMatch + `)
 		      OR evidence::text ~* ANY($3::text[])
 		      OR ` + evidenceCitesSubjectActivity,
-			[]any{contactID.UUID, leads, addressPatterns(emails), messages},
+			[]any{contactID.UUID, leads, addressPatterns(emails), messages, addressPatterns(ownEmails)},
 		},
 	}
 	return append(append(sections, sarMeetingSections(pkg, messages)...), sarDraftSection(pkg, contactID, emails, leads))
@@ -210,7 +212,7 @@ func sarPartySourceSection(pkg *SARPackage, emails []string) sarSection {
 // addressee finds a send, a blind copy included. The bcc list and the bounce
 // facts are reduced to the subject's own address, so no other blind recipient
 // is disclosed. Content follows the audience rule of the send's activity.
-func sarSentSection(pkg *SARPackage, contactID ids.ContactID, messages []ids.UUID) sarSection {
+func sarSentSection(pkg *SARPackage, ownEmails []string, messages []ids.UUID) sarSection {
 	return sarSection{&pkg.SentMessages, `SELECT ` + sarActivityDisclosed("o.activity_id") + ` AS content_disclosed,
 		      CASE WHEN ` + sarActivityDisclosed("o.activity_id") + ` THEN o.subject END AS subject,
 		      CASE WHEN ` + sarActivityDisclosed("o.activity_id") + ` THEN o.body END AS body,
@@ -221,24 +223,21 @@ func sarSentSection(pkg *SARPackage, contactID ids.ContactID, messages []ids.UUI
 		      CASE WHEN ` + sarActivityDisclosed("o.activity_id") + ` THEN o.cc END AS cc,
 		      CASE WHEN ` + sarActivityDisclosed("o.activity_id") + ` THEN (SELECT coalesce(jsonb_agg(addr), '[]'::jsonb)
 		         FROM jsonb_array_elements_text(coalesce(o.bcc, '[]'::jsonb)) AS addr
-		        WHERE lower(addr) IN (SELECT email FROM contact_email WHERE contact_id = $1)) END AS bcc,
+		        WHERE lower(addr) = ANY($2::text[])) END AS bcc,
 		      o.consent_purpose,
 		      o.provider, o.channel_user_id, o.status, o.sent_at, o.created_at,
-		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) IN (
-		             SELECT email FROM contact_email WHERE contact_id = $1)
+		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) = ANY($2::text[])
 		           THEN o.bounced_at END AS bounced_at,
-		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) IN (
-		             SELECT email FROM contact_email WHERE contact_id = $1)
+		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) = ANY($2::text[])
 		           THEN o.bounce_kind END AS bounce_kind,
-		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) IN (
-		             SELECT email FROM contact_email WHERE contact_id = $1)
+		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) = ANY($2::text[])
 		           THEN o.bounce_recipient END AS bounce_recipient
 		   FROM comms_outbound o
-		   WHERE o.activity_id = ANY($2)
+		   WHERE o.activity_id = ANY($1)
 		      OR EXISTS (
 		           SELECT 1 FROM jsonb_array_elements_text(
 		                          o.recipients || o.cc || coalesce(o.bcc, '[]'::jsonb)) AS addr
-		           WHERE lower(addr) IN (SELECT email FROM contact_email WHERE contact_id = $1))`, []any{contactID.UUID, messages}}
+		           WHERE lower(addr) = ANY($2::text[]))`, []any{messages, loweredAddresses(ownEmails)}}
 }
 
 // sarActivityDisclosed asks sarContentDisclosed of the activity a section row

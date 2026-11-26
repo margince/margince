@@ -115,7 +115,7 @@ func readContactNotice(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 	if err != nil {
 		return nil, err
 	}
-	sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, nil, nil, external)
+	sections, err := sarSections(ctx, &pkg, contactID, emails, nil, leads, identities, nil, nil, external)
 	if err != nil {
 		return nil, err
 	}

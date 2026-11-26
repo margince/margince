@@ -24,7 +24,7 @@ import (
 // query set is compliance-critical — adding or dropping a source changes what
 // the export owes the data subject. It is assembled chapter by chapter, and the
 // order the chapters concatenate in is the order the export runs them in.
-func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities, authored, messages, external []ids.UUID) ([]sarSection, error) {
+func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, emails, ownEmails []string, leads, identities, authored, messages, external []ids.UUID) ([]sarSection, error) {
 	sections := sarIdentitySections(pkg)
 	retained, err := sarRetainedCopySections(ctx, pkg, identities, emails, leads)
 	if err != nil {
@@ -33,7 +33,7 @@ func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, 
 	sections = append(sections, retained...)
 	sections = append(sections, sarReportingSections(pkg, contactID, messages), sarQuestionSection(pkg, contactID, emails), sarBindingSection(pkg, contactID, emails))
 	sections = append(sections, sarRecordSections(pkg, contactID, leads, messages)...)
-	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads, messages)...)
+	sections = append(sections, sarMessagingSections(pkg, contactID, emails, ownEmails, leads, messages)...)
 	sections = append(sections, sarConsentSections(pkg, contactID, emails, leads)...)
 	sections = append(sections, sarRequestSections(pkg, contactID)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
