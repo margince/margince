@@ -57,8 +57,13 @@ data counts with the newest Chromium the data knows.
   A browser without it still gets a working page. For example,
   [`recordtabs.css`](../../frontend/src/design-system/recordtabs.css) anchors the tab underline in CSS
   where the browser can, and keeps a fallback where it cannot.
-- No test checks which CSS or DOM features the code uses. The end-to-end lane runs Chromium only, so
-  Safari and Firefox are checked by hand.
+- No test checks which CSS or DOM features the code uses. The end-to-end lane for pull requests runs
+  Chromium only. A daily scheduled run on `main` (`make e2e-secondary`) runs the five `@smoke`
+  flows (sign-in, Home, a record page, a modal and a list row menu) on Playwright's WebKit and
+  Firefox builds. Those builds are close to Safari and Firefox and not the same. Firefox is the
+  current release and is not pinned to the ESR. The run is a smoke check and no proof of support, so
+  a break there is found the day after the merge, and the rest of Safari and Firefox is checked by
+  hand.
 
 ## Refreshing the browser data
 
