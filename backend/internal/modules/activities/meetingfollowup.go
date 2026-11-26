@@ -169,14 +169,14 @@ func meetingAttendeesSQL(addressable string) string {
 ` + fmt.Sprintf(`	  CROSS JOIN LATERAL (
 	       SELECT COALESCE(array_agg(met.contact_id ORDER BY met.rank, met.contact_id)
 	                         FILTER (WHERE met.addressable), '{}') AS recipients
-	         FROM (SELECT rc.id AS contact_id, min(src.rank) AS rank, bool_or(%s) AS addressable
+	         FROM (SELECT rc.id AS contact_id, min(src.rank) AS rank, bool_or(rc.addressable) AS addressable
 	                 FROM (SELECT l.contact_id, 0 AS rank FROM activity_link l
 	                        WHERE l.activity_id = candidate.id AND l.contact_id IS NOT NULL
 	                       UNION ALL
 	                       SELECT p.contact_id, 1 FROM activity_participant p
 	                        WHERE p.activity_id = candidate.id AND p.contact_id IS NOT NULL AND p.user_id IS NULL
 	                          AND p.role IN ('organizer', 'attendee', 'to', 'cc')) src
-	                 CROSS JOIN LATERAL (SELECT rc.* FROM contact rc
+	                 CROSS JOIN LATERAL (SELECT rc.id, rc.archived_at, %s AS addressable FROM contact rc
 	                        WHERE rc.id = (`+contactSurvivorSQL("src.contact_id")+`) LIMIT 1) rc
 	                WHERE rc.archived_at IS NULL
 	                GROUP BY rc.id) met) attendees`, addressable) + ")"
@@ -185,7 +185,9 @@ func meetingAttendeesSQL(addressable string) string {
 // contactSurvivorSQL reads the contact a merge kept for ref by its key. A contact table
 // analyzed while empty then cannot turn into a scan of every contact per meeting.
 func contactSurvivorSQL(ref string) string {
-	return `SELECT COALESCE(named.merged_into_id, named.id) AS id FROM contact named WHERE named.id = ` + ref + ` LIMIT 1`
+	// Not COALESCE projected alone: the row-scope census reads merged_into_id as a reference handed back.
+	return `SELECT kept.id FROM contact kept
+	 WHERE kept.id = (SELECT COALESCE(named.merged_into_id, named.id) FROM contact named WHERE named.id = ` + ref + `) LIMIT 1`
 }
 
 // laterActivityColumns are the columns the "nothing sent since" tests read from

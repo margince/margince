@@ -131,7 +131,7 @@ func TestTheDealFollowUpBatchReadsEachAttendeeByKeyWhenContactsLookEmpty(t *test
 
 // attendeeContact matches the contact aliases the attendee and recipient lookups
 // use; EXPLAIN numbers a repeated alias.
-var attendeeContact = regexp.MustCompile(`^(named|rc)(_[0-9]+)?$`)
+var attendeeContact = regexp.MustCompile(`^(named|kept|rc)(_[0-9]+)?$`)
 
 // assertAttendeesReadByKey holds each attendee's contact to one row read by key,
 // and each link and participant read to a few runs per meeting.
