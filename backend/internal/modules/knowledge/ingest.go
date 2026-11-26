@@ -91,8 +91,8 @@ func (s *Store) IngestOwed(ctx context.Context, documentID ids.UUID) (bool, erro
 }
 
 // BeginIngest opens an attempt: the document moves to running, and whatever a
-// previous attempt wrote for it is deleted, its vectors read first so EmbedIngest
-// can give them back to passages whose text did not change.
+// previous attempt wrote for it is deleted. Its vectors are read first, so
+// EmbedIngest can give them back to passages whose text did not change.
 //
 // The delete is the whole retry protocol. Without it a crashed attempt's chunks
 // are counted by the next one's ceiling check and cited twice by every answer.

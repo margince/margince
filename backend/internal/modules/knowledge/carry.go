@@ -3,8 +3,8 @@
 
 package knowledge
 
-// An attempt deletes its document's passages before it writes the new ones, so
-// the vectors that document already paid for are read first and carried across.
+// An attempt deletes its document's passages before it writes the new ones. The
+// vectors that document already paid for are read first and carried across.
 // Only the document's own: sharing across documents needs an index this table lacks.
 
 import (
@@ -50,8 +50,8 @@ func readCarriedVectors(ctx context.Context, tx pgx.Tx, documentID ids.UUID) (ca
 	return carried, rows.Err()
 }
 
-// add keeps a vector once per binding, and only when its row's text still hashes
-// to the stored hash: a row that disagrees holds a vector of prose it no longer has.
+// add keeps a vector once per binding, and only while its row's text hashes to
+// the stored hash. A row that disagrees holds a vector of prose it no longer has.
 func (c carriedVectors) add(text string, v carriedVector) {
 	if (Chunk{Text: text}).Hash() != v.hash {
 		return
@@ -64,8 +64,8 @@ func (c carriedVectors) add(text string, v carriedVector) {
 	c[v.hash] = append(c[v.hash], v)
 }
 
-// take splits pending passages into the ones a carried vector answers under the
-// live binding, beside those vectors, and the ones still owed a model call.
+// take splits pending passages in two. A carried vector under the live binding
+// answers the first, and is returned beside it. The rest are owed a model call.
 func (c carriedVectors) take(pending []pendingChunk, identity string) (reused []pendingChunk, vectors [][]float32, owed []pendingChunk) {
 	for _, p := range pending {
 		if vector, ok := c.current(p.text, identity); ok {

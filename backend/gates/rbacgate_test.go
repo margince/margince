@@ -481,11 +481,9 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 // exists to check. Ratifying it as "outside the gate's business" would have
 // hidden the one store whose gate has no backstop.
 //
-// Both entry points are METHODS on *Store (Raw, SetRaw) for this reason. The
-// typed Get/Set helpers beside them are generic, and Go forbids generic
-// methods — a package-level generic function does not match the shape this
-// gate collects, so writing the store that way would have left the write path
-// invisible here while this comment claimed otherwise.
+// Both entry points are methods on *Store (Raw, SetRaw) so this gate sees them.
+// The typed Get/Set helpers beside them are generic package functions, since Go
+// forbids generic methods, and those do not match the shape this gate collects.
 var storeEntryPointScope = gatekit.Scope{
 	Roots:   []string{modulesDir, settingsStoreDir, composeTierDir},
 	Subject: declaresStoreEntryPoint,

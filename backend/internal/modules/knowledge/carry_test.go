@@ -51,7 +51,7 @@ func TestTheLiveBindingsVectorIsTakenOfSeveralForOneText(t *testing.T) {
 }
 
 // A row whose text no longer hashes to its stored hash holds a vector of prose
-// it lost, so that vector is never handed to a passage.
+// it lost. That vector is never handed to a passage.
 func TestARowWhoseTextDisagreesWithItsHashCarriesNothing(t *testing.T) {
 	carried := carriedVectors{}
 	carried.add("Edited outside the writer.", heldVector("Kept as it was.", liveBinding, 0.1))

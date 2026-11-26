@@ -43,7 +43,9 @@ const (
 	// test file for the data reset cases of an event the sweep orphaned. Raised by
 	// 1 test file for the extension notice kind cases. Raised by 1 test file for
 	// the unit tool coverage cases, which read the unexported tool coverage census.
-	composeRootTestFiles = 1920
+	// Raised by 1 test file for the re-ingest vector reuse cases, which drive the
+	// unexported knowledge ingest worker.
+	composeRootTestFiles = 1921
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -100,7 +102,9 @@ const (
 	// state and the schedule book's time zone. Both drive the unexported
 	// inventory handler, schedule book and catch-up schedule.
 	composeRootProductionLines = 231_229
-	composeRootTestLines       = 361_866
+	// Raised by 197 test lines for the re-ingest vector reuse cases, which drive
+	// the unexported knowledge ingest worker and its embedder fixture.
+	composeRootTestLines = 362_063
 )
 
 // A read under these floors stopped early or read the wrong place, and would
