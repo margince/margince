@@ -311,6 +311,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `captureseatlessrows_test.go` | H2 | A shared mailbox is a capture\_connection with no user, and its import rows name the connection instead of a seat. |
 | `capturesinkseams_test.go` | H3 | Every optional seam the capture Sink offers is wired by the composition root. |
 | `catalogoptionsreaders_test.go` | H2 | Who may read a custom field's options. |
+| `chatonepath_test.go` | H3 | Every chat network receives, files, changes and sends through the same core functions. |
 | `checklegsplit_test.go` | H3 | CI splits the backend gate's fan-out over two jobs: deterministic-gates runs `make check-backend CHECK\_LEGS="…"` and backend-lint runs `make check-static`. |
 | `childsetaudit_test.go` | H2 | Every writer of a child set moves the parent record's version. |
 | `claimedspelling_test.go` | H3 | A constant whose doc comment says it is spelled once is making a checkable statement, and until now nothing checked it. |
@@ -816,6 +817,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobkindgate_test.go` | H2 | Registration probes compile the real generated constraint through a source overlay. |
 | `magicfieldcensusfalsify_test.go` | H3 | The receipt field census, falsified: each finding it reports, planted. |
 | `migrationreadguard_test.go` | H2 | A downgrade guard may inspect rows and raise; calls and procedural writes still need review. |
+| `noopprobematch_test.go` | H2 | noOpProbeHelpers are the helpers that send a save of the stored values and check nothing moved, with where each takes its method and path. |
 | `piicolumnreading_test.go` | H3 | Which way the PII census fails when it cannot read a statement. |
 | `piisqlreader_test.go` | H2 | Reading the SQL the PII census judges: where one statement ends and the next begins, which table a write lands on, which columns its SET clause names, and which of those the reader could not read at all. |
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |

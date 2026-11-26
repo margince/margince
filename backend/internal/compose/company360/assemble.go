@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -369,7 +370,10 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 		if a.adviceErr == nil {
 			// The stage and the name come off the company row this
 			// assembly already read, so the page adds no query for either.
-			heading := companyHeading{name: a.out.Company.DisplayName, lastActivity: a.out.Company.LastActivityAt}
+			heading := companyHeading{
+				name: a.out.Company.DisplayName, lastActivity: a.out.Company.LastActivityAt,
+				lastActivityDateOnly: occurredday.IsStatedDay(a.out.Company.LastActivityPrecision),
+			}
 			if owner := a.out.Company.OwnerId; owner != nil {
 				heading.owner = new(ids.UUID(*owner))
 			}

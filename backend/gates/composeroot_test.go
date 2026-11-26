@@ -132,8 +132,10 @@ const (
 	// company route and a quiet reason carry, and their cases.
 	// Raised by 259 production and 267 test lines for the seat-bound deal reads
 	// and the stored-object ledger wiring, and the cases that drive them.
-	composeRootProductionLines = 231_975
-	composeRootTestLines       = 362_787
+	// Raised by 14 production and 14 test lines for the date-only precision the
+	// close silence and the customer-progress reads carry, and their case.
+	composeRootProductionLines = 231_989
+	composeRootTestLines       = 362_801
 )
 
 // A read under these floors stopped early or read the wrong place, and would
