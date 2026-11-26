@@ -47,7 +47,7 @@ The one tree here for the user of Margince, not the developer. It has no code an
 What we do when an attacker uses a hole in Margince: who reports it, where, and by which dates. It is
 ready before we need it, because the first date comes 24 hours after we learn of the attack.
 
-- [compliance/cra/README.md](compliance/cra/README.md): the report forms and the maker's draft compliance documents.
+- [compliance/cra/README.md](compliance/cra/README.md): report forms (CRA Article 14) and the maker's draft compliance documents.
 - [how-to/run-margince-securely.md](how-to/run-margince-securely.md): safe setup, security fixes and how to remove data.
 
 ### Principles: how this code decides
