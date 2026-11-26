@@ -42,6 +42,7 @@ var contractRecords = map[string]reflect.Type{
 	entityActivity:      reflect.TypeFor[crmcontracts.Activity](),
 	entityProduct:       reflect.TypeFor[crmcontracts.Product](),
 	entityOfferTemplate: reflect.TypeFor[crmcontracts.OfferTemplate](),
+	entityDealRoom:      reflect.TypeFor[crmcontracts.DealRoom](),
 }
 
 // geoStructs names the contract types that carry a place rather than a value.

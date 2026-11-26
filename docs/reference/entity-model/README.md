@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 354 |
-| Columns | 4357 |
+| Columns | 4356 |
 | Foreign keys | 618 |
 | Owning areas | 40 |
 
@@ -285,7 +285,7 @@ erDiagram
 | [`deal_product`](deals.md#deal_product) | deals | 9 | 0 |
 | [`deal_risk_day`](deals.md#deal_risk_day) | deals | 7 | 1 |
 | [`deal_risk_verdict`](deals.md#deal_risk_verdict) | deals | 2 | 0 |
-| [`deal_room`](dealrooms.md#deal_room) | dealrooms | 14 | 6 |
+| [`deal_room`](dealrooms.md#deal_room) | dealrooms | 15 | 6 |
 | [`deal_room_comment`](dealrooms.md#deal_room_comment) | dealrooms | 10 | 0 |
 | [`deal_room_document`](dealrooms.md#deal_room_document) | dealrooms | 12 | 2 |
 | [`deal_room_engagement`](dealrooms.md#deal_room_engagement) | dealrooms | 6 | 0 |
@@ -338,7 +338,7 @@ erDiagram
 | [`intro_request`](introductions.md#intro_request) | introductions | 31 | 0 |
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 10 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 11 | 1 |
-| [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 17 | 1 |
+| [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 15 | 1 |
 | [`lawful_basis_confirmation`](consent.md#lawful_basis_confirmation) | consent | 9 | 0 |
 | [`lead`](contacts.md#lead) | contacts | 49 | 20 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |

@@ -29,6 +29,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// whatsappRow selects the WhatsApp connections, each of which names its number.
+const whatsappRow = "provider = '" + whatsapp.Provider + "' AND account_id IS NOT NULL"
+
 const whatsappColumns = `id, channel_id, account_id, channel_label, status, created_at, seat_id,
 	(SELECT s.reader_team_id FROM capture_connection s WHERE s.id = channel_connection.seat_id),
 	(SELECT s.mail_posture FROM capture_connection s WHERE s.id = channel_connection.seat_id)`

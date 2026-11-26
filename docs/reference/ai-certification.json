@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 62,
-    "sites_best_current": 50,
+    "sites_best_current": 51,
     "sites_best_partial": 0,
-    "sites_best_stale": 12,
+    "sites_best_stale": 11,
     "sites_absent": 0,
     "scenarios": 346,
     "records": 463,
@@ -332,7 +332,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "abandoned": 0,
           "runs": 15,
           "passed": 15,
@@ -1553,7 +1553,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "abandoned": 0,
           "runs": 15,
           "passed": 15,
@@ -2947,7 +2947,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "abandoned": 0,
           "runs": 18,
           "passed": 17,
@@ -10714,7 +10714,7 @@
       "usable_with_care": 5,
       "not_reliable_yet": 0,
       "too_few_runs": 20,
-      "recheck_pending": 14,
+      "recheck_pending": 13,
       "judges": [
         "gemini-3.1-flash-lite"
       ],
@@ -10751,9 +10751,9 @@
             "env": "cloud_frontier"
           },
           "sites": 52,
-          "sites_current": 39,
+          "sites_current": 40,
           "sites_partial": 0,
-          "sites_stale": 13,
+          "sites_stale": 12,
           "runs": 1011,
           "passed": 992,
           "reliability": 0.9812067260138477,
@@ -11001,7 +11001,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "runs": 18,
           "passed": 17,
           "records": 1,
@@ -11704,7 +11704,7 @@
       "usable_with_care": 4,
       "not_reliable_yet": 0,
       "too_few_runs": 15,
-      "recheck_pending": 12,
+      "recheck_pending": 11,
       "judges": [
         "claude-sonnet-5-5"
       ],
@@ -11742,9 +11742,9 @@
             "thinking_level": "low"
           },
           "sites": 52,
-          "sites_current": 41,
+          "sites_current": 42,
           "sites_partial": 0,
-          "sites_stale": 11,
+          "sites_stale": 10,
           "runs": 963,
           "passed": 961,
           "reliability": 0.9979231568016614,
@@ -11998,7 +11998,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "runs": 15,
           "passed": 15,
           "records": 1,
@@ -14572,9 +14572,9 @@
         "env": "cloud_frontier"
       },
       "sites": 52,
-      "sites_current": 39,
+      "sites_current": 40,
       "sites_partial": 0,
-      "sites_stale": 13,
+      "sites_stale": 12,
       "runs": 1011,
       "passed": 992,
       "reliability": 0.9812067260138477,
@@ -14750,9 +14750,9 @@
         "thinking_level": "low"
       },
       "sites": 52,
-      "sites_current": 41,
+      "sites_current": 42,
       "sites_partial": 0,
-      "sites_stale": 11,
+      "sites_stale": 10,
       "runs": 963,
       "passed": 961,
       "reliability": 0.9979231568016614,
@@ -22965,8 +22965,24 @@
       "key": "corpus_ask/corpus_ask",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.8-flash",
+          "env": "cloud_frontier",
+          "thinking_level": "low"
+        },
+        "band": "certified",
+        "runs": 15,
+        "passed": 15,
+        "reliability": 1,
+        "reliability_interval": {
+          "lower": 0.901307,
+          "upper": 1
+        },
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "corpus_ask_answers_only_from_the_passage_that_says_it",
@@ -23006,10 +23022,10 @@
             "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 0,
+          "scenarios_measured": 5,
           "scenarios_total": 5,
           "runs": 18,
           "passed": 17,
@@ -23026,16 +23042,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
-          "stale_cause": {
-            "grader_changed": [
-              "corpus_ask_answers_only_from_the_passage_that_says_it",
-              "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
-              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
-              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
-              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -23222,10 +23229,10 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 0,
+          "scenarios_measured": 5,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
@@ -23242,16 +23249,7 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
-          "stale_cause": {
-            "grader_changed": [
-              "corpus_ask_answers_only_from_the_passage_that_says_it",
-              "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
-              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
-              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
-              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
