@@ -71,7 +71,11 @@ type SenderDecision struct {
 }
 
 // Overruled reports whether the owner's decision differs from the machine's.
-func (d SenderDecision) Overruled() bool { return d.Decision != "" }
+// A standing private decision is the machine's own verdict kept, not a
+// correction of it.
+func (d SenderDecision) Overruled() bool {
+	return d.Decision != "" && d.Decision != OverridePersonal
+}
 
 // SendersFor lists every sender this seat's mailbox has produced a decision
 // about, the owner's own corrections included.

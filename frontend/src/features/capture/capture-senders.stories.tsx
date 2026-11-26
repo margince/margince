@@ -58,6 +58,18 @@ const EVERY_KIND: SenderDecision[] = [
     message_count: 4,
     last_seen_at: "2026-08-14T19:42:00Z",
   },
+  // The standing decision a personal verdict leaves: kept out of the contact
+  // list for good, with one press to lift it.
+  {
+    address: "dr.keller@clinic.example",
+    kind: "personal",
+    status: "noise",
+    decision: "personal",
+    overruled: false,
+    record_exists: false,
+    message_count: 9,
+    last_seen_at: "2026-10-03T09:10:00Z",
+  },
   {
     address: "office@studiolegal.de",
     kind: "advisor",
