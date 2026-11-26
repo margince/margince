@@ -385,21 +385,14 @@ func companyNameAcceptEffect(svc *approvals.Service, store *contacts.Store) appr
 		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
 			return fmt.Errorf("compose: decoding the company-name proposal: %w", err)
 		}
-		decider, ok := principal.Actor(ctx)
-		if !ok {
-			return errors.New("compose: company-name accept without a deciding principal")
+		// The write carries the machine provenance, since the name came from a
+		// signature, and runs under the decider's grants. That is also why the
+		// accepted name stamps name_source='signature' and not 'human': a later
+		// human edit must still win over it.
+		execCtx, err := agentForActor(ctx, companyNamePromotionActor)
+		if err != nil {
+			return err
 		}
-		// The write carries the machine provenance — the name came from a
-		// signature, not from someone typing it — while the human's approval
-		// is on the decision's own audit row. That is also why the accepted
-		// name stamps name_source='signature' and not 'human': a later human
-		// edit must still win over it.
-		execCtx := principal.WithActor(ctx, principal.Principal{
-			Type:       principal.PrincipalSystem,
-			ID:         companyNamePromotionActor,
-			UserID:     decider.UserID,
-			OnBehalfOf: decider.UserID,
-		})
 		return svc.RedeemAndApply(ctx, approvalID, companyNameProposalKind, diffHash, func(tx pgx.Tx) error {
 			// A false here is the company having been renamed by a
 			// stronger source while the offer waited: the approval is spent,

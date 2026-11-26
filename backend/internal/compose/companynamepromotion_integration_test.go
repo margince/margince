@@ -277,6 +277,34 @@ func TestCompanyNamePromotionDoesNotReofferADeclinedRename(t *testing.T) {
 	}
 }
 
+// An approved rename is written by the promotion agent acting for the decider,
+// under the decider's grants.
+func TestAnApprovedCompanyRenameIsWrittenByTheAgentForTheDecider(t *testing.T) {
+	e := integration.Setup(t)
+	company := seedProvisionalCompany(t, e, "Gitex", "domain")
+	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
+	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
+	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+		t.Fatalf("RunWorkspace: %v", err)
+	}
+	approvalID := e.WsScalar(t, `SELECT id::text FROM approval WHERE kind = 'company_name_promotion' AND target_entity_id = $1`, company)
+	id, err := ids.Parse(approvalID)
+	if err != nil {
+		t.Fatalf("reading the staged offer: %v", err)
+	}
+	if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(e.As(e.Rep1, nil, integration.AdminPerms),
+		ids.From[ids.ApprovalKind](id), true, nil); err != nil {
+		t.Fatalf("approving the rename: %v", err)
+	}
+	if name, _ := companyNameAndSource(t, e, company); name != "Gitex Global" {
+		t.Fatalf("company is named %q after the approval, want Gitex Global", name)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = $1
+		AND actor_type = 'agent' AND actor_id = $2 AND on_behalf_of = $3`, company, companyNamePromotionActor, e.Rep1); n != 1 {
+		t.Errorf("%d renames by %s for the decider, want 1", n, companyNamePromotionActor)
+	}
+}
+
 // declineTheStagedRename runs one sweep, declines the offer it stages, and
 // returns — the setup both tests below start from.
 func declineTheStagedRename(t *testing.T, e *integration.Env, promoter *CompanyNamePromoter, company ids.UUID) {
