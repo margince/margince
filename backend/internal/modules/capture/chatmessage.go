@@ -42,6 +42,12 @@ func FileChatMessage(
 		}
 		return datasource.EntityRef{}, err
 	}
+	if consumed, err := handleClarification(ctx, sink, binding, msg); err != nil || consumed {
+		if err == nil {
+			err = ErrChatMessageConsumed
+		}
+		return datasource.EntityRef{}, err
+	}
 	ctx, route, err := routeForward(ctx, sink, binding, msg)
 	if err != nil {
 		return datasource.EntityRef{}, err
@@ -60,7 +66,16 @@ func FileChatMessage(
 	if err != nil {
 		return datasource.EntityRef{}, err
 	}
-	return sink.Upsert(ctx, rec)
+	ref, err := sink.Upsert(ctx, rec)
+	if err != nil || !route.held {
+		return ref, err
+	}
+	// The question about a held message is asked later. So the colleague and the
+	// account it came through are noted on the message's original.
+	if marker, ok := sink.(heldForwardMarker); ok {
+		err = marker.MarkHeldForward(ctx, msg.StoredOriginal, route.member, binding.Connection)
+	}
+	return ref, err
 }
 
 // chatRecord is the pure mapping from a chat message to the record the sink

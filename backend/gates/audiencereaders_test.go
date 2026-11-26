@@ -124,6 +124,7 @@ const qualifyTaskTextReader = "a system data task adds display metadata to quali
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/compose/proposalstage/proposalstage.go:proposalNamedFile": "reads one outbound mail's attachments through dealscout.WorkspaceEvidence, which composes auth.WorkspaceAudienceSQL, so only a mail the whole workspace may read can announce a proposal. The gate sees the audience test only when it is spelled in the statement.",
 	"internal/compose/proposalstage/proposalstage.go:proposalFirstFile": "the same read for a mail the model's reading named, through dealscout.WorkspaceEvidence; only the attachment's id and file name leave it.",
+	"internal/modules/capture/chatasker.go:followUpsOwedTx":             "Reads a colleague's own held forwards, which no one else may read (audience participants, no contact, no link), to quote an excerpt of each back to that same colleague in the chat they forwarded it to. It returns nothing to a user and to no other reader.",
 	"internal/modules/contacts/promisekept.go:lockKeptPromise":          "System-only decision on one claim. It reads a linked task only for its assignee and returns nothing to a user. The evidence is found afterwards under the owner's own scope.",
 
 	"internal/modules/activities/searchtextrepair.go:RebuildSearchTextTx": "System-only data task reads each stored mail body to find where its sender's text ends. No row is returned to a caller, and a members-only mail is searched by its members, so its value is rebuilt too. Held rows are excluded.",

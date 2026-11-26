@@ -223,7 +223,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 	// type-asserts the message seam off this map, so an unregistered connector
 	// reads as "this installation has no Telegram integration" and parks every
 	// reply a rep writes.
-	r.Register(telegram.New(telegram.NewAPI(nil, "")))
+	r.Register(capture.TelegramConnector(telegram.NewAPI(nil, "")))
 	// The offline demo connector, registered unconditionally and INERT until a
 	// capture_connection names it — which only the demo seeder and
 	// scripts/seed-dev.sql do. It reaches no network and holds no credential,

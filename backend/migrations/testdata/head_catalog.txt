@@ -8950,7 +8950,18 @@ public.provider_run_reservation.text_bound_update CREATE TRIGGER text_bound_upda
 public.provider_run_reservation_pkey CREATE UNIQUE INDEX provider_run_reservation_pkey ON public.provider_run_reservation USING btree (run_id, pool)
 public.provider_run_subject_identity CREATE UNIQUE INDEX provider_run_subject_identity ON public.provider_run USING btree (id, contact_id, provider)
 public.raw_capture acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.raw_capture.ask_attempts smallint NOT NULL gen=- def=0
+public.raw_capture.ask_batch_id uuid gen=- def=-
+public.raw_capture.ask_claimed_at timestamp with time zone gen=- def=-
+public.raw_capture.ask_followup_at timestamp with time zone gen=- def=-
+public.raw_capture.ask_hint_due_at timestamp with time zone gen=- def=-
+public.raw_capture.ask_hinted_at timestamp with time zone gen=- def=-
+public.raw_capture.ask_message_ids text[] NOT NULL gen=- def='{}'::text[]
+public.raw_capture.ask_next_at timestamp with time zone gen=- def=-
+public.raw_capture.ask_sent_at timestamp with time zone gen=- def=-
 public.raw_capture.channel_subjects text[] gen=- def=-
+public.raw_capture.held_by uuid gen=- def=-
+public.raw_capture.held_connection uuid gen=- def=-
 public.raw_capture.id uuid NOT NULL gen=- def=uuidv7()
 public.raw_capture.parts_slim_outcome text gen=- def=-
 public.raw_capture.parts_slimmed_at timestamp with time zone gen=- def=-
@@ -8966,6 +8977,7 @@ public.raw_capture.received_at timestamp with time zone NOT NULL gen=- def=now()
 public.raw_capture.source_id text NOT NULL gen=- def=-
 public.raw_capture.source_system text NOT NULL gen=- def=-
 public.raw_capture_channel_subjects CREATE INDEX raw_capture_channel_subjects ON public.raw_capture USING gin (channel_subjects) WHERE (channel_subjects IS NOT NULL)
+public.raw_capture_held_forward_idx CREATE INDEX raw_capture_held_forward_idx ON public.raw_capture USING btree (held_by, held_connection) WHERE (held_by IS NOT NULL)
 public.raw_capture_original_legacy_hints CREATE INDEX raw_capture_original_legacy_hints ON public.raw_capture USING btree (id) WHERE ((payload_object IS NOT NULL) AND ((((payload_object -> 'subjects'::text) ->> 'version'::text) IS DISTINCT FROM '1'::text) OR (jsonb_typeof(((payload_object -> 'subjects'::text) -> 'email_bits'::text)) IS DISTINCT FROM 'array'::text) OR (COALESCE(((payload_object -> 'subjects'::text) ->> 'email_saturated'::text), 'false'::text) <> 'false'::text)))
 public.raw_capture_original_subject_hints CREATE INDEX raw_capture_original_subject_hints ON public.raw_capture USING gin (payload_object jsonb_path_ops) WHERE (payload_object IS NOT NULL)
 public.raw_capture_payload_object_key CREATE INDEX raw_capture_payload_object_key ON public.raw_capture USING btree (((payload_object ->> 'key'::text))) WHERE (payload_object IS NOT NULL)

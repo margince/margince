@@ -367,7 +367,6 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 	if err := reg.everyKindIsRegisteredWithItsDeclaredType(); err != nil {
 		return nil, err
 	}
-
 	return jobs.New(pool, jobs.Config{
 		Queues:          jobQueues(),
 		Workers:         reg.workers,
@@ -485,6 +484,7 @@ func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
 		periodicFor(cfg, CounterpartyVerdictArgs{}),
 		periodicFor(cfg, ConfidentialityVerdictArgs{}),
 		periodicFor(cfg, CaptureTraceSweepArgs{}),
+		periodicFor(cfg, ChatClarificationSweepArgs{}),
 		periodicFor(cfg, CapturedDealRefileSweepArgs{}),
 		periodicFor(cfg, CompanyNamePromotionArgs{}),
 		periodicFor(cfg, CaptureBackfillReconcileArgs{}),

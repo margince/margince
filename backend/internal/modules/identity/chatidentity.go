@@ -246,6 +246,41 @@ func ChatMemberTx(ctx context.Context, tx pgx.Tx, network ChatNetwork, scope, ac
 	return member, true, nil
 }
 
+// ChatAccount is a member's verified account on one network, with the language
+// the member reads Margince in.
+type ChatAccount struct {
+	// Scope is the official account for Zalo and empty elsewhere.
+	Scope  string
+	ID     string
+	Locale string
+}
+
+// ChatAccountTx is the verified account the active member has on a network. It
+// answers false when the member has none, has left, or is an agent.
+func ChatAccountTx(ctx context.Context, tx pgx.Tx, network ChatNetwork, member ids.UUID) (ChatAccount, bool, error) {
+	cols, err := columnsOf(network)
+	if err != nil {
+		return ChatAccount{}, false, err
+	}
+	scope := `''`
+	if network == ChatZalo {
+		scope = `chat_zalo_oa_id`
+	}
+	var out ChatAccount
+	var locale *string
+	err = tx.QueryRow(ctx, `SELECT `+cols.identity+`, `+scope+`, locale FROM app_user
+		WHERE id = $1 AND `+cols.identity+` IS NOT NULL AND `+cols.verifiedAt+` IS NOT NULL
+		AND `+workforce.LiveMemberSQL("")+` AND NOT is_agent`, member).Scan(&out.ID, &out.Scope, &locale)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ChatAccount{}, false, nil
+	}
+	if err != nil {
+		return ChatAccount{}, false, fmt.Errorf("identity: reading the chat account of a member: %w", err)
+	}
+	out.Locale = derefChat(locale)
+	return out, true, nil
+}
+
 // RedeemChatCodeTx verifies the account that sent text as a member's own when
 // the text is that member's pending, unexpired code and nothing else. It reports whether
 // text was a pending code, so the caller files nothing for one. A code that is

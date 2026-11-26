@@ -91,6 +91,16 @@ type Message struct {
 	ReplyToID string
 	// ErrorCodes lists codes Meta attached to the message (unsupported types).
 	ErrorCodes []int
+	// Shared is the contact cards a `contacts` message carries.
+	Shared []SharedContact
+}
+
+// SharedContact is one card of a message that shares contacts. Phones are
+// digits, the WhatsApp id when the card names one and the written number
+// otherwise.
+type SharedContact struct {
+	Name   string
+	Phones []string
 }
 
 // Delivery states a Status can carry.

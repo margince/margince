@@ -11,7 +11,9 @@ and `/channel-events/whatsapp`).
 
 - A Meta app with the WhatsApp product, and a WhatsApp Business Account that holds the number.
 - The WhatsApp Business Account id, the phone number id, and the number in display form.
-- A system-user access token for the account, and the app secret from the app's settings.
+- A system-user access token for the account, and the app secret from the app's settings. The token
+  needs the `whatsapp_business_messaging` permission as well as the one that reads messages. Without it the number
+  still receives, but it cannot ask a member who wrote the messages they forwarded (see below).
 - A team that reads the number's messages.
 - A credential store on this installation, because both secrets are sealed in it.
 - `--public-base-url` set, so Meta can reach `<public_base_url>/v1/channel-events/whatsapp`.
@@ -134,3 +136,13 @@ These need a live number and a Meta app before you trust them:
 - Business-scoped user ids, and what Meta sends when a customer hides a phone number.
 - The retry timing of Meta after a `503`, and the size limit of a batch.
 - Media download from Meta, and the real size and host of each file.
+
+## The question to a member
+
+The number sends one kind of message: the question to a member who forwarded messages that name no author. It
+asks "Who wrote this?" in the member's chat with the number, and the member answers there. The question is a free-form
+text, so Meta allows it only within 24 hours after the member last wrote. After that the batch stays held until it
+expires. The number sends nothing to a customer, and a reply into a customer's conversation is still refused.
+
+`whatsapp_business_messaging` must be on the token. A token without it answers the question with an error that
+Margince treats as a refused credential. The batch then stays held, and the question is tried again after a pause.
