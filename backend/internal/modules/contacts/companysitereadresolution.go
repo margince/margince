@@ -218,20 +218,24 @@ func applyResolvedHumanFacts(
 		if CompanyFactMultiValue[edit.proposal.Field] {
 			newKey = NormalizeFactValueKey(edit.value)
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM company_fact
-			WHERE company_id = $1 AND category = $2
-			  AND field = $3 AND value_key = $4`, companyID,
-			edit.proposal.Category, edit.proposal.Field, oldKey); err != nil {
+		if err := factInVocabulary(edit.proposal.Category, edit.proposal.Field); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM field_provenance
+			WHERE object_type = 'company' AND object_id = $1 AND value IS NOT NULL
+			  AND field_name = $2 AND value_key = $3`, companyID,
+			edit.proposal.Field, oldKey); err != nil {
 			return nil, fmt.Errorf("replace human company fact %s.%s: %w",
 				edit.proposal.Category, edit.proposal.Field, err)
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO company_fact (company_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by, site_read_id)
-			VALUES ($1, $2, $3, $4, $5, '', '', 1, $7, $6, NULL)
-			ON CONFLICT (company_id, category, field, value_key)
-			DO UPDATE SET value = EXCLUDED.value, evidence_snippet = '', source_url = '',
+		if _, err := tx.Exec(ctx, `INSERT INTO field_provenance (object_type, object_id, field_name, value, value_key,
+			       evidence_snippet, evidence_ref, confidence, source, captured_by, site_read_id)
+			VALUES ('company', $1, $2, $3, $4, '', '', 1, $6, $5, NULL)
+			ON CONFLICT (object_type, object_id, field_name, value_key) WHERE value IS NOT NULL
+			DO UPDATE SET value = EXCLUDED.value, evidence_snippet = '', evidence_ref = '',
 			 confidence = 1, source = EXCLUDED.source, captured_by = EXCLUDED.captured_by,
 			 site_read_id = NULL, captured_at = now()`, companyID,
-			edit.proposal.Category, edit.proposal.Field, edit.value, newKey, by, source); err != nil {
+			edit.proposal.Field, edit.value, newKey, by, source); err != nil {
 			return nil, fmt.Errorf("save human company fact %s.%s: %w",
 				edit.proposal.Category, edit.proposal.Field, err)
 		}
