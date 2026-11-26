@@ -108,6 +108,8 @@ Ask a question about won and lost deals, and group it by **Loss reason from the 
 - **Mapped from a note**: an administrator matched the deal's older note to a reason.
 - **Note not mapped**: the deal has only a note, and nobody has matched it yet.
 
+A reason given on too few deals is hidden, together with enough other groups that it cannot be worked out from the rest. The answer then says how many deals a group needs, for example "A group shows from 5 records". This holds for your own deals too.
+
 Deals lost before the list existed have only a note. Under **Settings → Deals → Loss reasons**, **Older loss notes** lists each note once, with how many deals carry it. An administrator picks the reason each note counts as and presses **Apply to deals**. Margince updates those deals in the background, for the decisions on the page. Each note stays as it was written, and a reason picked at close is never replaced. A decided note stays on the list, so you can change its reason and apply it again.
 
 ## Where do deals and leads stop moving?

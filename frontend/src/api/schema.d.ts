@@ -52592,6 +52592,8 @@ export interface components {
             withheld: boolean;
             /** @description Whether a total over these rows may be shown. False once anything is withheld, because the total minus the shown groups is the withheld remainder. */
             total_safe: boolean;
+            /** @description The fewest records a group needs to be shown, as the floor in force judged this answer. Absent from an answer the floor did not judge. */
+            floor?: number;
             /** @description The vocabulary this was asked in. */
             schema_version: string;
             /**

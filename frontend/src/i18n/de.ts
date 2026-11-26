@@ -9429,6 +9429,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.q.withheldBody":
     "Eine Gruppe mit zu wenigen Datensätzen wird verborgen. Dazu werden so viele weitere Gruppen verborgen, dass sich die Gruppe nicht aus den übrigen herausrechnen lässt.",
   "analytics.q.withheldTitle": "Einige Gruppen sind verborgen",
+  "analytics.q.withheldFloor_one":
+    "Eine Gruppe wird ab {count} Datensatz gezeigt.",
+  "analytics.q.withheldFloor_other":
+    "Eine Gruppe wird ab {count} Datensätzen gezeigt.",
   "analytics.q.amountInvalid":
     "Gib jeden Betrag als Zahl mit nicht mehr Nachkommastellen ein, als seine Währung hat.",
   "analytics.q.needCurrencyFilter":

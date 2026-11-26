@@ -71970,6 +71970,12 @@ components:
           description: >-
             Whether a total over these rows may be shown. False once anything is withheld,
             because the total minus the shown groups is the withheld remainder.
+        floor:
+          type: integer
+          minimum: 1
+          description: >-
+            The fewest records a group needs to be shown, as the floor in force judged this
+            answer. Absent from an answer the floor did not judge.
         schema_version:
           type: string
           description: The vocabulary this was asked in.

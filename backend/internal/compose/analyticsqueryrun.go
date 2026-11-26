@@ -37,6 +37,8 @@ type AnalyticsAnswer struct {
 	// anything is withheld, because total-minus-shown is the subtraction the
 	// floor exists to stop.
 	TotalSafe bool
+	// Floor is the fewest records a group needs to be shown; zero when none judged it.
+	Floor int
 	// SchemaVersion is the vocabulary this ran against. A caller comparing two
 	// answers needs to know they were asked in the same language.
 	SchemaVersion        string
@@ -348,7 +350,7 @@ func withheldAnswer(
 	}
 	return AnalyticsAnswer{
 		Columns: columns, Rows: out, Withheld: withheld,
-		TotalSafe: analyticsquery.TotalIsSafe(withheld), SchemaVersion: schemaVersion,
+		TotalSafe: analyticsquery.TotalIsSafe(withheld), SchemaVersion: schemaVersion, Floor: int(floor),
 	}
 }
 

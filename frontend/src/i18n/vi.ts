@@ -9175,6 +9175,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.q.withheldBody":
     "Nhóm có quá ít hồ sơ sẽ bị ẩn, cùng với đủ số nhóm khác để không thể suy ra nhóm đó từ phần còn lại.",
   "analytics.q.withheldTitle": "Một số nhóm đã bị ẩn",
+  "analytics.q.withheldFloor_one":
+    "Một nhóm được hiện khi có từ {count} hồ sơ.",
+  "analytics.q.withheldFloor_other":
+    "Một nhóm được hiện khi có từ {count} hồ sơ.",
   "analytics.q.amountInvalid":
     "Nhập mỗi số tiền dưới dạng số, với số chữ số thập phân không vượt quá mức của loại tiền đó.",
   "analytics.q.needCurrencyFilter":

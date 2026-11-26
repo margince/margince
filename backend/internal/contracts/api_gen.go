@@ -36586,6 +36586,9 @@ type AnalyticsAnswer struct {
 	// ExcludedByPermission Visible records excluded by field masks. Absent when no mask applies.
 	ExcludedByPermission *int `json:"excluded_by_permission,omitempty" minimum:"0"`
 
+	// Floor The fewest records a group needs to be shown, as the floor in force judged this answer. Absent from an answer the floor did not judge.
+	Floor *int `json:"floor,omitempty" minimum:"1"`
+
 	// Labels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
 	Labels *AnalyticsIdLabels `json:"labels,omitempty"`
 

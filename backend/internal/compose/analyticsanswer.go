@@ -13,6 +13,9 @@ func analyticsAnswerWire(answer AnalyticsAnswer) crmcontracts.AnalyticsAnswer {
 		PopulationNarrowed:   populationNarrowedWire(answer.PopulationNarrowed),
 		ExcludedByPermission: answer.ExcludedByPermission,
 	}
+	if answer.Floor > 0 {
+		out.Floor = &answer.Floor
+	}
 	if answer.BaseCurrency != "" {
 		out.BaseCurrency = &answer.BaseCurrency
 	}

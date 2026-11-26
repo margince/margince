@@ -9383,6 +9383,8 @@ export const en = {
   "analytics.q.withheldBody":
     "A group with too few records is hidden, along with enough of the rest that it cannot be worked out from the others.",
   "analytics.q.withheldTitle": "Some groups are withheld",
+  "analytics.q.withheldFloor_one": "A group shows from {count} record.",
+  "analytics.q.withheldFloor_other": "A group shows from {count} records.",
   "analytics.q.amountInvalid":
     "Enter each amount as a number with no more decimals than its currency has.",
   "analytics.q.needCurrencyFilter":

@@ -198,7 +198,14 @@ function MoneyAnswerTable({
           kind="standing"
           title={t("analytics.q.withheldTitle")}
         >
-          {t("analytics.q.withheldBody")}
+          <p>{t("analytics.q.withheldBody")}</p>
+          {answer.floor !== undefined && (
+            <p>
+              {plural("analytics.q.withheldFloor", answer.floor, {
+                count: formatAnalyticsNumber(answer.floor, locale),
+              })}
+            </p>
+          )}
         </Callout>
       )}
       {anyReading("mixed", query, answer, answerCurrency, money) && (

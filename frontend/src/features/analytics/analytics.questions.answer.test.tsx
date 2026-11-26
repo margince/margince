@@ -109,6 +109,21 @@ describe("the answer table", () => {
     ).toBeNull();
   });
 
+  it("says how many records a group needs, from the floor that judged the answer", async () => {
+    stubServer();
+    renderAnswer({ ...WITHHELD_ANSWER, floor: 7 });
+    expect(
+      await screen.findByText("A group shows from 7 records."),
+    ).toBeTruthy();
+  });
+
+  it("names no number for an answer that carries no floor", async () => {
+    stubServer();
+    renderAnswer(WITHHELD_ANSWER);
+    await screen.findByText("Some groups are withheld");
+    expect(screen.queryByText(/A group shows from/)).toBeNull();
+  });
+
   it("says a group value in the words the product already uses", async () => {
     stubServer();
     renderAnswer(
