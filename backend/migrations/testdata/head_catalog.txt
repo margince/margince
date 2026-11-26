@@ -8269,13 +8269,16 @@ public.meeting_readiness.text_bound_insert CREATE TRIGGER text_bound_insert AFTE
 public.meeting_readiness.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.meeting_readiness FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"revision": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"participants_fingerprint":20000,"revision":20000}')
 public.meeting_readiness_pkey CREATE UNIQUE INDEX meeting_readiness_pkey ON public.meeting_readiness USING btree (attendee_id, activity_id)
 public.member_identity_family(member uuid) secdef=false cfg=- acl=- 
-  WITH RECURSIVE member_identities(id) AS (
-    SELECT member
-    UNION
-    SELECT retired.id FROM app_user retired JOIN member_identities survivor
-      ON retired.merged_into_user_id = survivor.id
-     WHERE retired.removed_at IS NOT NULL)
-  SELECT array_agg(id) FROM member_identities
+BEGIN
+  RETURN (
+    WITH RECURSIVE member_identities(id) AS (
+      SELECT member
+      UNION
+      SELECT retired.id FROM app_user retired JOIN member_identities survivor
+        ON retired.merged_into_user_id = survivor.id
+       WHERE retired.removed_at IS NOT NULL)
+    SELECT array_agg(id) FROM member_identities);
+END;
 
 public.mfa_challenge_spent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mfa_challenge_spent.expires_at timestamp with time zone NOT NULL gen=- def=-
