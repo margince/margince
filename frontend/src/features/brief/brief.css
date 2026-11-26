@@ -735,15 +735,6 @@
 .brief-done-chips:empty {
   display: none;
 }
-.brief-done-preview {
-  margin: 0;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
-  color: var(--textSecondary);
-}
 /* The steps: a dot per change on a hairline spine. The dot is indigo while
    the change waits, since Margince made it, and grey once it is settled. */
 .brief-done-changes {
