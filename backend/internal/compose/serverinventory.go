@@ -165,6 +165,7 @@ type Server struct {
 	contact360Handlers
 	project360Handlers
 	contactBriefHandlers
+	taskExplainHandlers
 	meetingBriefHandlers
 	dealStatusHandlers
 	roomBriefHandlers

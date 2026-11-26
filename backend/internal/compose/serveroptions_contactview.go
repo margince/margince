@@ -18,6 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/leaddraft"
+	"github.com/margince/margince/backend/internal/compose/taskexplain"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -47,6 +49,24 @@ func WithContactBrief(brain completer, routingVersion func() string) Option {
 				WithEmailSummaries(emailRows(pool)),
 		)
 	}
+}
+
+// WithTaskExplanation binds the summarize lane that explains a task. Without
+// it the explanation states the facts alone and says so in generated_by.
+func WithTaskExplanation(brain completer, routingVersion func() string) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		if s.contact360Svc == nil {
+			return
+		}
+		s.taskExplainHandlers = taskexplain.NewHandlers(s.taskExplainService(pool, brain, routingVersion))
+	}
+}
+
+// taskExplainService reads the task through the activities store and the
+// relationship through the contact page's own composite read.
+func (s *Server) taskExplainService(pool *pgxpool.Pool, brain completer, routingVersion func() string) *taskexplain.Service {
+	return taskexplain.NewService(pool, activities.NewStore(InstallationDB(pool)), s.contact360Svc, brain, routingVersion, time.Now).
+		WithEmailSummaries(emailRows(pool))
 }
 
 // WithContactDraft binds the lane that writes an email to one contact — the

@@ -14,6 +14,8 @@ import (
 
 // ForgetContacts deletes what was written about these contacts, for all
 // readers. An erased or merged contact keeps its row, so no cascade fires.
+// Every task explanation goes too: any of them may quote these contacts, and
+// each is rebuilt on its next open.
 func ForgetContacts(ctx context.Context, tx pgx.Tx, contacts ...ids.ContactID) error {
 	keys := make([]ids.UUID, len(contacts))
 	for i, contact := range contacts {
@@ -22,6 +24,10 @@ func ForgetContacts(ctx context.Context, tx pgx.Tx, contacts ...ids.ContactID) e
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM generated_summary WHERE contact_id = ANY($1)`, keys); err != nil {
 		return fmt.Errorf("delete the generated summaries of a contact: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM generated_summary WHERE kind = $1`, KindTaskExplanation); err != nil {
+		return fmt.Errorf("delete the task explanations that may quote a contact: %w", err)
 	}
 	return nil
 }

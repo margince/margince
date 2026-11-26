@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
+	"github.com/margince/margince/backend/internal/compose/taskexplain"
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/contactresearch"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
@@ -97,6 +98,7 @@ type (
 	contact360Handlers      = contact360.Handlers
 	project360Handlers      = project360.Handlers
 	contactBriefHandlers    = contactbrief.Handlers
+	taskExplainHandlers     = taskexplain.Handlers
 	contactResearchHandlers = contactresearch.Handlers
 	meetingBriefHandlers    = meetingbrief.Handlers
 	dealStatusHandlers      = dealstatus.Handlers
@@ -136,6 +138,7 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 		contactbrief.NewService(pool, s.contact360Svc, nil, nil, time.Now).
 			WithEmailSummaries(emailRows(pool)),
 	)
+	s.taskExplainHandlers = taskexplain.NewHandlers(s.taskExplainService(pool, nil, nil))
 	// The pre-meeting brief shares that composite read and adds the claim
 	// reader for the rest of the room. It caches NOTHING (ADR-0097 D5): it is
 	// opened minutes before a meeting, so a stored artifact would be the one
