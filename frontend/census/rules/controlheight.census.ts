@@ -240,6 +240,11 @@ export const ACCEPTED = new Map<string, string>([
   ["fdz", "a drop ZONE is an area to aim at, not a control"],
   ["fdz-input", "the invisible file input covering that zone"],
   ["filterpill", "chip-shaped, and the chip is its own rung on the toolbar"],
+  [
+    "chip-dense",
+    "a fact chip at the badge's geometry, sharing a line with badges; as a " +
+      "button it opens a panel from that line and keeps the line's height",
+  ],
   // The filter row's own segments, which fill the row they stand in.
   ["lt-frow-seg", "fills the filter row's height, whatever that row stands at"],
   [

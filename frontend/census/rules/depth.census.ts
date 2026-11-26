@@ -17,7 +17,7 @@ import type { CensusRule } from "../tree";
 // `none` and `0` are the suppression half: a control with no fill takes the
 // resting layer back off, which is a decision and not a drift.
 const HOUSE_SHADOW =
-  /^(none|0|var\(--shadow-(rest|well|pop)\)|var\(--focus-glow(-danger|-ai)?\))$/;
+  /^(none|0|var\(--shadow-(rest|well|pop)\)|var\(--focus-(glow|field)(-danger|-ai)?\))$/;
 
 /**
  * Whether every layer of a shadow is a rule rather than depth. A flat inset is

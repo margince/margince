@@ -80,43 +80,51 @@ type ContactVerb = {
   // Without a composer the reader's own client gets the plain `label`, since
   // nothing would draft there.
   draft?: Readonly<{ label: string; intent: string }>;
+  // A line in a menu: the word alone, as `CallAction`'s `bare`.
+  bare?: boolean;
 };
 
 type Contact = Readonly<ContactValue | ContactVerb>;
 
+/** The labelled Email verb: the composer where one is hosted, else `mailto:`. */
+function EmailButton(props: ContactVerb) {
+  const writeTo = useWriteTo();
+  const address = mailbox(props.address ?? "");
+  if (!address || props.readOnly) {
+    return null;
+  }
+  const glyph = props.bare ? null : <Mail aria-hidden="true" />;
+  if (!writeTo) {
+    return linkVerb(`mailto:${address}`, glyph, props.label);
+  }
+  const { draft } = props;
+  if (draft) {
+    return (
+      <Button
+        variant="ai"
+        onClick={() =>
+          writeTo({ ...props.record, address, draftIntent: draft.intent })
+        }
+      >
+        {draft.label}
+      </Button>
+    );
+  }
+  return (
+    <Button
+      variant="ghost"
+      onClick={() => writeTo({ ...props.record, address })}
+    >
+      {glyph}
+      {props.label}
+    </Button>
+  );
+}
+
 export function ContactLink(props: Contact) {
   const writeTo = useWriteTo();
   if (props.appearance === "button") {
-    const address = mailbox(props.address ?? "");
-    if (!address || props.readOnly) {
-      return null;
-    }
-    const glyph = <Mail aria-hidden="true" />;
-    if (!writeTo) {
-      return linkVerb(`mailto:${address}`, glyph, props.label);
-    }
-    const { draft } = props;
-    if (draft) {
-      return (
-        <Button
-          variant="ai"
-          onClick={() =>
-            writeTo({ ...props.record, address, draftIntent: draft.intent })
-          }
-        >
-          {draft.label}
-        </Button>
-      );
-    }
-    return (
-      <Button
-        variant="ghost"
-        onClick={() => writeTo({ ...props.record, address })}
-      >
-        {glyph}
-        {props.label}
-      </Button>
-    );
+    return <EmailButton {...props} />;
   }
   const { value, children, className = "link-button", textClassName } = props;
   const body = children ?? value;
