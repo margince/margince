@@ -12,9 +12,8 @@ package gates
 // other cases. If they diverged, a retired case would hold a word the guard no
 // longer knows, and a rewrite of a closed request's answer would pass.
 //
-// The placeholder that SQL writes over the subject is held the same way: consent
-// reads it to tell the screen the case names no one, and a placeholder it no
-// longer knows would show as the subject's name.
+// The placeholder that SQL writes over the subject is held the same way. Consent
+// reads it to tell the screen the case names no one.
 
 import (
 	"go/ast"

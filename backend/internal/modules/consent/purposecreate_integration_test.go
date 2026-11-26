@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A new purpose's key holds no space, and its label cannot read as a listed
-// purpose's label or key: the consent screens name a purpose by its label alone.
+// A new purpose's key holds no space. Its label cannot read as a listed
+// purpose's label or key, since a contact's consent names a purpose by label.
 func TestANewPurposeCannotBeMistakenForAListedOne(t *testing.T) {
 	e := setupChannelConsent(t)
 	configurer := principal.WithActor(e.ctx, principal.Principal{

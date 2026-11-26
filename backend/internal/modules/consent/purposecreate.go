@@ -22,10 +22,8 @@ import (
 // so two admins naming one label at once cannot both pass the check.
 const purposeCatalogLock = "consent.consent_purpose.create"
 
-// CreatePurpose defines one purpose. Purposes are compliance configuration, and
-// consent_config is the object that says so — it replaced a borrowed
-// pipeline.create, which let anyone who could add a pipeline stage define the
-// vocabulary every outreach decision is judged against.
+// CreatePurpose defines one purpose. A purpose is compliance configuration, so
+// its grant is consent_config: every outreach decision is judged against it.
 func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDOI bool, frequency string) (Purpose, error) {
 	if err := auth.Require(ctx, "consent_config", principal.ActionCreate); err != nil {
 		return Purpose{}, err
@@ -69,7 +67,7 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 
 // refuseConfusableLabel refuses a label that reads as a listed purpose's label
 // or key. A contact's consent and the pages a contact opens name a purpose by
-// its label alone, so two that read alike cannot be told apart there. An
+// its label alone. Two that read alike cannot be told apart there, and an
 // archived purpose shows on none of them.
 func refuseConfusableLabel(ctx context.Context, tx pgx.Tx, label string) error {
 	rows, err := tx.Query(ctx, `SELECT key, label FROM consent_purpose WHERE archived_at IS NULL`)
