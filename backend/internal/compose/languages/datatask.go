@@ -39,6 +39,8 @@ type column struct {
 
 // columns lists every column the task checks. The language-column gate holds
 // Checked to the head catalog, so a column added there cannot be left out.
+//
+//nolint:goconst // each name is that table's own column, not one shared word
 var columns = []column{
 	{table: "activity", name: "language", id: "id"},
 	{table: "app_user", name: "locale", id: "id"},
@@ -56,7 +58,7 @@ var columns = []column{
 
 // DataTask reports each stored value the language table or a locale shape would
 // refuse. It changes no row and guesses no mapping. A key added not valid leaves
-// older rows unchecked, and a person reads the report to decide what each means.
+// older rows unchecked, and an admin reads the report to decide what each means.
 func DataTask() datatask.Task {
 	steps := make([]datatask.Step, len(columns))
 	for i, c := range columns {
