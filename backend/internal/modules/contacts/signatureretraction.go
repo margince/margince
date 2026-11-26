@@ -190,20 +190,25 @@ func takeBackSignatureFieldsTx(ctx context.Context, tx pgx.Tx, fields []ids.UUID
 		 FOR UPDATE OF c`, fields); err != nil {
 		return 0, fmt.Errorf("contacts: holding the contacts whose signature fields are taken back: %w", err)
 	}
+	if err := moveLegacySubjectsOf(ctx, tx, entityContact, `SELECT DISTINCT contact_id
+		  FROM contact_profile_field_legacy WHERE id = ANY($1)`, fields); err != nil {
+		return 0, err
+	}
 	if owed != nil {
 		if due, err := owed(ctx, tx); err != nil || !due {
 			return 0, err
 		}
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT f.id, f.contact_id, f.field, f.value, f.superseded_value, f.value_key, f.created_at
-		  FROM contact_profile_field f
-		 WHERE f.id = ANY($1) AND f.source = $2 AND ($3 = '' OR f.source_ref = $3)
+		SELECT f.id, f.object_id, f.field_name, f.value, f.superseded_value, f.value_key, f.captured_at
+		  FROM field_provenance f
+		 WHERE f.id = ANY($1) AND f.object_type = 'contact' AND f.value IS NOT NULL
+		   AND f.source = $2 AND ($3 = '' OR f.evidence_ref = $3)
 		   AND NOT EXISTS (
 		     SELECT 1 FROM ai_feedback
-		      WHERE subject_type = 'contact' AND subject_id = f.contact_id
+		      WHERE subject_type = 'contact' AND subject_id = f.object_id
 		        AND claim_kind = 'profile_field' AND verdict = 'corrected'
-		        AND claim_key = encode(sha256(('profile_field:' || f.field)::bytea), 'hex'))
+		        AND claim_key = encode(sha256(('profile_field:' || f.field_name)::bytea), 'hex'))
 		 ORDER BY f.id
 		 FOR UPDATE OF f`, fields, enrichSource, sourceRef)
 	if err != nil {
@@ -218,7 +223,8 @@ func takeBackSignatureFieldsTx(ctx context.Context, tx pgx.Tx, fields []ids.UUID
 		return 0, err
 	}
 	deleted, err := tx.Query(ctx, `
-		DELETE FROM contact_profile_field WHERE id = ANY($1) RETURNING contact_id, field`, removing)
+		DELETE FROM field_provenance WHERE id = ANY($1) AND value IS NOT NULL
+		RETURNING object_id, field_name`, removing)
 	if err != nil {
 		return 0, fmt.Errorf("contacts: removing the signature evidence: %w", err)
 	}

@@ -113,22 +113,6 @@ func progressOf(p migration.Progress) *crmcontracts.ImportRunProgress {
 	return &out
 }
 
-// reasonCodeOrAbsent is a report row's code, or nil for a row stored without one.
-func reasonCodeOrAbsent(code migration.ReasonCode) *crmcontracts.ImportReasonCode {
-	if code == "" {
-		return nil
-	}
-	return new(crmcontracts.ImportReasonCode(code))
-}
-
-func paramsOrAbsent(params migration.Params) *map[string]string {
-	if len(params) == 0 {
-		return nil
-	}
-	out := map[string]string(params)
-	return &out
-}
-
 // savedMappingOf is the part's column mapping as the run holds it, nil when it
 // holds none so the wire omits the field.
 func savedMappingOf(p migration.PartMapping) *map[string]string {

@@ -243,6 +243,9 @@ func restoreProfileFieldsOf(ctx context.Context, tx pgx.Tx, companyID ids.Compan
 	if err != nil || len(receipts) == 0 {
 		return nil, err
 	}
+	if err := moveLegacyEvidence(ctx, tx, entityCompany, companyID.UUID); err != nil {
+		return nil, err
+	}
 	before, err := readProfileFieldImages(ctx, tx, companyID)
 	if err != nil {
 		return nil, err
@@ -297,26 +300,26 @@ func restoreProfileField(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID
 	var args []any
 	switch {
 	case want == nil && current != nil:
-		statement = `DELETE FROM company_profile_field WHERE id = $1 AND version = $2`
+		statement = `DELETE FROM field_provenance WHERE id = $1 AND version = $2 AND value IS NOT NULL`
 		args = []any{current.ID, current.Version}
 	case want != nil && current != nil:
 		statement = `
-			UPDATE company_profile_field t
-			   SET value = r.value, evidence_snippet = r.evidence_snippet, source_url = r.source_url,
+			UPDATE field_provenance t
+			   SET value = r.value, evidence_snippet = r.evidence_snippet, evidence_ref = r.source_url,
 			       confidence = r.confidence, source = r.source, captured_by = r.captured_by,
 			       captured_at = r.captured_at, retrieved_at = r.retrieved_at,
 			       verified_at = r.verified_at, verified_by = r.verified_by
 			  FROM jsonb_populate_record(NULL::company_profile_field, $3::jsonb) r
-			 WHERE t.id = $1 AND t.version = $2`
+			 WHERE t.id = $1 AND t.version = $2 AND t.value IS NOT NULL`
 		args = []any{current.ID, current.Version, want.Content}
 	case want != nil:
 		statement = `
-			INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url,
+			INSERT INTO field_provenance (object_type, object_id, field_name, value, evidence_snippet, evidence_ref,
 			       confidence, source, captured_by, captured_at, retrieved_at, verified_at, verified_by)
-			SELECT $1, $2, r.value, r.evidence_snippet, r.source_url, r.confidence, r.source, r.captured_by,
-			       r.captured_at, r.retrieved_at, r.verified_at, r.verified_by
+			SELECT 'company', $1, $2, r.value, r.evidence_snippet, r.source_url, r.confidence, r.source,
+			       r.captured_by, r.captured_at, r.retrieved_at, r.verified_at, r.verified_by
 			  FROM jsonb_populate_record(NULL::company_profile_field, $3::jsonb) r
-			ON CONFLICT (company_id, field) DO NOTHING`
+			ON CONFLICT (object_type, object_id, field_name, value_key) WHERE value IS NOT NULL DO NOTHING`
 		args = []any{companyID, field, want.Content}
 	default:
 		return nil

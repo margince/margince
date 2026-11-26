@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/compose/recordexport"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -125,8 +126,8 @@ func (w *csvWriters) ownerOf(row migration.Row) (*ids.UserID, *migration.Skipped
 
 // landingCells is checkedCells with the row's owner: a known seat rides in
 // typed. An unknown address or an unsplit line 1 is the warning the row lands
-// with.
-func (w *csvWriters) landingCells(row migration.Row) (map[string]any, *migration.SkippedRow, *migration.SkippedRow) {
+// with. A row that cannot land answers every invalid cell and no warning.
+func (w *csvWriters) landingCells(row migration.Row) (map[string]any, []migration.SkippedRow, *migration.SkippedRow) {
 	typed, invalid := w.checkedCells(row)
 	if invalid != nil {
 		return nil, invalid, nil
@@ -181,7 +182,7 @@ func collapseUnknownOwners(issues []crmcontracts.ImportRowIssue) []crmcontracts.
 		was := out[at]
 		out[at] = crmcontracts.ImportRowIssue{
 			Line: was.Line, File: was.File, Column: was.Column, Kind: was.Kind, Value: was.Value,
-			Reason: why.English(), ReasonCode: reasonCodeOrAbsent(why.Code), Params: paramsOrAbsent(why.Params),
+			Reason: why.English(), ReasonCode: importwire.ReasonCodeOrAbsent(why.Code), Params: importwire.ParamsOrAbsent(why.Params),
 		}
 	}
 	return out

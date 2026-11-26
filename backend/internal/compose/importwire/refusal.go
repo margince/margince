@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package importwire holds the import surface's refusals, each with the values
-// a screen words it from. It also types a CSV sent without a type.
+// a screen words it from, and the row issues a run's report names. It also
+// types a CSV sent without a type.
 package importwire
 
 import (
