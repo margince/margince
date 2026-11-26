@@ -2191,6 +2191,13 @@ span.error-line {
   .stat-card-value {
   color: var(--textPrimary);
 }
+/* On a row of chart tabs each figure's receipt waits for the reader: it
+   shows on hover and on focus, so four receipts never crowd the row. */
+.stat-strip[data-density="plate"]:has(.stat-card-open[aria-pressed])
+  .stat-card:not(:hover, :focus-within)
+  :is(.stat-card-source, .stat-card-basis:not([aria-expanded="true"])) {
+  opacity: 0;
+}
 /* A reading that is a word, such as a status, is set as words: it is an
    answer about the figure, not a figure. */
 .stat-strip[data-density="plate"] .stat-card-value[data-word] {

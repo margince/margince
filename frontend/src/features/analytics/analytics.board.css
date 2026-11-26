@@ -361,3 +361,14 @@
 .analytics-duo .panel-foot > .btn {
   margin-inline-start: auto;
 }
+
+/* At half width a head's reading moves under its title, and the details
+   trigger keeps the title's line at the far end. */
+.analytics-duo .panel-head-flat > .reporting-meta {
+  order: 1;
+  flex-basis: 100%;
+  text-align: start;
+}
+.analytics-duo .panel-head-flat > .reporting-details {
+  margin-inline-start: auto;
+}

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, Suspense, useState } from "react";
+import { type ReactNode, Suspense } from "react";
 import type { components } from "../../api/schema";
-import { Button } from "../../design-system/atoms";
-import { ExpanderChevron } from "../../design-system/disclosure";
-import { FilterBar } from "../../design-system/filterbar";
-import { OverflowMenu } from "../../design-system/overflowmenu";
-import { useT } from "../../i18n";
+import { OverviewHead } from "./analytics.overview.head";
 import { OverviewSaveActions } from "./analytics.overview.readings";
+import {
+  OverviewViewMenu,
+  useSalesViewRows,
+} from "./analytics.overview.viewmenu";
 import { ReviewDecisionsAction } from "./analytics.overview.work";
-import { DimensionChips } from "./reporting.dimensions";
+import { DimensionChips, dimensionCount } from "./reporting.dimensions";
 import { ReportingExportButton } from "./reporting.export";
 import { ReportingFilters } from "./reporting.filters";
 import type {
@@ -21,9 +21,9 @@ import type {
 type Pipeline = components["schemas"]["Pipeline"];
 
 /**
- * Sales review's controls. Scope and period stand open; the pipeline and the
- * close window sit behind Filters, with what they hold always shown as chips.
- * Save view, the templates and the export sit behind More.
+ * Sales review's controls. The view, scope and period stand beside the page's
+ * name; the pipeline, the close window and the filters sit behind View, with
+ * any filter shown as a chip on the line that says what the figures cover.
  */
 export function SalesHeader({
   selection,
@@ -53,83 +53,54 @@ export function SalesHeader({
   scope: string;
   onChange: (next: ReportingSelection) => void;
 }>) {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  const pipeline = pipelines.find(({ id }) => id === selection.pipeline_id);
+  const rows = useSalesViewRows(selection, pipelines, onChange);
   return (
-    <FilterBar
-      label={t("analytics.filters")}
-      quiet
-      labels="inside"
-      // The active filters lead the line that says what the figures cover.
-      caption={
-        <span className="analytics-chips">
-          <DimensionChips
-            selection={selection}
-            productLabel={evaluation?.context.product_label}
-            initiativeLabel={evaluation?.context.initiative_label}
-            onChange={onChange}
-          />
-          {/* What the figures cover reads as one line; only a filter the
-              reader can take off is a chip. */}
-          <span>
-            {t("analytics.overview.chipPipeline", {
-              name: pipeline?.name ?? t("reporting.allPipelines"),
-            })}
-            {" · "}
-            {t("analytics.overview.chipClose", {
-              window: t(`reporting.${selection.close_window}`),
-            })}
-            {caption != null && (
-              <>
-                {" · "}
-                {caption}
-              </>
-            )}
+    <>
+      <OverviewHead
+        switcher={switcher}
+        dials={
+          <>
+            {scopeControl}
+            <ReportingFilters
+              selection={selection}
+              showScope={false}
+              showTargets={false}
+              showPipeline={false}
+              dates={dates}
+              onChange={onChange}
+            />
+          </>
+        }
+        caption={
+          <span className="analytics-chips">
+            <DimensionChips
+              selection={selection}
+              productLabel={evaluation?.context.product_label}
+              initiativeLabel={evaluation?.context.initiative_label}
+              onChange={onChange}
+            />
+            {caption != null && <span>{caption}</span>}
           </span>
-        </span>
-      }
-    >
-      {switcher}
-      {scopeControl}
-      <ReportingFilters
-        selection={selection}
-        showScope={false}
-        showTargets={false}
-        showPipeline={false}
-        dates={dates}
-        onChange={onChange}
+        }
       />
-      <Button
-        variant="ghost"
-        aria-expanded={open}
-        onClick={() => setOpen((was) => !was)}
-      >
-        {t("analytics.overview.filtersToggle")}
-        <ExpanderChevron />
-      </Button>
-      <OverflowMenu label={t("analytics.overview.more")}>
-        <OverviewSaveActions selection={saved} scope={scope} />
-        <Suspense fallback={null}>
-          <ReviewDecisionsAction />
-        </Suspense>
-        {evaluation && !charts?.isPending && (
-          <ReportingExportButton
-            evaluation={evaluation}
-            charts={charts?.data}
-          />
-        )}
-      </OverflowMenu>
-      {open && (
-        <ReportingFilters
-          selection={selection}
-          showScope={false}
-          showTargets={false}
-          showPeriod={false}
-          showDimensions
-          onChange={onChange}
-        />
-      )}
-    </FilterBar>
+      <OverviewViewMenu
+        rows={rows}
+        filterCount={dimensionCount(selection)}
+        footer={
+          <>
+            <OverviewSaveActions selection={saved} scope={scope} />
+            <Suspense fallback={null}>
+              <ReviewDecisionsAction />
+            </Suspense>
+            {evaluation && !charts?.isPending && (
+              <ReportingExportButton
+                evaluation={evaluation}
+                charts={charts?.data}
+              />
+            )}
+          </>
+        }
+      />
+    </>
   );
 }

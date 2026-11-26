@@ -24439,7 +24439,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.key.won": "Gewonnener Umsatz",
   "analytics.hero.key.goal": "Ziel",
   "analytics.hero.openForecast": "Prognose öffnen",
-  "analytics.overview.more": "Mehr",
   "analytics.outlook.valuedCount": "{included} von {eligible} mit Wert",
   "analytics.outlook.periodPipeline":
     "Pipeline mit Abschluss in diesem Quartal",
@@ -24478,8 +24477,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erledigte Arbeit qualifiziert oder gewinnt den Deal nicht.",
   "analytics.decisions.saveOutcome": "Ergebnis speichern",
   "analytics.overview.filtersToggle": "Filter",
-  "analytics.overview.chipPipeline": "Pipeline: {name}",
-  "analytics.overview.chipClose": "Abschluss: {window}",
   "analytics.overview.chipProduct": "Produkt: {name}",
   "analytics.overview.chipCountry": "Land: {name}",
   "analytics.overview.chipIndustry": "Branche: {name}",

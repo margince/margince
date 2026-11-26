@@ -80,7 +80,7 @@ Two sections appear only for some seats. **My outcomes** is for a seat that sees
 
 ## Overview
 
-Analytics opens on **Overview**. The opening view follows your work and the view you last chose.
+Analytics opens on **Overview**. The opening view follows your work and the view you last chose. Its views sit beside the page name, with the record scope and **Date range** at the far end. **View**, at the end of the tab row, holds the rest: on Sales review the pipeline, the **Expected close window** and **Filters**, each with what it holds now, then **Save view**, **Report templates** and **Export CSV**.
 
 **Sales review** opens with one card of readings: sales won, then the applicable forecast, the modelled range and pipeline due this quarter. Each reading has one short line under it, such as the target or how far the forecast falls short of it. The small **i** beside a reading opens what it rests on. Sales won carries its goal when a matching target or published sales goals are available, with a link to **Progress**. When its basis is recorded, the forecast’s label names it, such as **Manager’s call**, **Won + Likely deals** or **Won + weighted open deals**. A manager call shows its date.
 
@@ -100,7 +100,7 @@ A zero, a hidden figure, a failed one and a day that cannot be read each say so 
 
 **What happened to your handoffs** follows the ones you sent in the period, and under the meetings, **How your outcomes developed** opens more weekly history. **Save view** keeps the view as a report under **Reports** without changing Overview, and **Report templates** opens prepared reports such as **My prospecting progress**.
 
-**Team prospecting** has the record scope, a **Date range** of this week or month or the last completed week, month, quarter or year, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. The readings and **Members** fill the page; the **Team prospecting outlook** and **Where the team stands** sit beside them. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
+**Team prospecting** has the record scope, a **Date range** of this week or month or the last completed week, month, quarter or year, and **View**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. The readings and **Members** fill the page; the **Team prospecting outlook** and **Where the team stands** sit beside them. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
 
 Under it come what holds the team up: waiting handoffs, handoffs sent back or turned down, and leads waiting for a reply. Each opens its own list, and the reasons count the decisions made in the period.
 

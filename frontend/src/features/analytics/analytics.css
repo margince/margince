@@ -335,3 +335,42 @@
   border-radius: var(--r-xs);
   background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
+
+/* An Overview view's question beside the page's name: the view's pills next
+   to the name, its scope and period at the row's far end. */
+.pagetitle:has(.analytics-head) .pagetitle-text {
+  flex: 0 1 auto;
+}
+.pagetitle:has(.analytics-head) .pagehead-action {
+  flex: 1 1 auto;
+}
+.analytics-head,
+.analytics-head .filter-bar-controls {
+  flex: 1 1 auto;
+}
+.analytics-head-dials {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+  margin-inline-start: auto;
+}
+/* The View menu's host is no box of its own: View stands as one of the
+   tab row's verbs. */
+.analytics-view-slot {
+  display: contents;
+}
+.analytics-view-filters {
+  display: grid;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+}
+/* Without a tab row to fill, View stands alone at the view's top end. */
+.analytics-view-inline {
+  display: flex;
+  justify-content: flex-end;
+}
+.analytics-asof {
+  margin: 0;
+  color: var(--textSecondary);
+}
