@@ -43,8 +43,7 @@ Write plainly, one claim per sentence, and never open two sentences with the com
 // dossierSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 //
 // The dossier is assembled and cached per reader, so it takes the reader's
-// language rather than the language the crawled site happened to be in, which
-// is what an unruled prompt would have followed.
+// language. An unruled prompt would follow the crawled site's language instead.
 func dossierSystemFor(fence promptfence.Fence, lang string) string {
 	return dossierSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
 		fence.Rule("company summary")

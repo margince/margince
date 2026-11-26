@@ -93,18 +93,18 @@ func TestAnInstallationThatNeverNamedALanguageStillGetsAPrompt(t *testing.T) {
 	}
 }
 
-// The two shared-artifact prompts carry the language the installation actually
-// set, resolved through the same accessor production uses.
+// The two per-reader prompts carry the reader's language, resolved as production
+// resolves it. A reader who chose none gets the installation's.
 //
 // The static gate can see that a rule reaches these prompts. It cannot see that
 // the rule names the right language, because that is a settings row and a
 // transaction — which is what this reads back.
-func TestTheDossierAndGrowthFitPromptsCarryTheInstallationsLanguage(t *testing.T) {
+func TestTheDossierAndGrowthFitPromptsCarryTheReadersLanguage(t *testing.T) {
 	e := Setup(t)
 	ctx := e.Admin()
 
 	SetBaseLanguage(ctx, t, e.Pool, "vi")
-	lang := identity.BaseLanguageForPrompt(ctx, e.Pool)
+	lang := identity.ReaderLanguageForPrompt(ctx, e.Pool)
 
 	dossier := companydossier.DossierRequest(companydossier.Input{}, lang)
 	if !strings.Contains(dossier.System, "Vietnamese") {

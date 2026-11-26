@@ -5,11 +5,9 @@ package companydossier
 
 // The company record beyond its profile, as the floor states it.
 //
-// A company nobody has read a website for still has a record: what it does in
-// its own words, how many people work there, where it stands with us and how
-// much of it this reader can see. The floor says those plainly, so the overview
-// of such a company is not "nothing recorded" while the page around it shows
-// them.
+// A company nobody has read a website for still has a record. It says what the
+// company does, its size, its lifecycle and what this reader can count of it.
+// The floor states those, so its overview is not "nothing recorded".
 
 import (
 	"context"

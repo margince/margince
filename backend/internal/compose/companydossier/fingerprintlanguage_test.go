@@ -3,18 +3,9 @@
 
 package companydossier
 
-// The language belongs to the cache key, and this is the case that says so.
-//
-// A dossier is written in the installation's base language. When an admin
-// switches that setting, nothing about the company has moved — every other
-// component of the key is identical — so a key that did not carry the language
-// would report a hit and serve the old-language text indefinitely, until some
-// unrelated fact happened to change. The setting would appear to do nothing,
-// which is the exact complaint that made base language worth having.
-//
-// It sits beside the other entries in fingerprint_test.go for the reason that
-// file's own comment gives: these are the changes that alter the answer without
-// altering the company's rows.
+// The language belongs to the cache key. A reader who switches language moves
+// nothing about the company. A key without the language would serve the old
+// text until some unrelated fact changed.
 
 import (
 	"testing"
