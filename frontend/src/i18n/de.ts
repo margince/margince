@@ -3141,6 +3141,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.notShown": "Nicht angezeigt",
   "reading.restricted": "Eingeschränkt",
   "format.notForecast": "Nicht prognostiziert",
+  "format.tooLargeExact": "Zu groß für eine exakte Anzeige",
+  "format.someTooLargeExact":
+    "Einige Summen sind zu groß für eine exakte Anzeige und werden deshalb weggelassen.",
   "record.chronologyLoading": "Änderungsverlauf wird geladen…",
   "record.timeline": "Verlauf",
   "record.edit": "Bearbeiten",

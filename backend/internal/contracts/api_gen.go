@@ -36599,6 +36599,7 @@ type AnalyticsAnswer struct {
 	RateDate *time.Time `json:"rate_date,omitempty"`
 
 	// Rows One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
+	// A number past ±(2^53−1) is null, and `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the row is answered.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// RunId Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
@@ -64718,7 +64719,7 @@ type ReportCell2 = interface{}
 // the exact filter+group+aggregate plus the underlying source rows, which reconcile
 // exactly to the explained aggregate (AC-X1).
 type ReportDerivation struct {
-	// Aggregates The requested aggregates recomputed over exactly these source rows — equals the explained cell.
+	// Aggregates The requested aggregates recomputed over exactly these source rows — equals the explained cell. A total past ±(2^53−1) is null and named in `_out_of_range`, as on the report row.
 	Aggregates *map[string]interface{} `json:"aggregates,omitempty"`
 
 	// AsOf The instant these figures were computed at — the moment any currency conversion read the
@@ -64840,7 +64841,7 @@ type ReportResult struct {
 	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
 	Report             string              `json:"report"`
 
-	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
+	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. A total past ±(2^53−1) is null, and the row's `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the report is answered.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.

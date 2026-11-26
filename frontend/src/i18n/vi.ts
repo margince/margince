@@ -3044,6 +3044,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.notShown": "Không hiển thị",
   "reading.restricted": "Bị hạn chế",
   "format.notForecast": "Chưa dự báo",
+  "format.tooLargeExact": "Quá lớn để hiển thị chính xác",
+  "format.someTooLargeExact":
+    "Một số tổng quá lớn để hiển thị chính xác nên được bỏ qua.",
   "record.chronologyLoading": "Đang tải lịch sử thay đổi…",
   "record.timeline": "Lịch sử",
   "record.edit": "Sửa",

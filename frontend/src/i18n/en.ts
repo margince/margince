@@ -3049,6 +3049,9 @@ export const en = {
   "record.notShown": "Not shown",
   "reading.restricted": "Restricted",
   "format.notForecast": "Not forecast",
+  "format.tooLargeExact": "Too large to show exactly",
+  "format.someTooLargeExact":
+    "Some totals are too large to show exactly, so they are left out.",
   "record.chronologyLoading": "Loading change history…",
   // The same word the tab strip uses (`tab.timeline`): the heading over the
   // slot and the tab that opens it name one thing, and two words for it read

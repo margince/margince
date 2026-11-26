@@ -10,6 +10,7 @@ import { Row, Stack } from "../../design-system/stack";
 import { StatStrip } from "../../design-system/statstrip";
 import { stable } from "../../format/collate";
 import { formatDate, formatMoney, formatNumber } from "../../format/format";
+import { addMinor } from "../../format/minorunits";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
@@ -82,7 +83,8 @@ async function fetchPartnerCommissions(
  * Accrued and approved are both money this partner has not been paid; paid is
  * settled and void is money that came back, so neither counts. Never summed
  * ACROSS currencies — the schema's own summary row says why, and two currencies
- * added together is a number that means nothing.
+ * added together is a number that means nothing. A currency whose total passes
+ * 2^53 has no amount, and the card says it is too large.
  *
  * Derived from the entries already on screen rather than from
  * GET /commissions/summary: that endpoint answers for every partner at once and
@@ -90,10 +92,15 @@ async function fetchPartnerCommissions(
  * show a subset of what is already here — and the two could disagree while one
  * of them was stale.
  */
-export function outstandingByCurrency(
-  entries: CommissionEntry[],
-): Array<{ currency: string; amountMinor: number; entryCount: number }> {
-  const totals = new Map<string, { amountMinor: number; entryCount: number }>();
+export function outstandingByCurrency(entries: CommissionEntry[]): Array<{
+  currency: string;
+  amountMinor: number | undefined;
+  entryCount: number;
+}> {
+  const totals = new Map<
+    string,
+    { amountMinor: number | undefined; entryCount: number }
+  >();
   for (const entry of entries) {
     if (entry.status !== "accrued" && entry.status !== "approved") {
       continue;
@@ -102,7 +109,10 @@ export function outstandingByCurrency(
     // The COUNT travels with the sum, because the card states both and a second
     // pass over the same rows to find it is a second answer to one question.
     totals.set(entry.currency, {
-      amountMinor: (running?.amountMinor ?? 0) + entry.amount_minor,
+      amountMinor: addMinor(
+        running ? running.amountMinor : 0,
+        entry.amount_minor,
+      ),
       entryCount: (running?.entryCount ?? 0) + 1,
     });
   }
@@ -192,7 +202,11 @@ function OutstandingStrip({
             // cents outstanding would read "€0" — a partner told they are owed
             // nothing. The aggregates of deal value elsewhere abbreviate for
             // width; a balance does not.
-            value={formatMoney(amountMinor, currency, locale)}
+            value={
+              amountMinor === undefined
+                ? t("format.tooLargeExact")
+                : formatMoney(amountMinor, currency, locale)
+            }
             // What the figure is made of. Where paying happens is true of the
             // whole panel rather than of this one currency's total, so it is
             // said once above the readings instead of on each of them.
