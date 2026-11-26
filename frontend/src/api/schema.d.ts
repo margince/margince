@@ -56550,12 +56550,6 @@ export interface components {
              * @description The won deal that activated the partner.
              */
             readonly activation_deal_id?: string | null;
-            /** @description Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value. */
-            partner_fit_score?: number | null;
-            /** @description Retained machine-computed partner-fit value while a Commercial Judgement override is in force. */
-            readonly partner_fit_score_computed?: number | null;
-            /** @description Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared. */
-            readonly partner_fit_override_reason?: string | null;
             /**
              * @deprecated
              * @description Never set; always null. Kept so existing clients keep compiling.
