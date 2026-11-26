@@ -36,8 +36,8 @@ import {
 export type HeroChart = "won" | "forecast" | "range";
 
 const HERO_CHARTS: readonly HeroChart[] = ["won", "forecast", "range"];
-// The shown tab is in the address, so Back from a door at the chart's foot
-// returns to the same tab, and the door is there to take focus again.
+// The shown tab is in the address. Back from a door at the chart's foot then
+// returns to the same tab, where that door takes focus again.
 const CHART_DIAL = "chart";
 
 type QuarterProps = Parameters<typeof QuarterOverviewMetrics>[0];
