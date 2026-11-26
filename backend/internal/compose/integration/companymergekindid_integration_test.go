@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/pkg/extension/reach"
 )
 
 // theKindIDFloor is the count below which the derivation is reading a smaller
@@ -52,7 +53,16 @@ var kindIDPairsTheMergeLeaves = gatekit.Waive(map[string]string{
 func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 	defer kindIDPairsTheMergeLeaves.AssertAllMatched(t)
 
-	written := tablesTheMergeWrites(t)
+	assertEveryKindIDReferenceJoinsTheMerge(t, reach.Company, mergePathFiles, nil)
+}
+
+// assertEveryKindIDReferenceJoinsTheMerge is the census for one record kind.
+// own holds the pairs only that kind's vocabulary reaches. One recordmerge path
+// moves the kind-and-id rows for every merge. The pairs a merge leaves are
+// therefore the same for every kind, and they read the same map.
+func assertEveryKindIDReferenceJoinsTheMerge(t *testing.T, kind reach.Record, files []string, own *gatekit.Waivers[string]) {
+	t.Helper()
+	written := tablesTheMergeWrites(t, files, kind)
 	if len(written) == 0 {
 		t.Fatal("the merge path's source yielded no written tables — the scan is broken, not the merge")
 	}
@@ -75,8 +85,8 @@ func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 		    WHERE ck.conrelid = a.attrelid AND ck.contype = 'c'
 		      AND k.attnum = ANY (ck.conkey)
 		      AND pg_get_constraintdef(ck.oid) ~ 'ARRAY'
-		      AND pg_get_constraintdef(ck.oid) !~ '''company''')
-		ORDER BY 1, 2`)
+		      AND pg_get_constraintdef(ck.oid) !~ ('''' || $1 || ''''))
+		ORDER BY 1, 2`, string(kind))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,12 +100,12 @@ func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 		}
 		seen++
 		key := table + "." + column
-		if written[key] || kindIDPairsTheMergeLeaves.Waived(t, key) {
+		if written[key] || kindIDPairsTheMergeLeaves.Waived(t, key) || (own != nil && own.Waived(t, key)) {
 			continue
 		}
-		t.Errorf("%s can name a company by kind and id and the merge never moves it.\n"+
+		t.Errorf("%s can name a "+string(kind)+" by kind and id and the merge never moves it.\n"+
 			"Left alone it names an archived record: nothing errors and the row is gone from the "+
-			"survivor's view. Move it in internal/modules/contacts/mergekindid.go, or declare "+
+			"survivor's view. Move it in internal/platform/recordmerge/kindid.go, or declare "+
 			"it in kindIDPairsTheMergeLeaves with what moving it would cost.", key)
 	}
 	if err := rows.Err(); err != nil {

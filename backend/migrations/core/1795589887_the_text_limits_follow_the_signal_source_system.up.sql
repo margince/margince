@@ -1,0 +1,7 @@
+-- pgmigrate:no-transaction
+SET lock_timeout = '2s';
+CREATE OR REPLACE TRIGGER "text_bound_insert" AFTER INSERT ON "public"."signal" FOR EACH ROW
+WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), NULL, '{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"source_system":20000,"status":20000,"summary":500,"visibility":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"source_system":20000,"status":20000,"summary":500,"visibility":20000}');
+CREATE OR REPLACE TRIGGER "text_bound_update" AFTER UPDATE ON "public"."signal" FOR EACH ROW
+WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), to_jsonb(OLD), '{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"source_system":20000,"status":20000,"summary":500,"visibility":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"source_system":20000,"status":20000,"summary":500,"visibility":20000}');
+RESET lock_timeout;

@@ -23,6 +23,7 @@ import {
 import { customFieldsQuery } from "../../lib/customfields.query";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { FieldBuilder, type NewFieldDraft } from "./customfields.builder";
 import { activityKindsOf, useSetActivityKinds } from "./customfields.kinds";
 import { objectLabels } from "./customfields.labels";
@@ -212,12 +213,11 @@ export function CustomFieldsAdmin() {
       setRenaming(null);
     },
   });
-  const renameRefused = nameRefusal(
-    rename.error,
-    t,
-    "cf.labelTaken",
-    "custom_field_label_taken",
-  );
+  const renameRefused = nameRefusal(rename.error, t, {
+    label: t("cf.renamePrompt"),
+    duplicate: "cf.labelTaken",
+    code: "custom_field_label_taken",
+  });
 
   // The variable carries the field, so a flip that lands before React re-arms
   // the mutation still writes the row the reader pressed. The saved row goes
@@ -395,6 +395,7 @@ export function CustomFieldsAdmin() {
         pending={rename.isPending}
         problem={renameRefused.problem}
         nameProblem={renameRefused.nameProblem}
+        maxLength={TEXT_LIMITS.label}
         onSave={(label) => {
           if (renaming) rename.mutate({ field: renaming, label });
         }}

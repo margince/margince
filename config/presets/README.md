@@ -12,12 +12,13 @@ this installation goes, so an operator must choose it; it is never inherited.
 |---|---|---|
 | [`gemini_cloud.yaml`](gemini_cloud.yaml) | every tier to Gemini, embeddings to `gemini-embedding-001` | `GEMINI_API_KEY` |
 | [`gemini_vertex_eu.yaml`](gemini_vertex_eu.yaml) | every tier to Gemini on Vertex AI at `location: eu` and embeddings at `europe-west4`, under `eu_hosted` | `GEMINI_VERTEX_SA_JSON` (a service-account key) |
+| [`anthropic_cloud.yaml`](anthropic_cloud.yaml) | `local_small` and `cheap_cloud` to `claude-haiku-5-5`, `premium` and `frontier` to `claude-sonnet-5-5`, embeddings to `gemini-embedding-001`. Not yet measured | `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` |
 | [`openrouter_cloud.yaml`](openrouter_cloud.yaml) | every tier to an OpenRouter-brokered model | `OPENAI_COMPATIBLE_API_KEY` |
 | [`openrouter_openai.yaml`](openrouter_openai.yaml) | every tier to a GPT-6 model (`gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`) through OpenRouter, embeddings to `text-embedding-3-large` at 1024 | `OPENAI_COMPATIBLE_API_KEY` |
 | [`consumer_class_brokered.yaml`](consumer_class_brokered.yaml) | every tier to a Gemma 4 an operator could self-host, brokered at fp8 | `OPENAI_COMPATIBLE_API_KEY` |
 | [`openrouter_cloud_eu.yaml`](openrouter_cloud_eu.yaml) | every lane, embeddings included, to Mistral's EU-region endpoint (`only: [mistral/eu]`) | `OPENAI_COMPATIBLE_API_KEY` |
-| [`gemma4_local_ollama.yaml`](gemma4_local_ollama.yaml) | every tier to `gemma4:12b` on loopback Ollama, embeddings to `bge-m3`; zero egress | Ollama with both models pulled, nothing else |
-| [`qwen3_local_vllm.yaml`](qwen3_local_vllm.yaml) | every tier to Qwen3-14B (MLX 4-bit) on loopback vLLM, embeddings to `bge-m3` on a second vLLM; zero egress | two vLLM servers started with the flags in the file's header |
+| [`gemma4_local_ollama.yaml`](gemma4_local_ollama.yaml) | every tier to `gemma4:12b` on loopback Ollama, embeddings to `bge-m3`; zero egress. Not yet measured | Ollama with both models pulled, nothing else |
+| [`qwen3_local_vllm.yaml`](qwen3_local_vllm.yaml) | every tier to Qwen3-14B (MLX 4-bit) on loopback vLLM, embeddings to `bge-m3` on a second vLLM; zero egress. Not yet measured | two vLLM servers started with the flags in the file's header |
 
 `gemini_cloud.yaml` uses the provider a dev stack starts with, the Gemini Developer API, with
 `gemini-3.8-flash` in `premium` and `frontier`. `margince.dev.yaml` holds a copy of the same
@@ -84,10 +85,10 @@ for the reason given above for `openrouter_cloud.yaml`.
 the candidate to that profile. The judge is exempt: it is the lane's own grader, and it gets only the
 corpus and the candidate's answer. So either preset may be certified with the default cloud judge.
 
-No record is committed for `gemma4_local_ollama.yaml`: certify it with
+`gemma4_local_ollama.yaml` is **not yet measured**: no record exists for it. Certify it with
 `make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml` on a machine that serves it. The Gemma weights are 12b on every tier,
 because that is what a 24GB machine serves wholly on the GPU. The header of the file has the numbers.
-No record is committed for `qwen3_local_vllm.yaml` either: certify it with
+`qwen3_local_vllm.yaml` is **not yet measured** either. Certify it with
 `make e2e-ai ROUTING=config/presets/qwen3_local_vllm.yaml` with both vLLM servers up.
 
 On the `routing:` block of the OpenRouter preset, and the measurements behind its defaults:

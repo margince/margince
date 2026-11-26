@@ -34,32 +34,32 @@ type riskSentences struct {
 var riskWords = riskSentences{
 	SingleThreaded: phrase{
 		En: "too few engaged contacts — the deal rests on too few relationships",
-		De: "zu wenige aktive Kontakte — der Deal hängt an zu wenigen Beziehungen",
+		De: "zu wenige aktive Kontakte: Der Deal hängt an zu wenigen Beziehungen",
 		Vi: "quá ít người liên hệ đang tương tác — thương vụ chỉ dựa vào quá ít mối quan hệ",
 	},
 	CoverageGap: phrase{
 		En: "no engaged champion — nobody inside the company is carrying this",
-		De: "kein aktiver Fürsprecher — niemand im Unternehmen trägt das mit",
+		De: "kein aktiver Champion: Niemand im Unternehmen treibt den Deal voran",
 		Vi: "không có người ủng hộ đang tương tác — không ai bên trong công ty đang dẫn dắt việc này",
 	},
 	ChampionDeparted: phrase{
 		En: "the champion has left the company — the contact arguing for this deal no longer works there",
-		De: "der Fürsprecher hat das Unternehmen verlassen — der Kontakt, der für diesen Deal eingetreten ist, arbeitet dort nicht mehr",
+		De: "der Champion hat das Unternehmen verlassen: Der Kontakt, der sich für diesen Deal eingesetzt hat, arbeitet dort nicht mehr",
 		Vi: "người ủng hộ đã rời công ty — người liên hệ từng vận động cho thương vụ này không còn làm việc ở đó",
 	},
 	StakeholderLeft: phrase{
 		En: "a stakeholder has left the company — the seat is still on the deal, the relationship is not",
-		De: "ein Beteiligter hat das Unternehmen verlassen — die Rolle steht noch am Deal, die Beziehung nicht mehr",
+		De: "ein Kontakt aus dem Buying Center hat das Unternehmen verlassen: Die Rolle steht noch am Deal, die Beziehung besteht nicht mehr",
 		Vi: "một bên liên quan đã rời công ty — vị trí vẫn còn trong thương vụ, còn quan hệ thì không",
 	},
 	GoingCold: phrase{
 		En: "no captured touch for %d days — the deal is open and nobody is talking",
-		De: "seit %d Tagen kein erfasster Kontakt — der Deal ist offen und niemand spricht miteinander",
+		De: "seit %d Tagen kein erfasster Kontakt: Der Deal ist offen, aber niemand spricht miteinander",
 		Vi: "đã %d ngày không có tương tác nào được ghi nhận — thương vụ vẫn mở và không ai trao đổi",
 	},
 	OurSideDominance: phrase{
 		En: "one colleague carries almost all the contact — the deal depends on their availability",
-		De: "ein Teammitglied trägt fast den gesamten Kontakt — der Deal hängt an seiner Verfügbarkeit",
+		De: "fast der gesamte Kontakt läuft über ein Teammitglied: Der Deal hängt an dessen Verfügbarkeit",
 		Vi: "một đồng nghiệp đang gánh gần như toàn bộ liên hệ — thương vụ phụ thuộc vào thời gian của họ",
 	},
 }

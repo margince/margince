@@ -65,8 +65,8 @@ const DUPLICATE = {
   type: "about:blank",
   title: "Conflict",
   status: 409,
-  code: "conflict",
-  detail: "conflict",
+  code: "name_taken",
+  detail: 'a source called "Partner" already exists; choose a different name',
 };
 
 const ADMIN = { custom_field: ["read", "create", "update", "delete"] } as const;

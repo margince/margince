@@ -42,7 +42,7 @@ const COMPANY: Company = {
   writable: true,
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   owner_id: "u-owner",
   captured_by: "human:u-author",
   source: "manual",
@@ -360,7 +360,7 @@ describe("claiming an unowned account", () => {
 // to tell a record that is closed from a build without an edit button.
 // The menu reads the page's activity gate for its Add task row.
 function MenuHost({ company }: Readonly<{ company: Company }>) {
-  const activity = useActivityGate();
+  const activity = useActivityGate("company");
   return (
     <CompanyActionBadges
       company={company}
@@ -525,7 +525,7 @@ describe("the marks under an account's name", () => {
       <CompanyMarks
         company={{
           ...COMPANY,
-          lifecycle: "opportunity",
+          status: "opportunity",
           relationship_types: ["customer", "partner", "supplier"],
         }}
       />,
@@ -569,7 +569,7 @@ describe("the marks under an account's name", () => {
       <CompanyMarks
         company={{
           ...COMPANY,
-          lifecycle: "customer",
+          status: "customer",
           relationship_types: ["customer"],
         }}
       />,
@@ -586,7 +586,7 @@ describe("the marks under an account's name", () => {
       <CompanyMarks
         company={{
           ...COMPANY,
-          lifecycle: "former_customer",
+          status: "former_customer",
           relationship_types: ["customer", "partner"],
         }}
       />,

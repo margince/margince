@@ -35,7 +35,8 @@ func TestCapturedMailDoesNotRefoldUnrelatedCorrespondents(t *testing.T) {
 				}
 			}
 			v.recompute(t, activities...)
-			if _, err := owner.Exec(ctx, `UPDATE graph_interaction_edge SET computed_at='2000-01-01T00:00:00Z'`); err != nil {
+			var before []string
+			if err := owner.QueryRow(ctx, `SELECT array_agg(contact_id::text || '/' || xmin::text) FROM graph_interaction_edge`).Scan(&before); err != nil {
 				t.Fatal(err)
 			}
 			added := v.interaction(t, v.e.Rep1, target, at.Add(24*time.Hour), "inbound", "from")
@@ -49,7 +50,7 @@ func TestCapturedMailDoesNotRefoldUnrelatedCorrespondents(t *testing.T) {
 				t.Fatal(err)
 			}
 			var untouched int
-			if err := owner.QueryRow(ctx, `SELECT count(*) FROM graph_interaction_edge WHERE computed_at='2000-01-01T00:00:00Z'`).Scan(&untouched); err != nil {
+			if err := owner.QueryRow(ctx, `SELECT count(*) FROM graph_interaction_edge WHERE contact_id::text || '/' || xmin::text = ANY($1)`, before).Scan(&untouched); err != nil {
 				t.Fatal(err)
 			}
 			if untouched != 31 {

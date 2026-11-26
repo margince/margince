@@ -6,6 +6,7 @@ import {
   LatestInboundLine,
   useLatestInbound,
 } from "../../components/latestinbound";
+import { ViewOnly } from "../../components/viewonly";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useRecordTimeline } from "../../design-system/recordtimeline";
@@ -184,7 +185,17 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
       nameBadge={<LeadSubtitle lead={lead} />}
       // A reader has to know this is a prospect and not a contact before they
       // read anything else about them.
-      pulse={<LeadPulse lead={lead} />}
+      pulse={
+        <>
+          <LeadPulse lead={lead} />
+          <ViewOnly
+            kind="lead"
+            record={lead}
+            name={leadIdentityName(lead) || t("lead.unnamed")}
+            reasonId={terminalReasonId}
+          />
+        </>
+      }
       latest={
         tab !== "overview" && (
           <LatestInboundLine
@@ -211,7 +222,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
       // default for a prospect. A lead carries no workspace location of its
       // own to prefer over where the reader is.
       zone={readerZone}
-      band={leadBand({ lead, writer, reasonId: terminalReasonId, t })}
+      band={leadBand({ writer })}
       // The same strip every record in the product carries. It is a place a reader
       // navigates, drawn as a rule with the open body underlined, rather than
       // a pill that offers a setting.

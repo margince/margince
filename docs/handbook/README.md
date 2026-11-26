@@ -65,6 +65,7 @@ Records, deals and mail in Margince, by page:
 - How do I see my weekly review or plan my week? → [Your week](your-week.md)
 - An extension suggested a record for a message. What do I do? → [Suggested links](suggested-links.md)
 - How do I link a deal to another deal, a company or a contact? → [Links between records](deal-links.md)
+- How do I merge two deals that are one opportunity? → [Merging two deals](merging-deals.md)
 - How do I give a deal or project its own channel in the team chat? → [Team chat channels](chat-channels.md)
 - How do I attach or upload a file to a contact, company or deal? → [Documents and files](documents-and-files.md)
 - How do I import, export, archive or delete? → [What is kept, what is destroyed](retention-exports-and-deletion.md)
@@ -124,6 +125,8 @@ Records, deals and mail in Margince, by page:
   suggests for a message, and how to accept or decline one.
 - [Links between records](deal-links.md): linking a deal to a deal, a company
   or a contact with a type, and finding deals by link.
+- [Merging two deals](merging-deals.md): folding a duplicate deal into the one that stays, what moves and
+  what is refused.
 - [Performance and saved reports](sales-reporting.md): graphs, targets, scheduled editions, comparisons and exports.
 - [Progress and sales goals](progress-and-sales-goals.md): closed revenue against
   the goal of a seller or a team, and how a manager drafts and publishes the goals.

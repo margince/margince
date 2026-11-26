@@ -82,3 +82,20 @@ func TestTheRetiredSetIsACopyTheCallerCannotWriteThrough(t *testing.T) {
 		t.Error("a caller's write reached the owner's own set, so one gate can silently narrow another's corpus")
 	}
 }
+
+// A wire that carries the channel alone must not send its caller to fields it
+// cannot set.
+func TestAChannelOnlyRefusalNamesNoOutsideIDFields(t *testing.T) {
+	t.Parallel()
+	if err := AdmitRecordChannel(RecordSourceManual); err != nil {
+		t.Fatalf("AdmitRecordChannel(manual) = %v, want nil", err)
+	}
+	err := AdmitRecordChannel("signal-scan")
+	var refused *RecordSourceError
+	if !errors.As(err, &refused) {
+		t.Fatalf("AdmitRecordChannel(signal-scan) = %v, want a RecordSourceError", err)
+	}
+	if _, code, message := refused.FieldFault(); code != "invalid_source" || strings.Contains(message, "source_system") {
+		t.Errorf("the refusal reads %s %q, want invalid_source with no mention of source_system", code, message)
+	}
+}

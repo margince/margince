@@ -69,6 +69,18 @@ function ComposedNewDealAction(props: ComponentProps<typeof NewDealAction>) {
   );
 }
 
+const LazyDealMergeAction = lazy(async () => ({
+  default: (await import("./features/deals/deal360/dealactions"))
+    .DealMergeAction,
+}));
+function DealMergeAction(props: ComponentProps<typeof LazyDealMergeAction>) {
+  return (
+    <Suspense fallback={null}>
+      <LazyDealMergeAction {...props} />
+    </Suspense>
+  );
+}
+
 function CoveredDealSuggestion({
   companyId,
   suggestionId,
@@ -120,6 +132,7 @@ export const reviewActions: ReviewActions = {
   NewDealAction: ComposedNewDealAction,
   CompanyDealPicker,
   CoveredDealSuggestion,
+  DealMergeAction,
   OpenActivityDrawer,
 };
 

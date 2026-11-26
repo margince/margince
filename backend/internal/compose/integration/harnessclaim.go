@@ -19,7 +19,7 @@ import (
 // fixture cannot then file a claim the writer would refuse as ungrounded.
 func (e *Env) RecordClaim(ctx context.Context, t *testing.T, in contacts.ClaimInput) crmcontracts.ConversationClaim {
 	t.Helper()
-	const addQuote = `UPDATE activity SET body = btrim(COALESCE(body, '') || ' ' || $2::text)
+	const addQuote = `UPDATE activity SET body = btrim(COALESCE(body, '') || ' ' || $2::text), body_own_end = NULL
 		WHERE id = $1 AND position($2::text IN COALESCE(body, '')) = 0`
 	e.WsExec(t, addQuote, in.ActivityID, in.Quote) //nolint:contextcheck // setup helpers bind the workspace themselves
 	claim, err := e.Contacts.RecordConversationClaim(ctx, in)

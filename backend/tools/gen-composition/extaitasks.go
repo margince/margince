@@ -15,7 +15,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -46,8 +45,6 @@ type extAITask struct {
 	Sites             []string `yaml:"sites"`
 	Doc               string   `yaml:"doc"`
 }
-
-var extAITaskSuffix = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 
 // extensionAITasks reads every enabled unit's AI tasks out of the merged
 // ai-tasks.yaml. The order is (unit, task), because it is emitted into Go.
@@ -103,7 +100,7 @@ func readExtAITask(key string, node *yaml.Node, owners map[string]string, tiers 
 	if !ok {
 		return extension.AITaskDeclaration{}, fmt.Errorf("it is in the extension namespace but no enabled unit owns it; a task is named %s_<task> after its unit", "ext_<unit>")
 	}
-	if !extAITaskSuffix.MatchString(strings.TrimPrefix(key, ns+"_")) {
+	if !extension.IsShortName(strings.TrimPrefix(key, ns+"_")) {
 		return extension.AITaskDeclaration{}, fmt.Errorf("the name after %s_ must be lower snake_case", ns)
 	}
 	def, err := decodeStrict[extAITask](node)

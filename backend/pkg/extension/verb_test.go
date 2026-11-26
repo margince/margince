@@ -90,11 +90,11 @@ func TestVerbValidateAcceptsAWellFormedDeclaration(t *testing.T) {
 // at gen time and refused (or worse, served) at boot.
 func TestVerbValidateRefusals(t *testing.T) {
 	for name, mutate := range map[string]func(*Verb){
-		"a unit name outside the grammar": func(v *Verb) { v.Unit = "Bad_Unit" },
-		"no source contract":              func(v *Verb) { v.Contract = "" },
-		"no operationId":                  func(v *Verb) { v.OperationID = "" },
-		"a core route":                    func(v *Verb) { v.Route = "/v1/deals" },
-		"a route with a path template":    func(v *Verb) { v.Route = "/ext/crm-demo/{id}" },
+		"a unit name outside the grammar":   func(v *Verb) { v.Unit = "Bad_Unit" },
+		"no source contract":                func(v *Verb) { v.Contract = "" },
+		"no operationId":                    func(v *Verb) { v.OperationID = "" },
+		"a core route":                      func(v *Verb) { v.Route = "/v1/deals" },
+		"a route with an id after the unit": func(v *Verb) { v.Route = "/ext/crm-demo/{id}" },
 		// A contract path is relative to the document's own servers url, which
 		// already ends in /v1. A declaration spelling the prefix itself would
 		// resolve to https://host/v1/v1/ext/… for every consumer of the

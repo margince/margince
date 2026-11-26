@@ -34,11 +34,16 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1384
+	composeRootProductionFiles = 1383
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
-	composeRootTestFiles = 1911
+	// Raised by 1 for the removed-unit list cases, which drive the unexported
+	// Live List check and list export over a kind no unit declares. Raised by 1
+	// test file for the data reset cases of an event the sweep orphaned. Raised by
+	// 1 test file for the extension notice kind cases. Raised by 1 test file for
+	// the unit tool coverage cases, which read the unexported tool coverage census.
+	composeRootTestFiles = 1919
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -59,16 +64,51 @@ const (
 	// Raised by 7 production lines for the team request reword and the paused
 	// team link's title on Home. Raised by 64 test lines for the team-link mail
 	// case, which drives the unexported mail worker over two team links.
-	composeRootProductionLines = 230_697
-	composeRootTestLines       = 360_128
+	// Raised by 2 production lines for the stage-evidence prompt rule on a
+	// document a criterion asks to be sent, which is the site's own prompt text.
+	// Raised by 7 production and 106 test lines for the route answer that keeps
+	// its field errors, and the route cases that read the unexported verb shapes.
+	// Raised by 9 production and 17 test lines for the company status rename,
+	// whose webhook and preview keys sit in this package's unexported maps.
+	// Raised by 30 production and 363 test lines for lists over a removed
+	// extension kind and the failing-report directory. The cases drive the
+	// unexported Live List check, the list export and the report directory.
+	// Raised by 12 production and 73 test lines for the reading refusal that
+	// names its cause per question. Its cases drive the unexported document
+	// extractor and transcript proposer.
+	// Raised by 244 test lines for the data reset cases of an event the sweep
+	// orphaned, which drive the unexported reset handlers.
+	// Raised by 21 test lines when main's root compose cases met develop's in the
+	// back-sync; each side stayed under its own ceiling.
+	// Raised by 10 production lines when develop's rate sheet removal and main's
+	// call log met in the back-sync; develop's own ceiling already covers them.
+	// Raised by 68 production and 96 test lines for path ids in extension routes
+	// and the mail hooks in the extension inventory. They extend the unexported
+	// route argument reader and inventory builder, and their cases drive them.
+	// Raised by 9 test lines when the back-sync met develop's extension route cases.
+	// Raised by 6 production lines for the signals and initiatives carriers
+	// every contact merge door is wired with. Raised by 6 test lines for the
+	// seat without an introduction grant that the preview refusal case needs.
+	// Raised by 110 production and 297 test lines, and 3 test files, when main's
+	// Anthropic setup met develop's cases in the back-sync.
+	// Raised by 60 production and 65 test lines for the record kind index checks
+	// and the History type check. They extend VerifyRecordKinds and the
+	// unexported History query, and their cases drive the History query plan.
+	// Raised by 14 production and 42 test lines, and 1 test file, for main's
+	// signal evidence and correction cases, met in the back-sync.
+	// Raised by 240 production and 260 test lines for the extension card's setup
+	// state and the schedule book's time zone. Both drive the unexported
+	// inventory handler, schedule book and catch-up schedule.
+	composeRootProductionLines = 231_243
+	composeRootTestLines       = 361_804
 )
 
 // A read under these floors stopped early or read the wrong place, and would
 // pass every ceiling. They sit near 90% of the package; lower them with the
 // ceilings when code moves out.
 const (
-	composeRootFloorFiles = 2900
-	composeRootFloorLines = 520_000
+	composeRootFloorFiles = 2960
+	composeRootFloorLines = 530_000
 )
 
 // composeRootGenerated grows with the contract, not with hand-written code, so

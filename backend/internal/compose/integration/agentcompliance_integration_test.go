@@ -462,11 +462,54 @@ func TestAnAgentReadsTheComplianceQueues(t *testing.T) {
 			t.Errorf("%s answers the agent %v and the user %v", read.topic, got, want)
 		}
 	}
+	readsListedStates(t, c)
 	history := c.tool(t, "read_workspace", map[string]any{
 		"topic": "record_history", "entity_type": "contact", "id": c.contact,
 	})
 	if !strings.Contains(string(history), "create") {
 		t.Errorf("a contact's history %s does not hold its creation", history)
+	}
+}
+
+// readsListedStates asks the notice queue for every state its action lists, in
+// one call. The route takes each listed word and refuses an unlisted one.
+func readsListedStates(t *testing.T, c complianceDoors) {
+	t.Helper()
+	var catalog struct {
+		Actions []struct {
+			Action string `json:"action"`
+			Query  []struct {
+				Name string   `json:"name"`
+				Enum []string `json:"enum"`
+			} `json:"query"`
+		} `json:"actions"`
+	}
+	if err := json.Unmarshal(c.tool(t, "read_workspace", map[string]any{"topic": "actions", "router": "read_workspace", "action": "notice_cases"}), &catalog); err != nil {
+		t.Fatal(err)
+	}
+	var states []string
+	for _, a := range catalog.Actions {
+		for _, q := range a.Query {
+			if a.Action == "notice_cases" && q.Name == "state" {
+				states = q.Enum
+			}
+		}
+	}
+	if len(states) < 2 {
+		t.Fatalf("notice_cases lists the states %v, want every state the queue holds", states)
+	}
+	var asUser, asAgent any
+	if status := c.e.Call(t, "GET", "/v1/privacy/notice-cases?state="+strings.Join(states, "&state="), nil, nil, &asUser); status != http.StatusOK {
+		t.Fatalf("the user's read of the states %v → %d", states, status)
+	}
+	if err := json.Unmarshal(c.tool(t, "read_workspace", map[string]any{"topic": "notice_cases", "state": states}), &asAgent); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(asUser, asAgent) {
+		t.Errorf("the listed states answer the agent %v and the user %v", asAgent, asUser)
+	}
+	if got := c.mcp.Call(t, "read_workspace", map[string]any{"topic": "notice_cases", "state": []string{"open", "overdue"}}); !got.IsError {
+		t.Errorf("a state the queue does not list was answered: %s", got.Text)
 	}
 }
 

@@ -8,13 +8,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type stageValuation struct {
 	amount   *int64
 	currency *string
-	rate     pgtype.Numeric
 	on       *time.Time
 	reason   string
 }
@@ -47,7 +45,6 @@ func (s *Store) stageValuation(ctx context.Context, tx pgx.Tx, in stageHistoryIn
 		return out, nil
 	}
 	out.amount = &priced[0].Minor
-	out.rate = rate.Rate
 	out.on = &rate.On
 	out.reason = "frozen_at_transition"
 	return out, nil

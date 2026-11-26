@@ -85,7 +85,7 @@ export function OwnerAsk<K extends string>({
   open: OpenRequest;
   actions: AskActions<K>;
   words: AskWords;
-  variant: "primary" | "link";
+  variant: "primary" | "ghost" | "link";
 }>) {
   const owner = useMemberName(ownerId ?? null);
   const readerZone = useViewerZone();

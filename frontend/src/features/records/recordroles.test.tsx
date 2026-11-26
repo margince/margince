@@ -93,12 +93,12 @@ it.each([
 
 const ADMIN: GrantSpec = { custom_field: ["read", "create", "update"] };
 
-const CONFLICT = {
+const NAME_TAKEN = {
   type: "about:blank",
   title: "Conflict",
   status: 409,
-  code: "conflict",
-  detail: "conflict",
+  code: "name_taken",
+  detail: "name taken",
 };
 
 const TECHNICAL_CONTACT = {
@@ -134,7 +134,7 @@ function rolesBackend(
     }
     if (request.method !== "GET") {
       return refuseWrite
-        ? jsonResponse(CONFLICT, 409)
+        ? jsonResponse(NAME_TAKEN, 409)
         : jsonResponse(TECHNICAL_CONTACT);
     }
     return jsonResponse({
@@ -263,6 +263,26 @@ it("says a duplicate name on the Name field and keeps the dialog open", async ()
   expect(field.getAttribute("aria-invalid")).toBe("true");
   await user.type(field, "s");
   expect(dialog.queryByText(en["recordRoles.duplicate"])).toBeNull();
+});
+
+it("says a rename to a taken name on the field", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", rolesBackend(ADMIN, [], true));
+  render(<RecordRolesCard />);
+  await user.click(
+    await screen.findByRole("button", {
+      name: en["table.rowActions"].replace("{name}", "Delivery lead"),
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "Rename" }));
+  const dialog = within(await screen.findByRole("dialog"));
+  const field = dialog.getByLabelText(en["recordRoles.addLabel"]);
+  expect(field).toHaveAttribute("data-character-limit", "120");
+  await user.clear(field);
+  await user.type(field, "Technical contact{Enter}");
+  await waitFor(() =>
+    expect(field).toHaveAccessibleDescription(en["recordRoles.duplicate"]),
+  );
 });
 
 it("names the refusal on the one switch whose write failed", async () => {

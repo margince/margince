@@ -217,11 +217,9 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"lead.company_id":                     "gated: auth.EnsureLinkTarget in LinkLeadCompany, the one writer that names a company; UpdateLead only clears it",
 	"lead.partner_company_id":             "gated: auth.EnsureReferenceTarget in setLeadPartner, the one writer that names a partner; a company merge repoints it to the survivor",
 	"suggestion_dismissal.company_id":     "gated: auth.EnsureVisible in company360.Service.DismissSuggestion, inside the same transaction as the insert — dismissing advice about an account the caller cannot read would confirm it exists",
-	"company_dossier.company_id":          "gated: the dossier is assembled only after companydossier.Service.Get runs the caller's OWN sidecar reads, and contacts.ListCompanyProfileFields opens with auth.Require + ensureCompanyReadable — a company the caller cannot read has no dossier written for it, and the row is keyed on that same caller",
-	"company_growth_fit.company_id":       "gated: same path as company_dossier — the assessment is written only after the caller's own gated sidecar reads succeed, and the row is keyed on that caller",
-	"company_brief.company_id":            "gated: the brief is written only after companybrief.Service.Get runs the caller's own company360 Assemble, whose GetCompanyTx does auth.Require + auth.EnsureVisible — an account the caller cannot read has no brief written for it, and the row is keyed on that same caller",
-	"deal_status_card.deal_id":            "gated: the deal-side twin of company_brief and contact_brief — the card is written only after dealstatus.Service.gather calls deals.Store.GetDeal, whose auth.Require + auth.EnsureVisible refuse a deal the caller cannot read, and that gather runs BEFORE the cache is consulted so the served-from-cache path carries the same gate. The row is keyed on that same caller",
-	"contact_brief.contact_id":            "gated: the contact-side twin of company_brief — the brief is written only after contactbrief.Service.Get runs the caller's own contact360 Assemble, whose GetContactTx does auth.Require + auth.EnsureVisible, and the row is keyed on that same caller",
+	"generated_summary.company_id":        "gated: a company summary is written only after its service ran the caller's OWN gated read of the company. companybrief.Service.Get runs company360 Assemble, whose GetCompanyTx does auth.Require + auth.EnsureVisible; companydossier's two services run the caller's sidecar reads, and contacts.ListCompanyProfileFields opens with auth.Require + ensureCompanyReadable. The row is keyed on that same caller",
+	"generated_summary.deal_id":           "gated: the card is written only after dealstatus.Service.gather calls deals.Store.GetDeal, whose auth.Require + auth.EnsureVisible refuse a deal the caller cannot read, and that gather runs BEFORE the cache is consulted so the served-from-cache path carries the same gate. The row is keyed on that same caller",
+	"generated_summary.contact_id":        "gated: the brief is written only after contactbrief.Service.Get runs the caller's own contact360 Assemble, whose GetContactTx does auth.Require + auth.EnsureVisible, and the row is keyed on that same caller",
 	"deal_move_dismissal.deal_id":         "gated: auth.RequireHuman + auth.Require + auth.EnsureVisible in dealstatus.Service.setAside, inside the same transaction as the write — setting aside a move on a deal the caller cannot read would confirm it exists",
 	"contact_moment_dismissal.contact_id": "gated: auth.RequireHuman + auth.Require + auth.EnsureVisibleLive in contact360.Service.DismissMoment, inside the same transaction as the insert — dismissing a card about a contact the caller cannot read would confirm they exist",
 	"consent_qualifying_event.lead_id":    "gated: recordQualifyingSubjectTx holds auth.HoldWritableLive on the lead, and retraction holds the same gate before changing its child row. ON DELETE CASCADE",
@@ -361,11 +359,13 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"contact.merged_into_id":   "server-derived: stamped by MergeContact",
 	"company.merged_into_id":   "server-derived: stamped by MergeCompany",
 	// The same shape as its two siblings above, through the same writer
-	// (archiveMergedAway) and the same admission (mergePair): the survivor id
-	// arrives from the caller, and is stamped only after auth.EnsureWritable
-	// has admitted the loser and auth.WritableBy the survivor. A lead either
-	// end of the pair cannot be written to answers before the pointer is set.
-	"lead.merged_into_id":               "gated then stamped: MergeLead puts BOTH leads through mergePair's row-scope writability probes before archiveMergedAway writes the pointer",
+	// (recordmerge.ArchiveMergedAway) and the same admission (recordmerge.Pair).
+	// The survivor id arrives from the caller. It is stamped only after
+	// auth.EnsureWritable admits the loser and auth.WritableBy the survivor.
+	// A record at either end that the caller cannot write answers before the
+	// pointer is set.
+	"lead.merged_into_id":               "gated then stamped: MergeLead puts BOTH leads through recordmerge.Pair's row-scope writability probes before ArchiveMergedAway writes the pointer",
+	"deal.merged_into_id":               "gated then stamped: MergeDeal puts BOTH deals through recordmerge.Pair's row-scope writability probes before ArchiveMergedAway writes the pointer",
 	"contact.converted_from_lead_id":    "server-derived: stamped by PromoteLead",
 	"deal_stage_history.deal_id":        "server-derived: appended by CreateDeal/AdvanceDeal",
 	"project_phase_history.project_id":  "server-derived: appended by CreateProject/AdvanceProjectPhase from the project row they just wrote or advanced, never from a request body",

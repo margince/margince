@@ -94,18 +94,3 @@
   border-radius: var(--r-full);
   background: var(--borderSubtle);
 }
-
-/* The verbs wait behind hover or focus so a rarely-used one does not compete
-   with the card's own controls. A coarse pointer has no hover, so it stays on. */
-.company-card-actions {
-  opacity: 0;
-}
-.company-card:hover .company-card-actions,
-.company-card:focus-within .company-card-actions {
-  opacity: 1;
-}
-@media (hover: none) {
-  .company-card-actions {
-    opacity: 1;
-  }
-}

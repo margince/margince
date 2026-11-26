@@ -15,6 +15,7 @@ import {
   useCanWriteRecord,
   useHoldsOperatorSeat,
   useRecordWriteRefusal,
+  useWriteBlock,
 } from "./capability";
 import { useMe } from "./session";
 
@@ -421,10 +422,48 @@ describe("useCanWriteRecord", () => {
   });
 });
 
+describe("useWriteBlock — which axis refuses every change to an object", () => {
+  async function block(
+    allow: Parameters<typeof meFixture>[0],
+  ): Promise<ReturnType<typeof useWriteBlock>> {
+    stubMe(meFixture(allow));
+    const { result } = renderHook(
+      () => ({ me: useMe(), block: useWriteBlock("deal") }),
+      { wrapper },
+    );
+    await waitFor(() => {
+      expect(result.current.me.isPending).toBe(false);
+    });
+    return result.current.block;
+  }
+
+  it("names the seat first, then the role, and nothing for a writer", async () => {
+    expect(
+      await block({ allow: { deal: ["read", "update"] }, seat: "read" }),
+    ).toBe("seat");
+    expect(await block({ allow: { deal: ["read"] } })).toBe("role");
+    expect(
+      await block({ allow: { deal: ["read", "update"] } }),
+    ).toBeUndefined();
+  });
+
+  it("blames neither while /me is on its way", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+    const { result } = renderHook(() => useWriteBlock("deal"), { wrapper });
+
+    expect(result.current).toBeUndefined();
+  });
+});
+
 describe("useRecordWriteRefusal — the sentence a record page's verbs share", () => {
   const granted = { allow: { deal: ["read", "update"] } } as const;
   const reasons = {
     archived: "This deal is archived.",
+    seat: "Your seat is read-only.",
+    readOnlyRole: "Your role can only read.",
     notYours: "You cannot change this deal.",
   };
 
@@ -469,16 +508,41 @@ describe("useRecordWriteRefusal — the sentence a record page's verbs share", (
     expect(await refusal({ writable: false })).toBe(reasons.notYours);
   });
 
-  it("refuses a writable row when the object grant is missing", async () => {
+  it("names the role when the object grant is missing", async () => {
+    // A share or a handover cannot lift a role that only reads.
     stubMe(meFixture({ allow: { deal: ["read"] } } as const));
 
-    expect(await refusal({ writable: true })).toBe(reasons.notYours);
+    expect(await refusal({ writable: true })).toBe(reasons.readOnlyRole);
+    expect(await refusal({ writable: false })).toBe(reasons.readOnlyRole);
   });
 
-  it("refuses a writable row on a read seat", async () => {
+  it("names the seat on a read seat, before the role", async () => {
     stubMe(meFixture({ ...granted, seat: "read" }));
+    expect(await refusal({ writable: true })).toBe(reasons.seat);
 
-    expect(await refusal({ writable: true })).toBe(reasons.notYours);
+    stubMe(meFixture({ allow: { deal: ["read"] }, seat: "read" } as const));
+    expect(await refusal({ writable: false })).toBe(reasons.seat);
+  });
+
+  it("blames no role while /me is on its way", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+    const { result } = renderHook(
+      () => useRecordWriteRefusal("deal", { writable: false }, reasons),
+      { wrapper },
+    );
+
+    expect(result.current).toBe(reasons.notYours);
+  });
+
+  it("still names the archive to a role that only reads", async () => {
+    stubMe(meFixture({ allow: { deal: ["read"] } } as const));
+
+    expect(
+      await refusal({ writable: false, archived_at: "2026-07-01T00:00:00Z" }),
+    ).toBe(reasons.archived);
   });
 
   it("refuses a record carrying no writable flag, failing closed", async () => {

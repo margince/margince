@@ -37,6 +37,7 @@ function Served({ writable }: Readonly<{ writable: boolean }>) {
             to_name: "Warehouse renewal",
             link_type: "renews",
             created_at: "2026-10-08T09:00:00Z",
+            removable: writable,
           },
         ],
       }),

@@ -123,10 +123,15 @@ function ResidualFace({
 export function ReversalPairRow({
   row,
   currency,
+  redo,
   children,
 }: Readonly<{
   row: PairRow;
   currency: string | null | undefined;
+  // The pair's one verb: a line that says "undone" has one useful next
+  // step. It sits on the face, open or folded, so the expanded rows below
+  // carry no second copy of it.
+  redo?: ReactNode;
   // The two rows whole, built by the caller from the same row component every
   // other entry uses. Passed in rather than rendered here so the expansion is
   // the ordinary history row — its own actor, time, diff and verb — and not a
@@ -156,18 +161,18 @@ export function ReversalPairRow({
         ) : (
           <ResidualFace row={row} currency={currency} />
         )}
-        {/* The only control on the collapsed face, and it writes nothing. Two
-            changes with opposite intents have no honest single label, so the
-            verbs live on the rows they belong to, inside. */}
-        <Button
-          variant="ghost"
-          className="reversal-toggle"
-          aria-expanded={open}
-          aria-controls={open ? regionId : undefined}
-          onClick={() => setOpen((was) => !was)}
-        >
-          {t(open ? "history.reversal.collapse" : "history.reversal.expand")}
-        </Button>
+        <span className="reversal-actions">
+          {redo}
+          {/* Writes nothing: it only shows the two audit rows behind the line. */}
+          <Button
+            variant="ghost"
+            aria-expanded={open}
+            aria-controls={open ? regionId : undefined}
+            onClick={() => setOpen((was) => !was)}
+          >
+            {t(open ? "history.reversal.collapse" : "history.reversal.expand")}
+          </Button>
+        </span>
         {open && (
           <ul
             id={regionId}
