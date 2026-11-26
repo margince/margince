@@ -12,10 +12,14 @@ package activities
 
 import (
 	"context"
+	"errors"
+	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -105,8 +109,17 @@ func TestTheDealFollowUpBatchReadsEachAttendeeByKeyWhenContactsLookEmpty(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Bounded run takes about a second; a contact scan per meeting runs for minutes.
+	if _, err := tx.Exec(ctx, "SET LOCAL statement_timeout = '15s'"); err != nil {
+		t.Fatal(err)
+	}
 	var raw string
-	if err := tx.QueryRow(ctx, "EXPLAIN (ANALYZE, FORMAT JSON) "+statement, args...).Scan(&raw); err != nil {
+	err = tx.QueryRow(ctx, "EXPLAIN (ANALYZE, FORMAT JSON) "+statement, args...).Scan(&raw)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.QueryCanceled {
+		t.Fatal("the batch ran past 15s with contacts looking empty: a contact scan inside the per-meeting loop")
+	}
+	if err != nil {
 		t.Fatalf("running the deal follow-up batch: %v", err)
 	}
 	plan := decodePlan(t, raw)
@@ -116,23 +129,32 @@ func TestTheDealFollowUpBatchReadsEachAttendeeByKeyWhenContactsLookEmpty(t *test
 	assertAttendeesReadByKey(t, plan)
 }
 
-// assertAttendeesReadByKey holds each read of a link, participant or contact to a
-// few runs per meeting; a contact scan inside the per-meeting loop multiplies them.
+// attendeeContact matches the contact aliases the attendee and recipient lookups
+// use; EXPLAIN numbers a repeated alias.
+var attendeeContact = regexp.MustCompile(`^(named|rc)(_[0-9]+)?$`)
+
+// assertAttendeesReadByKey holds each attendee's contact to one row read by key,
+// and each link and participant read to a few runs per meeting.
 func assertAttendeesReadByKey(t *testing.T, plan planNode) {
 	t.Helper()
-	reads := 0
+	contacts := 0
 	plan.walk(func(n planNode) {
-		switch n.RelationName {
-		case "contact", "activity_link", "activity_participant":
-			reads++
+		switch {
+		case n.RelationName == "contact" && attendeeContact.MatchString(n.Alias):
+			contacts++
+			if !readByKey(n) || n.ActualRows+n.RemovedByFilter > 1 {
+				t.Errorf("attendee contact %s is read by %s %s on %q, %.0f rows a loop, not by its key",
+					n.Alias, n.NodeType, n.IndexName, n.IndexCond, n.ActualRows+n.RemovedByFilter)
+			}
+		case n.RelationName == "activity_link" || n.RelationName == "activity_participant":
 			if n.ActualLoops > perMeetingSteps*planMeetings {
-				t.Errorf("%s on %s %s ran %.0f times for %d meetings, once per meeting and contact",
-					n.NodeType, n.RelationName, n.Alias, n.ActualLoops, planMeetings)
+				t.Errorf("%s on %s %s ran %.0f times for %d meetings, more than %d a meeting",
+					n.NodeType, n.RelationName, n.Alias, n.ActualLoops, planMeetings, perMeetingSteps)
 			}
 		}
 	})
-	if reads == 0 {
-		t.Fatal("the plan reads no link, participant or contact, so this test checks nothing")
+	if contacts == 0 {
+		t.Fatal("the plan reads no attendee contact, so this test checks nothing")
 	}
 }
 
