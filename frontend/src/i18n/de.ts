@@ -17765,6 +17765,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.svc.queued": "Startet gleich",
   "connectors.svc.imported": "Importiert",
   "connectors.svc.stopped": "Gestoppt",
+  "connectors.svc.mailMissing": "E-Mails fehlen",
+  "connectors.svc.unreadPeriod":
+    "E-Mails von {from} bis {to} wurden nicht gelesen. Importiere ältere E-Mails mit einem Zeitraum, der bis {from} zurückreicht.",
   "connectors.svc.calendar": "Kalender",
   "connectors.svc.calendarDesc":
     "Termine erscheinen bei Kontakten und Deals, und dein Buchungslink bietet nur deine freien Zeiten an.",

@@ -53,3 +53,16 @@ export const AttemptWithoutSuccess: Story = {
 export const SuccessTimeNotSupplied: Story = {
   render: services({ ...mail, last_success_at: undefined }),
 };
+
+// A sync succeeded and the import is done, yet a lost cursor left mail unread.
+export const ImportDoneWithMailUnread: Story = {
+  render: services({
+    ...mail,
+    provider: "gmail",
+    can_backfill: true,
+    last_success_at: "2026-08-24T12:00:00Z",
+    last_sync_error_class: null,
+    backfill: { state: "done", window: "3m" },
+    unread_period: { from: "2026-08-01T09:00:00Z", to: "2026-08-14T09:06:00Z" },
+  }),
+};

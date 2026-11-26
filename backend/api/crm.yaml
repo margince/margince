@@ -44654,6 +44654,17 @@ components:
         sync_failing_since: { type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.' }
         next_sync_due_at: { type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).' }
         backfill: { allOf: [ { $ref: '#/components/schemas/BackfillStatus' } ], description: 'Summary of the connection''s backfill run; state `none` when never run.' }
+        unread_period:
+          allOf: [{ $ref: '#/components/schemas/CaptureUnreadPeriod' }]
+          description: >-
+            A period no sync of this mailbox read: a sync found its provider cursor gone and
+            listed only the newest mail, or a first sync could not reach back to where it was
+            to start. A successful sync since, and a finished import, do not clear it. Only an
+            import whose window reaches back over it does. Absent when there is none.
+
+            A recent `last_success_at` and a `backfill` in state `done` say a poll and a scan
+            completed. This period says which mail neither of them read, so the owner knows to
+            import a window that covers it.
         signature_enrich_enabled:
           type: [boolean, 'null']
           description: |

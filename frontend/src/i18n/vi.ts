@@ -17283,6 +17283,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.svc.queued": "Sắp bắt đầu",
   "connectors.svc.imported": "Đã nhập",
   "connectors.svc.stopped": "Đã dừng",
+  "connectors.svc.mailMissing": "Thiếu thư",
+  "connectors.svc.unreadPeriod":
+    "Thư từ {from} đến {to} chưa được đọc. Hãy nhập email cũ hơn với khoảng thời gian lấy lại được tới {from}.",
   "connectors.svc.calendar": "Lịch",
   "connectors.svc.calendarDesc":
     "Cuộc họp hiện trên liên hệ và giao dịch, và liên kết đặt lịch của bạn chỉ đưa ra những giờ bạn rảnh.",

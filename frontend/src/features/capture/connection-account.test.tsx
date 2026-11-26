@@ -287,6 +287,47 @@ describe("the past email service", () => {
     expect(requestsTo(calls, "/backfill/preview", "POST")).toHaveLength(0);
   });
 
+  it("does not call an import done while mail no sync read is still missing", async () => {
+    stubApi();
+    renderAccount([
+      {
+        ...gmail,
+        unread_period: {
+          from: "2026-06-01T09:00:00Z",
+          to: "2026-06-14T09:06:00Z",
+        },
+      },
+    ]);
+    const service = await screen.findByTestId("connector-gmail-past-email");
+
+    expect(within(service).getByRole("status").textContent).toBe(
+      "Mail missing",
+    );
+    expect(within(service).getByTestId("past-email-unread")).toHaveTextContent(
+      /^Mail from .+ to .+ was never read\. Import older email with a window that reaches back to .+\.$/,
+    );
+  });
+
+  it("names the unread period before any import has run", async () => {
+    stubApi();
+    renderAccount([
+      {
+        ...gmail,
+        backfill: { state: "none" },
+        unread_period: {
+          from: "2026-06-01T09:00:00Z",
+          to: "2026-06-14T09:06:00Z",
+        },
+      },
+    ]);
+    const service = await screen.findByTestId("connector-gmail-past-email");
+
+    expect(within(service).getByText("Not imported")).toBeInTheDocument();
+    expect(
+      within(service).getByTestId("past-email-unread"),
+    ).toBeInTheDocument();
+  });
+
   it("opens the import dialog from the menu, where the scope is counted", async () => {
     const calls = stubApi({
       "POST /connectors/gmail/backfill/preview": () =>

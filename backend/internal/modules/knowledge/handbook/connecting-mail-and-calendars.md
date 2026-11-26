@@ -165,12 +165,25 @@ Under the account, each part (**New mail**, **Past email**, **Calendar**,
 
 You also see its last good sync. A failed check does not move that time.
 
+**Past email** says **Mail missing** when some mail was never read, even after a
+good sync or a finished import. The row names the dates: "Mail from {from} to
+{to} was never read."
+
 ### Does a record show all my mail?
 
 Dates on a contact or deal describe the mail on record. They do not prove that nobody replied outside these records.
 A good sync or a finished history import does not prove that every Inbox and Sent message is on record.
 A connection problem shows on **Settings → Connections**.
 A task you kept stays even when some mail is missing.
+
+### How do I bring back mail Margince missed?
+Reconnecting the same account does not bring back mail. Import it again instead.
+1. Open **Settings → Connections** and choose **Import older email** in the account's menu.
+2. Choose **Start a new import** and pick a window that reaches back to the first missing date.
+3. Press **Start import**.
+Mail already on record is not added twice. Mail you excluded and threads held as private stay as they were.
+When the import reaches back over the dates, **Mail missing** goes away, and Home stops asking for a follow-up you sent.
+Also called: re-import mail, missing sent email, recover email, resync mailbox.
 
 ### Why did my Gmail or Outlook connection stop working?
 When emails stop coming into Margince, open **Settings → Connections** and read the badge on the account and the word on its **New mail** row.
