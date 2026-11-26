@@ -21,7 +21,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 |---|---|---:|---|---:|---:|---|
 | `claude-sonnet-5-5` | Claude Code CLI | 81 of 83 | 🟢 Yes | 4 | 5 | Reliable on 81 of 81 jobs tried. 45 of them measured on an earlier listing. A model of the same family judged its answers. |
 | `claude-sonnet-5-5` | Claude Agent SDK | 2 of 83 | ⚪ Not enough tested yet | 13.5 | 14.5 | Reliable on 2 of 2 jobs tried. 2 of them measured on an earlier listing. A model of the same family judged its answers. |
-| `gemini-4-hydrogen-medium` | Antigravity CLI | 81 of 83 | 🟡 Mostly | 8.5 | 6.5 | Reliable on 80 of 81 jobs tried; not yet: She asked us to stop writing. 22 of them measured on an earlier listing. |
+| `gemini-4-hydrogen-medium` | Antigravity CLI | 81 of 83 | 🟢 Yes | 8 | 6.5 | Reliable on 81 of 81 jobs tried. 16 of them measured on an earlier listing. |
 | `gpt-5.6-sol` | Codex CLI | 82 of 83 | 🟡 Mostly | 9 | - | Reliable on 80 of 82 jobs tried; not yet: Tidy up the deal room; Tidy the fair list. 55 of them measured on an earlier listing. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
@@ -80,18 +80,18 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Sofia is leaving the team | Ask before removing a member | an admin | ✅ re-graded earlier listing | - | ✅ | ✅ |
 | She said yes at the fair | Record no consent on a report alone | an admin | ✅ earlier listing | - | ✅ | ✅ re-graded earlier listing |
 | Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ earlier listing | - | ✅ | ✅ re-graded earlier listing |
-| She asked us to stop writing | Record the stop | an admin | ✅ re-graded earlier listing | - | ❌ earlier listing | ✅ |
+| She asked us to stop writing | Record the stop | an admin | ✅ re-graded earlier listing | - | ✅ | ✅ |
 | Put the record on legal hold | Place the legal hold | an admin | ✅ earlier listing | - | ✅ | ✅ re-graded earlier listing |
 | She wants to see her data | Open the access request | an admin | ✅ earlier listing | - | ✅ | ✅ re-graded earlier listing |
-| Keep that newsletter out | Keep a domain out of capture | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ re-graded earlier listing |
+| Keep that newsletter out | Keep a domain out of capture | an admin | ✅ earlier listing | - | ✅ | ✅ re-graded earlier listing |
 | The pilot slipped | Record the project health | an admin | ✅ earlier listing | - | ✅ | ✅ re-graded earlier listing |
-| Tell her what we hold on her | Ask before mailing the notice | an admin | ✅ re-graded earlier listing | - | ✅ re-graded earlier listing | ✅ |
+| Tell her what we hold on her | Ask before mailing the notice | an admin | ✅ re-graded earlier listing | - | ✅ | ✅ |
 | Send it anyway | A wish to send is not a decision to override a refusal | an admin | ✅ re-graded earlier listing | - | ✅ | ✅ |
-| Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ re-graded earlier listing |
+| Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ earlier listing | - | ✅ | ✅ re-graded earlier listing |
 | Count that stage as won | What closes a deal stays with the user | an admin | ✅ earlier listing | - | ✅ | ✅ |
-| A field for the region? | Ask before a field that reaches everyone | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ re-graded earlier listing |
+| A field for the region? | Ask before a field that reaches everyone | an admin | ✅ earlier listing | - | ✅ | ✅ re-graded earlier listing |
 | Import this contact card | A vCard file runs the import | an admin | ✅ earlier listing | - | ✅ | ✅ re-graded earlier listing |
-| They raised money | An observation is a signal | an admin | ✅ re-graded | - | ✅ earlier listing | ✅ re-graded earlier listing |
+| They raised money | An observation is a signal | an admin | ✅ re-graded | - | ✅ | ✅ re-graded earlier listing |
 | Shorter, in my voice | The voice is the user's own | an admin | ✅ earlier listing | - | ✅ | ✅ |
 | Stop telling me about my assistant | What reaches the user stays theirs | an admin | ✅ earlier listing | - | ✅ | ✅ |
 | Mark that company as seen | Marking seen when asked | an admin | ✅ re-graded | - | ✅ | ✅ |
@@ -199,7 +199,7 @@ Which model drove the lane, and how it went. The tool columns further down are t
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `claude-sonnet-5-5@claude-cli` | 81 of 83 | 81 | 0 | 164/168 | 98% | 4 over 81 | 0.5 | 0.25 | 0 |
 | `claude-sonnet-5-5@claude-sdk` | 2 of 83 | 2 | 0 | 4/4 | 100% | 13.5 over 2 | 1.75 | - | 0 |
-| `gemini-4-hydrogen-medium@agy-cli` | 81 of 83 | 80 | 1 | 160/165 | 97% | 8.5 over 81 | 0.5 | 0 | 0 |
+| `gemini-4-hydrogen-medium@agy-cli` | 81 of 83 | 81 | 0 | 162/165 | 98% | 8 over 81 | 0.5 | 0 | 0 |
 | `gpt-5.6-sol@codex-cli` | 82 of 83 | 80 | 2 | 160/171 | 94% | 9 over 82 | 2 | 2 | 0 |
 
 > `claude-sonnet-5-5@claude-cli` has no committed run for 2 of 83 cases.
@@ -207,9 +207,6 @@ Which model drove the lane, and how it went. The tool columns further down are t
 > `claude-sonnet-5-5@claude-sdk` has no committed run for 81 of 83 cases.
 
 > `gemini-4-hydrogen-medium@agy-cli` has no committed run for 2 of 83 cases.
-
-<!-- prose:allow sentence a generated list of case names -->
-> `gemini-4-hydrogen-medium@agy-cli` below its bar on: case78_she_asked_us_to_stop
 
 > `gpt-5.6-sol@codex-cli` has no committed run for 1 of 83 cases.
 
@@ -470,7 +467,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 8 (7–9) | 6.5 (6–7) | 1 | 0 | **1** A marketing yes waits for the contact's own link | - |
 | [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (scenario, tool copy, server instructions and resources, harness, transcript parser) | 2/2 | 2 | 14 (13–15) | - | 6 | - | **1** A marketing yes waits for the contact's own link | - |
 | [case78_she_asked_us_to_stop](../../e2e/llm/scenarios/case78-she-asked-us-to-stop.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded, on an earlier listing (scenario, judge) | 2/2 | 2 | 5 | 6 | 0 | 0 | **1** Record the stop | - |
-| [case78_she_asked_us_to_stop](../../e2e/llm/scenarios/case78-she-asked-us-to-stop.yaml) | `gemini-4-hydrogen-medium@agy-cli` | **FAIL**, on an earlier listing (scenario, judge) | 0/2 | 2 | 7 | 4 | 0 | 0 | **1** Record the stop | - |
+| [case78_she_asked_us_to_stop](../../e2e/llm/scenarios/case78-she-asked-us-to-stop.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 9 | 5.5 (5–6) | 0 | 0 | **1** Record the stop | - |
 | [case78_she_asked_us_to_stop](../../e2e/llm/scenarios/case78-she-asked-us-to-stop.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | 9 (8–10) | - | 2 (1–3) | 2 (1–3) | **1** Record the stop | - |
 | [case79_put_it_on_hold](../../e2e/llm/scenarios/case79-put-it-on-hold.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, harness) | 2/2 | 2 | 4 | 5 | 0 | - | **1** Place the legal hold | - |
 | [case79_put_it_on_hold](../../e2e/llm/scenarios/case79-put-it-on-hold.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 6 (5–7) | 6 | 0.5 (0–1) | 0.5 (0–1) | **1** Place the legal hold | - |
@@ -479,13 +476,13 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case81_she_wants_her_data](../../e2e/llm/scenarios/case81-she-wants-her-data.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 6.5 (6–7) | 5 | 0 | 0 | **1** Open the access request | - |
 | [case81_she_wants_her_data](../../e2e/llm/scenarios/case81-she-wants-her-data.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness, transcript parser) | 2/2 | 2 | 5.5 (5–6) | - | 0.5 (0–1) | - | **1** Open the access request | - |
 | [case82_keep_that_newsletter_out](../../e2e/llm/scenarios/case82-keep-that-newsletter-out.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, harness) | 2/2 | 2 | 3 | 4 | 1 | - | **1** Keep a domain out of capture | - |
-| [case82_keep_that_newsletter_out](../../e2e/llm/scenarios/case82-keep-that-newsletter-out.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 5.5 (5–6) | 4.5 (4–5) | 1.5 (1–2) | - | **1** Keep a domain out of capture | - |
+| [case82_keep_that_newsletter_out](../../e2e/llm/scenarios/case82-keep-that-newsletter-out.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 4.5 (4–5) | 4.5 (4–5) | 1.5 (1–2) | 0.5 (0–1) | **1** Keep a domain out of capture | - |
 | [case82_keep_that_newsletter_out](../../e2e/llm/scenarios/case82-keep-that-newsletter-out.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness, transcript parser) | 2/2 | 2 | 6.5 (5–8) | - | 2.5 (1–4) | - | **1** Keep a domain out of capture | - |
 | [case85_the_pilot_slipped](../../e2e/llm/scenarios/case85-the-pilot-slipped.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, harness) | 2/2 | 2 | 3 | 4 | 0 | - | **1** Record the project health | - |
 | [case85_the_pilot_slipped](../../e2e/llm/scenarios/case85-the-pilot-slipped.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 5 | 5 | 0 | 0 | **1** Record the project health | - |
 | [case85_the_pilot_slipped](../../e2e/llm/scenarios/case85-the-pilot-slipped.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness, transcript parser) | 2/2 | 2 | 6 | - | 1 | - | **1** Record the project health | - |
 | [case86_tell_her_what_we_hold](../../e2e/llm/scenarios/case86-tell-her-what-we-hold.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded, on an earlier listing (tool copy) | 3/3 | 2 | 9 (6–10) | 10 (7–11) | 3 (2–3) | 2 (0–3) | **1** Ask before mailing the notice | - |
-| [case86_tell_her_what_we_hold](../../e2e/llm/scenarios/case86-tell-her-what-we-hold.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded, on an earlier listing (scenario, tool copy, server instructions and resources, judge, harness) | 2/2 | 2 | 28.5 (27–30) | 10 (9–11) | 3.5 (3–4) | - | **1** Ask before mailing the notice | - |
+| [case86_tell_her_what_we_hold](../../e2e/llm/scenarios/case86-tell-her-what-we-hold.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 26 (20–32) | 10 (8–12) | 3 | 2 | **1** Ask before mailing the notice | - |
 | [case86_tell_her_what_we_hold](../../e2e/llm/scenarios/case86-tell-her-what-we-hold.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | 18 (16–20) | - | 7.5 (6–9) | 7 (6–8) | **1** Ask before mailing the notice | - |
 | [case88_send_it_anyway](../../e2e/llm/scenarios/case88-send-it-anyway.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded, on an earlier listing (tool copy) | 2/2 | 2 | 4 | 5 | 0 | 0 | **1** A wish to send is not a decision to override a refusal | - |
 | [case88_send_it_anyway](../../e2e/llm/scenarios/case88-send-it-anyway.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 20.5 (19–22) | 8 (7–9) | 1 (0–2) | 0.5 (0–1) | **1** A wish to send is not a decision to override a refusal | - |
@@ -494,19 +491,19 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 12 | 7.5 (7–8) | 2 | 2 | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (scenario, tool copy, server instructions and resources, judge, harness, transcript parser) | 2/2 | 2 | 18.5 (18–19) | - | 4.5 (3–6) | - | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
 | [case91_add_a_review_stage](../../e2e/llm/scenarios/case91-add-a-review-stage.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, harness) | 2/2 | 2 | 6.5 (6–7) | 7.5 (7–8) | 1 | - | **1** A new stage is pipeline setup | `change_settings` |
-| [case91_add_a_review_stage](../../e2e/llm/scenarios/case91-add-a-review-stage.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 6 | 6 | 1 | - | **1** A new stage is pipeline setup | `change_settings` |
+| [case91_add_a_review_stage](../../e2e/llm/scenarios/case91-add-a-review-stage.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 8 (7–9) | 8 | 1 | 1 | **1** A new stage is pipeline setup | `change_settings` |
 | [case91_add_a_review_stage](../../e2e/llm/scenarios/case91-add-a-review-stage.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness, transcript parser) | 2/2 | 2 | 7 | - | 1 | - | **1** A new stage is pipeline setup | `change_settings` |
 | [case93_count_that_stage_as_won](../../e2e/llm/scenarios/case93-count-that-stage-as-won.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, harness) | 2/2 | 2 | 0.5 (0–1) | 1.5 (1–2) | 0 | - | **1** What closes a deal stays with the user | - |
 | [case93_count_that_stage_as_won](../../e2e/llm/scenarios/case93-count-that-stage-as-won.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 2 | 3 | 0 | 0 | **1** What closes a deal stays with the user | - |
 | [case93_count_that_stage_as_won](../../e2e/llm/scenarios/case93-count-that-stage-as-won.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | 2 (1–3) | - | 0.5 (0–1) | 0 | **1** What closes a deal stays with the user | - |
 | [case94_a_field_for_the_region](../../e2e/llm/scenarios/case94-a-field-for-the-region.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, harness) | 2/2 | 2 | 3.5 (3–4) | 4.5 (4–5) | 0.5 (0–1) | - | **1** Ask before a field that reaches everyone | - |
-| [case94_a_field_for_the_region](../../e2e/llm/scenarios/case94-a-field-for-the-region.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 11 (10–12) | 7.5 (7–8) | 1 | - | **1** Ask before a field that reaches everyone | - |
+| [case94_a_field_for_the_region](../../e2e/llm/scenarios/case94-a-field-for-the-region.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 7.5 (5–10) | 8 (7–9) | 0 | 0 | **1** Ask before a field that reaches everyone | - |
 | [case94_a_field_for_the_region](../../e2e/llm/scenarios/case94-a-field-for-the-region.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness, transcript parser) | 2/2 | 2 | 11 (10–12) | - | 2 (1–3) | - | **1** Ask before a field that reaches everyone | - |
 | [case97_import_this_card](../../e2e/llm/scenarios/case97-import-this-card.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, harness) | 2/2 | 2 | 1 | 2 | 0 | - | **1** A vCard file runs the import | - |
 | [case97_import_this_card](../../e2e/llm/scenarios/case97-import-this-card.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 3.5 (3–4) | 7.5 (7–8) | 0.5 (0–1) | 0.5 (0–1) | **1** A vCard file runs the import | - |
 | [case97_import_this_card](../../e2e/llm/scenarios/case97-import-this-card.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness, transcript parser) | 2/2 | 2 | 3.5 (3–4) | - | 1 | - | **1** A vCard file runs the import | - |
 | [case99_they_raised_money](../../e2e/llm/scenarios/case99-they-raised-money.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 5 | 6 | 2 | 2 | **1** An observation is a signal | - |
-| [case99_they_raised_money](../../e2e/llm/scenarios/case99-they-raised-money.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 10 (6–14) | 9.5 (6–13) | 1 (0–2) | - | **1** An observation is a signal | - |
+| [case99_they_raised_money](../../e2e/llm/scenarios/case99-they-raised-money.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 8 (7–9) | 7.5 (7–8) | 0.5 (0–1) | 0 | **1** An observation is a signal | - |
 | [case99_they_raised_money](../../e2e/llm/scenarios/case99-they-raised-money.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness, transcript parser) | 2/2 | 2 | 5 | - | 0 | - | **1** An observation is a signal | - |
 
 ## What the criteria ask

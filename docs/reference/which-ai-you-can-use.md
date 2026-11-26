@@ -61,7 +61,7 @@ Also called: which AI tool works with Margince, Claude, Codex, Gemini, ChatGPT, 
 |---|---|---:|---|
 | `claude-sonnet-5-5` | Claude Code CLI | 81 of 81 (2 not yet run) | 🟢 Yes |
 | `claude-sonnet-5-5` | Claude Agent SDK | 2 of 2 (81 not yet run) | ⚪ Not enough tested yet |
-| `gemini-4-hydrogen-medium` | Antigravity CLI | 80 of 81 (2 not yet run) | 🟡 Mostly |
+| `gemini-4-hydrogen-medium` | Antigravity CLI | 81 of 81 (2 not yet run) | 🟢 Yes |
 | `gpt-5.6-sol` | Codex CLI | 80 of 82 (1 not yet run) | 🟡 Mostly |
 
 ### Can I use an AI assistant that is not in the table?

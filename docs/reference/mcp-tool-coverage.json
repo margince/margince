@@ -59,22 +59,20 @@
     {
       "model": "gemini-4-hydrogen-medium@agy-cli",
       "name": "gemini-4-hydrogen-medium",
-      "trust": "🟡 Mostly",
+      "trust": "🟢 Yes",
       "cases_with_a_committed_run": 81,
-      "cases_that_reached_their_bar": 80,
-      "cases_below_their_bar": 1,
-      "cases_measured_on_an_earlier_listing": 22,
+      "cases_that_reached_their_bar": 81,
+      "cases_below_their_bar": 0,
+      "cases_measured_on_an_earlier_listing": 16,
       "runs": 165,
-      "passed": 160,
-      "reliability": 0.9696969696969697,
-      "cases_below_their_bar_named": [
-        "case78_she_asked_us_to_stop"
-      ],
+      "passed": 162,
+      "reliability": 0.9818181818181818,
+      "cases_below_their_bar_named": [],
       "route": "Antigravity CLI",
       "self_judged": false,
-      "calls_per_case": "8.5 over 81",
+      "calls_per_case": "8 over 81",
       "slow_cases": [],
-      "median_calls_per_case": "8.5",
+      "median_calls_per_case": "8",
       "median_turns_per_case": "6.5",
       "median_refused_per_case": "0.5",
       "median_retries_per_case": "0"
@@ -8822,22 +8820,22 @@
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
           "runs": 2,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 7,
-              "max": 7
+              "median": 9,
+              "min": 9,
+              "max": 9
             },
             "turns": {
-              "median": 4,
-              "min": 4,
-              "max": 4
+              "median": 5.5,
+              "min": 5,
+              "max": 6
             },
             "refused": {
               "median": 0,
@@ -8849,11 +8847,7 @@
               "min": 0,
               "max": 0
             }
-          },
-          "measured_on_an_earlier_listing": [
-            "scenario",
-            "judge"
-          ]
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -9157,9 +9151,9 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 4.5,
+              "min": 4,
+              "max": 5
             },
             "turns": {
               "median": 4.5,
@@ -9171,13 +9165,12 @@
               "min": 1,
               "max": 2
             },
-            "retries": null
-          },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+            "retries": {
+              "median": 0.5,
+              "min": 0,
+              "max": 1
+            }
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -9378,30 +9371,26 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 28.5,
-              "min": 27,
-              "max": 30
+              "median": 26,
+              "min": 20,
+              "max": 32
             },
             "turns": {
               "median": 10,
-              "min": 9,
-              "max": 11
+              "min": 8,
+              "max": 12
             },
             "refused": {
-              "median": 3.5,
+              "median": 3,
               "min": 3,
-              "max": 4
+              "max": 3
             },
-            "retries": null
-          },
-          "regraded": true,
-          "measured_on_an_earlier_listing": [
-            "scenario",
-            "tool copy",
-            "server instructions and resources",
-            "judge",
-            "harness"
-          ]
+            "retries": {
+              "median": 2,
+              "min": 2,
+              "max": 2
+            }
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -9715,27 +9704,26 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
-              "min": 6,
-              "max": 6
+              "median": 8,
+              "min": 7,
+              "max": 9
             },
             "turns": {
-              "median": 6,
-              "min": 6,
-              "max": 6
+              "median": 8,
+              "min": 8,
+              "max": 8
             },
             "refused": {
               "median": 1,
               "min": 1,
               "max": 1
             },
-            "retries": null
-          },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+            "retries": {
+              "median": 1,
+              "min": 1,
+              "max": 1
+            }
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -9929,27 +9917,26 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 11,
-              "min": 10,
-              "max": 12
+              "median": 7.5,
+              "min": 5,
+              "max": 10
             },
             "turns": {
-              "median": 7.5,
+              "median": 8,
               "min": 7,
-              "max": 8
+              "max": 9
             },
             "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
+              "median": 0,
+              "min": 0,
+              "max": 0
             },
-            "retries": null
-          },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -10147,27 +10134,26 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10,
-              "min": 6,
-              "max": 14
+              "median": 8,
+              "min": 7,
+              "max": 9
             },
             "turns": {
-              "median": 9.5,
-              "min": 6,
-              "max": 13
+              "median": 7.5,
+              "min": 7,
+              "max": 8
             },
             "refused": {
-              "median": 1,
+              "median": 0.5,
               "min": 0,
-              "max": 2
+              "max": 1
             },
-            "retries": null
-          },
-          "measured_on_an_earlier_listing": [
-            "tool copy",
-            "server instructions and resources",
-            "harness"
-          ]
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -11135,8 +11121,7 @@
         "case77_record_her_yes",
         "case78_she_asked_us_to_stop",
         "case86_tell_her_what_we_hold",
-        "case88_send_it_anyway",
-        "case99_they_raised_money"
+        "case88_send_it_anyway"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -11721,8 +11706,8 @@
         "case59_file_it_on_the_meeting_and_the_contract",
         "case64_catch_me_up_and_the_brief",
         "case65_clear_out_the_dead_deals",
-        "case94_a_field_for_the_region",
-        "case99_they_raised_money"
+        "case91_add_a_review_stage",
+        "case94_a_field_for_the_region"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -12115,7 +12100,8 @@
         "case131_no_to_the_hand_over",
         "case31_wrong_word_on_the_record",
         "case47_tidy_the_fair_list",
-        "case76_she_said_yes_at_the_fair"
+        "case76_she_said_yes_at_the_fair",
+        "case94_a_field_for_the_region"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -12409,6 +12395,7 @@
         "case65_clear_out_the_dead_deals",
         "case71_record_the_signed_contract",
         "case76_she_said_yes_at_the_fair",
+        "case78_she_asked_us_to_stop",
         "case79_put_it_on_hold",
         "case86_tell_her_what_we_hold",
         "case88_send_it_anyway",
@@ -12555,8 +12542,7 @@
         "case32_two_words_for_one_thing",
         "case54_a_word_from_the_fair",
         "case76_she_said_yes_at_the_fair",
-        "case94_a_field_for_the_region",
-        "case99_they_raised_money"
+        "case94_a_field_for_the_region"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -12581,7 +12567,8 @@
         "case130_put_the_offer_link_on_the_deal",
         "case59_file_it_on_the_meeting_and_the_contract",
         "case6_ask_the_company",
-        "case74_read_the_file_back"
+        "case74_read_the_file_back",
+        "case86_tell_her_what_we_hold"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -12942,6 +12929,7 @@
         "case75_sofia_is_leaving",
         "case76_she_said_yes_at_the_fair",
         "case77_record_her_yes",
+        "case78_she_asked_us_to_stop",
         "case79_put_it_on_hold",
         "case81_she_wants_her_data",
         "case85_the_pilot_slipped",
