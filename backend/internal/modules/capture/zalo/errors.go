@@ -28,6 +28,11 @@ var (
 	// a 5xx or an unreadable answer. A send that ends here may have been
 	// delivered, so it is not safe to repeat blindly.
 	ErrUnreachable = errors.New("zalo: no usable answer")
+	// ErrMediaTooLarge reports an attachment over the caller's size limit.
+	ErrMediaTooLarge = errors.New("zalo: the attachment exceeds the size limit")
+	// ErrMediaChecksum reports downloaded bytes that differ from the checksum
+	// the webhook stated.
+	ErrMediaChecksum = errors.New("zalo: the attachment checksum does not match")
 )
 
 // APIError carries Zalo's own error code and message beside the sentinel it

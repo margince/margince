@@ -6,9 +6,6 @@ package whatsapp
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/safedownload"
 	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
 )
 
@@ -41,6 +39,7 @@ type Client struct {
 	base       string
 	version    string
 	mediaHosts []string
+	policy     safedownload.Policy
 }
 
 // DefaultMediaHosts are the hosts media may be downloaded from. A pattern
@@ -75,52 +74,17 @@ func NewClient(hc *http.Client, base, version string, opts ...Option) *Client {
 	// The caller's client is copied, so its redirect policy stays its own. Every
 	// hop is checked like the first request, because a redirect from an allowed
 	// host could otherwise carry the bearer token to any other.
-	own := *hc
-	own.CheckRedirect = c.checkRedirect
-	c.http = &own
+	graph, err := url.Parse(c.base)
+	if err != nil {
+		graph = &url.URL{}
+	}
+	c.policy = safedownload.Policy{Hosts: c.mediaHosts, RedirectHosts: []string{graph.Host}}
+	c.http = c.policy.Client(hc)
 	return c
 }
 
-// maxRedirects bounds a media fetch's hops.
-const maxRedirects = 3
-
-// errRedirectRefused marks a redirect the policy stopped.
-var errRedirectRefused = errors.New("whatsapp: redirect refused")
-
-// checkRedirect lets a request follow a redirect only to an https media host or
-// to the Graph host, and only a few times.
-func (c *Client) checkRedirect(req *http.Request, via []*http.Request) error {
-	if len(via) > maxRedirects {
-		return errRedirectRefused
-	}
-	base, err := url.Parse(c.base)
-	if err == nil && req.URL.Scheme == "https" && strings.EqualFold(req.URL.Host, base.Host) {
-		return nil
-	}
-	if !c.allowedMediaURL(req.URL.String()) {
-		return errRedirectRefused
-	}
-	return nil
-}
-
 // allowedMediaURL reports whether raw is an https URL on an allowed host.
-func (c *Client) allowedMediaURL(raw string) bool {
-	u, err := url.Parse(raw)
-	if err != nil || u.Scheme != "https" {
-		return false
-	}
-	host := strings.ToLower(u.Hostname())
-	for _, p := range c.mediaHosts {
-		if suffix, wild := strings.CutPrefix(p, "*"); wild {
-			if strings.HasSuffix(host, suffix) && len(host) > len(suffix) {
-				return true
-			}
-		} else if host == p {
-			return true
-		}
-	}
-	return false
-}
+func (c *Client) allowedMediaURL(raw string) bool { return c.policy.Allows(raw) }
 
 // Download is a fetched attachment.
 type Download struct {
@@ -180,11 +144,7 @@ func (c *Client) DownloadURL(ctx context.Context, token, mediaURL string, maxByt
 
 // checksumMatches accepts the digest as hex (Graph's media metadata) or base64
 // (as webhook payloads state it), because the two surfaces differ.
-func checksumMatches(data []byte, want string) bool {
-	sum := sha256.Sum256(data)
-	return strings.EqualFold(want, hex.EncodeToString(sum[:])) ||
-		want == base64.StdEncoding.EncodeToString(sum[:])
-}
+func checksumMatches(data []byte, want string) bool { return safedownload.SHA256Matches(data, want) }
 
 // SendText sends one free-form text message from phoneNumberID to the
 // customer's wa_id and returns Meta's message id. Outside the 24-hour window
@@ -239,29 +199,22 @@ func (c *Client) do(ctx context.Context, method, target, token string, body []by
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	resp, err := c.http.Do(req)
-	if errors.Is(err, errRedirectRefused) {
+	resp, err := safedownload.Do(c.http, req, limit)
+	switch {
+	case errors.Is(err, safedownload.ErrRefused):
 		return nil, fmt.Errorf("whatsapp: a redirect left the allowed hosts: %w", ErrRejected)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("whatsapp: transport failure: %w", ErrUnreachable)
-	}
-	//craft:ignore swallowed-errors best-effort close of the response body — the status and bytes already read are what matter
-	defer func() { _ = resp.Body.Close() }()
-	data, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
-	if err != nil {
-		return nil, fmt.Errorf("whatsapp: reading the answer: %w", ErrUnreachable)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, classify(resp.StatusCode, graphErrorOf(data), retryafter.Of(resp))
-	}
-	if int64(len(data)) > limit {
+	case errors.Is(err, safedownload.ErrTooLarge):
 		if limit == maxResponseBytes {
 			return nil, fmt.Errorf("whatsapp: answer too large: %w", ErrUnreachable)
 		}
 		return nil, ErrMediaTooLarge
+	case err != nil:
+		return nil, fmt.Errorf("whatsapp: transport failure: %w", ErrUnreachable)
 	}
-	return data, nil
+	if resp.Status < 200 || resp.Status >= 300 {
+		return nil, classify(resp.Status, graphErrorOf(resp.Body), retryafter.Header(resp.Header.Get("Retry-After")))
+	}
+	return resp.Body, nil
 }
 
 // graphErrorOf reads Meta's error envelope; an unreadable body yields zeros,
