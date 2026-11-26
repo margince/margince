@@ -2,10 +2,13 @@
 jurisdiction: se
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Marknadsföringslagen (2008:486)"
     provision: "19–20 §§"
     source-url: https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/marknadsforingslag-2008486_sfs-2008-486/
+    text-digest: c498cd9922bd6168aa8b05d9f31bff8ac23e6f62caec78a31c2ea9cd0b882421
+    text-fetched: 2026-11-25
 fixtures:
   - finding: objection_route
     triggers: se/fixtures/advertising-without-objection-route.md
