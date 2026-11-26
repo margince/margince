@@ -38325,6 +38325,70 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /me/chat-identities:
+    get:
+      tags: [Identity]
+      operationId: listMyChatIdentities
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Your own chat accounts that are confirmed, or waiting for their code.
+      description: |
+        One row per network where you have a confirmed account or an unexpired code. The account
+        is shown with all but its last digits hidden. A confirmed account lets the company's chat
+        accounts recognise you, so a customer message you forward is filed for that customer and
+        never for you.
+      responses:
+        '200':
+          description: Your chat accounts.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatIdentityList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /me/chat-identities/{network}:
+    parameters:
+      - name: network
+        in: path
+        required: true
+        schema: { type: string, enum: [whatsapp, telegram, zalo] }
+    post:
+      tags: [Identity]
+      operationId: startMyChatVerification
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security   # an agent must not be able to claim a chat account as a member's
+      summary: Get a code that confirms your account on one chat network.
+      description: |
+        Returns a short code once, valid for ten minutes. Send exactly that code as a message from
+        your own account to any connected company account on the same network. A second start
+        replaces the first code. The code is stored only as a hash.
+      responses:
+        '200':
+          description: The code and when it stops working.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatVerificationStarted' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Identity]
+      operationId: removeMyChatIdentity
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Forget your confirmed account and any waiting code on one network.
+      description: Removing a network where you have nothing is not an error.
+      responses:
+        '204': { description: Removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /me/ai-activity:
     get:
       tags: [AI]
@@ -41505,6 +41569,30 @@ components:
 
   # ------------------------------- schemas ----------------------------------
   schemas:
+    ChatNetwork:
+      type: string
+      x-extensible-enum: true
+      enum: [whatsapp, telegram, zalo]
+    ChatIdentity:
+      type: object
+      required: [network]
+      properties:
+        network: { $ref: '#/components/schemas/ChatNetwork' }
+        account_hint: { type: string, maxLength: 64, description: The confirmed account with all but its last digits hidden. Absent while only a code waits. }
+        verified_at: { type: string, format: date-time, description: When the account was confirmed. }
+        expires_at: { type: string, format: date-time, description: When the waiting code stops working. }
+    ChatIdentityList:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/ChatIdentity' } }
+    ChatVerificationStarted:
+      type: object
+      required: [network, code, expires_at]
+      properties:
+        network: { $ref: '#/components/schemas/ChatNetwork' }
+        code: { type: string, maxLength: 16, description: Shown once. Send it as a message from your own account. }
+        expires_at: { type: string, format: date-time }
     DealViability:
       type: object
       additionalProperties: false

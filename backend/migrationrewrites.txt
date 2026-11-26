@@ -311,6 +311,9 @@
 1795657803_a_source_id_is_bounded.up.sql | * | replaces the two text-length guards on knowledge_document with ones that also name external_id; it creates triggers and reads or rewrites no row
 1795657803_a_source_id_is_bounded.down.sql | * | runs only on a rollback; restores the earlier guards without external_id and changes no row
 1795672283_a_zalo_message_can_name_its_channel.down.sql | * | the down migration is a single SELECT 1; the provider remains available to historical foreign keys and no row changes
+1795692374_a_member_chat_account_columns_check_their_text_limits.up.sql | * | replaces the two text-bound triggers of app_user, and no row changes
+1795692374_a_member_chat_account_columns_check_their_text_limits.down.sql | * | restores the previous two text-bound triggers of app_user, and no row changes
+1795692376_the_member_chat_account_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795672904_the_edge_precision_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795675479_an_extension_counts_its_stored_objects.up.sql | * | creates a new empty table and its two text guards; the guards act on later writes only, and no row exists to change
 1795687894_a_link_suggestion_may_ask_one_colleague.down.sql | activity_link_suggestion | deletes only the suggestions Margince itself made, a small set of deal questions
