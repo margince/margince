@@ -34355,7 +34355,7 @@ type ActivityDealDecline struct {
 	// ProjectUnfiled The project link that came from a declined deal came off the message.
 	ProjectUnfiled bool `json:"project_unfiled"`
 
-	// QuestionsClosed The open deal questions of the conversation this call marked done.
+	// QuestionsClosed The messages of the conversation whose open deal question this call closed.
 	QuestionsClosed int `json:"questions_closed" minimum:"0"`
 
 	// Unlinked Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
@@ -58396,22 +58396,31 @@ type LinkSuggestion struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 
 	// ActivitySubject The subject of the message. Empty when the message has none.
-	ActivitySubject *string            `json:"activity_subject,omitempty"`
-	CreatedAt       time.Time          `json:"created_at"`
-	EntityId        openapi_types.UUID `json:"entity_id"`
+	ActivitySubject *string   `json:"activity_subject,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
+
+	// DealAmountMinor For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+	DealAmountMinor *int64 `json:"deal_amount_minor,omitempty"`
+
+	// DealCurrency The currency of `deal_amount_minor`, withheld with it.
+	DealCurrency *string `json:"deal_currency,omitempty"`
+
+	// DealExpectedCloseDate For a suggested deal, when it is expected to close. Absent on a decision's answer.
+	DealExpectedCloseDate *openapi_types.Date `json:"deal_expected_close_date,omitempty"`
+	EntityId              openapi_types.UUID  `json:"entity_id"`
 
 	// EntityName The name of the suggested record, for the screen. Absent on a decision's answer.
 	EntityName *string                  `json:"entity_name,omitempty"`
 	EntityType LinkSuggestionEntityType `json:"entity_type"`
 	Id         openapi_types.UUID       `json:"id"`
 
-	// Reason One short sentence from the extension on why.
+	// Reason One short sentence from the extension on why, or Margince's own question.
 	Reason string               `json:"reason"`
 	Score  float32              `json:"score" maximum:"1" minimum:"0"`
 	Status LinkSuggestionStatus `json:"status"`
 
-	// Unit The extension that proposed it.
-	Unit string `json:"unit"`
+	// Unit The extension that proposed it. Null when Margince itself asks which deal a mail is about.
+	Unit *string `json:"unit"`
 }
 
 // LinkSuggestionEntityType defines model for LinkSuggestion.EntityType.
@@ -104480,10 +104489,10 @@ type ServerInterface interface {
 	// Take back an open request.
 	// (POST /legal-reviews/{id}/withdraw)
 	WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id)
-	// The records an extension suggests messages belong to, waiting for a reader to decide.
+	// The link suggestions waiting for the caller to decide.
 	// (GET /link-suggestions)
 	ListLinkSuggestions(w http.ResponseWriter, r *http.Request)
-	// Accept a suggestion, which files the message under the record it names.
+	// Accept a suggestion, filing the message under its record.
 	// (POST /link-suggestions/{id}/accept)
 	AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id)
 	// Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
@@ -110213,13 +110222,13 @@ func (_ Unimplemented) WithdrawLegalReview(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The records an extension suggests messages belong to, waiting for a reader to decide.
+// The link suggestions waiting for the caller to decide.
 // (GET /link-suggestions)
 func (_ Unimplemented) ListLinkSuggestions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Accept a suggestion, which files the message under the record it names.
+// Accept a suggestion, filing the message under its record.
 // (POST /link-suggestions/{id}/accept)
 func (_ Unimplemented) AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -145799,6 +145808,8 @@ func (siw *ServerInterfaceWrapper) ListLinkSuggestions(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -145831,6 +145842,8 @@ func (siw *ServerInterfaceWrapper) AcceptLinkSuggestion(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -145862,6 +145875,8 @@ func (siw *ServerInterfaceWrapper) RejectLinkSuggestion(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

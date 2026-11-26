@@ -12,6 +12,7 @@ package capture
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -31,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -222,13 +224,15 @@ func activityOf(t *testing.T, e *integration.SearchEnv, sourceID string) ids.UUI
 	return id
 }
 
-// whichDealQuestions counts the disambiguation tasks, and who holds them.
+// whichDealQuestions counts the mails Margince asked a colleague about in the
+// link suggestion queue, and who was asked each time.
 func whichDealQuestions(t *testing.T, e *integration.SearchEnv) (int, []ids.UUID) {
 	t.Helper()
 	var holders []ids.UUID
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
-			SELECT assignee_id FROM activity WHERE kind = 'task' AND source_system = 'which_deal' ORDER BY id`)
+			SELECT for_user FROM activity_link_suggestion WHERE unit IS NULL
+			 GROUP BY activity_id, for_user ORDER BY activity_id`)
 		if err != nil {
 			return err
 		}
@@ -730,10 +734,10 @@ func TestTheDealRepairSeesOnlyWhatTheCapturingMailboxSaw(t *testing.T) {
 	wantDeals(t, e, "own3@beta.example", betaTwo)
 }
 
-// openQuestions reads the deal questions still open, and whether each is done.
+// openQuestions counts the mails whose deal question still waits in the queue.
 func openQuestions(t *testing.T, e *integration.SearchEnv) int {
 	t.Helper()
-	return countRows(t, e, `SELECT count(*) FROM activity WHERE source_system = 'which_deal' AND NOT is_done AND archived_at IS NULL`)
+	return countRows(t, e, `SELECT count(DISTINCT activity_id) FROM activity_link_suggestion WHERE unit IS NULL AND status = 'pending'`)
 }
 
 // A colleague answers the question by filing one mail of the conversation on a
@@ -877,9 +881,8 @@ func TestTheDealRepairRechecksOnlyTheRulesOwnLinks(t *testing.T) {
 }
 
 // The question is asked only about current mail, judged by the mail's own
-// time against the waiting horizon, never by when it was captured. The same
-// clause keeps the question in the colleague's task list, and drops it once
-// the mail ages past the horizon.
+// time against the waiting horizon, never by when it was captured. It waits in
+// the link suggestion queue of the colleague asked, and of no one else.
 func TestTheDealQuestionIsAskedOnlyAboutCurrentMail(t *testing.T) {
 	horizon := time.Duration(storekit.DefaultWaitingHorizonDays) * 24 * time.Hour
 	for _, c := range []struct {
@@ -904,7 +907,7 @@ func TestTheDealQuestionIsAskedOnlyAboutCurrentMail(t *testing.T) {
 			}
 		})
 	}
-	t.Run("the task list drops it past the horizon", func(t *testing.T) {
+	t.Run("only the asked colleague sees it in the queue", func(t *testing.T) {
 		env := newCaptureEnv(t)
 		e := env.e
 		w := newDealWorld(t, e)
@@ -913,37 +916,23 @@ func TestTheDealQuestionIsAskedOnlyAboutCurrentMail(t *testing.T) {
 		w.deal(t, "Acme reporting")
 		env.syncSent(t, map[string]bool{"cur2@myco.example": true},
 			email(captureOwner, "", "alice@acme.example", "cur2@myco.example", ""))
-		rep := ids.From[ids.UserKind](e.Rep1)
-		listed := func(asOf time.Time) int {
-			t.Helper()
-			rows, _, err := activities.NewStore(e.DB()).ListActivities(w.ctx, activities.ListActivitiesInput{
-				AssigneeID: &rep, AsOf: &asOf, Kind: new("task"),
-			})
-			if err != nil {
-				t.Fatalf("reading the colleague's tasks: %v", err)
-			}
-			return len(rows)
+		store := activities.NewStore(e.DB())
+		mine, err := store.ListLinkSuggestions(w.ctx)
+		if err != nil {
+			t.Fatalf("reading the asked colleague's queue: %v", err)
 		}
-		if got := listed(captureNow); got != 1 {
-			t.Fatalf("the colleague's task list shows %d deal questions for current mail, want 1", got)
+		if len(mine) != 2 || mine[0].Unit != nil || mine[1].Unit != nil {
+			t.Fatalf("the asked colleague's queue holds %+v, want Margince's two deal suggestions", mine)
 		}
-		if got := listed(mailDay.Add(horizon + time.Hour)); got != 0 {
-			t.Fatalf("the task list still shows %d deal questions after the mail aged out", got)
+		others, err := store.ListLinkSuggestions(e.Admin())
+		if err != nil {
+			t.Fatalf("reading another colleague's queue: %v", err)
 		}
-		// A question the colleague took up by hand is theirs, whatever its age.
-		var question ids.UUID
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-			return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE source_system = 'which_deal'`).Scan(&question)
-		}); err != nil {
-			t.Fatal(err)
+		if len(others) != 0 {
+			t.Fatalf("a colleague who was not asked sees %d deal suggestions, want none", len(others))
 		}
-		subject := "Which deal: ask Alice on Monday"
-		if _, err := activities.NewStore(e.DB()).UpdateActivity(w.ctx, ids.From[ids.ActivityKind](question),
-			activities.UpdateActivityInput{Subject: &subject}); err != nil {
-			t.Fatalf("taking the question up by hand: %v", err)
-		}
-		if got := listed(mailDay.Add(horizon + time.Hour)); got != 1 {
-			t.Fatalf("the task list shows %d questions the colleague took up, want 1", got)
+		if _, err := store.AcceptLinkSuggestion(e.Admin(), ids.UUID(mine[0].Id)); !errors.Is(err, apperrors.ErrNotFound) {
+			t.Fatalf("a colleague who was not asked answered the question: %v, want not found", err)
 		}
 	})
 }

@@ -62,7 +62,9 @@ const (
 	// Raised by 2 test files for the seat-bound deal reads and the stored-object
 	// count, whose cases drive the unexported seat and ledger wiring. Raised by 1
 	// for the exact-range cases, which drive the unexported report scan.
-	composeRootTestFiles = 1925
+	// Raised by 1 test file for the link suggestion tools an agent reads and
+	// answers through, which read the unexported tool registry.
+	composeRootTestFiles = 1926
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -125,7 +127,7 @@ const (
 	// Raised by 76 production and 459 test lines for the row scope of an owned
 	// extension kind and its cases. They drive the unexported report runner,
 	// History query, boot owner check and filter preview handler.
-	// Raised by 105 production and 31 test lines when main's managed corpus port
+	// Raised by 63 production and 31 test lines when main's managed corpus port
 	// and its cases met develop in the sync. The port wraps the unexported call runtime.
 	// Raised by 44 production and 99 test lines for the agent-for-a-colleague
 	// seam, the finance card's hidden billing count and their cases.
@@ -138,8 +140,9 @@ const (
 	// and the stored-object ledger wiring, and the cases that drive them.
 	// Raised by 14 production and 14 test lines for the date-only precision the
 	// close silence and the customer-progress reads carry, and their case.
-	composeRootProductionLines = 232_094
-	composeRootTestLines       = 362_832
+	composeRootProductionLines = 232_052
+	// Raised by 18 test lines for those cases.
+	composeRootTestLines = 362_850
 )
 
 // A read under these floors stopped early or read the wrong place, and would

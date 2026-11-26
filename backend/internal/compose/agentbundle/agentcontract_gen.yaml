@@ -7333,6 +7333,82 @@ paths:
               schema: {$ref: '#/components/schemas/LinkTypeList'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /link-suggestions:
+    get:
+      tags: [Activities]
+      operationId: listLinkSuggestions
+      security: [{bearerAuth: []}]
+      summary: The link suggestions waiting for the caller to decide.
+      description: |-
+        An extension may suggest which deal, company, contact or project a message belongs to. A
+        suggestion attaches nothing. It waits here until a reader accepts or rejects it. Margince
+        itself asks one question here: when several open deals fit a captured mail, it suggests each
+        of them to the one colleague the mailbox confirms is responsible. Such a suggestion has no
+        `unit`, and only that colleague sees and decides it. An agent acting for a colleague sees
+        and decides what that colleague would, and never another colleague's question.
+      responses:
+        '200':
+          description: The pending suggestions the caller may see.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LinkSuggestionList'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /link-suggestions/{id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: acceptLinkSuggestion
+      security: [{bearerAuth: []}]
+      summary: Accept a suggestion, filing the message under its record.
+      description: |-
+        Files the message under the suggested record through the same relink as any other filing,
+        and closes the suggestion in the same transaction. The caller needs the right to update the
+        message and to attach to the target. Accepting a suggestion that is already accepted is the
+        same success. A rejected one answers `409`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '200':
+          description: The suggestion, now accepted.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LinkSuggestion'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /link-suggestions/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: rejectLinkSuggestion
+      security: [{bearerAuth: []}]
+      summary: Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
+      description: |-
+        Closes the suggestion and attaches nothing. The same target is not proposed for the same
+        message a second time. Rejecting a suggestion that is already rejected is the same success.
+        An accepted one answers `409`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '200':
+          description: The suggestion, now rejected.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LinkSuggestion'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /activities/{id}/deal-decline:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -42517,6 +42593,51 @@ components:
         data:
           type: array
           items: {$ref: '#/components/schemas/LinkType'}
+    LinkSuggestion:
+      type: object
+      additionalProperties: false
+      required: [id, activity_id, entity_type, entity_id, unit, reason, score, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        activity_id: {type: string, format: uuid}
+        activity_subject:
+          type: [string, 'null']
+          description: The subject of the message. Empty when the message has none.
+        entity_type: {type: string, enum: [contact, company, deal, project]}
+        entity_id: {type: string, format: uuid}
+        entity_name:
+          type: [string, 'null']
+          description: The name of the suggested record, for the screen. Absent on a decision's answer.
+        deal_amount_minor:
+          type: [integer, 'null']
+          format: int64
+          description: For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+        deal_currency:
+          type: [string, 'null']
+          pattern: '^[A-Z]{3}$'
+          description: The currency of `deal_amount_minor`, withheld with it.
+        deal_expected_close_date:
+          type: [string, 'null']
+          format: date
+          description: For a suggested deal, when it is expected to close. Absent on a decision's answer.
+        unit:
+          type: [string, 'null']
+          description: The extension that proposed it. Null when Margince itself asks which deal a mail is about.
+        reason:
+          type: string
+          maxLength: 200
+          description: One short sentence from the extension on why, or Margince's own question.
+        score: {type: number, minimum: 0, maximum: 1}
+        status: {type: string, enum: [pending, accepted, rejected]}
+        created_at: {type: string, format: date-time}
+    LinkSuggestionList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/LinkSuggestion'}
     DeclineActivityDealRequest:
       type: object
       additionalProperties: false
@@ -42587,7 +42708,7 @@ components:
         questions_closed:
           type: integer
           minimum: 0
-          description: The open deal questions of the conversation this call marked done.
+          description: The messages of the conversation whose open deal question this call closed.
     SetActivityDispositionRequest:
       type: object
       additionalProperties: false

@@ -7020,10 +7020,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The records an extension suggests messages belong to, waiting for a reader to decide.
+         * The link suggestions waiting for the caller to decide.
          * @description An extension may suggest which deal, company, contact or project a message belongs to. A
-         *     suggestion attaches nothing. It waits here until a reader accepts or rejects it. Core makes
-         *     none of its own: this queue holds only what an extension proposed.
+         *     suggestion attaches nothing. It waits here until a reader accepts or rejects it. Margince
+         *     itself asks one question here: when several open deals fit a captured mail, it suggests each
+         *     of them to the one colleague the mailbox confirms is responsible. Such a suggestion has no
+         *     `unit`, and only that colleague sees and decides it. An agent acting for a colleague sees
+         *     and decides what that colleague would, and never another colleague's question.
          *
          *     Oldest first, at most 50. A decided suggestion leaves the queue, so asking again shows the
          *     next ones. A suggestion is left out when the caller may not read its message or its target,
@@ -7051,7 +7054,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Accept a suggestion, which files the message under the record it names.
+         * Accept a suggestion, filing the message under its record.
          * @description Files the message under the suggested record through the same relink as any other filing,
          *     and closes the suggestion in the same transaction. The caller needs the right to update the
          *     message and to attach to the target. Accepting a suggestion that is already accepted is the
@@ -7081,6 +7084,10 @@ export interface paths {
          * @description Closes the suggestion and attaches nothing. The same target is not proposed for the same
          *     message a second time. Rejecting a suggestion that is already rejected is the same success.
          *     An accepted one answers `409`.
+         *
+         *     Rejecting a deal Margince itself suggested also declines that deal, as `declineActivityDeal`
+         *     does: on the message and on each unfiled message of its conversation, so no automatic pass
+         *     files them there again.
          */
         post: operations["rejectLinkSuggestion"];
         delete?: never;
@@ -7116,9 +7123,10 @@ export interface paths {
          *     as a member's does. `project_kept` says so.
          *
          *     Without `deal_id`, the answer is "none of them" to the open "Which deal is this about?"
-         *     question of the message's conversation. Each deal the question offered is declined on the
-         *     message and on each unfiled message of the conversation, and the question is done. A
-         *     message with no open question answers 422.
+         *     question of the message's conversation: the deals Margince suggested to the caller in the
+         *     link suggestion queue. Each of them is declined on the message and on each unfiled message
+         *     of the conversation, and the suggestions are rejected. A message with no open question for
+         *     the caller answers 422.
          *
          *     Declining a deal already declined is the same success and writes nothing. With `deal_id`,
          *     the caller needs the right to change the deal too, as for `setActivityDealRelevance`.
@@ -45904,9 +45912,21 @@ export interface components {
             entity_id: string;
             /** @description The name of the suggested record, for the screen. Absent on a decision's answer. */
             entity_name?: string | null;
-            /** @description The extension that proposed it. */
-            unit: string;
-            /** @description One short sentence from the extension on why. */
+            /**
+             * Format: int64
+             * @description For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+             */
+            deal_amount_minor?: number | null;
+            /** @description The currency of `deal_amount_minor`, withheld with it. */
+            deal_currency?: string | null;
+            /**
+             * Format: date
+             * @description For a suggested deal, when it is expected to close. Absent on a decision's answer.
+             */
+            deal_expected_close_date?: string | null;
+            /** @description The extension that proposed it. Null when Margince itself asks which deal a mail is about. */
+            unit: string | null;
+            /** @description One short sentence from the extension on why, or Margince's own question. */
             reason: string;
             score: number;
             /** @enum {string} */
@@ -45972,7 +45992,7 @@ export interface components {
             project_unfiled: boolean;
             /** @description A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project. */
             project_kept: boolean;
-            /** @description The open deal questions of the conversation this call marked done. */
+            /** @description The messages of the conversation whose open deal question this call closed. */
             questions_closed: number;
         };
         SetActivityDispositionRequest: {

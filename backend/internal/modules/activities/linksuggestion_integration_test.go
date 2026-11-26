@@ -305,3 +305,45 @@ func TestAProposalIsRefusedForABadShape(t *testing.T) {
 		}
 	}
 }
+
+// Margince's own deal question waits only in the queue of the colleague it
+// asks, and carries no unit. Another colleague who may change the message
+// neither sees nor decides it, and asking again in the conversation adds
+// nothing.
+func TestACoreDealQuestionIsForTheColleagueItAsks(t *testing.T) {
+	f := newSuggestionFixture(t)
+	ask := func() {
+		t.Helper()
+		err := f.store.tx(f.ctx, func(tx pgx.Tx) error {
+			return AskWhichDealTx(f.ctx, tx, WhichDealQuestion{
+				Mail: ids.From[ids.ActivityKind](f.message), Seat: f.e.rep,
+				Deals: []ids.UUID{f.deal}, Reason: "Which deal is this about?",
+			})
+		})
+		if err != nil {
+			t.Fatalf("asking the deal question: %v", err)
+		}
+	}
+	ask()
+	ask()
+
+	queue, err := f.queue()
+	if err != nil {
+		t.Fatalf("reading the asked colleague's queue: %v", err)
+	}
+	if len(queue) != 1 || queue[0].Unit != nil {
+		t.Fatalf("queue = %+v, want one question with no unit", queue)
+	}
+	other := f
+	other.ctx = f.e.asSeat(f.e.other)
+	theirs, err := other.queue()
+	if err != nil {
+		t.Fatalf("reading another colleague's queue: %v", err)
+	}
+	if len(theirs) != 0 {
+		t.Fatalf("a colleague who was not asked sees %+v", theirs)
+	}
+	if _, err := f.store.RejectLinkSuggestion(other.ctx, ids.UUID(queue[0].Id)); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a colleague who was not asked rejected the question: %v, want not found", err)
+	}
+}

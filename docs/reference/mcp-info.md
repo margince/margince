@@ -15,10 +15,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 244.5 KB |
+| Tool catalog | 245.1 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 64002 |
-| Largest tool | `read_details` (15.3 KB) |
+| Approx. wire tokens | 64150 |
+| Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.1 KB | 20% | Yes, every step |
-| Input schemas | 148.2 KB | 60% | Yes, every step |
+| Input schemas | 148.8 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **199.3 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **199.9 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,9 +68,9 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 892 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 3029 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 3033 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1833 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1985 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1918 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1289 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
@@ -78,7 +78,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 1017 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 816 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 2014 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3307 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3239 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2365 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 652 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 375 |
@@ -89,7 +89,7 @@ descriptions and input schemas are what each step pays for.
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 448 |
 | [`find_records`](#find_records) | Find records | yes |  | 2053 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
-| [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 351 |
+| [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
 | [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1373 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
@@ -105,9 +105,9 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 3353 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1921 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 3007 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 3012 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
-| [`run_research`](#run_research) | Run AI work for your user |  |  | 1419 |
+| [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 527 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 698 |
@@ -813,13 +813,13 @@ invitation did not go out. Use schedule_meeting to book a meeting still to come,
 move_deal when the same event moves a deal, so move and note are one change, and change_reports
 record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a
 relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs
-immediately for accept_document_fields, archive_document, assign_inquiry, attach, attach_link,
-bring_back, cancel_send, check_new_send, check_send, deal_relevance, decline_deal, discard_draft,
-file_channel_message, hide_document, log, preview_inquiry_assignment, preview_sign_off,
-read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft,
-set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready;
-decided per call from its arguments for relink, relink_many; ask the user first for the actions
-archive_document, assign_inquiry.)
+immediately for accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry,
+attach, attach_link, bring_back, cancel_send, check_new_send, check_send, deal_relevance,
+decline_deal, discard_draft, file_channel_message, hide_document, log, preview_inquiry_assignment,
+preview_sign_off, read_document_fields, read_transcript, ready, reject_link_suggestion,
+request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details,
+set_thread_audience, show_document, task, unready; decided per call from its arguments for relink,
+relink_many; ask the user first for the actions archive_document, assign_inquiry.)
 ```
 
 <details><summary>Input schema</summary>
@@ -828,9 +828,10 @@ archive_document, assign_inquiry.)
 {
   "properties": {
     "action": {
-      "description": "accept_document_fields: Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only)\narchive_document: Archive an attachment (soft delete)\nassign_inquiry: Take an inquiry or hand its lead and this task to a colleague in one transaction\nattach: Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab, or on one activity such as the meeting it came from — use it whenever the user wants a file kept on a record, and never save a file's text as a note instead\nattach_link: Add a web link to a record's documents\nbring_back: Pick the message back up — the undo behind every set-aside verb\ncancel_send: Withdraw a scheduled message before it fires\ncheck_new_send: Would a new message with no thread behind it be allowed, and on what ground\ncheck_send: Would this reply be allowed, and on what ground — asked before a word is typed\ndeal_relevance: Say whether an activity linked to a deal is about that deal, or take that back\ndecline_deal: Say a captured message is not about a deal, or about none of the deals its question offered\ndiscard_draft: Discard one of the caller's unsent messages\nfile_channel_message: File a summary of one message in a record's channel, or of its thread, as a note\nhide_document: Stop listing a captured file on this deal without touching the file\nlog: Record something that happened — a call, a meeting, a note, a message — on every record it was about\npreview_inquiry_assignment: Show the inquiry task and record ownership before taking or assigning it\npreview_sign_off: The sign-off a send of this message would append beneath it\nread_document_fields: Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields\nread_transcript: Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals\nready: Say the user is ready for a meeting they attend, so their Worklist stops asking them to prepare it\nrelink: Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none\nrelink_many: Move up to 500 named activities onto one record, all or nothing\nrequest_document_access: Request access to a restricted attachment (audit row only — no notification system)\nreschedule_send: Move a scheduled message to a different moment\nsave_draft: Save the caller's unsent message for one anchor, replacing what was saved before\nset_aside: Put a waiting message down, so the Worklist stops offering it\nset_audience: Limit (or re-open) who may see this activity's content\nset_document_details: Set a document's category, title, state or supersedes pointer\nset_thread_audience: Share a thread with the team, or keep it private\nshow_document: List the file on this deal again\ntask: Put a to-do on someone's list: what is owed, by whom, on which records\nunready: Take back the user's \"I'm ready\" for a meeting",
+      "description": "accept_document_fields: Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only)\naccept_link_suggestion: Accept a suggestion, filing the message under its record\narchive_document: Archive an attachment (soft delete)\nassign_inquiry: Take an inquiry or hand its lead and this task to a colleague in one transaction\nattach: Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab, or on one activity such as the meeting it came from — use it whenever the user wants a file kept on a record, and never save a file's text as a note instead\nattach_link: Add a web link to a record's documents\nbring_back: Pick the message back up — the undo behind every set-aside verb\ncancel_send: Withdraw a scheduled message before it fires\ncheck_new_send: Would a new message with no thread behind it be allowed, and on what ground\ncheck_send: Would this reply be allowed, and on what ground — asked before a word is typed\ndeal_relevance: Say whether an activity linked to a deal is about that deal, or take that back\ndecline_deal: Say a captured message is not about a deal, or about none of the deals its question offered\ndiscard_draft: Discard one of the caller's unsent messages\nfile_channel_message: File a summary of one message in a record's channel, or of its thread, as a note\nhide_document: Stop listing a captured file on this deal without touching the file\nlog: Record something that happened — a call, a meeting, a note, a message — on every record it was about\npreview_inquiry_assignment: Show the inquiry task and record ownership before taking or assigning it\npreview_sign_off: The sign-off a send of this message would append beneath it\nread_document_fields: Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields\nread_transcript: Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals\nready: Say the user is ready for a meeting they attend, so their Worklist stops asking them to prepare it\nreject_link_suggestion: Reject a suggestion\nrelink: Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none\nrelink_many: Move up to 500 named activities onto one record, all or nothing\nrequest_document_access: Request access to a restricted attachment (audit row only — no notification system)\nreschedule_send: Move a scheduled message to a different moment\nsave_draft: Save the caller's unsent message for one anchor, replacing what was saved before\nset_aside: Put a waiting message down, so the Worklist stops offering it\nset_audience: Limit (or re-open) who may see this activity's content\nset_document_details: Set a document's category, title, state or supersedes pointer\nset_thread_audience: Share a thread with the team, or keep it private\nshow_document: List the file on this deal again\ntask: Put a to-do on someone's list: what is owed, by whom, on which records\nunready: Take back the user's \"I'm ready\" for a meeting",
       "enum": [
         "accept_document_fields",
+        "accept_link_suggestion",
         "archive_document",
         "assign_inquiry",
         "attach",
@@ -850,6 +851,7 @@ archive_document, assign_inquiry.)
         "read_document_fields",
         "read_transcript",
         "ready",
+        "reject_link_suggestion",
         "relink",
         "relink_many",
         "request_document_access",
@@ -885,6 +887,11 @@ archive_document, assign_inquiry.)
       "format": "uuid",
       "type": "string"
     },
+    "assignee_id": {
+      "description": "task only: Defaults to the human you act for.",
+      "format": "uuid",
+      "type": "string"
+    },
     "attendee_user_ids": {
       "description": "log only: Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused.",
       "items": {
@@ -908,11 +915,7 @@ archive_document, assign_inquiry.)
       "type": "string"
     },
     "content_base64": {
-      "description": "attach only: The whole file, standard base64 with = padding; send this or content_text",
-      "type": "string"
-    },
-    "content_text": {
-      "description": "attach only: A text file's whole contents, as they are; send this instead of content_base64 for text, which then needs no encoding",
+      "description": "attach only: The whole file, standard base64 with = padding",
       "type": "string"
     },
     "content_type": {
@@ -936,6 +939,10 @@ archive_document, assign_inquiry.)
       "description": "log, task only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
+    },
+    "due_has_time": {
+      "description": "task only: True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day.",
+      "type": "boolean"
     },
     "entity_id": {
       "description": "attach, relink, relink_many only",
@@ -1001,7 +1008,7 @@ archive_document, assign_inquiry.)
       "type": "object"
     },
     "id": {
-      "description": "accept_document_fields, archive_document, assign_inquiry, bring_back, cancel_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, preview_inquiry_assignment, read_document_fields, read_transcript, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
+      "description": "accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry, bring_back, cancel_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, preview_inquiry_assignment, read_document_fields, read_transcript, reject_link_suggestion, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
       "type": "string"
     },
     "idempotency_key": {
@@ -1098,6 +1105,18 @@ archive_document, assign_inquiry.)
     },
     "subject": {
       "description": "log, task only: Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
+      "type": "string"
+    },
+    "task_type": {
+      "description": "task only: The work it asks for; it decides the one button the task shows. reply answers a message the way it came in, reach_out contacts someone by email or phone, do is work outside Margince.",
+      "enum": [
+        "reply",
+        "reach_out",
+        "meet",
+        "review",
+        "decide",
+        "do"
+      ],
       "type": "string"
     }
   },
@@ -1284,11 +1303,7 @@ withdraw_owner_identity.)
       "type": "string"
     },
     "content_base64": {
-      "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: The whole file, standard base64 with = padding; send this or content_text",
-      "type": "string"
-    },
-    "content_text": {
-      "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: A text file's whole contents, as they are; send this instead of content_base64 for text, which then needs no encoding",
+      "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: The whole file, standard base64 with = padding",
       "type": "string"
     },
     "content_type": {
@@ -2160,11 +2175,7 @@ update_exit_criterion, update_web_form, upsert_partner.)
       "type": "string"
     },
     "content_base64": {
-      "description": "upload_company_logo, upload_company_logo_icon, upload_legal_entity_logo only: The whole file, standard base64 with = padding; send this or content_text",
-      "type": "string"
-    },
-    "content_text": {
-      "description": "upload_company_logo, upload_company_logo_icon, upload_legal_entity_logo only: A text file's whole contents, as they are; send this instead of content_base64 for text, which then needs no encoding",
+      "description": "upload_company_logo, upload_company_logo_icon, upload_legal_entity_logo only: The whole file, standard base64 with = padding",
       "type": "string"
     },
     "content_type": {
@@ -4381,12 +4392,12 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
 ```text
 List the files stored on a company, contact, deal, lead, project or activity, newest first: name,
 type, size, who added them and the contract each is filed against. Send entity_type and entity_id to
-list, or a file's id to read its contents. A stored file answers as content_base64, and a text file
-also as content_text, up to 6.2 MB; a larger one is refused with the limit. A document link or a
-withheld mail attachment has no bytes to read, so it is refused too. Check the list before attaching
-a file again, so the record does not carry the same file twice. Use read_view with view
-company_documents or deal_documents for a company's or deal's document register, filtered by
-category, contract or state. Keep next_cursor to read the next page.
+list, or a file's id to read its contents. A stored file answers as content_base64, up to 6.2 MB; a
+larger one is refused with the limit. A document link or a withheld mail attachment has no bytes to
+read, so it is refused too. Check the list before attaching a file again, so the record does not
+carry the same file twice. Use read_view with view company_documents or deal_documents for a
+company's or deal's document register, filtered by category, contract or state. Keep next_cursor to
+read the next page.
 ```
 
 <details><summary>Input schema</summary>
@@ -4416,7 +4427,7 @@ category, contract or state. Keep next_cursor to read the next page.
       "type": "string"
     },
     "id": {
-      "description": "A document's id from this list; naming it answers that file's contents as content_base64, and a text file's also as content_text",
+      "description": "A document's id from this list; naming it answers that file's contents as content_base64",
       "type": "string"
     },
     "limit": {
@@ -7210,6 +7221,31 @@ read_attention for what needs the user now, and read_record for a record's own f
       ],
       "type": "string"
     },
+    "anchor_id": {
+      "description": "mail_draft only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "anchor_type": {
+      "description": "mail_draft only",
+      "enum": [
+        "activity",
+        "forward",
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project"
+      ],
+      "type": "string"
+    },
+    "change_kind": {
+      "description": "deal_margince_changes only",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "contact_id": {
       "description": "meeting_proposals only",
       "format": "uuid",
@@ -7264,6 +7300,14 @@ read_attention for what needs the user now, and read_record for a record's own f
       "description": "company_contracts, contact_overrides, deal_suggestions, field_history, lead_score, legal_reviews, magic, magic_line_records, my_linkedin_reach, notices only",
       "type": "integer"
     },
+    "note_activity_id": {
+      "description": "deal_margince_changes only",
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "type": "array"
+    },
     "project_id": {
       "description": "company_brief only",
       "format": "uuid",
@@ -7272,6 +7316,11 @@ read_attention for what needs the user now, and read_record for a record's own f
     "request_body": {
       "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview, website_inquiry_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
+    },
+    "stage_history_id": {
+      "description": "deal_margince_changes only",
+      "format": "uuid",
+      "type": "string"
     },
     "state": {
       "description": "job_health_history only",
@@ -9885,6 +9934,7 @@ user first for the actions ai_call, ai_calls.)
         "legal_entity_members",
         "legal_holds",
         "legal_review_settings",
+        "link_suggestions",
         "link_types",
         "list_filters",
         "member",

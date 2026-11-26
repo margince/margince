@@ -7719,9 +7719,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "task.next.reviewProject": "Xem lại dự án",
   "task.next.reviewContact": "Xem lại liên hệ",
   "task.next.reviewCompany": "Xem lại công ty",
-  "tasks.whichDeal.legend": "Email này nói về deal nào?",
-  "tasks.whichDeal.file": "Gắn chuỗi thư vào deal",
-  "tasks.whichDeal.filed": "Đã gắn chuỗi thư vào deal",
   "today.withheld":
     "Không bao gồm: {sections}. Bạn không có quyền truy cập các mục này.",
   "today.source.moments": "phát hiện của Margince",
@@ -8759,8 +8756,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.email_request": "Việc này được tạo từ một yêu cầu trong email.",
   "tasks.origin.which_deal":
     "Việc này được tạo vì một email đã thu thập khớp với nhiều deal đang mở. Chọn deal mà email này thuộc về, hoặc chọn “Không thuộc deal nào”.",
-  "tasks.whichDeal.none": "Không thuộc deal nào",
-  "tasks.whichDeal.noneDone": "Đã để email ngoài các deal này",
   "tasks.origin.system":
     "Một quy trình tự động đã tạo việc này, không phải đồng nghiệp nhập vào.",
 
@@ -19072,6 +19067,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Có ai đó liên kết một deal, công ty hoặc liên hệ với bản ghi khác, hoặc gỡ một liên kết.",
   "linkSuggestions.title": "Liên kết gợi ý",
   "linkSuggestions.reason": "{unit} cho biết: {reason}",
+  "linkSuggestions.byMargince": "Hệ thống Margince",
   "linkSuggestions.target": "{subject} vào {record} ({kind})",
   "linkSuggestions.noSubject": "Thư không có tiêu đề",
   "linkSuggestions.kind.contact": "liên hệ",

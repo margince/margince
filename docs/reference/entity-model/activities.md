@@ -435,7 +435,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_link_suggestion
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -445,10 +445,11 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `decided_by` | `text` |  |  |
 | `entity_id` | `uuid` | yes |  |
 | `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `project`. |
+| `for_user` | `uuid` |  | Points at `app_user.id`. |
 | `reason` | `text` | yes | At most 200 characters. |
 | `score` | `numeric(5,4)` | yes |  |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `accepted`, `rejected`. |
-| `unit` | `text` | yes |  |
+| `unit` | `text` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
@@ -459,11 +460,13 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
+| `for_user` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
 
 - `activity_link_suggestion_decided`: `CHECK ((((status = 'pending') AND (decided_at IS NULL) AND (decided_by IS NULL)) OR ((status <> 'pending') AND (decided_at IS NOT NULL) AND (decided_by IS NOT NULL))))`
 - `activity_link_suggestion_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'project'])))`
+- `activity_link_suggestion_producer`: `CHECK (((unit IS NULL) = (for_user IS NOT NULL)))`
 - `activity_link_suggestion_reason_check`: `CHECK (((char_length(reason) >= 1) AND (char_length(reason) <= 200)))`
 - `activity_link_suggestion_score_check`: `CHECK (((score >= (0)::numeric) AND (score <= (1)::numeric)))`
 - `activity_link_suggestion_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'accepted', 'rejected'])))`
@@ -472,8 +475,11 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `activity_link_suggestion_pkey`: `unique, btree (id)`
+- `idx_activity_link_suggestion_activity`: `btree (activity_id)`
+- `idx_activity_link_suggestion_for_user`: `btree (for_user) WHERE (for_user IS NOT NULL)`
 - `idx_activity_link_suggestion_pending`: `btree (created_at, id) WHERE (status = 'pending')`
-- `uq_activity_link_suggestion_target`: `unique, btree (activity_id, entity_type, entity_id)`
+- `uq_activity_link_suggestion_question`: `unique, btree (activity_id, entity_type, entity_id, for_user) WHERE (for_user IS NOT NULL)`
+- `uq_activity_link_suggestion_unit_target`: `unique, btree (activity_id, entity_type, entity_id) WHERE (unit IS NOT NULL)`
 
 **Triggers**
 
