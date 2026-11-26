@@ -93,11 +93,11 @@ export const ReviewSelection: Story = {
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole("checkbox", {
-        name: "Select A website question",
+        name: "Select Lena Vogel",
       }),
     );
     await user.click(
-      screen.getByRole("checkbox", { name: "Select An older question" }),
+      screen.getByRole("checkbox", { name: "Select ops@example.test" }),
     );
     await user.click(
       screen.getByRole("button", { name: "Review selected inquiries" }),
@@ -111,7 +111,7 @@ export const CreatedTask: Story = {
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole("checkbox", {
-        name: "Select A website question",
+        name: "Select Lena Vogel",
       }),
     );
     await user.click(
@@ -129,7 +129,7 @@ export const PreviewRefused: Story = {
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole("checkbox", {
-        name: "Select A website question",
+        name: "Select Lena Vogel",
       }),
     );
     await user.click(
