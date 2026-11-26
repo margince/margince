@@ -322,11 +322,11 @@ func TestASharedForecastNamesOnlyWhatItsReaderMayMeasure(t *testing.T) {
 	rep, colleague := actorWithScope(principal.RowScopeOwn), ids.NewV7()
 	ctx := principal.WithActor(individualPerformanceShown(), rep)
 	whole, err := sharedScopeLabel(ctx, nil, forecasting.Scope{Kind: forecasting.ScopeWorkspace})
-	if err != nil || whole == nil || *whole != workspaceLabel {
+	if err != nil || whole != workspaceLabel {
 		t.Fatalf("the workspace was named %v (%v), want %q", whole, err, workspaceLabel)
 	}
 	named, err := sharedScopeLabel(ctx, nil, forecasting.Scope{Kind: forecasting.ScopeOwner, ID: &colleague})
-	if err != nil || named != nil {
+	if err != nil || named != "" {
 		t.Fatalf("a colleague outside the lens was named %v (%v), want no name", named, err)
 	}
 }
