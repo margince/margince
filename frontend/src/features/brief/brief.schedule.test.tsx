@@ -355,7 +355,7 @@ describe("the schedule panel", () => {
     },
   );
 
-  // Before the roster answers, nothing has said this reader may connect, so a
+  // Before the roster answers, nothing has said this reader may connect. A
   // member whose capture will be refused is not sent to the setting meanwhile.
   it.each([
     ["not_connected", "brief.schedule.notConnected"],

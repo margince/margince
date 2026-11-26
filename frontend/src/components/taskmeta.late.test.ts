@@ -43,8 +43,8 @@ describe("a late task's due day", () => {
     );
   });
 
-  // A timed deadline is an instant: it keeps the reader's own date and clock,
-  // and the agreed clock beside them, and adds how late it is.
+  // A timed deadline is an instant. It keeps the reader's own date and clock
+  // and the agreed clock beside them, then adds how late it is.
   it("keeps a timed late task on the reader's clock", () => {
     const timed = row({
       source: "task",
