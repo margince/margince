@@ -55,7 +55,7 @@ func (s *Store) writeFact(
 	// No canonical hook: the whole claim lives in the sidecar, so the row IS
 	// the value and there is no second write to keep in step.
 	return writeEvidence(ctx, s, companyID, evidenceWrite[crmcontracts.CompanyFact]{
-		table:      tableCompanyFact,
+		entity:     tableCompanyFact,
 		archived:   storekit.NoArchiveColumn,
 		changedKey: factKey,
 		value:      in.Value,
