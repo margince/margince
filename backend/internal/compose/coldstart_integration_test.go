@@ -328,6 +328,10 @@ func TestColdStartAcceptWritesProfileOntoCompany(t *testing.T) {
 	}
 
 	assertAcceptFilledOnlyEmptyColumns(admin, t, e, companyID)
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = $1
+		AND actor_type = 'agent' AND actor_id = 'agent:coldstart' AND on_behalf_of = $2`, companyID, e.Rep2); n != 1 {
+		t.Errorf("%d company writes by agent:coldstart for the decider, want 1", n)
+	}
 
 	// The approval is consumed; deciding again is refused and applies
 	// nothing twice.
