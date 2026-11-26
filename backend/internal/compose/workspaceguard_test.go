@@ -220,11 +220,11 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 			})
 		},
 		WhatsAppIngestArgs{}.Kind(): func(ctx context.Context) error {
-			worker := whatsappedge.NewWorker[WhatsAppIngestArgs](workspaceJobCtx, nil, nil, principal.Principal{}, nil)
+			worker := whatsappedge.NewWorker[WhatsAppIngestArgs](workspaceJobCtx, nil, nil, principal.Principal{}, nil, whatsappedge.Media{})
 			return worker.Work(ctx, &river.Job[WhatsAppIngestArgs]{})
 		},
 		ZaloOAIngestArgs{}.Kind(): func(ctx context.Context) error {
-			worker := zaloedge.NewWorker[ZaloOAIngestArgs](workspaceJobCtx, nil, nil, principal.Principal{}, nil)
+			worker := zaloedge.NewWorker[ZaloOAIngestArgs](workspaceJobCtx, nil, nil, principal.Principal{}, nil, nil)
 			return worker.Work(ctx, &river.Job[ZaloOAIngestArgs]{})
 		},
 		TelegramPollArgs{}.Kind(): func(ctx context.Context) error {

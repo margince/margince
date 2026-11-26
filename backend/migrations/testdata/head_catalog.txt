@@ -5211,6 +5211,7 @@ public.deal_room.deal_room_touch CREATE TRIGGER deal_room_touch BEFORE UPDATE ON
 public.deal_room.deal_room_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_room.expires_at timestamp with time zone gen=- def=-
 public.deal_room.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_room.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(title, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(title, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(welcome_message, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(welcome_message, ''::text))), 'B'::"char"))
 public.deal_room.source text NOT NULL gen=- def=-
 public.deal_room.state text NOT NULL gen=- def='live'::text
 public.deal_room.steward_user_id uuid gen=- def=-
@@ -6575,6 +6576,7 @@ public.idx_deal_room_document_room CREATE INDEX idx_deal_room_document_room ON p
 public.idx_deal_room_document_room_cascade CREATE INDEX idx_deal_room_document_room_cascade ON public.deal_room_document USING btree (room_id)
 public.idx_deal_room_engagement_participant_room CREATE INDEX idx_deal_room_engagement_participant_room ON public.deal_room_engagement USING btree (participant_id, room_id)
 public.idx_deal_room_participant_room CREATE INDEX idx_deal_room_participant_room ON public.deal_room_participant USING btree (room_id)
+public.idx_deal_room_search CREATE INDEX idx_deal_room_search ON public.deal_room USING gin (search_tsv)
 public.idx_deal_room_session_participant CREATE INDEX idx_deal_room_session_participant ON public.deal_room_session USING btree (participant_id) WHERE (revoked_at IS NULL)
 public.idx_deal_room_session_participant_room CREATE INDEX idx_deal_room_session_participant_room ON public.deal_room_session USING btree (participant_id, room_id)
 public.idx_deal_room_session_room CREATE INDEX idx_deal_room_session_room ON public.deal_room_session USING btree (room_id)

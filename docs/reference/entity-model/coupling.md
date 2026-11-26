@@ -29,7 +29,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
-| [dealrooms](dealrooms.md) | 8 | 92 | 0 | 8 | 1 |
+| [dealrooms](dealrooms.md) | 8 | 93 | 0 | 8 | 1 |
 | [deals](deals.md) | 26 | 379 | 26 | 16 | 2 |
 | [finance](finance.md) | 5 | 79 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 94 | 1 | 2 | 0 |
