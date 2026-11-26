@@ -26993,6 +26993,7 @@ paths:
               schema: {$ref: '#/components/schemas/KnowledgeCorpusList'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: The document corpora this workspace has defined.
     post:
       tags: [Knowledge]

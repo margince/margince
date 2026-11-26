@@ -109,3 +109,5 @@ f990f17a20ccf345f0e545e8d6aa510300e0924c 36960d86f1546a1ceb939b155c3d7e753731530
 2086bd0bde99ce1c1d7096b8f4b17f43d7790836 36960d86f1546a1ceb939b155c3d7e753731530d ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
 8972ae1805817453aeb28d02db32bc6c75e9e05c dab2e7657a3f5a6a94f199afcbd47f24db4e4a5e ratified-develop-s-which-deal-question-as-a-link-suggestion-13581-carried-into-main
 69ce557094c53b78dac47288c9c763d2ad0e7efa dab2e7657a3f5a6a94f199afcbd47f24db4e4a5e ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
+8972ae1805817453aeb28d02db32bc6c75e9e05c b9ae5e488f0c79bdb5054d68bdd8ace463c496d5 ratified-develop-s-which-deal-question-as-a-link-suggestion-13581-carried-into-main
+69ce557094c53b78dac47288c9c763d2ad0e7efa b9ae5e488f0c79bdb5054d68bdd8ace463c496d5 ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
