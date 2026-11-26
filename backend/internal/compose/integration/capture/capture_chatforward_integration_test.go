@@ -50,9 +50,10 @@ func forwardedMessage(id string, forward *connector.ChatForward) connector.ChatM
 	return chatFrom("5001", id, "price for 20 seats?", forward)
 }
 
-func verifyTelegram(t *testing.T, e *integration.SearchEnv, member ids.UUID, account string) {
+// verifyTelegram confirms Telegram account 5001 as the first rep's own.
+func verifyTelegram(t *testing.T, e *integration.SearchEnv) {
 	t.Helper()
-	wsExec(t, e, `UPDATE app_user SET chat_telegram_user_id = $2, chat_telegram_verified_at = now() WHERE id = $1`, member, account)
+	wsExec(t, e, `UPDATE app_user SET chat_telegram_user_id = '5001', chat_telegram_verified_at = now() WHERE id = $1`, e.Rep1)
 }
 
 // connectorCtx is the company account's ingest principal for the binding's provider.
@@ -70,7 +71,7 @@ func humanCtx(e *integration.SearchEnv, member ids.UUID) context.Context {
 
 func TestAVerifiedMembersForwardWithAnAuthorFilesOnTheAuthorsContact(t *testing.T) {
 	e := newCaptureEnv(t).e
-	verifyTelegram(t, e, e.Rep1, "5001")
+	verifyTelegram(t, e)
 	sink := compose.NewCaptureSink(e.Pool, compose.CaptureConfig{})
 	origin := chatChangeEpoch.Add(-3 * time.Hour)
 	forward := &connector.ChatForward{Author: &connector.ChatParty{UserID: "6002", DisplayName: "Anna Weber"}, OriginalAt: origin}
@@ -129,7 +130,7 @@ func TestAnUnverifiedAccountNeverRecognisesAMember(t *testing.T) {
 
 func TestAPendingForwardExpiresWithItsRawRow(t *testing.T) {
 	e := newCaptureEnv(t).e
-	verifyTelegram(t, e, e.Rep1, "5001")
+	verifyTelegram(t, e)
 	sink := compose.NewCaptureSink(e.Pool, compose.CaptureConfig{})
 	fresh, err := capturemod.FileChatMessage(workspaceConnectorCtx(e), sink, forwardBinding, forwardedMessage("4", &connector.ChatForward{}))
 	if err != nil {
@@ -229,7 +230,7 @@ func TestAnExpiredCodeAndATakenAccountVerifyNothing(t *testing.T) {
 	if n := wsCount(t, e, `SELECT count(*) FROM app_user WHERE chat_telegram_user_id IS NOT NULL`); n != 0 {
 		t.Fatal("an expired code verified an account")
 	}
-	verifyTelegram(t, e, e.Rep1, "5001")
+	verifyTelegram(t, e)
 	second, _, err := svc.StartChatVerification(humanCtx(e, e.Rep3), identity.ChatTelegram)
 	if err != nil {
 		t.Fatal(err)

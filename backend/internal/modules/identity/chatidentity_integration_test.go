@@ -92,7 +92,7 @@ func TestARetiredMembersChatAccountsAreFreedForASuccessor(t *testing.T) {
 
 func TestAChatCodeIsDatedAndJudgedByTheDatabaseClock(t *testing.T) {
 	e := setupRevocationEnv(t, "chat-clock")
-	e.svc.now = func() time.Time { return time.Now().Add(-48 * time.Hour) }
+	e.svc.now = func() time.Time { return time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC) }
 	e.confirm(t, e.member, ChatTelegram, "", "7001")
 	if _, found := e.chatMember(t, ChatTelegram, "7001"); !found {
 		t.Fatal("a code was refused because the service clock ran two days behind the database")

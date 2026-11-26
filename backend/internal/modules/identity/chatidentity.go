@@ -120,6 +120,9 @@ func (s *Service) StartChatVerification(ctx context.Context, network ChatNetwork
 	}
 	var expires time.Time
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := storekit.LockRow(ctx, tx, "app_user", self, storekit.LiveOnly); err != nil {
+			return err
+		}
 		// The database clock dates the code here and judges it when it is sent,
 		// so the API and the worker cannot disagree about it.
 		err := tx.QueryRow(ctx, `UPDATE app_user SET `+cols.codeHash+` = $2, `+cols.codeExpires+` = now() + make_interval(secs => $3)

@@ -28,7 +28,7 @@ import (
 // Telegram account 5001 and ages it past its window.
 func heldForwardOlderThanItsWindow(t *testing.T, e *integration.SearchEnv, id string) string {
 	t.Helper()
-	verifyTelegram(t, e, e.Rep1, "5001")
+	verifyTelegram(t, e)
 	sink := compose.NewCaptureSink(e.Pool, compose.CaptureConfig{})
 	ref, err := capturemod.FileChatMessage(workspaceConnectorCtx(e), sink, forwardBinding, forwardedMessage(id, &connector.ChatForward{}))
 	if err != nil {
@@ -103,7 +103,7 @@ func TestAForwardFiledOnAContactAfterItWasSelectedForExpiryIsKept(t *testing.T) 
 
 func TestAForwardOfAColleaguesMessageIsHeldAndMakesNoContactForTheColleague(t *testing.T) {
 	e := newCaptureEnv(t).e
-	verifyTelegram(t, e, e.Rep1, "5001")
+	verifyTelegram(t, e)
 	wsExec(t, e, `UPDATE app_user SET chat_telegram_user_id = '7001', chat_telegram_verified_at = now() WHERE id = $1`, e.Rep3)
 	sink := compose.NewCaptureSink(e.Pool, compose.CaptureConfig{})
 	colleague := &connector.ChatForward{Author: &connector.ChatParty{UserID: "7001", DisplayName: "Rep Three"}}
