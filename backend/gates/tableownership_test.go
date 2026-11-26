@@ -216,9 +216,7 @@ type tableWrite struct {
 // a struct field rather than a name this walker can read, each with the tables
 // the field can actually hold. Ratified, not discovered: the reason must name
 // them, so the exception is re-checkable against the construction sites.
-var indirectTableArg = gatekit.Waive(map[string]string{
-	"internal/modules/contacts:w.table": "the evidence writer is one shape over two sidecars; the field is set at four struct literals in this package, to the company_fact constant and to company_profile_field, and contacts owns both",
-})
+var indirectTableArg = gatekit.Waive(map[string]string{})
 
 // tableArgText reads a storekit table argument: a string literal, or an
 // identifier declared as a string constant in the same package.

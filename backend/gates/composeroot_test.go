@@ -43,7 +43,7 @@ const (
 	// test file for the data reset cases of an event the sweep orphaned. Raised by
 	// 1 test file for the extension notice kind cases. Raised by 1 test file for
 	// the unit tool coverage cases, which read the unexported tool coverage census.
-	// Raised by 2 production and 1 test file for the How it stands job and the
+	// Raised by 2 production and 2 test files for the How it stands job and the
 	// task explanation's certification case, which reuses the unexported contact
 	// brief fixture.
 	composeRootTestFiles = 1922
@@ -102,12 +102,12 @@ const (
 	// Raised by 240 production and 260 test lines for the extension card's setup
 	// state and the schedule book's time zone. Both drive the unexported
 	// inventory handler, schedule book and catch-up schedule.
-	// Raised by 281 production and 155 test lines, and 1 test file. They hold
+	// Raised by 250 production and 152 test lines. They hold
 	// the How it stands job and its page case, and the task explanation's
 	// certification case and its test. The job needs the unexported job
 	// context; the cases drive the contact page.
-	composeRootProductionLines = 231_660
-	composeRootTestLines       = 362_033
+	composeRootProductionLines = 231_479
+	composeRootTestLines       = 362_018
 )
 
 // A read under these floors stopped early or read the wrong place, and would

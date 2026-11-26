@@ -44,7 +44,6 @@ var kindIDPairsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"record_link.from_id":                      "moved, but not by an UPDATE: the table is insert and delete only, so moveRecordLinks copies each end onto the survivor, keeps the survivor's own link where the pair already holds one, and deletes the retired record's rows",
 	"record_link.to_id":                        "the second end of the same link, moved by the same copy and delete in moveRecordLinks",
 	"standing_line.entity_id":                  "deleted, not moved: generatedsummary.CarryCompany drops both companies' lines, because a sentence about the retired record would misstate the survivor. The survivor's next activity writes its own",
-	"field_provenance.object_id":               "carried field by field for exactly the values the survivor inherits, in carryFieldAuthors, through the stamp writer every other path uses",
 })
 
 // TestEveryCompanyKindIDReferenceJoinsTheMerge derives the pairs from the

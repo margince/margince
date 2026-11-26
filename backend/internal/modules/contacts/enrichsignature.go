@@ -461,9 +461,13 @@ func applySignatureNumbers(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 // its guarded column fill lost the race: evidence must never claim a
 // value the record does not carry.
 func revokeSignatureEvidence(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, field string) error {
+	if err := moveLegacyEvidence(ctx, tx, entityContact, contactID.UUID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
-		DELETE FROM contact_profile_field
-		WHERE contact_id = $1 AND field = $2 AND source = $3`,
+		DELETE FROM field_provenance
+		WHERE object_type = 'contact' AND object_id = $1 AND field_name = $2 AND source = $3
+		  AND value IS NOT NULL`,
 		contactID, field, enrichSource); err != nil {
 		return fmt.Errorf("contacts: withdrawing unapplied signature evidence (%s): %w", field, err)
 	}

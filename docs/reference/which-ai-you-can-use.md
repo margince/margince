@@ -22,7 +22,7 @@ Also called: which model should I use, best model, recommended model, which LLM,
 |---|---|---:|---:|---:|---:|
 | Google Gemini | global cloud | 28 | 9 | 0 | 1 |
 | Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 28 | 9 | 0 | 1 |
-| Anthropic Claude | global cloud | 33 | 3 | 1 | 1 |
+| Anthropic Claude | global cloud | 33 | 4 | 0 | 1 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 7 | 7 |
 | Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 0 | 4 | 33 |
@@ -30,7 +30,7 @@ Also called: which model should I use, best model, recommended model, which LLM,
 | Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 38 |
 | Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 38 |
 
-92 of these 197 grades were measured on an older version of Margince and wait for a re-check.
+89 of these 197 grades were measured on an older version of Margince and wait for a re-check.
 
 ### What does a grade of a Margince AI feature mean?
 A grade of a Margince AI feature says how often it was right. **Ready** means right in at least 90 of every 100 tries: turn it on. **Usable with care** means right in most tries: have someone look over what it makes. **Not reliable yet** means wrong too often: leave it off. **Not measured** means nobody has tested that feature on that model yet.
@@ -43,7 +43,7 @@ Also called: grade, rating, certified, how reliable is the AI.
 |---|---|
 | Google Gemini | none |
 | Google Gemini in the EU, through Vertex AI | none |
-| Anthropic Claude | Natural-language search |
+| Anthropic Claude | none |
 | OpenAI GPT-6, through OpenRouter | Thread confidentiality check<br>First-time sender check<br>Meeting follow-up extraction |
 | Open models from OpenAI and Mistral, through OpenRouter | Message classification<br>First-time sender check<br>Buying-role reading<br>Website research<br>Stage evidence extraction<br>Tag suggestions<br>Meeting follow-up extraction |
 | Gemma 4 you could run yourself, through OpenRouter | First-time sender check<br>Signature enrichment<br>Unanswered-message triage<br>Checking whether the reply answered the request |

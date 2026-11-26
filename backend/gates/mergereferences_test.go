@@ -68,7 +68,7 @@ var carriedOutOfSight = map[string]string{
 	"consent_event.lead_id":                     "carryConsent",
 	"contact_consent.contact_id":                "repointCarriedConsent",
 	"contact_consent.lead_id":                   "repointCarriedConsent",
-	"contact_profile_field.contact_id":          "relinkContactReferences",
+	"contact_profile_field_legacy.contact_id":   "legacyEvidenceMoves",
 	"contact_signature_enrich_state.contact_id": "relinkWorkInFlight",
 	"relationship.contact_id":                   "mergeEdgeWrite",
 	"relationship.counterparty_contact_id":      "mergeEdgeWrite",

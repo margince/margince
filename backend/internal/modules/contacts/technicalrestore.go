@@ -114,10 +114,11 @@ func technicalRestoreOf(evidence json.RawMessage) (technicalRestore, error) {
 // readTechnicalFactRows reads the rows of these fields, locked, in id order.
 func readTechnicalFactRows(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, fields []string) ([]technicalFactRow, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT id, category, field, value, value_key, evidence_snippet, source_url, confidence,
-		       source, captured_by, site_read_id, captured_at, version, retrieved_at, verified_at, verified_by
-		  FROM company_fact
-		 WHERE company_id = $1 AND field = ANY($2)
+		SELECT id, company_fact_category(field_name), field_name, value, value_key, evidence_snippet,
+		       evidence_ref, confidence, source, captured_by, site_read_id, captured_at, version, retrieved_at,
+		       verified_at, verified_by
+		  FROM field_provenance
+		 WHERE object_type = 'company' AND object_id = $1 AND value IS NOT NULL AND field_name = ANY($2)
 		 ORDER BY id
 		   FOR UPDATE`, companyID, fields)
 	if err != nil {
@@ -220,6 +221,9 @@ func (s *Store) LockTechnicalRestoreTx(ctx context.Context, tx pgx.Tx, companyID
 	if err := auth.HoldWritableLive(ctx, tx, entityCompany, companyID.UUID); err != nil {
 		return err
 	}
+	if err := moveLegacyEvidence(ctx, tx, entityCompany, companyID.UUID); err != nil {
+		return err
+	}
 	return storekit.EnsureIfMatch(ctx, tx, entityCompany, companyID.UUID, &ifVersion)
 }
 
@@ -264,7 +268,8 @@ func replaceTechnicalRows(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 	for _, row := range restore.After {
 		after = append(after, row.ID)
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM company_fact WHERE company_id = $1 AND id = ANY($2)`, companyID, after); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM field_provenance
+		 WHERE object_type = 'company' AND object_id = $1 AND value IS NOT NULL AND id = ANY($2)`, companyID, after); err != nil {
 		return fmt.Errorf("remove the lookup's facts: %w", err)
 	}
 	for _, row := range restore.Before {
@@ -273,12 +278,13 @@ func replaceTechnicalRows(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 			version = max(version, restore.After[i].Version+1)
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO company_fact
-			       (id, company_id, category, field, value, value_key, evidence_snippet, source_url, confidence,
-			        source, captured_by, site_read_id, captured_at, version, retrieved_at, verified_at, verified_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-			        (SELECT id FROM site_read WHERE id = $12), $13, $14, $15, $16, $17)`,
-			row.ID, companyID, row.Category, row.Field, row.Value, row.ValueKey, row.EvidenceSnippet, row.SourceURL,
+			INSERT INTO field_provenance
+			       (id, object_type, object_id, field_name, value, value_key, evidence_snippet, evidence_ref,
+			        confidence, source, captured_by, site_read_id, captured_at, version, retrieved_at, verified_at,
+			        verified_by)
+			VALUES ($1, 'company', $2, $3, $4, $5, $6, $7, $8, $9, $10,
+			        (SELECT id FROM site_read WHERE id = $11), $12, $13, $14, $15, $16)`,
+			row.ID, companyID, row.Field, row.Value, row.ValueKey, row.EvidenceSnippet, row.SourceURL,
 			row.Confidence, row.Source, row.CapturedBy, row.SiteReadID, row.CapturedAt, version,
 			row.RetrievedAt, row.VerifiedAt, row.VerifiedBy)
 		if _, dup := storekit.UniqueViolation(err); dup {

@@ -15809,7 +15809,10 @@ export interface paths {
          *     conversion rate against it, because changing it would re-mean every roll-up built on
          *     those rates (ADR-0085 §7). Before that point it is freely changeable, which is the
          *     case this serves: an installation that chose wrong in its configuration and noticed
-         *     in week one. Audit-only write (no event stream, EVT-NOEVT-3).
+         *     in week one. The refusal's field error keeps its English `message` and carries
+         *     `params` that mirror `BaseCurrencyLock`: `reason`, `count` as a decimal string, and
+         *     `base_currency` only when the lock names one, so a client words it as it words the
+         *     read's `base_currency_lock`. Audit-only write (no event stream, EVT-NOEVT-3).
          */
         patch: operations["updateInstallationSettings"];
         trace?: never;
@@ -28803,7 +28806,8 @@ export interface components {
             timezone?: string;
             /**
              * @description ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
-             *     rate against the current base.
+             *     rate against the current base. The refusal's `params` mirror `BaseCurrencyLock`:
+             *     `reason`, `count` as a decimal string, and `base_currency` when the lock names one.
              */
             base_currency?: string;
             /**
@@ -34012,7 +34016,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_link_ambiguous_will_drop" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "amount_needs_currency" | "amount_too_many_decimals" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_far" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_not_found_will_drop" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_not_money" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_not_found_will_drop" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_column_empty_will_drop" | "employer_not_found" | "employer_not_found_dropped" | "employer_not_found_will_drop" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_not_found_will_drop" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_ambiguous_will_drop" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_not_found_will_drop" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_row_skipped_will_drop" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_a_phone" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -34263,7 +34267,7 @@ export interface components {
             /** @description A picklist or multiselect field's allowed values, for a caller who may read custom fields. Absent otherwise. */
             options?: string[];
         };
-        /** @description One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line. */
+        /** @description One problem of a row, named by its line so a human can go fix it. A row with several cells at fault has one issue for each, and counts once in `skipped`. A problem of a whole file, such as a tag the file names that does not exist yet, has no line. */
         ImportRowIssue: {
             /** @description The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file. */
             line?: number;
@@ -34448,6 +34452,8 @@ export interface components {
             file_name?: string;
             /** @description The name the run's source is filed under. */
             source_name?: string;
+            /** @description Rows the upload counted in the file, a ZIP's files added together. Present while the run keeps what the upload read of the file, in a list too, so a draft no test has read still says how many rows it holds. */
+            readonly row_count?: number;
             /** @description The files the run imports, in import order. A single CSV is one part. */
             parts?: components["schemas"]["ImportRunPart"][];
             /**
@@ -34549,6 +34555,8 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             /** @description Rows the file holds, once a dry run has read it; 0 before. */
             row_count: number;
+            /** @description Rows of the file the run created or updated. Present once the run has written: `complete`, `failed`, `undoing` or `undone`. */
+            readonly rows_written?: number;
             /** @description `{source column -> target field}` as the run saved it, the shape `updateImportRun` accepts, so a reader restores its edits from the run. Absent while the run holds none. */
             mapping?: {
                 [key: string]: string;
