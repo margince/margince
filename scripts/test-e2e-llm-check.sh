@@ -1046,6 +1046,8 @@ judges "$c46" case46 reports-no-calendar 0 "!the judge says NO"
 judges "$c46" case46 invites-greta 1 "called invite_meeting carrying"
 c47="case47-tidy-the-fair-list.yaml"
 judges "$c47" case47 tidies-the-list 0 "!the judge says NO"
+# "Who is on it?" answered with the roster after the changes answers it too.
+judges "$c47" case47 lists-the-roster-after 0 "!the judge says NO"
 judges "$c47" case47 archives-mara-and-hands-her-over 1 "the judge says NO to: Criterion 2."
 # A run the Agent SDK host drove, as it wrote it: the SDK's message stream, and
 # the form's question and the scripted yes on an `elicitation` line between the

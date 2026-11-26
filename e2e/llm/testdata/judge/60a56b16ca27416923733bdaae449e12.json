@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states Mara Voigt's conversion was reversed so she is a lead again and removed from the list, and that Jens Falk was added, which matches the criterion.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer says Mara Voigt's conversion was undone — she is a lead again — and that she is no longer on the list, and says Jens Falk was added. Answer no if it says she was deleted or disqualified, says she is still a contact, or does not report Jens as added.",
+  "answer": "Done.\n\n- **Mara Voigt:** conversion reversed; she is a lead again, and removed from the list.\n- **Jens Falk:** added to the list.\n- **Hand-over:** all 12 contacts now on Messe Hannover 2026, Jens Falk included, belong to Sofia Meier. Mara is not part of it.\n\nThe list now holds: Ralf Thiel, Sabine Ott, Dirk Hallmann, Inge Rohde, Jens Falk and seven more, 12 in all."
+}

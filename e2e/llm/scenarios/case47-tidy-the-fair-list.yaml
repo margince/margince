@@ -54,7 +54,7 @@ must_mention:
   - "Sofia"
 
 judge:
-  - "Criterion 1. The answer shows it read the list: it says Mara Voigt was on the Messe Hannover list, and says who else was or how many were. Answer no if it gives no account of what was on the list, or never mentions that Mara was on it."
+  - "Criterion 1. The answer says who is on the Messe Hannover list, by name or by count, as it stood before the changes or after them. Answer no if it gives no account of who is on the list."
   - "Criterion 2. The answer says Mara Voigt's conversion was undone — she is a lead again — and that she is no longer on the list, and says Jens Falk was added. Answer no if it says she was deleted or disqualified, says she is still a contact, or does not report Jens as added."
   - "Criterion 3. The answer reports the hand-over to Sofia Meier as covering everybody who stayed on the list plus Jens Falk, and not Mara Voigt. Answer no if it hands Mara to Sofia, hands over only some of the people, or says nothing about who was handed over."
 
