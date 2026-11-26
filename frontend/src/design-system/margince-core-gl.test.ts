@@ -64,6 +64,13 @@ describe("the points for a canvas size", () => {
     },
   );
 
+  it.each([
+    [48, 36],
+    [44, 22],
+  ])("keeps the small-orb grid for %i CSS px on %i device px", (css, side) => {
+    expect(pointsFor(css, side)).toEqual({ ...pointGrid(side), soft: 0 });
+  });
+
   it("ramps the large treatment in from 80 to 112 CSS px", () => {
     expect(pointsFor(80, 160).soft).toBe(0);
     expect(pointsFor(96, 192).soft).toBe(0.5);

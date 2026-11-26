@@ -107,6 +107,10 @@ export function pointsFor(
   side: number,
 ): Readonly<{ along: number; across: number; pointPx: number; soft: number }> {
   const large = Math.min(1, Math.max(0, (cssSide - LARGE_FROM) / LARGE_RAMP));
+  // A small orb keeps main's grid at every ratio, so zooming out never caps it.
+  if (large === 0) {
+    return { ...pointGrid(side), soft: 0 };
+  }
   const density = 1 + (1.8 - 1) * large;
   const pointScale = 1 + (1.5 - 1) * large;
   const grid = pointGrid(side, density, pointScale);
