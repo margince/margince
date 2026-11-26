@@ -68,6 +68,14 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/contacts/contactstanding.peeks.test.ts",
+    why: "A date-only activity must read as its own date for a reader far east of UTC, where its stored noon is already the next day; only a named zone at UTC+14 tells that apart from the instant's day.",
+  },
+  {
+    file: "features/deals/deal360/dealverdict.test.ts",
+    why: "A date-only activity must read as its own date for a reader far east of UTC, where its stored noon is already the next day; only a named zone at UTC+14 tells that apart from the instant's day.",
+  },
+  {
     file: "features/companies/companystanding.events.test.ts",
     why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
   },

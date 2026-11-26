@@ -53490,6 +53490,10 @@ components:
         last_interaction_at:
           type: [string, 'null']
           format: date-time
+        last_interaction_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_interaction_at`, from the activity it names. Absent when that is null.
 
 
     Company360DealRole:
@@ -55662,6 +55666,10 @@ components:
         outbound_90d: { type: integer }
         sent_90d: { type: integer, minimum: 0, description: "Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on." }
         last_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` among the activities the edge counts. A client orders edges by it.' }
+        last_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_at`, from the activity it names. Absent when that is null.
         receipts:
           type: array
           maxItems: 3
@@ -55792,6 +55800,10 @@ components:
           type: boolean
           description: Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.
         last_at: { type: [string, 'null'], format: date-time }
+        last_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_at`, from the activity it names. Absent when that is null.
         days_since_last:
           type: [integer, 'null']
           description: Whole days from the last interaction to now, so a client renders "2 days ago" without re-deriving today from a timestamp.
@@ -56458,6 +56470,10 @@ components:
         interactions_90d: { type: integer, minimum: 0 }
         two_way: { type: boolean, description: "Whether both sides have written within the relationship window, decided by the shared direction rule." }
         last_at:          { type: [string, 'null'], format: date-time }
+        last_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_at`, from the activity it names. Absent when that is null.
         # The direction split. Without it a surface can say "6 exchanges" but not
         # "6 TWO-WAY exchanges" or "replied 2 days ago", and cannot tell a live
         # correspondence from six unanswered sends — which is the distinction that
@@ -59538,6 +59554,10 @@ components:
         wait_ends_at: { type: [string, 'null'], format: date-time, readOnly: true, description: "The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date." }
         closed_at: { type: [string, 'null'], format: date-time }
         last_activity_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.' }
+        last_activity_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
         stalled: { type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.' }
         last_email:
           allOf: [{ $ref: '#/components/schemas/DealLastEmail' }]
@@ -60237,6 +60257,10 @@ components:
           format: date-time
           readOnly: true
           description: 'The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
+        last_activity_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
         source: { type: string, description: 'The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.' }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         author:
@@ -60603,6 +60627,10 @@ components:
           type: [string, 'null']
           format: date-time
           description: 'The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.'
+        last_activity_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
         activity_count: { type: integer, minimum: 0, description: Every live activity filed under the project. }
 
     CreateProjectRequest:
@@ -61399,6 +61427,29 @@ components:
           x-enum-varnames: [LinkRelevanceSourceHuman, LinkRelevanceSourceClassifier]
           x-extensible-enum: true
           description: Who set `deal_relevance`. The classifier never changes a mark a human set.
+        filed_by: { $ref: '#/components/schemas/LinkFiler' }
+
+    LinkFiler:
+      type: object
+      readOnly: true
+      description: >-
+        On a deal link only, and only when no human or agent chose it: who filed the activity on
+        the deal, read from the latest filing of it there. The actor is `core` for the
+        installation's own rule, or the name of the extension whose hook filed it. Marking the link
+        `unrelated` takes the filing back, and no automatic pass files the activity there again.
+      required: [actor]
+      properties:
+        actor: { type: string }
+        hook:
+          type: string
+          enum: [parties, deal]
+          x-extensible-enum: true
+          description: 'Which hook point filed it, for an extension actor. Absent for `core`.'
+        reason:
+          type: string
+          description: >-
+            For an extension, a key the extension declared for its hook. Read it together with the
+            actor: the label comes from that extension's own translations. Absent for `core`.
 
     RelinkThreadRequest:
       type: object
@@ -75795,6 +75846,10 @@ components:
           description: >-
             When the record was last in touch: its newest logged call, mail, meeting or note.
             Set on a contact, a company and a deal.
+        last_activity_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
         masked_fields:
           type: array
           items: { type: string }

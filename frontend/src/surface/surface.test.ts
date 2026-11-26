@@ -11,8 +11,12 @@
 // accident, because some tool wanted a path, is the failure this test exists
 // to make impossible.
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import pkg from "../../package.json" with { type: "json" };
+import { reachedModulesIn, SRC_ROOT } from "../../scripts/lib/bundle-reach";
+import { filesUnder } from "../../scripts/lib/source-tree";
 import { stable } from "../format/collate";
 import * as apiSurface from "./api";
 import * as designSystem from "./design-system";
@@ -120,5 +124,23 @@ describe("the published frontend surface", () => {
       "useOAuthReturn",
       "useT",
     ]);
+  });
+
+  // A unit imports this surface, and loading the screen registry loads every
+  // unit, so a surface that reached the registry would import itself.
+  it("does not load the registry of the units' screens", () => {
+    const tree = new Map(
+      filesUnder(SRC_ROOT).map((path): [string, string] => [
+        path,
+        readFileSync(path, "utf8"),
+      ]),
+    );
+    const reached = reachedModulesIn(tree, {}, [
+      join(SRC_ROOT, "surface/index.ts"),
+    ]);
+    expect(reached.has(join(SRC_ROOT, "lib/extensions.ts"))).toBe(true);
+    expect(reached.has(join(SRC_ROOT, "composition/extscreens.gen.ts"))).toBe(
+      false,
+    );
   });
 });
