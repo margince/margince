@@ -323,8 +323,8 @@ func followUpDoer(ctx context.Context, tx pgx.Tx, proposal deals.FollowUpProposa
 // The task goes through the activities store, the RBAC-gated write a rep's own
 // "add task" takes. The single-use redemption claims it once, and the write is
 // idempotent on (source_system, source_id) keyed to the approval. So a
-// re-driven decision creates nothing twice. It runs as the overnight agent on
-// behalf of the deciding human, who is on the decision's own audit row.
+// re-driven decision creates nothing twice. It runs as the overnight agent
+// acting for the deciding human, under that human's grants.
 func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now func() time.Time) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		proposal, err := deals.UnmarshalFollowUpProposal(proposedChange)
@@ -345,12 +345,10 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 		if !ok {
 			return errors.New("compose: follow-up effect without a deciding principal")
 		}
-		execCtx := principal.WithActor(ctx, principal.Principal{
-			Type:       principal.PrincipalSystem,
-			ID:         overnightAgent,
-			UserID:     decider.UserID,
-			OnBehalfOf: decider.UserID,
-		})
+		execCtx, err := agentForActor(ctx, overnightAgent)
+		if err != nil {
+			return err
+		}
 		// Redemption and the write in ONE transaction. Consuming the approval
 		// first and writing after leaves the two able to disagree: the approval
 		// reads as redeemed while no task exists, and the audit row asserts a

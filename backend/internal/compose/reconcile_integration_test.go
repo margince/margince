@@ -641,6 +641,10 @@ func TestFollowUpConfirmCreatesTheTaskExactlyOnce(t *testing.T) {
 	if sourceSystem != "overnight-reconcile" {
 		t.Errorf("source_system = %q, want overnight-reconcile", sourceSystem)
 	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'activity'
+		AND actor_type = 'agent' AND actor_id = 'agent:overnight' AND on_behalf_of = $1`, e.Rep1); n != 1 {
+		t.Errorf("%d tasks written by agent:overnight for the decider, want 1", n)
+	}
 	if due == nil || due.Format(time.DateOnly) != proposal.DueDate {
 		t.Errorf("task due = %v, want the proposed %s", due, proposal.DueDate)
 	}
