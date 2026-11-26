@@ -9,10 +9,16 @@ import { ErrorLine } from "../../../design-system/errorline";
 import { Heading } from "../../../design-system/heading";
 import { QueryGate } from "../../../design-system/querystates";
 import { ordinalNumber } from "../../../format/format";
-import { useLocale, useT } from "../../../i18n";
+import { useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
-import { useCurrencyNote } from "../../../lib/installation-settings.currency";
-import { problemFieldSentencesOf } from "../../../lib/problem";
+import {
+  useCurrencyNote,
+  useLockDropsTypedCurrency,
+} from "../../../lib/installation-settings.currency";
+import {
+  installationRefusal,
+  refusalWordsLock,
+} from "../../../lib/installation-settings.refusal";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "../../sign-in/installation-settings";
 import type {
@@ -63,7 +69,6 @@ function reportingPatch(
 
 export function BasisAct({ state, dispatch }: BasisActProps) {
   const t = useT();
-  const { locale } = useLocale();
   const currencyNote = useCurrencyNote();
   const canManage = useCanWrite("installation_settings", "update");
   const settings = useInstallationSettings(canManage);
@@ -76,6 +81,9 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
   const [leaving, setLeaving] = useState(false);
 
   const stored = settings.data;
+  useLockDropsTypedCurrency(stored?.base_currency_locked === true, () =>
+    setCurrencyEdit(null),
+  );
   const currency = currencyEdit ?? stored?.base_currency ?? "";
   const timezone = timezoneEdit ?? stored?.timezone ?? "";
   const reportingShown = canManage && stored !== undefined;
@@ -87,7 +95,11 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
         .filter((need): need is [true, string] => need[0] === true)
         .map(([, why]) => why)
     : [];
-  const refused = problemFieldSentencesOf(update.error, locale);
+  const refusal = installationRefusal(update.error, t, {
+    base_currency: t("installationSettings.baseCurrency"),
+    timezone: t("installationSettings.timezone"),
+  });
+  const currencyRefused = refusal.byField.get("base_currency");
 
   const leave = async () => {
     setLeaving(true);
@@ -134,8 +146,13 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
                 </Heading>
                 <Field
                   label={t("installationSettings.baseCurrency")}
-                  hint={currencyNote(current)}
-                  error={refused.get("base_currency")}
+                  hint={
+                    currencyRefused !== undefined &&
+                    refusalWordsLock(update.error)
+                      ? undefined
+                      : currencyNote(current)
+                  }
+                  error={currencyRefused}
                 >
                   {(control) => (
                     <TextInput
@@ -153,7 +170,7 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
                 <Field
                   label={t("installationSettings.timezone")}
                   hint={t("installationSettings.timezoneHint")}
-                  error={refused.get("timezone")}
+                  error={refusal.byField.get("timezone")}
                 >
                   {(control) => (
                     <TextInput
@@ -181,9 +198,9 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
           held={canManage && !settings.isSuccess}
           stillNeeded={(why) => why.join(" ")}
           note={
-            update.isError && refused.size === 0 ? (
-              <ErrorLine inline error={update.error} />
-            ) : undefined
+            refusal.rest === null ? undefined : (
+              <ErrorLine inline>{refusal.rest}</ErrorLine>
+            )
           }
           onGo={() => void leave()}
         />

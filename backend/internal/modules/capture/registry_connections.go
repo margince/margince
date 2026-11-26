@@ -184,7 +184,7 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 			       c.history_baseline_date, c.history_baseline_tz, c.history_baseline_set_by, c.history_baseline_set_at,
 			       t.id, t.name, t.archived_at IS NOT NULL,
 			       s.last_synced_at, s.last_success_at, s.last_error_class, s.next_sync_at, s.failing_since,
- c.connected_at, c.silence_dismissed_since, s.last_delivery_at, `+notesCalendarAccountSQL+`
+ c.connected_at, c.silence_dismissed_since, s.last_delivery_at, c.unread_from, c.unread_to, `+notesCalendarAccountSQL+`
 			FROM capture_connection c
 			LEFT JOIN capture_sync_state s ON s.connection_id = c.id
 			-- The word's own row, so the connection reports the name the
@@ -209,7 +209,7 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 				&v.AccountLabel, &v.SignatureEnrichEnabled, &v.MailPosture, &v.DefaultSender,
 				&baseline.date, &baseline.timezone, &baseline.setBy, &baseline.setAt,
 				&tagID, &tagName, &tagArchived,
-				&v.LastSyncedAt, &v.LastSuccessAt, &v.LastErrorClass, &v.NextSyncDueAt, &v.FailingSince, &v.ConnectedAt, &v.SilenceDismissedSince, &v.LastDeliveryAt, &v.CalendarAccountLabel); err != nil {
+				&v.LastSyncedAt, &v.LastSuccessAt, &v.LastErrorClass, &v.NextSyncDueAt, &v.FailingSince, &v.ConnectedAt, &v.SilenceDismissedSince, &v.LastDeliveryAt, &v.UnreadFrom, &v.UnreadTo, &v.CalendarAccountLabel); err != nil {
 				return err
 			}
 			v.ContextTag = contextTagOf(tagID, tagName, tagArchived)

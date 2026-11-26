@@ -22,6 +22,7 @@ package gates
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -31,14 +32,21 @@ const storedOriginalFile = "internal/platform/database/storekit/storedoriginal.g
 // storedOriginalFallback is the arm a copy of the correlation needs: an
 // alias-qualified raw_capture_id tested for NULL. The owner's format verb
 // counts as an alias.
-var storedOriginalFallback = regexp.MustCompile(`(\w+|%\[\d\]s)\.raw_capture_id\s+IS\s+NULL`)
+var storedOriginalFallback = regexp.MustCompile(`(\w+|%\[\d\]s)` + regexp.QuoteMeta(storedOriginalColumn) + `\s+IS\s+NULL`)
+
+// storedOriginalColumn is spelled in every match, so a file without it is not
+// handed to the pattern, whose leading \w+ tries every offset.
+const storedOriginalColumn = ".raw_capture_id"
 
 func TestTheStoredOriginalIsCorrelatedOnce(t *testing.T) {
 	t.Parallel()
 	var owner int
 	for _, tree := range licensedTrees {
 		walkHandWrittenGoFiles(t, tree.root, func(path, text string) {
-			found := storedOriginalFallback.FindAllString(text, -1)
+			var found []string
+			if strings.Contains(text, storedOriginalColumn) {
+				found = storedOriginalFallback.FindAllString(text, -1)
+			}
 			if path == storedOriginalFile {
 				owner = len(found)
 				return

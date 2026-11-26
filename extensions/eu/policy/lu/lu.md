@@ -2,10 +2,14 @@
 jurisdiction: lu
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Loi du 30 mai 2005 concernant la protection de la vie privée dans le secteur des communications électroniques"
     provision: "art. 11"
     source-url: https://legilux.public.lu/eli/etat/leg/loi/2005/05/30/n4/jo
+    text-url: https://data.legilux.public.lu/file/eli-etat-leg-loi-2005-05-30-n4-jo-fr-html.html
+    text-digest: f89fd8a5ae616d83f90cb2e562a543f0fbce70dd08c5cd609d55d74dc91aa5bb
+    text-fetched: 2026-11-25
 fixtures:
   - finding: objection_route
     triggers: lu/fixtures/advertising-without-objection-route.md

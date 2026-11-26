@@ -47,7 +47,7 @@ func dealWithSignedDraft(t *testing.T, e *Env) (deal ids.UUID, contract, file id
 		t.Fatalf("creating the agreement: %v", err)
 	}
 	contract = ids.UUID(created.Id)
-	file = seedDocument(t, e, company, "deal", deal, "msa.pdf", "contract", false)
+	file = seedDocument(t, e, "deal", deal, "msa.pdf", "contract", false)
 	e.WsExec(t, `UPDATE attachment SET contract_id = $2, doc_state = 'current' WHERE id = $1`, file, contract)
 	return deal, contract, file, won
 }

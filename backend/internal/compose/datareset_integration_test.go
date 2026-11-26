@@ -302,14 +302,10 @@ func TestDropResetCustomFieldColumns(t *testing.T) {
 	}
 }
 
-// TestSweepTargetsCarryNoDeleteBlockingTrigger is the forward safety rail the
-// preserve-set check cannot give on its own: a table the sweep TARGETS must not
-// carry a DELETE-firing trigger. Today only the append-only ledgers (audit_log,
-// system_log) have one, and both are preserved. If a future workspace_id table
-// arrives with a delete guard — an append-only or otherwise protected store —
-// and is not added to preservedResetTables, it would either abort the sweep at
-// runtime or be wiped against its guard's intent. This turns that silent
-// runtime hazard into a test failure that forces a conscious classification.
+// TestSweepTargetsCarryNoDeleteBlockingTrigger: a table the sweep targets must
+// not carry a DELETE trigger that guards it. Such a table left out of
+// preservedResetTables aborts the sweep or is wiped against its guard's intent.
+// The preserve-set check cannot see that, so this test fails on it instead.
 // deleteGuardedSweepTargets are the sweep targets whose DELETE-firing trigger
 // does NOT protect the table as a whole, and why sweeping them is still safe.
 //
@@ -329,8 +325,7 @@ const settlementEvidenceShare = "the settlement evidence generation, not a guard
 // replySettledClear is the reason for the triggers that clear the stamp the owed check reads first.
 const replySettledClear = "clears the reply-settled stamps on the deleted rows' threads so the stamping job reads them again, and refuses no delete. Its UPDATE skips restricted rows, so the restricted-row guard never fires; the sweep deletes every stamped message too, so no stale stamp survives a reset"
 
-// strengthDatesRecompute is the reason for the triggers that refold a
-// contact's stored strength dates when a row they were read from goes.
+// strengthDatesRecompute is why the strength-date triggers refold on a delete.
 const strengthDatesRecompute = "recomputes the stored strength dates of the contacts the deleted rows reached, and refuses no delete; `contact` is not preserved, so the sweep deletes those rows too and the recompute is discarded with them"
 
 var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
@@ -339,7 +334,9 @@ var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	// Not a guard: the trigger counts fact writes and refuses no delete. Its
 	// counter rows go with their company by FK cascade, so a reset that clears
 	// the companies leaves no counter behind. TestAResetLeavesNoFactRevision holds it.
-	"company_fact trg_company_fact_count_revision":                    "counts a company's fact writes and refuses no delete; the counter rows cascade with their company, so a reset leaves none",
+	"company deleted_company_drops_evidence":                          "deletes the swept companies' evidence rows from field_provenance and refuses no delete, as the typed tables' cascade did",
+	"field_provenance trg_deleted_company_evidence_counts_revision":   "counts a company's fact writes and refuses no delete; the counter rows cascade with their company, so a reset leaves none",
+	"contact deleted_contact_drops_evidence":                          "deletes the swept contacts' evidence rows from field_provenance and refuses no delete, as the typed tables' cascade did",
 	"record_grant home_read_fence_record_grant":                       "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
 	"activity_audience_member home_read_fence_audience_member":        "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
 	"activity_link home_read_fence_link_removed":                      "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",

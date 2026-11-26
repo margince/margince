@@ -73,6 +73,7 @@ export function InstallationProfileDialog({
   dirty,
   pending,
   refused,
+  lockRefused,
   formRef,
   blanketError,
   describe,
@@ -90,6 +91,8 @@ export function InstallationProfileDialog({
   dirty: boolean;
   pending: boolean;
   refused: ReadonlyMap<string, string>;
+  /** The base currency's refusal words its lock, so its hint stays hidden. */
+  lockRefused: boolean;
   // The form's ref, where a refused save looks for the field to focus.
   formRef: (form: HTMLFormElement | null) => void;
   blanketError: string | null;
@@ -186,7 +189,7 @@ export function InstallationProfileDialog({
               />
               <Field
                 label={t("installationSettings.baseCurrency")}
-                hint={currencyNote(settings)}
+                hint={lockRefused ? undefined : currencyNote(settings)}
                 error={refused.get("base_currency")}
               >
                 {(control) => (

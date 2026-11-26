@@ -22,7 +22,14 @@ import {
 import { useCanWrite } from "../../lib/capability";
 // Installation facts are readable by every role; only admin/ops may change them.
 // Each row opens the shared sparse-patch form with its own field focused.
-import { useCurrencyNote } from "../../lib/installation-settings.currency";
+import {
+  useCurrencyNote,
+  useLockDropsTypedCurrency,
+} from "../../lib/installation-settings.currency";
+import {
+  installationRefusal,
+  refusalWordsLock,
+} from "../../lib/installation-settings.refusal";
 import { type FieldLabels, percentLimit, unwrap } from "../../lib/problem";
 // Shared with every upload form, which reads the ceiling off this same record.
 // One query, one key: two hooks on one key would let whichever mounted first
@@ -45,7 +52,6 @@ import {
   fiscalYearStartSummary,
   InstallationProfileDialog,
 } from "./installation-settings.profile";
-import { installationRefusal } from "./installation-settings.refusal";
 import { RegionalSettingsRows } from "./installation-settings.regional";
 
 export { fiscalYearStartSummary } from "./installation-settings.profile";
@@ -77,11 +83,22 @@ const EDITABLE_FACTS = [
 // tab in one sparse PATCH, so this decides only where focus lands.
 export type EditedFact = (typeof EDITABLE_FACTS)[number];
 
+const FORECAST_FACTS: readonly EditedFact[] = [
+  "forecast_forward_measure",
+  "forecast_likely_threshold",
+];
+
 // The server's bounds on the Likely threshold, in percent.
 const LIKELY_THRESHOLD = { min: 1, max: 100 } as const;
 
-function factLabels(t: ReturnType<typeof useT>, locale: Locale): FieldLabels {
-  return {
+// Labels only for the facts the part's dialog draws, so a refusal naming
+// another fact reaches the foot.
+function factLabels(
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  part: InstallationPart,
+): FieldLabels {
+  const labels: FieldLabels = {
     timezone: t("installationSettings.timezone"),
     base_currency: t("installationSettings.baseCurrency"),
     base_language: t("installationSettings.baseLanguage"),
@@ -94,6 +111,13 @@ function factLabels(t: ReturnType<typeof useT>, locale: Locale): FieldLabels {
       limit: percentLimit(locale),
     },
   };
+  return Object.fromEntries(
+    Object.entries(labels).filter(
+      ([fact]) =>
+        FORECAST_FACTS.some((forecast) => forecast === fact) ===
+        (part === "forecast"),
+    ),
+  );
 }
 
 // A whole percent from 1 to 100, in the words the server's refusal gets.
@@ -215,11 +239,8 @@ function InstallationSettingsForm({
   const { locale } = useLocale();
   const toast = useToast();
   const [editing, setEditing] = useState<EditedFact | null>(null);
-  // The save's only visible answer was the button going disabled, because the
-  // draft now matched the server. A control losing its affordance reads as the
-  // form having given up, not as the write having landed — and on this form the
-  // patch is SPARSE, so an operator who changed one field of three had no way to
-  // tell which of them the installation now holds.
+  // The toast says the sparse write landed. A save button that only goes
+  // disabled reads as the form giving up.
   const update = useUpdateInstallationSettings(() => {
     toast.show(t("settings.saved"));
     setEditing(null);
@@ -228,18 +249,14 @@ function InstallationSettingsForm({
   const individual = useUpdateInstallationSettings();
   const selfCorrecting = useUpdateInstallationSettings();
   const [draft, setDraft] = useState(settings);
+  useLockDropsTypedCurrency(settings.base_currency_locked, () =>
+    setDraft({ ...draft, base_currency: settings.base_currency }),
+  );
   const seeded = useRef(serverSignature(settings));
 
-  // Re-seed when the server answers with DIFFERENT values than the draft was
-  // built from — another admin's change arriving — and only then.
-  //
-  // The identity of `settings` is not that question. Every refetch mints a new
-  // object, and `refetchOnWindowFocus` means a reader who tabs away to look up
-  // their IANA zone and tabs back triggers one: the values come back
-  // unchanged, the object does not, and the effect used to throw away
-  // everything they had typed. Comparing what the server SAID, rather than
-  // which object said it, leaves an unsaved draft alone across every refetch
-  // that changes nothing.
+  // Re-seed only when the server's values differ from the draft's source. A
+  // focus refetch mints a new object with the same values, and must keep the
+  // reader's unsaved draft.
   useEffect(() => {
     const signature = serverSignature(settings);
     if (seeded.current === signature) {
@@ -249,27 +266,15 @@ function InstallationSettingsForm({
     setDraft(settings);
   }, [settings]);
 
-  // The denial, said once and POINTED AT, from every control it refuses. It
-  // refuses three Edit verbs on the card and — if the grant is withdrawn while
-  // the dialog is open, which /me's focus refetch can do — the three fields
-  // inside it. `Button`'s `reasonId` and a field's `aria-describedby` are the
-  // same wiring: name the sentence once, point every refused control at it.
-  // Printing it beside each of them would state one fact three times.
+  // The denial is said once, and every control it refuses points at it: the
+  // Edit verbs, and the fields when /me's refetch withdraws the grant.
   const denialId = useId();
   const describe = (control: FieldControl): string | undefined =>
     describedByIds(control["aria-describedby"], !canManage && denialId);
 
-  // The server's per-field assertions, put on the FIELDS. A 422 on this form
-  // names which of the three values it refused — an unknown IANA zone, a
-  // currency that is not a currency — and until now all of that arrived as one
-  // paragraph under the last field, so a reader had to guess which input to fix.
-  // `Field`'s `error` slot has existed the whole time; nothing routed anything
-  // into it, on any settings page.
-  //
-  // Keyed by the wire field name because that is what the server asserts. The
-  // patch is sparse and built from the same names, so the two cannot drift
-  // without the request itself being wrong.
-  const labels = factLabels(t, locale);
+  // A 422 names the value it refused, so each sentence goes on its field,
+  // keyed by the wire name the sparse patch also sends.
+  const labels = factLabels(t, locale, part);
   const [faults, faultsRoot] = useFieldFaults();
   const refused = new Map(
     EDITABLE_FACTS.flatMap((fact) => {
@@ -277,7 +282,11 @@ function InstallationSettingsForm({
       return sentence === undefined ? [] : [[fact, sentence] as const];
     }),
   );
-  const blanket = installationRefusal(update.error, t, labels, part).rest;
+  const blanket = installationRefusal(update.error, t, labels).rest;
+  // Kept with the field's sentence, not read off `update.error`, which a
+  // second save clears while the sentence stays.
+  const [lockWorded, setLockWorded] = useState(false);
+  const lockRefused = lockWorded && refused.has("base_currency");
   const edit = (next: InstallationSettings) => {
     for (const fact of EDITABLE_FACTS) {
       if (next[fact] !== draft[fact]) faults.edited(fact);
@@ -318,8 +327,10 @@ function InstallationSettingsForm({
       return;
     }
     update.mutate(patch, {
-      onError: (error) =>
-        faults.show(installationRefusal(error, t, labels, part).byField),
+      onError: (error) => {
+        faults.show(installationRefusal(error, t, labels).byField);
+        setLockWorded(refusalWordsLock(error));
+      },
     });
   };
 
@@ -465,6 +476,7 @@ function InstallationSettingsForm({
           dirty={dirty}
           pending={update.isPending}
           refused={refused}
+          lockRefused={lockRefused}
           formRef={faultsRoot}
           blanketError={blanket}
           describe={describe}

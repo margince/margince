@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -50,11 +49,8 @@ func (e *dedupeEnv) seedUnrelatedMeetings(ctx context.Context, t *testing.T, cou
 	}
 }
 
-func TestTheCohortHoldSeeksPastAnUnrelatedInstallation(t *testing.T) {
-	e := setupDedupe(t)
+func theCohortHoldSeeksPastAnUnrelatedInstallation(t *testing.T, e *dedupeEnv) {
 	ctx := e.as()
-	connected := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
-	e.seedHistoryReadBackground(ctx, t, connected)
 	e.seedUnrelatedMeetings(ctx, t, 20000)
 
 	const address, retiredAddress = "cohort@bounded-cohort.test", "retired@bounded-cohort.test"
