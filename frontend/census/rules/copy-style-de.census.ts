@@ -128,11 +128,34 @@ function gatedNeverWords(neverColumn: string): string[] {
   return [...neverColumn.matchAll(/`([^`]+)`/g)].map(([, gated]) => gated);
 }
 
-export function vocabularyNeverColumn(): string {
-  const page = readFileSync(
+function stylePage(): string {
+  return readFileSync(
     join(repoRoot, "docs", "reference", "ui-copy-style-de.md"),
     "utf8",
   );
+}
+
+/**
+ * Fails a parse of the Never column that reads a different number of words
+ * than the page states, so a lost row cannot shorten the list. The backend
+ * gate germanvocabulary_test.go holds the same count.
+ */
+export function neverColumnCountFindings(page: string = stylePage()): string[] {
+  const stated = /The Never column\s+retires\s+(\d+)\s+words/.exec(page)?.[1];
+  if (stated === undefined) {
+    return [
+      "the style page states no count of the words its Never column retires",
+    ];
+  }
+  const parsed = gatedNeverWords(vocabularyNeverColumn(page)).length;
+  return String(parsed) === stated
+    ? []
+    : [
+        `parsed ${parsed} retired words from the Never column, and the page states ${stated}`,
+      ];
+}
+
+export function vocabularyNeverColumn(page: string = stylePage()): string {
   const section = page.split("\n## Vocabulary\n")[1]?.split("\n## ")[0] ?? "";
   return section
     .split("\n")
@@ -323,8 +346,10 @@ export function styleFindings(
 export const rule: CensusRule = {
   name: "copy-style-de",
   corpus: (tree) => tree.files.filter((file) => file.path === coreCatalog),
-  floors: () =>
-    listedUnitCopy("de").length > 0 ? [] : ["no unit ships a de.json"],
+  floors: () => [
+    ...(listedUnitCopy("de").length > 0 ? [] : ["no unit ships a de.json"]),
+    ...neverColumnCountFindings(),
+  ],
   across: (corpus) => {
     const core = corpus[0]?.source;
     return core ? styleFindings(germanCopies(core)) : [];

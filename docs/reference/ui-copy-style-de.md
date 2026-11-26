@@ -266,9 +266,12 @@ column a word in code format is retired. It fails as a whole word,
 case-sensitive. `frontend/census/rules/copy-style-de.census.ts` holds it on
 the screens, outside the keys the census names with a reason.
 `backend/gates/germanvocabulary_test.go` holds it on every German string in
-the server's Go code. Both read this column, so a word added here is retired
-on both sides. A plain word is held by the reviewer, and only in the sense its
-row gives, because it is ordinary German in another sense.
+the server's Go code and on the German files the server embeds. Both read
+this column, so a word added here is retired on both sides. The Never column
+retires 134 words in code format. Both readers fail when they parse a
+different number, so raise the count when you add a word. A plain word is held
+by the reviewer, and only in the sense its row gives, because it is ordinary
+German in another sense.
 
 | Concept | German | Never |
 |---|---|---|
@@ -378,8 +381,9 @@ source file, key and value. Placeholders are removed before the word rules run.
 | Never wir | wir, uns, unser in lower or leading capital, outside `privacynotice.` and the consent statements |
 | Retired vocabulary | A word in code format in the Vocabulary table's Never column, as a whole word, case-sensitive, outside the keys it names with a reason |
 
-A last test compares the code-format words of the Never column with the words
-the test retires, and fails a difference in either direction.
+The census keeps no word list of its own. It reads the code-format words of
+the Never column, and fails when it parses a different number of them than
+the Vocabulary section states.
 
 `frontend/census/rules/address-register.census.ts` holds the address: no Sie, Ihr or
 Ihnen outside the five outsider families, no du-pronoun inside them, and no

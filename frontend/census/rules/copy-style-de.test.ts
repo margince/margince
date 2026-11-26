@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { plantedFindings } from "../tree";
+import { plantedFindings, repoRoot } from "../tree";
 import {
   coreCatalog,
+  neverColumnCountFindings,
   rule,
   styleFindings,
   vocabularyNeverColumn,
@@ -102,6 +105,16 @@ describe("the de copy checks, over planted catalogs", () => {
     expect(styleFindings([], "")).toContain(
       "the Vocabulary table's Never column sets no word in code",
     );
+  });
+
+  it("parses exactly the count of retired words the real page states", () => {
+    expect(neverColumnCountFindings()).toEqual([]);
+    const page = readFileSync(
+      join(repoRoot, "docs/reference/ui-copy-style-de.md"),
+      "utf8",
+    );
+    const lostRow = page.replace(/^\|[^\n]*`Firma`[^\n]*\n/m, "");
+    expect(neverColumnCountFindings(lostRow)).toHaveLength(1);
   });
 
   it("names an empty catalog", () => {
