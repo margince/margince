@@ -13,24 +13,24 @@
   "self_judged": false,
   "stamp": {
     "scenario": "a4fd2c400c2f7497",
-    "tools": "72de152f53ff5458",
-    "instructions": "4eab26d5fff0793f",
+    "tools": "b3ad0af9637ef1c1",
+    "instructions": "d707a123fe53827f",
     "judge": "claude-haiku-5-5",
-    "harness": "ae24b6799c8461d2",
+    "harness": "0fe690d35efcc703",
     "parsers": {
       "gemini:cli": "fa1db64bc14e971b",
       "gpt:cli": "d48ca27c983f8b3f"
     },
-    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
-    "ran_at": "2026-11-25T10:16:50Z",
-    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
-    "graded_at": "2026-11-25T10:16:50Z"
+    "commit": "ad96834804cdd040c8f582fe5c8d31b0fa53f1ab",
+    "ran_at": "2026-11-26T07:59:27Z",
+    "graded_commit": "ad96834804cdd040c8f582fe5c8d31b0fa53f1ab",
+    "graded_at": "2026-11-26T07:59:27Z"
   },
   "usage": {
-    "input_tokens": 170928,
-    "output_tokens": 25672,
+    "input_tokens": 169559,
+    "output_tokens": 25582,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 549201,
+    "cache_read_input_tokens": 685615,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -43,8 +43,8 @@
         "catch_me_up_on",
         "find_records",
         "forecast_readings",
-        "list_approvals",
         "list_input_checks",
+        "list_legacy_loss_reasons",
         "list_pipelines",
         "list_records",
         "read_attention",
@@ -54,6 +54,10 @@
         "read_workspace",
         "whats_slipping_this_week",
         "whoami"
+      ],
+      "refused": [
+        "find_records",
+        "read_forecast"
       ]
     },
     {
@@ -62,7 +66,6 @@
         "at_risk_relationships",
         "catch_me_up_on",
         "find_records",
-        "forecast_movement",
         "forecast_readings",
         "list_input_checks",
         "list_legacy_loss_reasons",
@@ -76,35 +79,48 @@
         "read_workspace",
         "whats_slipping_this_week",
         "whoami"
+      ],
+      "refused": [
+        "read_forecast"
       ]
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 21,
-      "min": 19,
+      "median": 21.5,
+      "min": 20,
       "max": 23
     },
     "turns": {
-      "median": 9.5,
-      "min": 9,
-      "max": 10
+      "median": 10.5,
+      "min": 10,
+      "max": 11
     },
     "refused": {
+      "median": 1.5,
+      "min": 1,
+      "max": 2
+    },
+    "retries": {
+      "median": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "client_refused": {
       "median": 0,
       "min": 0,
       "max": 0
     },
     "prompt_tokens": {
-      "median": 360064.5,
-      "min": 318849,
-      "max": 401280
+      "median": 427587,
+      "min": 406657,
+      "max": 448517
     },
     "output_tokens": {
-      "median": 12836,
-      "min": 11806,
-      "max": 13866
+      "median": 12791,
+      "min": 12571,
+      "max": 13011
     }
   }
 }
