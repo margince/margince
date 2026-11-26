@@ -6,6 +6,8 @@
 package integration
 
 import (
+	"encoding/json"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -23,10 +25,23 @@ import (
 // sees it nor answers it.
 func TestAnAgentReadsAndAnswersOnlyItsOwnColleaguesDealQuestion(t *testing.T) {
 	d := newTwoDoors(t, "agent-which-deal", "read", "write")
+	// A member is invited only once the installation has described its company.
+	d.e.DescribeCompany(t)
 	agentOf := func(email string) (*apptest.MCPClient, string) {
 		t.Helper()
 		const password = "agent-which-deal-password"
-		member := createdID(t, d.e, "/v1/users", AnyMap{"email": email, "display_name": strings.Split(email, "@")[0], "role": "admin"})
+		var invited struct {
+			ID string `json:"id"`
+		}
+		var body json.RawMessage
+		invite := AnyMap{"email": email, "display_name": strings.Split(email, "@")[0], "role": "admin"}
+		if status := d.e.Call(t, "POST", "/v1/users", invite, nil, &body); status != http.StatusCreated {
+			t.Fatalf("inviting %s → %d %s", email, status, body)
+		}
+		if err := json.Unmarshal(body, &invited); err != nil || invited.ID == "" {
+			t.Fatalf("the invitation of %s answered no id: %v %s", email, err, body)
+		}
+		member := invited.ID
 		apptest.SetPasswordByLink(t, d.e, member, password)
 		seat := d.e.AsSecondSeat(t, email, password)
 		bearer, _ := apptest.PassportWithID(t, seat, "which deal agent", "read", "write")
