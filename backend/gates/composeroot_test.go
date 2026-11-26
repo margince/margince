@@ -46,7 +46,7 @@ const (
 	// Raised by 2 production and 1 test file for the How it stands job and the
 	// task explanation's certification case, which reuses the unexported contact
 	// brief fixture.
-	composeRootTestFiles = 1921
+	composeRootTestFiles = 1922
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -102,11 +102,12 @@ const (
 	// Raised by 240 production and 260 test lines for the extension card's setup
 	// state and the schedule book's time zone. Both drive the unexported
 	// inventory handler, schedule book and catch-up schedule.
-	// Raised by 281 production and 98 test lines for the How it stands job and
-	// its page case, and the task explanation's certification case. The job
-	// needs the unexported job context, and the cases drive the contact page.
+	// Raised by 281 production and 155 test lines, and 1 test file, for the How
+	// it stands job and its page case, and the task explanation's certification
+	// case and its test. The job needs the unexported job context; the cases
+	// drive the contact page.
 	composeRootProductionLines = 231_660
-	composeRootTestLines       = 361_976
+	composeRootTestLines       = 362_033
 )
 
 // A read under these floors stopped early or read the wrong place, and would
