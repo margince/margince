@@ -90,6 +90,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // the tab that opens it.
   "room.card.title",
   "tab.dealRoom",
+  "search.kind.dealRoom",
   "buyer.eyebrow",
   // Sales nouns Vietnamese borrows: vi writes "Tên deal" and "Pipeline" elsewhere,
   // so translating only these drill-through headers would split the vocabulary.

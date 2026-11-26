@@ -231,7 +231,7 @@ func (r *VocabularyResolver) Resolve(ctx context.Context, targets ...string) (Vo
 		if len(targets) > 0 && !slices.Contains(targets, branch.entity) {
 			continue
 		}
-		if !auth.Allows(ctx, branch.entity, principal.ActionRead) {
+		if !mayRead(ctx, branch.entity) || (branch.dealChild && !mayRead(ctx, entityDeal)) {
 			continue
 		}
 		target, err := r.resolveTarget(ctx, schema, branch.entity)

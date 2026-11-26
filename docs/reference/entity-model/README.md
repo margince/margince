@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 354 |
-| Columns | 4357 |
+| Columns | 4358 |
 | Foreign keys | 618 |
 | Owning areas | 40 |
 
@@ -285,7 +285,7 @@ erDiagram
 | [`deal_product`](deals.md#deal_product) | deals | 9 | 0 |
 | [`deal_risk_day`](deals.md#deal_risk_day) | deals | 7 | 1 |
 | [`deal_risk_verdict`](deals.md#deal_risk_verdict) | deals | 2 | 0 |
-| [`deal_room`](dealrooms.md#deal_room) | dealrooms | 14 | 6 |
+| [`deal_room`](dealrooms.md#deal_room) | dealrooms | 15 | 6 |
 | [`deal_room_comment`](dealrooms.md#deal_room_comment) | dealrooms | 10 | 0 |
 | [`deal_room_document`](dealrooms.md#deal_room_document) | dealrooms | 12 | 2 |
 | [`deal_room_engagement`](dealrooms.md#deal_room_engagement) | dealrooms | 6 | 0 |
