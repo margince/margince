@@ -15306,6 +15306,10 @@
                 "row_count": {
                   "type": "integer",
                   "minimum": 0
+                },
+                "rows_written": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               },
               "required": [

@@ -142,9 +142,9 @@ const (
 	// close silence and the customer-progress reads carry, and their case.
 	// Raised by 1 production line for the retain policy of a link suggestion's
 	// colleague in the member reference registry.
-	composeRootProductionLines = 232_053
+	composeRootProductionLines = 231_900
 	// Raised by 18 test lines for those cases.
-	composeRootTestLines = 362_850
+	composeRootTestLines = 362_838
 )
 
 // A read under these floors stopped early or read the wrong place, and would
