@@ -253,6 +253,8 @@ var parityPathAreas = map[string]string{
 	"/me":                                 "own_profile",
 	"/me/agent-grants":                    "agent_limits",
 	"/me/approval-preferences":            "agent_limits",
+	"/me/chat-identities":                 "own_profile",
+	"/me/chat-identities/{network}":       "own_profile",
 	"/me/mfa":                             "own_security",
 	"/me/sessions":                        "own_security",
 	"/oauth/consent-request":              "agent_clients",

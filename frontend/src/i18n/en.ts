@@ -2228,6 +2228,19 @@ export const en = {
   "systemJob.public_record_preview": "Public record preview",
   "systemJob.agent_resume": "Agent run resume",
   "systemJob.agent_scheduler": "Scheduled agent runs",
+  "systemJob.voice_build": "Writing style build",
+  "systemJob.document_read": "Document reading",
+  "systemJob.extraction_accept": "Extraction accept note",
+  "systemJob.deep_read": "Website read",
+  "systemJob.transcript_read": "Meeting transcript reading",
+  "systemJob.company_name_promotion": "Company name update",
+  "systemJob.contact_share": "Contact share request",
+  "systemJob.task_due_date": "Due date question",
+  "systemJob.employer_change": "Employer change question",
+  "systemJob.deal_scout": "Deal Scout",
+  "systemJob.overnight": "Overnight pass",
+  "systemJob.project_health": "Project health check",
+  "systemJob.tag_scout": "Tag suggestions",
   "systemJob.forecast_chances": "Forecast stage rates",
   "systemJob.assurance_freshness": "Forecast check freshness",
   "systemJob.forecast_call_baseline": "Forecast call baseline",
@@ -3083,6 +3096,9 @@ export const en = {
   "record.notShown": "Not shown",
   "reading.restricted": "Restricted",
   "format.notForecast": "Not forecast",
+  "format.tooLargeExact": "Too large to show exactly",
+  "format.someTooLargeExact":
+    "Some totals are too large to show exactly, so they are left out.",
   "record.chronologyLoading": "Loading change history…",
   // The same word the tab strip uses (`tab.timeline`): the heading over the
   // slot and the tab that opens it name one thing, and two words for it read
@@ -7915,9 +7931,6 @@ export const en = {
   "task.next.reviewProject": "Review project",
   "task.next.reviewContact": "Review contact",
   "task.next.reviewCompany": "Review company",
-  "tasks.whichDeal.legend": "Which deal is the email about?",
-  "tasks.whichDeal.file": "Link email thread to deal",
-  "tasks.whichDeal.filed": "Email thread linked to the deal",
   "today.withheld": "Not included: {sections}. You do not have access to them.",
   "today.source.moments": "Margince findings",
   "today.source.nextSteps": "open tasks",
@@ -8966,8 +8979,6 @@ export const en = {
   "tasks.origin.email_request": "Created from a request in an email.",
   "tasks.origin.which_deal":
     "Created because a captured email fits more than one open deal. Choose the deal it belongs to, or choose “None of these deals”.",
-  "tasks.whichDeal.none": "None of these deals",
-  "tasks.whichDeal.noneDone": "Email kept off these deals",
   "tasks.origin.system": "Created by an automation, not typed by a colleague.",
 
   "analytics.sub":
@@ -12938,6 +12949,9 @@ export const en = {
   "senders.markBusiness": "Mark as business",
   "senders.keepOut": "Exclude",
   "senders.withdraw": "Withdraw my answer",
+  "senders.liftPrivate": "Lift: allow contacts again",
+  "senders.kind.private": "Private",
+  "senders.privateStands": "No contact is made for this sender",
   "senders.keepOutTitle": "Exclude this sender permanently?",
   "senders.keepOutBody":
     "No contact is created, and mail this sender already brought into your mailbox is destroyed. Copies a colleague imported stay theirs.",
@@ -15679,7 +15693,7 @@ export const en = {
   "knowledge.archive": "Archive set",
   "knowledge.archiveConfirm.title": "Archive {name}?",
   "knowledge.archiveConfirm.body":
-    "The set and its documents are no longer searchable. Nothing is deleted.",
+    "The set and its documents are no longer searchable. Nothing is deleted, and Show archived sets brings it back.",
   "knowledge.archiveShipped":
     "This set ships with Margince, so it cannot be archived.",
   "knowledge.uploadShipped":
@@ -15711,6 +15725,13 @@ export const en = {
     "One sentence. It is shown to anyone whose question this set does not cover.",
   "knowledge.searchable": "Searchable",
   "knowledge.reindexingBadge": "Reindexing",
+  "knowledge.edit": "Edit set",
+  "knowledge.edit.title": "Edit {name}",
+  "knowledge.edit.save": "Save",
+  "knowledge.edit.description": "Description",
+  "knowledge.showArchived": "Show archived sets",
+  "knowledge.archivedBadge": "Archived",
+  "knowledge.restore": "Restore set",
   "settings.tab.privacy": "Privacy and retention",
   "verdictPass.subject.senders": "Senders",
   "verdictPass.subject.threads": "Threads",
@@ -17910,6 +17931,20 @@ export const en = {
   "account.pictureEdit": "Edit profile picture",
   "account.pictureSaved": "Picture saved",
   "account.pictureRemoved": "Picture removed",
+  "account.chatWhatsapp": "WhatsApp account",
+  "account.chatTelegram": "Telegram account",
+  "account.chatZalo": "Zalo account",
+  "account.chatHelp":
+    "Confirm your own {network} account. A customer message you forward from it to a company {network} account is then filed for that customer, never for you.",
+  "account.chatCode":
+    "Send this code as a message from your {network} account to a company {network} account within 10 minutes: {code}",
+  "account.chatWaiting":
+    "A code is waiting. Send it from your {network} account to a company {network} account, or start again for a new one.",
+  "account.chatConfirmed": "Confirmed: {account}",
+  "account.chatConfirm": "Confirm with a code",
+  "account.chatRemove": "Remove",
+  "account.chatRemoved": "Account removed",
+  "account.chatFailed": "That did not work. Try again.",
   "account.pictureWrongType":
     "Picture not uploaded. Use a PNG, JPEG or WebP file.",
   "account.pictureTooLarge": "Picture not uploaded. Use a file up to 5 MB.",
@@ -19363,6 +19398,7 @@ export const en = {
     "Someone links a deal, company or contact to another record, or removes a link.",
   "linkSuggestions.title": "Suggested links",
   "linkSuggestions.reason": "{unit}: {reason}",
+  "linkSuggestions.byMargince": "Margince",
   "linkSuggestions.target": "{subject} to {record} ({kind})",
   "linkSuggestions.noSubject": "A message with no subject",
   "linkSuggestions.kind.contact": "contact",

@@ -287,7 +287,8 @@ func TestAReadOnlyPassportSeesTheQueueAndCannotAnswerIt(t *testing.T) {
 // A passport does what its holder could do unaided. Relinking an activity onto
 // a contact, a company or a deal costs no human decision. Filing under a
 // project marks the activity as commercial correspondence. On a passport it
-// waits for a human, and automatic work with no passport behind it is refused.
+// waits for a human, and automatic work with no passport behind it stages it
+// for the colleague it acts for.
 //
 // Each attach after a logged meeting once staged a card the app would never
 // have asked for, which is the shape this holds against.
@@ -365,7 +366,7 @@ func TestAnAgentOnAPassportRelinksWithoutAskingExceptToAProject(t *testing.T) {
 		}
 	})
 
-	t.Run("a project is refused to automatic work", func(t *testing.T) {
+	t.Run("a project from automatic work waits for its colleague", func(t *testing.T) {
 		second, err := invoke("log_activity", `{"kind":"note","body":"relink me later"}`)
 		if err != nil {
 			t.Fatalf("log_activity: %v", err)
@@ -380,9 +381,7 @@ func TestAnAgentOnAPassportRelinksWithoutAskingExceptToAProject(t *testing.T) {
 		}
 		_, err = automatic("relink_activity", `{"activity_id":"`+envelope.Data.ID+
 			`","entity_type":"project","entity_id":"`+project.ID+`"}`)
-		if !isPassportlessStagingRefusal(err) {
-			t.Fatalf("automatic work relinking to a project → %v, want the refusal that it cannot stage", err)
-		}
+		stagedForTheColleague(t, q.Owner, err)
 	})
 }
 

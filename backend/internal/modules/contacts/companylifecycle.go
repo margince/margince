@@ -65,10 +65,8 @@ func (s *Store) SetCompanyLifecycleTx(
 	if err := checkLifecycleWriter(ctx, to); err != nil {
 		return false, err
 	}
-	// The approval executor that drives this is a system principal, for whom the
-	// probe is a no-op; the human's authority over the row was already taken at
-	// decide time. Stated here so the write carries its own scope rather than
-	// depending on every future caller having taken it somewhere else.
+	// The approval executor that drives this is an agent under the decider's
+	// grants, so the probe asks the decider's write scope again at write time.
 	if err := auth.EnsureWritable(ctx, tx, "company", companyID.UUID); err != nil {
 		return false, err
 	}

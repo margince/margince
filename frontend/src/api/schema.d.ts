@@ -7020,10 +7020,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The records an extension suggests messages belong to, waiting for a reader to decide.
+         * The link suggestions waiting for the caller to decide.
          * @description An extension may suggest which deal, company, contact or project a message belongs to. A
-         *     suggestion attaches nothing. It waits here until a reader accepts or rejects it. Core makes
-         *     none of its own: this queue holds only what an extension proposed.
+         *     suggestion attaches nothing. It waits here until a reader accepts or rejects it. Margince
+         *     itself asks one question here: when several open deals fit a captured mail, it suggests each
+         *     of them to the one colleague the mailbox confirms is responsible. Such a suggestion has no
+         *     `unit`, and only that colleague sees and decides it. An agent acting for a colleague sees
+         *     and decides what that colleague would, and never another colleague's question.
          *
          *     Oldest first, at most 50. A decided suggestion leaves the queue, so asking again shows the
          *     next ones. A suggestion is left out when the caller may not read its message or its target,
@@ -7051,7 +7054,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Accept a suggestion, which files the message under the record it names.
+         * Accept a suggestion, filing the message under its record.
          * @description Files the message under the suggested record through the same relink as any other filing,
          *     and closes the suggestion in the same transaction. The caller needs the right to update the
          *     message and to attach to the target. Accepting a suggestion that is already accepted is the
@@ -7081,6 +7084,10 @@ export interface paths {
          * @description Closes the suggestion and attaches nothing. The same target is not proposed for the same
          *     message a second time. Rejecting a suggestion that is already rejected is the same success.
          *     An accepted one answers `409`.
+         *
+         *     Rejecting a deal Margince itself suggested also declines that deal, as `declineActivityDeal`
+         *     does: on the message and on each unfiled message of its conversation, so no automatic pass
+         *     files them there again.
          */
         post: operations["rejectLinkSuggestion"];
         delete?: never;
@@ -7116,9 +7123,10 @@ export interface paths {
          *     as a member's does. `project_kept` says so.
          *
          *     Without `deal_id`, the answer is "none of them" to the open "Which deal is this about?"
-         *     question of the message's conversation. Each deal the question offered is declined on the
-         *     message and on each unfiled message of the conversation, and the question is done. A
-         *     message with no open question answers 422.
+         *     question of the message's conversation: the deals Margince suggested to the caller in the
+         *     link suggestion queue. Each of them is declined on the message and on each unfiled message
+         *     of the conversation, and the suggestions are rejected. A message with no open question for
+         *     the caller answers 422.
          *
          *     Declining a deal already declined is the same success and writes nothing. With `deal_id`,
          *     the caller needs the right to change the deal too, as for `setActivityDealRelevance`.
@@ -26161,6 +26169,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/chat-identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your own chat accounts that are confirmed, or waiting for their code.
+         * @description One row per network where you have a confirmed account or an unexpired code. The account
+         *     is shown with all but its last digits hidden. A confirmed account lets the company's chat
+         *     accounts recognise you, so a customer message you forward is filed for that customer and
+         *     never for you.
+         */
+        get: operations["listMyChatIdentities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/chat-identities/{network}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                network: "whatsapp" | "telegram" | "zalo";
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get a code that confirms your account on one chat network.
+         * @description Returns a short code once, valid for ten minutes. Send exactly that code as a message from
+         *     your own account to any connected company account on the same network. A second start
+         *     replaces the first code. The code is stored only as a hash.
+         */
+        post: operations["startMyChatVerification"];
+        /**
+         * Forget your confirmed account and any waiting code on one network.
+         * @description Removing a network where you have nothing is not an error.
+         */
+        delete: operations["removeMyChatIdentity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/ai-activity": {
         parameters: {
             query?: never;
@@ -27524,6 +27583,31 @@ export interface paths {
         patch: operations["updateCorpus"];
         trace?: never;
     };
+    "/knowledge/corpora/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bring an archived corpus back with everything filed in it.
+         * @description The undo half of `archiveCorpus`. The set, its documents and their passages return in one transaction, and the ask finds the passages again.
+         *     Restoring a set that is not archived succeeds and changes nothing, so a retried call after a lost response answers the same way as the first.
+         *     It does NOT make the set the default again. The default moved elsewhere when the set was archived, and `updateCorpus` says which set the palette asks.
+         */
+        post: operations["restoreCorpus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/knowledge/corpora/{id}/documents": {
         parameters: {
             query?: never;
@@ -27928,6 +28012,33 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {string} */
+        ChatNetwork: "whatsapp" | "telegram" | "zalo";
+        ChatIdentity: {
+            network: components["schemas"]["ChatNetwork"];
+            /** @description The confirmed account with all but its last digits hidden. Absent while only a code waits. */
+            account_hint?: string;
+            /**
+             * Format: date-time
+             * @description When the account was confirmed.
+             */
+            verified_at?: string;
+            /**
+             * Format: date-time
+             * @description When the waiting code stops working.
+             */
+            expires_at?: string;
+        };
+        ChatIdentityList: {
+            data: components["schemas"]["ChatIdentity"][];
+        };
+        ChatVerificationStarted: {
+            network: components["schemas"]["ChatNetwork"];
+            /** @description Shown once. Send it as a message from your own account. */
+            code: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
         DealViability: {
             /** Format: uuid */
             deal_id: string;
@@ -31312,10 +31423,11 @@ export interface components {
             /** @description The ledger's own lifecycle for this sender. */
             status?: string;
             /**
-             * @description What YOU decided instead, absent when you have not.
+             * @description What YOU decided instead, absent when you have not. `personal` is the standing decision a
+             *     private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
              * @enum {string}
              */
-            decision?: "business" | "keep_out";
+            decision?: "business" | "keep_out" | "personal";
             /**
              * @description What your decision overruled. Present so the page can say you corrected something,
              *     rather than showing only the answer that now stands.
@@ -33678,8 +33790,9 @@ export interface components {
              * @description Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
              */
             switched: number;
-            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            /** @description The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step's own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read. */
             switched_to?: string;
+            switched_to_certification?: components["schemas"]["AiRouteCertification"];
         };
         AiDeferredWork: {
             carrier: string;
@@ -45874,9 +45987,21 @@ export interface components {
             entity_id: string;
             /** @description The name of the suggested record, for the screen. Absent on a decision's answer. */
             entity_name?: string | null;
-            /** @description The extension that proposed it. */
-            unit: string;
-            /** @description One short sentence from the extension on why. */
+            /**
+             * Format: int64
+             * @description For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+             */
+            deal_amount_minor?: number | null;
+            /** @description The currency of `deal_amount_minor`, withheld with it. */
+            deal_currency?: string | null;
+            /**
+             * Format: date
+             * @description For a suggested deal, when it is expected to close. Absent on a decision's answer.
+             */
+            deal_expected_close_date?: string | null;
+            /** @description The extension that proposed it. Null when Margince itself asks which deal a mail is about. */
+            unit: string | null;
+            /** @description One short sentence from the extension on why, or Margince's own question. */
             reason: string;
             score: number;
             /** @enum {string} */
@@ -45942,7 +46067,7 @@ export interface components {
             project_unfiled: boolean;
             /** @description A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project. */
             project_kept: boolean;
-            /** @description The open deal questions of the conversation this call marked done. */
+            /** @description The messages of the conversation whose open deal question this call closed. */
             questions_closed: number;
         };
         SetActivityDispositionRequest: {
@@ -53225,7 +53350,10 @@ export interface components {
         AnalyticsAnswer: {
             /** @description What each value in a row means, in order. */
             columns: string[];
-            /** @description One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own. */
+            /**
+             * @description One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
+             *     A number past ±(2^53−1) is null, and `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the row is answered.
+             */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -54986,7 +55114,7 @@ export interface components {
                 [key: string]: unknown;
             };
             columns: string[];
-            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. */
+            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. A total past ±(2^53−1) is null, and the row's `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the report is answered. */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -55031,7 +55159,7 @@ export interface components {
             rows: {
                 [key: string]: unknown;
             }[];
-            /** @description The requested aggregates recomputed over exactly these source rows — equals the explained cell. */
+            /** @description The requested aggregates recomputed over exactly these source rows — equals the explained cell. A total past ±(2^53−1) is null and named in `_out_of_range`, as on the report row. */
             aggregates?: {
                 [key: string]: unknown;
             };
@@ -66006,6 +66134,11 @@ export interface components {
             coverage: components["schemas"]["KnowledgeCoverage"];
             /** Format: date-time */
             created_at: string;
+            /**
+             * Format: date-time
+             * @description When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set, and it takes the `knowledge_corpus` delete grant that archives and restores one.
+             */
+            archived_at?: string | null;
         };
         /** @description Every corpus, unpaged. A workspace defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a promise with no producer behind it. */
         KnowledgeCorpusList: {
@@ -107056,6 +107189,78 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listMyChatIdentities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Your chat accounts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatIdentityList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    startMyChatVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                network: "whatsapp" | "telegram" | "zalo";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The code and when it stops working. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatVerificationStarted"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    removeMyChatIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                network: "whatsapp" | "telegram" | "zalo";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getMyAiActivity: {
         parameters: {
             query?: {
@@ -108913,7 +109118,10 @@ export interface operations {
     };
     listCorpora: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include soft-deleted (archived) rows. Default false. */
+                include_archived?: components["parameters"]["IncludeArchived"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -109053,6 +109261,34 @@ export interface operations {
         };
         responses: {
             /** @description The corpus. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeCorpus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NameTakenConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreCorpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restored corpus. */
             200: {
                 headers: {
                     [name: string]: unknown;

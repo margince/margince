@@ -142,6 +142,7 @@
         "remove_consumer_mail_domain": "remove_consumer_mail_domain",
         "remove_workspace_email_domain": "remove_workspace_email_domain",
         "reopen_domain": "reopen_withheld_domain",
+        "restore_corpus": "restore_corpus",
         "restore_owner_identity": "restore_owner_identity",
         "set_blocked_domain": "set_blocked_domain",
         "set_channel_verbosity": "set_channel_verbosity",

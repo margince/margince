@@ -2309,6 +2309,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.public_record_preview": "Öffentliche Datensatzvorschau",
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
+  "systemJob.voice_build": "Ablauf der Schreibstil-Analyse",
+  "systemJob.document_read": "Ablauf des Dokument-Auslesens",
+  "systemJob.extraction_accept": "Notiz zur übernommenen Extraktion",
+  "systemJob.deep_read": "Website-Analyse",
+  "systemJob.transcript_read": "Lesen des Gesprächsprotokolls",
+  "systemJob.company_name_promotion": "Aktualisierung des Firmennamens",
+  "systemJob.contact_share": "Anfrage zum Teilen eines Kontakts",
+  "systemJob.task_due_date": "Frage zum Fälligkeitsdatum",
+  "systemJob.employer_change": "Frage zum Arbeitgeberwechsel",
+  "systemJob.deal_scout": "Deal Scout",
+  "systemJob.overnight": "Nächtlicher Durchlauf",
+  "systemJob.project_health": "Projektzustand-Prüfung",
+  "systemJob.tag_scout": "Tag-Vorschläge",
   "systemJob.forecast_chances": "Prognose-Phasenquoten",
   "systemJob.assurance_freshness": "Aktualität der Prognoseprüfung",
   "systemJob.forecast_call_baseline": "Ausgangsstand einer Prognoseabgabe",
@@ -3177,6 +3190,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.notShown": "Nicht angezeigt",
   "reading.restricted": "Eingeschränkt",
   "format.notForecast": "Nicht prognostiziert",
+  "format.tooLargeExact": "Zu groß für eine exakte Anzeige",
+  "format.someTooLargeExact":
+    "Einige Summen sind zu groß für eine exakte Anzeige und werden deshalb weggelassen.",
   "record.chronologyLoading": "Änderungsverlauf wird geladen…",
   "record.timeline": "Verlauf",
   "record.edit": "Bearbeiten",
@@ -7908,9 +7924,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "task.next.reviewProject": "Projekt prüfen",
   "task.next.reviewContact": "Kontakt prüfen",
   "task.next.reviewCompany": "Unternehmen prüfen",
-  "tasks.whichDeal.legend": "Um welchen Deal geht es in der E-Mail?",
-  "tasks.whichDeal.file": "E-Mail-Thread dem Deal zuordnen",
-  "tasks.whichDeal.filed": "E-Mail-Thread dem Deal zugeordnet",
   "today.withheld":
     "Nicht enthalten: {sections}. Du hast keinen Zugriff darauf.",
   "today.source.moments": "Erkenntnisse von Margince",
@@ -8993,8 +9006,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.email_request": "Erstellt aus einer Anfrage in einer E-Mail.",
   "tasks.origin.which_deal":
     "Erstellt, weil eine erfasste E-Mail zu mehr als einem offenen Deal passt. Wähle den Deal, zu dem sie gehört, oder „Keiner dieser Deals“.",
-  "tasks.whichDeal.none": "Keiner dieser Deals",
-  "tasks.whichDeal.noneDone": "E-Mail keinem dieser Deals zugeordnet",
   "tasks.origin.system":
     "Von einer Automatisierung erstellt, nicht von einem Teammitglied eingegeben.",
 
@@ -13010,6 +13021,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "senders.markBusiness": "Als geschäftlich markieren",
   "senders.keepOut": "Ausschließen",
   "senders.withdraw": "Antwort zurückziehen",
+  "senders.liftPrivate": "Aufheben: Kontakte wieder erlauben",
+  "senders.kind.private": "Privat",
+  "senders.privateStands":
+    "Für diese Absendeadresse wird kein Kontakt erstellt",
   "senders.keepOutTitle": "Diese Absendeadresse dauerhaft ausschließen?",
   "senders.keepOutBody":
     "Es wird kein Kontakt erstellt, und E-Mails von dieser Absendeadresse, die bereits in dein Postfach gelangt sind, werden vernichtet. Kopien, die ein Teammitglied importiert hat, bleiben bei diesem Teammitglied.",
@@ -15774,7 +15789,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "knowledge.archive": "Sammlung archivieren",
   "knowledge.archiveConfirm.title": "{name} archivieren?",
   "knowledge.archiveConfirm.body":
-    "Die Sammlung und ihre Dokumente sind nicht mehr durchsuchbar. Es wird nichts gelöscht.",
+    "Die Sammlung und ihre Dokumente sind nicht mehr durchsuchbar. Es wird nichts gelöscht, und „Archivierte Sammlungen zeigen“ holt sie zurück.",
   "knowledge.archiveShipped":
     "Diese Sammlung kann nicht archiviert werden, da sie mit Margince ausgeliefert wird.",
   "knowledge.uploadShipped":
@@ -15807,6 +15822,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Satz. Der Satz wird allen gezeigt, deren Frage diese Sammlung nicht abdeckt.",
   "knowledge.searchable": "Durchsuchbar",
   "knowledge.reindexingBadge": "Wird neu indexiert",
+  "knowledge.edit": "Sammlung bearbeiten",
+  "knowledge.edit.title": "{name} bearbeiten",
+  "knowledge.edit.save": "Speichern",
+  "knowledge.edit.description": "Beschreibung",
+  "knowledge.showArchived": "Archivierte Sammlungen zeigen",
+  "knowledge.archivedBadge": "Archiviert",
+  "knowledge.restore": "Sammlung wiederherstellen",
   "settings.tab.privacy": "Datenschutz und Aufbewahrung",
   "verdictPass.subject.senders": "Absendeadressen",
   "verdictPass.subject.threads": "Threads",
@@ -18091,6 +18113,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "account.pictureEdit": "Profilbild bearbeiten",
   "account.pictureSaved": "Bild gespeichert",
   "account.pictureRemoved": "Bild entfernt",
+  "account.chatWhatsapp": "WhatsApp-Konto",
+  "account.chatTelegram": "Telegram-Konto",
+  "account.chatZalo": "Zalo-Konto",
+  "account.chatHelp":
+    "Bestätige dein eigenes {network}-Konto. Eine Kundennachricht, die du von dort an ein {network}-Konto des Unternehmens weiterleitest, wird dann für diesen Kunden abgelegt, nie für dich.",
+  "account.chatCode":
+    "Sende diesen Code innerhalb von 10 Minuten als Nachricht von deinem {network}-Konto an ein {network}-Konto des Unternehmens: {code}",
+  "account.chatWaiting":
+    "Ein Code wartet. Sende ihn von deinem {network}-Konto an ein {network}-Konto des Unternehmens, oder starte neu für einen neuen Code.",
+  "account.chatConfirmed": "Bestätigt: {account}",
+  "account.chatConfirm": "Mit Code bestätigen",
+  "account.chatRemove": "Entfernen",
+  "account.chatRemoved": "Konto entfernt",
+  "account.chatFailed": "Das hat nicht geklappt. Versuche es noch einmal.",
   "account.pictureWrongType":
     "Bild nicht hochgeladen. Nimm eine PNG-, JPEG- oder WebP-Datei.",
   "account.pictureTooLarge":
@@ -19594,6 +19630,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand verknüpft einen Deal, ein Unternehmen oder einen Kontakt mit einem anderen Datensatz oder entfernt eine Verknüpfung.",
   "linkSuggestions.title": "Verknüpfungsvorschläge",
   "linkSuggestions.reason": "{unit}: {reason}",
+  "linkSuggestions.byMargince": "Margince",
   "linkSuggestions.target": "{subject} zu {record} ({kind})",
   "linkSuggestions.noSubject": "Eine Nachricht ohne Betreff",
   "linkSuggestions.kind.contact": "Kontakt",

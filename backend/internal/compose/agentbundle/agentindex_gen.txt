@@ -352,6 +352,9 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /activities/{id}/meeting-brief` | getMeetingBrief | The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands. | Read records | at once |
 | `GET /activities/{id}/pipeline` | readActivityPipelineTrace | Every ingress stage this message passed through, and why each did or did not run. | Read records | at once |
 | `POST /activities/{id}/relink` | relinkActivity | Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving). | Change records | may wait for approval |
+| `GET /link-suggestions` | listLinkSuggestions | The link suggestions waiting for the caller to decide. | Read records | at once |
+| `POST /link-suggestions/{id}/accept` | acceptLinkSuggestion | Accept a suggestion, filing the message under its record. | Change records | at once |
+| `POST /link-suggestions/{id}/reject` | rejectLinkSuggestion | Reject a suggestion. The message stays where it is, and the suggestion is not offered again. | Change records | at once |
 | `POST /activities/{id}/deal-decline` | declineActivityDeal | Say a captured message is not about a deal, or about none of the deals its question offered. | Change records | at once |
 | `PUT /activities/{id}/deal-relevance` | setActivityDealRelevance | Say whether an activity linked to a deal is about that deal, or take that back. | Change records | at once |
 | `GET /activities/{id}/project-filing` | getActivityProjectFiling | What filing this activity under a project did to its retention, and whether it can be undone. | Read records | at once |
@@ -746,6 +749,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /knowledge/corpora/{id}` | readCorpus | One corpus and how much of it is searchable. | Read records | at once |
 | `PATCH /knowledge/corpora/{id}` | updateCorpus | Edit a corpus — its words, its floor, or which one the palette asks. | Change records | at once |
 | `DELETE /knowledge/corpora/{id}` | archiveCorpus | Archive a corpus and everything filed in it. | Change records | at once |
+| `POST /knowledge/corpora/{id}/restore` | restoreCorpus | Bring an archived corpus back with everything filed in it. | Change records | at once |
 | `POST /knowledge/corpora/{id}/documents` | uploadCorpusDocument | Add a document to this corpus. | Change records | at once |
 | `GET /knowledge/corpora/{id}/documents` | listCorpusDocuments | The documents filed in this corpus, and how far each one's ingest got. | Read records | at once |
 | `GET /knowledge/documents/{id}` | downloadCorpusDocument | Download a document's own bytes. | Read records | at once |

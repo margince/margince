@@ -74,9 +74,9 @@ func TestCaptureAsksWhenAStakeholderHoldsSeatsAtTwoCompanies(t *testing.T) {
 	if n, _ := whichDealQuestions(t, e); n != 1 {
 		t.Fatalf("%d deal questions for two seats, want exactly 1", n)
 	}
-	if n := countRows(t, e, `SELECT count(*) FROM activity
-		 WHERE source_system = 'which_deal' AND jsonb_array_length(raw->'offered_deal_ids') = 2`); n != 1 {
-		t.Fatalf("%d questions offer both deals, want 1", n)
+	if n := countRows(t, e, `SELECT count(*) FROM activity_link_suggestion
+		 WHERE unit IS NULL AND entity_type = 'deal' AND status = 'pending'`); n != 2 {
+		t.Fatalf("the question suggests %d deals, want both", n)
 	}
 }
 

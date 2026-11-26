@@ -656,7 +656,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `address` | `text` | yes |  |
-| `decision` | `text` | yes | One of `business`, `keep_out`. |
+| `decision` | `text` | yes | One of `business`, `keep_out`, `personal`. |
 | `overruled_kind` | `text` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `captured_by` | `text` |  | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -670,7 +670,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `capture_sender_override_address_is_canonical`: `CHECK ((address = lower(btrim(address))))`
-- `capture_sender_override_decision_check`: `CHECK ((decision = ANY (ARRAY['business', 'keep_out'])))`
+- `capture_sender_override_decision_check`: `CHECK ((decision = ANY (ARRAY['business', 'keep_out', 'personal'])))`
 - `capture_sender_override_user_address_key`: `UNIQUE (user_id, address)`
 
 **Indexes**

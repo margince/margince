@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 250587,
+    "tool_catalog_bytes": 250980,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 64052,
+    "approx_wire_tokens_total": 64150,
     "largest_tool_bytes": 16198,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 52266,
-      "input_schema_bytes": 152002,
+      "description_bytes": 52314,
+      "input_schema_bytes": 152347,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 204268
+      "description_plus_input_schema_bytes": 204661
     }
   },
   "tools": {
@@ -406,13 +406,14 @@
           "readOnlyHint": false,
           "title": "Log, plan and file activities"
         },
-        "description": "Log, plan and file activities, and work the mail, drafts and documents on them. log records what already happened; one the user only tells you about is logged from what they said, saying so, without its exact words. relink files one activity under another record too, and relink_many a named set; with replace_existing_of_type they move it off the old record of that type instead. relink and relink_many usually run at once; filing under a project, or a move the installation's policy holds, answers staged with an approval id, and nothing has moved until the retry answers. Tell the user before you file under a project, which only a member can undo from the activity. Before log, read the record's recent activity with read_context about catch_up: a call or meeting already on it is reported as there, never logged a second time. attach checks the record first; read list_documents before attaching the same file again. A logged meeting names who takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book a meeting still to come, change_state with move_deal when the same event moves a deal, so move and note are one change, and change_reports record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for accept_document_fields, archive_document, assign_inquiry, attach, attach_link, bring_back, cancel_send, check_new_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, log, preview_inquiry_assignment, preview_sign_off, read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per call from its arguments for relink, relink_many; ask the user first for the actions archive_document, assign_inquiry.)",
+        "description": "Log, plan and file activities, and work the mail, drafts and documents on them. log records what already happened; one the user only tells you about is logged from what they said, saying so, without its exact words. relink files one activity under another record too, and relink_many a named set; with replace_existing_of_type they move it off the old record of that type instead. relink and relink_many usually run at once; filing under a project, or a move the installation's policy holds, answers staged with an approval id, and nothing has moved until the retry answers. Tell the user before you file under a project, which only a member can undo from the activity. Before log, read the record's recent activity with read_context about catch_up: a call or meeting already on it is reported as there, never logged a second time. attach checks the record first; read list_documents before attaching the same file again. A logged meeting names who takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book a meeting still to come, change_state with move_deal when the same event moves a deal, so move and note are one change, and change_reports record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry, attach, attach_link, bring_back, cancel_send, check_new_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, log, preview_inquiry_assignment, preview_sign_off, read_document_fields, read_transcript, ready, reject_link_suggestion, request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per call from its arguments for relink, relink_many; ask the user first for the actions archive_document, assign_inquiry.)",
         "inputSchema": {
           "properties": {
             "action": {
-              "description": "accept_document_fields: Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only)\narchive_document: Archive an attachment (soft delete)\nassign_inquiry: Take an inquiry or hand its lead and this task to a colleague in one transaction\nattach: Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab, or on one activity such as the meeting it came from — use it whenever the user wants a file kept on a record, and never save a file's text as a note instead\nattach_link: Add a web link to a record's documents\nbring_back: Pick the message back up — the undo behind every set-aside verb\ncancel_send: Withdraw a scheduled message before it fires\ncheck_new_send: Would a new message with no thread behind it be allowed, and on what ground\ncheck_send: Would this reply be allowed, and on what ground — asked before a word is typed\ndeal_relevance: Say whether an activity linked to a deal is about that deal, or take that back\ndecline_deal: Say a captured message is not about a deal, or about none of the deals its question offered\ndiscard_draft: Discard one of the caller's unsent messages\nfile_channel_message: File a summary of one message in a record's channel, or of its thread, as a note\nhide_document: Stop listing a captured file on this deal without touching the file\nlog: Record something that happened — a call, a meeting, a note, a message — on every record it was about\npreview_inquiry_assignment: Show the inquiry task and record ownership before taking or assigning it\npreview_sign_off: The sign-off a send of this message would append beneath it\nread_document_fields: Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields\nread_transcript: Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals\nready: Say the user is ready for a meeting they attend, so their Worklist stops asking them to prepare it\nrelink: Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none\nrelink_many: Move up to 500 named activities onto one record, all or nothing\nrequest_document_access: Request access to a restricted attachment (audit row only — no notification system)\nreschedule_send: Move a scheduled message to a different moment\nsave_draft: Save the caller's unsent message for one anchor, replacing what was saved before\nset_aside: Put a waiting message down, so the Worklist stops offering it\nset_audience: Limit (or re-open) who may see this activity's content\nset_document_details: Set a document's category, title, state or supersedes pointer\nset_thread_audience: Share a thread with the team, or keep it private\nshow_document: List the file on this deal again\ntask: Put a to-do on someone's list: what is owed, by whom, on which records\nunready: Take back the user's \"I'm ready\" for a meeting",
+              "description": "accept_document_fields: Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only)\naccept_link_suggestion: Accept a suggestion, filing the message under its record\narchive_document: Archive an attachment (soft delete)\nassign_inquiry: Take an inquiry or hand its lead and this task to a colleague in one transaction\nattach: Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab, or on one activity such as the meeting it came from — use it whenever the user wants a file kept on a record, and never save a file's text as a note instead\nattach_link: Add a web link to a record's documents\nbring_back: Pick the message back up — the undo behind every set-aside verb\ncancel_send: Withdraw a scheduled message before it fires\ncheck_new_send: Would a new message with no thread behind it be allowed, and on what ground\ncheck_send: Would this reply be allowed, and on what ground — asked before a word is typed\ndeal_relevance: Say whether an activity linked to a deal is about that deal, or take that back\ndecline_deal: Say a captured message is not about a deal, or about none of the deals its question offered\ndiscard_draft: Discard one of the caller's unsent messages\nfile_channel_message: File a summary of one message in a record's channel, or of its thread, as a note\nhide_document: Stop listing a captured file on this deal without touching the file\nlog: Record something that happened — a call, a meeting, a note, a message — on every record it was about\npreview_inquiry_assignment: Show the inquiry task and record ownership before taking or assigning it\npreview_sign_off: The sign-off a send of this message would append beneath it\nread_document_fields: Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields\nread_transcript: Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals\nready: Say the user is ready for a meeting they attend, so their Worklist stops asking them to prepare it\nreject_link_suggestion: Reject a suggestion\nrelink: Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none\nrelink_many: Move up to 500 named activities onto one record, all or nothing\nrequest_document_access: Request access to a restricted attachment (audit row only — no notification system)\nreschedule_send: Move a scheduled message to a different moment\nsave_draft: Save the caller's unsent message for one anchor, replacing what was saved before\nset_aside: Put a waiting message down, so the Worklist stops offering it\nset_audience: Limit (or re-open) who may see this activity's content\nset_document_details: Set a document's category, title, state or supersedes pointer\nset_thread_audience: Share a thread with the team, or keep it private\nshow_document: List the file on this deal again\ntask: Put a to-do on someone's list: what is owed, by whom, on which records\nunready: Take back the user's \"I'm ready\" for a meeting",
               "enum": [
                 "accept_document_fields",
+                "accept_link_suggestion",
                 "archive_document",
                 "assign_inquiry",
                 "attach",
@@ -432,6 +433,7 @@
                 "read_document_fields",
                 "read_transcript",
                 "ready",
+                "reject_link_suggestion",
                 "relink",
                 "relink_many",
                 "request_document_access",
@@ -588,7 +590,7 @@
               "type": "object"
             },
             "id": {
-              "description": "accept_document_fields, archive_document, assign_inquiry, bring_back, cancel_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, preview_inquiry_assignment, read_document_fields, read_transcript, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
+              "description": "accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry, bring_back, cancel_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, preview_inquiry_assignment, read_document_fields, read_transcript, reject_link_suggestion, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
               "type": "string"
             },
             "idempotency_key": {
@@ -808,7 +810,7 @@
         "inputSchema": {
           "properties": {
             "action": {
-              "description": "read_workspace topic actions lists each action's body\nadd_consumer_mail_domain: Add a consumer-mail domain, or carve one out\nadd_counterparty_hold: Keep one party's mail to the contacts on it\nadd_exclusion: Keep an address or a domain out of capture\nadd_owner_identity: Declare another address as your own\nadd_workspace_email_domain: Register one of the workspace's own email domains\narchive_corpus: Archive a corpus and everything filed in it\ncancel_backfill: Cancel a running backfill — captured rows are retained\ncancel_import_run: Cancel a draft, a test run, or a report nobody will approve\ncreate_corpus: Define a document corpus\ndiscard_domain: Answer an open domain question by excluding the domain from your own capture\ndisconnect_channel: Disconnect a messaging channel (archives the binding and destroys the credential)\ndisconnect_mailbox: Disconnect the calling user's mail/calendar capture\ndismiss_mailbox_silence: Dismiss the owner's current mailbox silence warning\nimport_linkedin_connections: Import your own LinkedIn connections export\nimport_vcards: Import a .vcf address-card file\nkeep_domain_as_company: Answer an open domain question by keeping the company\nkeep_domain_as_vendor: Answer an open vendor question by keeping the vendor verdict\nlift_counterparty_hold: Lift a counterparty hold\nlift_exclusion: Lift an exclusion\nremove_consumer_mail_domain: Withdraw a consumer-mail list entry (admin/ops)\nremove_workspace_email_domain: Stop treating a domain as the workspace's own\nreopen_domain: Ask about an undecided domain again (admin/ops)\nrestore_owner_identity: Put back one of your own addresses you just withdrew\nset_blocked_domain: Block a domain, or unblock one\nset_channel_verbosity: Choose how much Margince posts into a record's channel\nset_context_tag: Set the word this connector files what it captures under\nset_history_baseline: Set the date this mailbox's automatic commitment suggestions start from\nset_mail_posture: Set what this mailbox asks of the mail it brings in\nset_sender_decision: Overrule what the classifier decided about a sender\nset_signature_enrichment: Set this mailbox's own answer to the nightly signature pass\nshare_counterparty_hold_history: Re-open the mail the caller's counterparty holds already caught\nundo_import_run: Reverse a completed CSV import run\nunlink_channel: Stop syncing a record with its chat channel\nupdate_corpus: Edit a corpus — its words, its floor, or which one the palette asks\nupdate_import_run: Save choices on a draft import run\nupload_corpus_document: Add a document to this corpus\nvalidate_import_run: Test a draft import run against the estate\nwithdraw_owner_identity: Withdraw one of your own addresses\nwithdraw_sender_decision: Withdraw your decision and hand the sender back to the classifier",
+              "description": "read_workspace topic actions lists each action's body\nadd_consumer_mail_domain: Add a consumer-mail domain, or carve one out\nadd_counterparty_hold: Keep one party's mail to the contacts on it\nadd_exclusion: Keep an address or a domain out of capture\nadd_owner_identity: Declare another address as your own\nadd_workspace_email_domain: Register one of the workspace's own email domains\narchive_corpus: Archive a corpus and everything filed in it\ncancel_backfill: Cancel a running backfill — captured rows are retained\ncancel_import_run: Cancel a draft, a test run, or a report nobody will approve\ncreate_corpus: Define a document corpus\ndiscard_domain: Answer an open domain question by excluding the domain from your own capture\ndisconnect_channel: Disconnect a messaging channel (archives the binding and destroys the credential)\ndisconnect_mailbox: Disconnect the calling user's mail/calendar capture\ndismiss_mailbox_silence: Dismiss the owner's current mailbox silence warning\nimport_linkedin_connections: Import your own LinkedIn connections export\nimport_vcards: Import a .vcf address-card file\nkeep_domain_as_company: Answer an open domain question by keeping the company\nkeep_domain_as_vendor: Answer an open vendor question by keeping the vendor verdict\nlift_counterparty_hold: Lift a counterparty hold\nlift_exclusion: Lift an exclusion\nremove_consumer_mail_domain: Withdraw a consumer-mail list entry (admin/ops)\nremove_workspace_email_domain: Stop treating a domain as the workspace's own\nreopen_domain: Ask about an undecided domain again (admin/ops)\nrestore_corpus: Bring an archived corpus back with everything filed in it\nrestore_owner_identity: Put back one of your own addresses you just withdrew\nset_blocked_domain: Block a domain, or unblock one\nset_channel_verbosity: Choose how much Margince posts into a record's channel\nset_context_tag: Set the word this connector files what it captures under\nset_history_baseline: Set the date this mailbox's automatic commitment suggestions start from\nset_mail_posture: Set what this mailbox asks of the mail it brings in\nset_sender_decision: Overrule what the classifier decided about a sender\nset_signature_enrichment: Set this mailbox's own answer to the nightly signature pass\nshare_counterparty_hold_history: Re-open the mail the caller's counterparty holds already caught\nundo_import_run: Reverse a completed CSV import run\nunlink_channel: Stop syncing a record with its chat channel\nupdate_corpus: Edit a corpus — its words, its floor, or which one the palette asks\nupdate_import_run: Save choices on a draft import run\nupload_corpus_document: Add a document to this corpus\nvalidate_import_run: Test a draft import run against the estate\nwithdraw_owner_identity: Withdraw one of your own addresses\nwithdraw_sender_decision: Withdraw your decision and hand the sender back to the classifier",
               "enum": [
                 "add_consumer_mail_domain",
                 "add_counterparty_hold",
@@ -832,6 +834,7 @@
                 "remove_consumer_mail_domain",
                 "remove_workspace_email_domain",
                 "reopen_domain",
+                "restore_corpus",
                 "restore_owner_identity",
                 "set_blocked_domain",
                 "set_channel_verbosity",
@@ -8774,7 +8777,7 @@
               "type": "string"
             },
             "include_archived": {
-              "description": "legal_entities, pipelines, roles, saved_views, web_forms only",
+              "description": "corpora, legal_entities, pipelines, roles, saved_views, web_forms only",
               "type": "boolean"
             },
             "include_inactive": {
@@ -9137,6 +9140,7 @@
                 "legal_entity_members",
                 "legal_holds",
                 "legal_review_settings",
+                "link_suggestions",
                 "link_types",
                 "list_filters",
                 "member",
@@ -10875,6 +10879,14 @@
           "route": "POST /v1/attachments/{id}/extraction:accept"
         },
         {
+          "action": "accept_link_suggestion",
+          "does": "Accept a suggestion, filing the message under its record.",
+          "ids": [
+            "id"
+          ],
+          "route": "POST /v1/link-suggestions/{id}/accept"
+        },
+        {
           "action": "archive_document",
           "ask_user_first": true,
           "does": "Archive an attachment (soft delete).",
@@ -11720,6 +11732,14 @@
           },
           "does": "Say the user is ready for a meeting they attend, so their Worklist stops asking them to prepare it. Only for a meeting the user attends, and only at the preparation revision read_context with about=meeting answered: a meeting that changed since answers a conflict. It holds for the user alone, and a new start, agenda or guest list asks them again. read_context with about=meeting reads the meeting and its current preparation revision; change_activities with action=unready takes the confirmation back. Keep the revision you confirmed; the undo sends it.",
           "route": "in process: send body's members at the top level, beside action"
+        },
+        {
+          "action": "reject_link_suggestion",
+          "does": "Reject a suggestion. The message stays where it is, and the suggestion is not offered again.",
+          "ids": [
+            "id"
+          ],
+          "route": "POST /v1/link-suggestions/{id}/reject"
         },
         {
           "action": "relink",
@@ -13864,6 +13884,14 @@
             "domain"
           ],
           "route": "POST /v1/capture/blocked-domains/{domain}/reopen"
+        },
+        {
+          "action": "restore_corpus",
+          "does": "Bring an archived corpus back with everything filed in it.",
+          "ids": [
+            "id"
+          ],
+          "route": "POST /v1/knowledge/corpora/{id}/restore"
         },
         {
           "action": "restore_owner_identity",
@@ -27398,6 +27426,12 @@
         {
           "action": "corpora",
           "does": "The document corpora this workspace has defined.",
+          "query": [
+            {
+              "name": "include_archived",
+              "type": "boolean"
+            }
+          ],
           "route": "GET /v1/knowledge/corpora"
         },
         {
@@ -27705,6 +27739,11 @@
           "action": "legal_review_settings",
           "does": "Whether legal review is switched on for this installation.",
           "route": "GET /v1/legal-reviews/settings"
+        },
+        {
+          "action": "link_suggestions",
+          "does": "The link suggestions waiting for the caller to decide.",
+          "route": "GET /v1/link-suggestions"
         },
         {
           "action": "link_types",

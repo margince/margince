@@ -50,7 +50,7 @@ func setupScout(t *testing.T) *scoutEnv {
 
 // system is the scout's own principal on this workspace.
 func (e *scoutEnv) system() context.Context {
-	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:deal-scout")
+	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:deal-scout")
 }
 
 // pass runs one scout pass at the env's clock.

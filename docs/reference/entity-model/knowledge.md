@@ -52,7 +52,7 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 | `name` | `text` | yes |  |
 | `reindexing` | `boolean`, default `false` | yes | A re-embed is in flight; every ask answers not_ready until it finishes. |
 | `topic_statement` | `text` | yes | What this corpus covers, in the workspace's own words. |
-| `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
+| `archived_at` | `timestamp with time zone` |  | When the set was archived; absent or null while it is live. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 

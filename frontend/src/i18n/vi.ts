@@ -2246,6 +2246,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.public_record_preview": "Xem trước bản ghi công khai",
   "systemJob.agent_resume": "Tiếp tục lần chạy của trợ lý AI",
   "systemJob.agent_scheduler": "Lượt chạy trợ lý AI theo lịch",
+  "systemJob.voice_build": "Tiến trình phân tích văn phong",
+  "systemJob.document_read": "Tiến trình đọc tài liệu",
+  "systemJob.extraction_accept": "Ghi chú chấp nhận trích xuất",
+  "systemJob.deep_read": "Đọc trang web",
+  "systemJob.transcript_read": "Đọc bản chép lời cuộc họp",
+  "systemJob.company_name_promotion": "Cập nhật tên công ty",
+  "systemJob.contact_share": "Yêu cầu chia sẻ liên hệ",
+  "systemJob.task_due_date": "Câu hỏi về hạn",
+  "systemJob.employer_change": "Câu hỏi về đổi nơi làm việc",
+  "systemJob.deal_scout": "Trinh sát deal",
+  "systemJob.overnight": "Lượt chạy qua đêm",
+  "systemJob.project_health": "Kiểm tra tình trạng dự án",
+  "systemJob.tag_scout": "Gợi ý thẻ",
   "systemJob.forecast_chances": "Tỷ lệ giai đoạn dự báo",
   "systemJob.assurance_freshness": "Độ mới của kiểm tra dự báo",
   "systemJob.forecast_call_baseline": "Mốc so sánh của dự báo đã chốt",
@@ -3077,6 +3090,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.notShown": "Không hiển thị",
   "reading.restricted": "Bị hạn chế",
   "format.notForecast": "Chưa dự báo",
+  "format.tooLargeExact": "Quá lớn để hiển thị chính xác",
+  "format.someTooLargeExact":
+    "Một số tổng quá lớn để hiển thị chính xác nên được bỏ qua.",
   "record.chronologyLoading": "Đang tải lịch sử thay đổi…",
   "record.timeline": "Lịch sử",
   "record.edit": "Sửa",
@@ -7716,9 +7732,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "task.next.reviewProject": "Xem lại dự án",
   "task.next.reviewContact": "Xem lại liên hệ",
   "task.next.reviewCompany": "Xem lại công ty",
-  "tasks.whichDeal.legend": "Email này nói về deal nào?",
-  "tasks.whichDeal.file": "Gắn chuỗi thư vào deal",
-  "tasks.whichDeal.filed": "Đã gắn chuỗi thư vào deal",
   "today.withheld":
     "Không bao gồm: {sections}. Bạn không có quyền truy cập các mục này.",
   "today.source.moments": "phát hiện của Margince",
@@ -8753,8 +8766,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.email_request": "Việc này được tạo từ một yêu cầu trong email.",
   "tasks.origin.which_deal":
     "Việc này được tạo vì một email đã thu thập khớp với nhiều deal đang mở. Chọn deal mà email này thuộc về, hoặc chọn “Không thuộc deal nào”.",
-  "tasks.whichDeal.none": "Không thuộc deal nào",
-  "tasks.whichDeal.noneDone": "Đã để email ngoài các deal này",
   "tasks.origin.system":
     "Một quy trình tự động đã tạo việc này, không phải đồng nghiệp nhập vào.",
 
@@ -12663,6 +12674,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "senders.markBusiness": "Đánh dấu là công việc",
   "senders.keepOut": "Loại trừ",
   "senders.withdraw": "Rút lại câu trả lời",
+  "senders.liftPrivate": "Bỏ: cho phép tạo liên hệ lại",
+  "senders.kind.private": "Riêng tư",
+  "senders.privateStands": "Không tạo liên hệ cho địa chỉ này",
   "senders.keepOutTitle": "Loại trừ vĩnh viễn người gửi này?",
   "senders.keepOutBody":
     "Sẽ không tạo liên hệ nào, và thư người gửi này đã đưa vào hộp thư của bạn sẽ bị hủy. Các bản sao do đồng nghiệp nhập vẫn thuộc về họ.",
@@ -15337,7 +15351,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "knowledge.archive": "Chuyển vào kho lưu trữ",
   "knowledge.archiveConfirm.title": "Chuyển {name} vào kho lưu trữ?",
   "knowledge.archiveConfirm.body":
-    "Bộ tài liệu và các tài liệu trong đó sẽ không còn tìm kiếm được. Không có gì bị xóa.",
+    "Bộ tài liệu và các tài liệu trong đó sẽ không còn tìm kiếm được. Không có gì bị xóa, và mục Hiện bộ đã lưu trữ sẽ đưa bộ này trở lại.",
   "knowledge.archiveShipped":
     "Bộ tài liệu này đi kèm Margince nên không thể chuyển vào kho lưu trữ.",
   "knowledge.uploadShipped":
@@ -15368,6 +15382,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một câu. Câu này hiển thị cho bất kỳ ai có câu hỏi nằm ngoài phạm vi của bộ này.",
   "knowledge.searchable": "Tìm kiếm được",
   "knowledge.reindexingBadge": "Đang lập lại chỉ mục",
+  "knowledge.edit": "Sửa bộ tài liệu",
+  "knowledge.edit.title": "Sửa {name}",
+  "knowledge.edit.save": "Lưu",
+  "knowledge.edit.description": "Mô tả",
+  "knowledge.showArchived": "Hiện bộ đã lưu trữ",
+  "knowledge.archivedBadge": "Đã lưu trữ",
+  "knowledge.restore": "Khôi phục bộ tài liệu",
   "settings.tab.privacy": "Quyền riêng tư và lưu trữ",
   "verdictPass.subject.senders": "Người gửi",
   "verdictPass.subject.threads": "Chuỗi thư",
@@ -17596,6 +17617,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "account.pictureEdit": "Sửa ảnh hồ sơ",
   "account.pictureSaved": "Đã lưu ảnh",
   "account.pictureRemoved": "Đã gỡ ảnh",
+  "account.chatWhatsapp": "Tài khoản WhatsApp",
+  "account.chatTelegram": "Tài khoản Telegram",
+  "account.chatZalo": "Tài khoản Zalo",
+  "account.chatHelp":
+    "Xác nhận tài khoản {network} của chính bạn. Tin nhắn của khách mà bạn chuyển tiếp từ đó đến tài khoản {network} của công ty sẽ được lưu cho khách đó, không bao giờ cho bạn.",
+  "account.chatCode":
+    "Trong 10 phút, hãy gửi mã này bằng tin nhắn từ tài khoản {network} của bạn đến tài khoản {network} của công ty: {code}",
+  "account.chatWaiting":
+    "Đang chờ mã. Hãy gửi mã từ tài khoản {network} của bạn đến tài khoản {network} của công ty, hoặc bắt đầu lại để nhận mã mới.",
+  "account.chatConfirmed": "Đã xác nhận: {account}",
+  "account.chatConfirm": "Xác nhận bằng mã",
+  "account.chatRemove": "Gỡ",
+  "account.chatRemoved": "Đã gỡ tài khoản",
+  "account.chatFailed": "Không thành công. Hãy thử lại.",
   "account.pictureWrongType":
     "Không thể tải ảnh lên. Hãy dùng tệp PNG, JPEG hoặc WebP.",
   "account.pictureTooLarge": "Không thể tải ảnh lên. Hãy dùng tệp tối đa 5 MB.",
@@ -19059,6 +19094,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Có ai đó liên kết một deal, công ty hoặc liên hệ với bản ghi khác, hoặc gỡ một liên kết.",
   "linkSuggestions.title": "Liên kết gợi ý",
   "linkSuggestions.reason": "{unit} cho biết: {reason}",
+  "linkSuggestions.byMargince": "Hệ thống Margince",
   "linkSuggestions.target": "{subject} vào {record} ({kind})",
   "linkSuggestions.noSubject": "Thư không có tiêu đề",
   "linkSuggestions.kind.contact": "liên hệ",

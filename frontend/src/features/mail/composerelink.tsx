@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
-import { useDealStakeholderOffer } from "../../components/dealstakeholderoffer";
 import { Checkbox } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { emailDetailKey } from "../../design-system/emailmessage";
@@ -15,6 +14,7 @@ import { entityTimelineKeys } from "../../lib/activitykeys";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { type RelinkKind, useRecordTargets } from "../../lib/recordtargets";
+import { useDealStakeholderOffer } from "./dealstakeholderoffer";
 
 // Moving a filed message to the record it actually belongs to, extracted from
 // compose.tsx unchanged.

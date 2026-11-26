@@ -144,10 +144,31 @@ func wireCandidates(plan []plannedBinding) []crmcontracts.AiRouteCandidate {
 // gives the model it names for task. A model that is not measured keeps no stamp.
 func withCertification(candidates []crmcontracts.AiRouteCandidate, plan []plannedBinding, task Task, profile Profile) {
 	for i, binding := range plan {
-		if cert := CertificationFor(task, binding.config, profile); cert.Verdict != "" {
-			candidates[i].Certification = &crmcontracts.AiRouteCertification{Verdict: cert.Verdict, Current: !cert.RecheckPending}
+		candidates[i].Certification = certificationWire(CertificationFor(task, binding.config, profile))
+	}
+}
+
+func certificationWire(cert Certification) *crmcontracts.AiRouteCertification {
+	if cert.Verdict == "" {
+		return nil
+	}
+	return &crmcontracts.AiRouteCertification{Verdict: cert.Verdict, Current: !cert.RecheckPending}
+}
+
+// switchedCertification grades the model a provider answered with in place of
+// the one bound on tier. It keeps the binding's own settings, so the served
+// model is looked up the way a bound model with those settings would be. Nil
+// when no record measures it, or when cfg no longer walks tier for task.
+func switchedCertification(cfg RoutingConfig, task Task, tier Tier, served string) *crmcontracts.AiRouteCertification {
+	plan, _ := boundPlan(cfg, task, BandNormal)
+	for _, binding := range plan {
+		if binding.tier == tier {
+			switched := binding.config
+			switched.Model = served
+			return certificationWire(CertificationFor(task, switched, cfg.Profile))
 		}
 	}
+	return nil
 }
 
 // leadingTierOf is the rung task is first sent to under cfg, read through the
