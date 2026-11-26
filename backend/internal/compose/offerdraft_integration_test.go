@@ -64,10 +64,11 @@ func newOfferDrafterFixture(t *testing.T, e *integration.Env, brain *ai.FakeClie
 		rateCard: e.Deals,
 		context:  search.NewRetriever(search.NewStore(e.DB()), nil),
 		// The real pool, because the drafter reads the installation's base
-		// language through it. A nil one panicked inside the call instead of
-		// failing an assertion, which pointed the report at the wrong line.
+		// language through it. A fixture that left this nil panicked inside the
+		// call rather than failing an assertion, which read as a nil RESULT and
+		// sent the report looking at the wrong line entirely.
 		pool:  e.Pool,
-		rules: ai.NewVoiceStore(InstallationDB(e.Pool)),
+		rules: ai.NewVoiceStore(e.DB()),
 	}
 }
 
@@ -256,8 +257,8 @@ func TestDraftOfferLinesStagesGroundedLinesAndDiscloses(t *testing.T) {
 	// offer_line_item's AI authorship is recorded (T7).
 	if n := e.WsCount(t,
 		`SELECT count(*) FROM audit_log WHERE entity_type = 'offer' AND entity_id = $1
-		 AND action = 'update' AND actor_type = 'system' AND actor_id = 'agent:offer-drafting'`,
-		offerID.UUID); n != 1 {
+		 AND action = 'update' AND actor_type = 'agent' AND actor_id = 'agent:offer-drafting' AND on_behalf_of = $2`,
+		offerID.UUID, e.Rep1); n != 1 {
 		t.Fatalf("staged-lines audit row does not carry the agent:offer-drafting provenance")
 	}
 }

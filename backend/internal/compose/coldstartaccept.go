@@ -13,7 +13,6 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"time"
 
@@ -32,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -131,21 +129,11 @@ func coldstartAcceptEffect(svc *approvals.Service, store *contacts.Store) approv
 		if err != nil {
 			return err
 		}
-		// The write executes as the coldstart executor: captured_by =
-		// agent:coldstart / source = coldstart (features/07 §1 AC), on
-		// behalf of the human whose approval released it — that human is
-		// on the decision's own audit row, this one carries the machine
-		// provenance the 360 renders as "read from your site".
-		decider, ok := principal.Actor(ctx)
-		if !ok {
-			return errors.New("compose: coldstart effect without a deciding principal")
-		}
-		execCtx := principal.WithActor(ctx, principal.Principal{
-			Type:       principal.PrincipalSystem,
-			ID:         "agent:coldstart",
-			UserID:     decider.UserID,
-			OnBehalfOf: decider.UserID,
-		})
+		// The write executes as the coldstart agent acting for the human whose
+		// approval released it, under that human's grants: captured_by =
+		// agent:coldstart. This row carries the machine provenance the 360
+		// renders as "read from your site". A company the decider may not
+		// write refuses the apply, and the approval records the failure.
 		// The single-use redemption IS the idempotency claim: whoever consumes
 		// the approval executes; anyone else finds it consumed. Redeemed in the
 		// write's OWN transaction, so a failed apply leaves the approval
@@ -155,7 +143,7 @@ func coldstartAcceptEffect(svc *approvals.Service, store *contacts.Store) approv
 		// Redeemed under the DECIDER's context and applied under the executor's:
 		// the redemption asserts that human's authority, the write carries the
 		// machine provenance.
-		return svc.RedeemAndApply(ctx, approvalID, "coldstart", diffHash, func(tx pgx.Tx) error {
+		return redeemForApprover(ctx, svc, approvalID, "coldstart", diffHash, "agent:coldstart", func(execCtx context.Context, tx pgx.Tx) error {
 			_, err := store.ApplyColdStartProfileTx(execCtx, tx, contacts.ApplyColdStartProfileInput{
 				SourceURL: sourceURL,
 				Fields:    fields,

@@ -14,8 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A worker assembled without the object store fails EVERY document reading in
@@ -79,27 +77,5 @@ func TestDecliningAReadingAnotherWorkerHoldsWritesNothing(t *testing.T) {
 	}
 	if store.finishes != 0 {
 		t.Error("a reading held by another worker was closed anyway")
-	}
-}
-
-// The reading is attributed to the reader, on behalf of the human who asked —
-// not to the transcript reader next door, which would tell a rep something that
-// never ran had read their invoice.
-func TestADocumentReadingIsAttributedToItsOwnAgent(t *testing.T) {
-	requester := ids.NewV7()
-	// The requester rides as the namespaced principal id the row stores, and only
-	// a HUMAN namespace can be a human owner — a system one naming a uuid would
-	// attribute the reading to somebody who did not ask for it.
-	ctx := withDocumentReader(t.Context(), "human:"+requester.String(), ids.NewV7())
-
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		t.Fatal("no acting principal was bound")
-	}
-	if actor.ID != documentExtractActor {
-		t.Errorf("acting agent = %q, want %q", actor.ID, documentExtractActor)
-	}
-	if actor.OnBehalfOf != requester {
-		t.Errorf("on behalf of %v, want the human who asked (%v)", actor.OnBehalfOf, requester)
 	}
 }

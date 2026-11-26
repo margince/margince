@@ -806,6 +806,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `actorbinders_planted_test.go` | H2 | plantedColleagueJob is the shape forColleague has, with the bookkeeping id written down wrong. |
 | `audiencebinding_test.go` | H2 | _(no doc comment)_ |
 | `bookingdisplay_test.go` | H2 | A projection may append display values, but cannot pass addresses to another call or retain them in another assignment for a later send. |
 | `deallinewritersplanted_test.go` | H2 | A census must reject new writers and misleading guard paths, even when they sit outside the files that introduced the line-value engine. |

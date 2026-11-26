@@ -62,9 +62,11 @@ const (
 	// Raised by 2 test files for the seat-bound deal reads and the stored-object
 	// count, whose cases drive the unexported seat and ledger wiring. Raised by 1
 	// for the exact-range cases, which drive the unexported report scan.
+	// Raised by 8 test files for the agent-for-a-colleague cases of the converted
+	// jobs, which drive the unexported job and effect wiring.
 	// Raised by 1 test file for the link suggestion tools an agent reads and
 	// answers through, which read the unexported tool registry.
-	composeRootTestFiles = 1926
+	composeRootTestFiles = 1934
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -142,9 +144,11 @@ const (
 	// close silence and the customer-progress reads carry, and their case.
 	// Raised by 1 production line for the retain policy of a link suggestion's
 	// colleague in the member reference registry.
-	composeRootProductionLines = 231_900
-	// Raised by 18 test lines for those cases.
-	composeRootTestLines = 362_838
+	// Raised by 153 production and 829 test lines for the jobs that run as an agent
+	// for a named colleague, and their cases.
+	composeRootProductionLines = 232_066
+	// Raised by 18 test lines for the link suggestion tool cases.
+	composeRootTestLines = 363_714
 )
 
 // A read under these floors stopped early or read the wrong place, and would

@@ -321,3 +321,5 @@
 1795687896_open_which_deal_tasks_move_into_the_link_suggestion_queue.down.sql | activity_link_suggestion | deletes only the suggestions Margince itself made, the same small set of deal questions
 1795687897_the_link_suggestion_producer_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795688931_a_private_sender_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795693170_the_lead_arrival_origin_checks_its_text_limit.up.sql | * | the file only replaces trigger definitions and writes no row
+1795693170_the_lead_arrival_origin_checks_its_text_limit.down.sql | * | the file only replaces trigger definitions and writes no row

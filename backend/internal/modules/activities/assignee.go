@@ -102,7 +102,9 @@ func SeatCanHoldAutomaticWork(ctx context.Context, tx pgx.Tx, seat ids.UserID) (
 const fieldAssignee = "assignee_id"
 
 // A task with no assignee named belongs to the human behind the call: the
-// writer, or the one an agent or connector acts for. Automatic work stays unassigned.
+// writer, or the one an agent or connector acts for. Automatic work stays
+// unassigned, the product's own job for a person included: it names its
+// assignee, and none named means the work has no holder.
 func taskAssignee(ctx context.Context, in LogActivityInput) *ids.UserID {
 	if in.AssigneeID != nil || in.Kind != string(crmcontracts.ActivityKindTask) {
 		return in.AssigneeID
@@ -116,6 +118,9 @@ func taskAssignee(ctx context.Context, in LogActivityInput) *ids.UserID {
 	case principal.PrincipalHuman:
 		human = actor.UserID
 	case principal.PrincipalAgent, principal.PrincipalConnector:
+		if actor.ProductAgentForItsUser() {
+			return nil
+		}
 		human = actor.OnBehalfOf
 	default:
 		return nil

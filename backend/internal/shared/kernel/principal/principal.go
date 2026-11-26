@@ -152,6 +152,14 @@ func (p Principal) ActsAsItsUser() bool {
 	return p.Type == PrincipalAgent && !p.PassportID.IsZero() && !p.OnBehalfOf.IsZero()
 }
 
+// ProductAgentForItsUser reports whether p is the product's own job acting for
+// one named person. It is an agent with no passport, carrying that person as
+// both its user and the one it acts for. Its writes are that person's, under
+// their grants.
+func (p Principal) ProductAgentForItsUser() bool {
+	return p.Type == PrincipalAgent && p.PassportID.IsZero() && !p.OnBehalfOf.IsZero() && p.UserID == p.OnBehalfOf
+}
+
 // HumanOrItsAgent reports whether p is a human, or an agent acting for one on
 // their passport. Either may do what that human does in the product.
 func (p Principal) HumanOrItsAgent() bool {
