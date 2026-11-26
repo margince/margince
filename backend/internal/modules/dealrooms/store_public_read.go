@@ -137,9 +137,9 @@ func (s *Store) BuyerView(ctx context.Context, sess Session, companyName func(co
 }
 
 // engagementNotice is the one line telling a buyer what the room records. A
-// seat sees it in the earliest session it ever opened, so a second invitation
+// seat sees it in the earliest session it ever opened. A second invitation
 // exchanged in another tab before either room loads cannot hide it from both.
-// Session ids are time-ordered, and a signed-out session stays as a revoked
+// Session ids are time-ordered and a signed-out session stays as a revoked
 // row, so a later sign-in never counts as the first. A seller preview always
 // sees it.
 func engagementNotice(ctx context.Context, tx pgx.Tx, sess Session, companyName func(context.Context, pgx.Tx) (string, error)) (*crmcontracts.BuyerEngagementNotice, error) {
