@@ -8773,7 +8773,7 @@ export interface paths {
         };
         /**
          * The room's conversation as the buyer sees it.
-         * @description Optionally narrowed to one published document. Empty while the room serves no content.
+         * @description Optionally narrowed to one published document. Empty while the room serves no content. `hidden_own_conversations` is true when a thread this buyer wrote in is withheld because its file is no longer shared.
          */
         get: operations["listBuyerRoomThreads"];
         put?: never;
@@ -60636,6 +60636,7 @@ export interface components {
             id: string;
             /** Format: uuid */
             room_id: string;
+            visible_to_buyer: boolean;
             /**
              * Format: uuid
              * @description Null for a room-level thread.
@@ -60654,6 +60655,11 @@ export interface components {
         };
         DealRoomThreadListResponse: {
             data: components["schemas"]["DealRoomThread"][];
+        };
+        BuyerRoomThreadListResponse: {
+            data: components["schemas"]["DealRoomThread"][];
+            /** @description True when a conversation this buyer wrote in is withheld because its file is no longer shared. No count and no file. */
+            hidden_own_conversations: boolean;
         };
         OpenDealRoomThreadRequest: {
             /**
@@ -80932,7 +80938,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DealRoomThreadListResponse"];
+                    "application/json": components["schemas"]["BuyerRoomThreadListResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];

@@ -12937,7 +12937,7 @@ paths:
       security: [{ dealRoomSession: [] }]
       x-agent-access: human-only
       summary: The room's conversation as the buyer sees it.
-      description: Optionally narrowed to one published document. Empty while the room serves no content.
+      description: Optionally narrowed to one published document. Empty while the room serves no content. `hidden_own_conversations` is true when a thread this buyer wrote in is withheld because its file is no longer shared.
       parameters:
         - name: document_id
           in: query
@@ -12947,7 +12947,7 @@ paths:
           description: The threads.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/DealRoomThreadListResponse' }
+              schema: { $ref: '#/components/schemas/BuyerRoomThreadListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429':
@@ -82252,10 +82252,13 @@ components:
         One thread of the room's conversation, with its comments. Served to both
         sides in the same shape: the buyer and the seller read the same
         conversation, and neither side's ids beyond the thread's own are in it.
-      required: [id, room_id, required_change, state, author, created_at, comments]
+      required: [id, room_id, required_change, state, author, created_at, comments, visible_to_buyer]
       properties:
         id: { type: string, format: uuid }
         room_id: { type: string, format: uuid }
+        # False when the buyer's own list withholds this thread because its file
+        # is no longer shared. Always true on the buyer's side. Room state is not part of it.
+        visible_to_buyer: { type: boolean }
         document_id: { type: [string, 'null'], format: uuid, description: Null for a room-level thread. }
         required_change: { type: boolean }
         state: { type: string, description: '`open` or `resolved`. A plain string, not an inline enum, for the reason `DealRoomParticipantCapability` gives.' }
@@ -82273,6 +82276,14 @@ components:
       required: [data]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/DealRoomThread' } }
+      additionalProperties: false
+
+    BuyerRoomThreadListResponse:
+      type: object
+      required: [data, hidden_own_conversations]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/DealRoomThread' } }
+        hidden_own_conversations: { type: boolean, description: True when a conversation this buyer wrote in is withheld because its file is no longer shared. No count and no file. }
       additionalProperties: false
 
     OpenDealRoomThreadRequest:

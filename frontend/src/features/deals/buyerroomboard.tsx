@@ -261,24 +261,31 @@ export function BuyerBoard({
         pendingLabel={t("buyer.docs.title")}
       >
         {docs.data && threads.data ? (
-          <DocumentBoard
-            title={t("buyer.docs.title")}
-            groups={DOCUMENT_GROUPS.map((g) => ({
-              key: g.key,
-              label: t(g.labelKey),
-            }))}
-            documents={documents}
-            threads={threads.data.data}
-            empty={t("buyer.docs.empty")}
-            verbs={{
-              mayRequireChange: true,
-              refusal,
-              open: mayWrite ? (input) => open.mutateAsync(input) : undefined,
-              reply: mayWrite
-                ? (threadId, body) => reply.mutateAsync({ threadId, body })
-                : undefined,
-            }}
-          />
+          <>
+            <DocumentBoard
+              title={t("buyer.docs.title")}
+              groups={DOCUMENT_GROUPS.map((g) => ({
+                key: g.key,
+                label: t(g.labelKey),
+              }))}
+              documents={documents}
+              threads={threads.data.data}
+              empty={t("buyer.docs.empty")}
+              verbs={{
+                mayRequireChange: true,
+                refusal,
+                open: mayWrite ? (input) => open.mutateAsync(input) : undefined,
+                reply: mayWrite
+                  ? (threadId, body) => reply.mutateAsync({ threadId, body })
+                  : undefined,
+              }}
+            />
+            {threads.data.hidden_own_conversations ? (
+              <p role="note" className="t-caption">
+                {t("buyer.threads.hiddenOwn")}
+              </p>
+            ) : null}
+          </>
         ) : null}
       </QueryStates>
     </QueryStates>

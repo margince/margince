@@ -798,3 +798,28 @@ describe("an access state this build does not know", () => {
     ).toBeNull();
   });
 });
+
+describe("the buyer's own withheld conversations", () => {
+  const WITHHELD = "A conversation about a file that is no longer shared.";
+
+  it("says so once, whatever the number of withheld conversations", async () => {
+    stubRoom({
+      "GET /public/rooms/threads": () =>
+        jsonResponse({ data: [], hidden_own_conversations: true }),
+    });
+    render(<BuyerRoomScreen />);
+
+    expect(await screen.findAllByText(WITHHELD)).toHaveLength(1);
+  });
+
+  it("says nothing when no conversation of theirs is withheld", async () => {
+    stubRoom({
+      "GET /public/rooms/threads": () =>
+        jsonResponse({ data: [], hidden_own_conversations: false }),
+    });
+    render(<BuyerRoomScreen />);
+
+    await screen.findByLabelText("New thread");
+    expect(screen.queryByText(WITHHELD)).toBeNull();
+  });
+});
