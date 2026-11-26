@@ -25,7 +25,7 @@ func answerTo(t *testing.T, e *apptest.AppEnv, path, prefer string) (int, http.H
 	if prefer != "" {
 		req.Header.Set("Prefer", prefer)
 	}
-	res, err := e.Client.Do(req)
+	res, err := e.Client.Do(req) //nolint:bodyclose // closed by apptest.CloseBody below
 	if err != nil {
 		t.Fatalf("GET %s: %v", path, err)
 	}

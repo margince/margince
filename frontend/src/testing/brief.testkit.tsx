@@ -149,9 +149,9 @@ const DEFAULTS: Routes = {
   // The archive's index, as the weeks this rep has a review for. `weeks` is
   // what the hook reads; the generic empty page carries none.
   "GET /weekly-reviews": () => jsonResponse({ weeks: [] }),
-  // 204 and not an empty 200: a rep whose first Monday has not come round has
-  // no review, and the hook reads that status as "no review yet". An empty 200
-  // would reach the `local_week_start` branch, a path no server takes.
+  // A rep whose first Monday has not come round has no review yet, which the
+  // server answers 204. An empty 200 would reach the `local_week_start` branch,
+  // a path no server takes.
   "GET /weekly-reviews/latest": () => new Response(null, { status: 204 }),
   // Both answer `{ data, page }`, which the empty page already is — declared
   // anyway, because the point of this table is that every read Brief makes is
