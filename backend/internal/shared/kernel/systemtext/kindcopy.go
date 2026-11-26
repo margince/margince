@@ -15,7 +15,7 @@ var kindDefinitions = map[string]Definition{
 	"action_kind.create_record":   {Words: langcopy.Phrase{En: "create_record", De: "einen Datensatz erstellen", Vi: "tạo bản ghi"}},
 	"action_kind.update_record":   {Words: langcopy.Phrase{En: "update_record", De: "einen Datensatz ändern", Vi: "cập nhật bản ghi"}},
 	"action_kind.create_task":     {Words: langcopy.Phrase{En: "create_task", De: "eine Aufgabe erstellen", Vi: "tạo việc cần làm"}},
-	"action_kind.assign_owner":    {Words: langcopy.Phrase{En: "assign_owner", De: "eine verantwortliche Person festlegen", Vi: "gán chủ sở hữu"}},
+	"action_kind.assign_owner":    {Words: langcopy.Phrase{En: "assign_owner", De: "festlegen, wer verantwortlich ist", Vi: "gán chủ sở hữu"}},
 	"action_kind.advance_deal":    {Words: langcopy.Phrase{En: "advance_deal", De: "einen Deal weiterführen", Vi: "chuyển giai đoạn deal"}},
 	"action_kind.send_email":      {Words: langcopy.Phrase{En: "send_email", De: "eine E-Mail senden", Vi: "gửi email"}},
 	"action_kind.emit_flow_event": {Words: langcopy.Phrase{En: "emit_flow_event", De: "einen Ablauf auslösen", Vi: "kích hoạt luồng"}},

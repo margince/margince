@@ -388,7 +388,7 @@ var actDefinitions = map[string]Definition{
 	"act.verbs.update_deal_line":                   {Words: langcopy.Phrase{En: "Update deal line", De: "Position eines Deals ändern", Vi: "Sửa một mục của giao dịch"}},
 	"act.verbs.update_deal_room":                   {Words: langcopy.Phrase{En: "Update deal room", De: "Titel und Begrüßung des Deal Rooms ändern", Vi: "Sửa tiêu đề và lời chào phòng giao dịch"}},
 	"act.verbs.update_deal_room_document":          {Words: langcopy.Phrase{En: "Update deal room document", De: "Dokument im Deal Room umbenennen oder ordnen", Vi: "Đổi tên hoặc sắp xếp tài liệu phòng giao dịch"}},
-	"act.verbs.update_deal_room_participant":       {Words: langcopy.Phrase{En: "Update deal room participant", De: "Angaben einer teilnehmenden Person im Deal Room korrigieren", Vi: "Sửa thông tin người tham gia phòng giao dịch"}},
+	"act.verbs.update_deal_room_participant":       {Words: langcopy.Phrase{En: "Update deal room participant", De: "Angaben von Teilnehmenden im Deal Room korrigieren", Vi: "Sửa thông tin người tham gia phòng giao dịch"}},
 	"act.verbs.update_exit_criterion":              {Words: langcopy.Phrase{En: "Update exit criterion", De: "Abschlusskriterium ändern", Vi: "Sửa tiêu chí hoàn thành giai đoạn"}},
 	"act.verbs.update_follow_up_settings":          {Words: langcopy.Phrase{En: "Update follow up settings", De: "Zeitfenster für Nachfassen ändern", Vi: "Đổi khoảng thời gian theo dõi"}},
 	"act.verbs.update_import_run":                  {Words: langcopy.Phrase{En: "Update import run", De: "Auswahl eines Imports speichern", Vi: "Lưu lựa chọn của lần nhập"}},

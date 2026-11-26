@@ -250,7 +250,11 @@ func germanStringsIn(fset *token.FileSet, path string, file *ast.File) ([]german
 				take(shape, kv.Value)
 				return false
 			}
-			if text, ok := germanLiteral(n); ok {
+			lit, isLit := n.(*ast.BasicLit)
+			if !isLit {
+				return true
+			}
+			if text, ok := literalText(lit); ok {
 				found = append(found, germanString{
 					at: fmt.Sprintf("%s:%d", path, fset.Position(n.Pos()).Line), shape: shape, text: text,
 				})
@@ -300,14 +304,14 @@ func recordGerman(elements []ast.Expr) []ast.Expr {
 		if kv, ok := element.(*ast.KeyValueExpr); ok {
 			values[i] = kv.Value
 		}
-		text, ok := germanLiteral(values[i])
+		text, ok := literalText(values[i])
 		german = german || ok && text == "de"
 	}
 	if !german {
 		return nil
 	}
 	return slices.DeleteFunc(values, func(value ast.Expr) bool {
-		text, ok := germanLiteral(value)
+		text, ok := literalText(value)
 		return !ok || text == "de"
 	})
 }
@@ -322,7 +326,7 @@ func embeddedGerman(path string, file *ast.File) ([]germanString, error) {
 			if !ok {
 				continue
 			}
-			for _, pattern := range strings.Fields(patterns) {
+			for pattern := range strings.FieldsSeq(patterns) {
 				lines, err := embeddedGermanLines(filepath.Join(filepath.Dir(path), filepath.FromSlash(pattern)))
 				if err != nil {
 					return found, fmt.Errorf("reading the embed pattern %q in %s: %w", pattern, path, err)
@@ -387,7 +391,7 @@ func namesGerman(expr ast.Expr) bool {
 	case *ast.SelectorExpr:
 		return key.Sel.Name == "German"
 	case *ast.BasicLit:
-		text, ok := germanLiteral(key)
+		text, ok := literalText(key)
 		return ok && text == "de"
 	}
 	return false
@@ -398,9 +402,9 @@ func namesGerman(expr ast.Expr) bool {
 func rowGerman(list []ast.Expr) []ast.Expr {
 	var german []ast.Expr
 	for i := 0; i+2 < len(list); i++ {
-		_, english := joinedLiteral(list[i])
-		_, middle := joinedLiteral(list[i+1])
-		third, vietnamese := joinedLiteral(list[i+2])
+		_, english := literalText(list[i])
+		_, middle := literalText(list[i+1])
+		third, vietnamese := literalText(list[i+2])
 		if english && middle && vietnamese && strings.ContainsAny(third, vietnameseOnlyRunes) {
 			german = append(german, list[i+1])
 			i += 2
@@ -409,21 +413,13 @@ func rowGerman(list []ast.Expr) []ast.Expr {
 	return german
 }
 
-// joinedLiteral reads a long sentence split over several literals with +.
-func joinedLiteral(expr ast.Expr) (string, bool) {
-	if sum, ok := expr.(*ast.BinaryExpr); ok && sum.Op == token.ADD {
-		left, leftOK := joinedLiteral(sum.X)
-		right, rightOK := joinedLiteral(sum.Y)
-		return left + right, leftOK && rightOK
+// literalText reads a string literal, or a sentence split over literals with +.
+// A literal on its own is the unit the walk judges, so a part of a
+// concatenation is read once, as itself.
+func literalText(node ast.Node) (string, bool) {
+	switch node.(type) {
+	case *ast.BasicLit, *ast.BinaryExpr:
+		return gatekit.StringExpr(node, nil, gatekit.FoldStrict)
 	}
-	return germanLiteral(expr)
-}
-
-func germanLiteral(node ast.Node) (string, bool) {
-	lit, ok := node.(*ast.BasicLit)
-	if !ok || lit.Kind != token.STRING {
-		return "", false
-	}
-	text, err := strconv.Unquote(lit.Value)
-	return text, err == nil
+	return "", false
 }
