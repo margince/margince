@@ -202,7 +202,7 @@ func (t listApprovalsTool) Spec() mcp.ToolSpec {
 		OpenAPIOp: "listApprovals",
 		InputSchema: schema(`{"type":"object","properties":{
 			"include_muted":{"type":"boolean","description":"Include your muted proposals for explicit review; visibility rules still apply."},
-			"status":{"type":"string","enum":["pending","approved","rejected"],"description":"Defaults to pending — what is still waiting."},
+			"status":{"type":"string","enum":["pending","approved","rejected"],"description":"Defaults to pending: what is still waiting."},
 			"kind":{"type":"string","description":"One staged action's kind, e.g. advance_deal."},
 			"target_entity_type":{"type":"string","description":"With target_entity_id, the approvals staged against one record."},
 			"target_entity_id":{"type":"string","format":"uuid"},
@@ -459,7 +459,7 @@ func knownStatus(status string) error {
 	default:
 		return &BadArgsError{Cause: fmt.Errorf(
 			"`status` is %q; it is pending, approved or rejected. A proposal that lapsed reads as "+
-				"expired among the pending ones — it is not a filter of its own", status)}
+				"expired among the pending ones; it is not a filter of its own", status)}
 	}
 }
 

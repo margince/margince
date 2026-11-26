@@ -180,15 +180,15 @@ func querySchemaDocument(vocab Vocabulary) querySchemaDoc {
 		Grammar: querySchemaGrammar{
 			Plan: `{"version": <version above>, "target": <a target below>, "where": [<predicate>, ...], ` +
 				`"similar_to": ..., "traverse": ..., "limit": ...}; every member but version and target may be omitted.`,
-			Predicates: `{"field": <name below>, "op": <op the field admits>, "value": <operand>} — ` +
+			Predicates: `{"field": <name below>, "op": <op the field admits>, "value": <operand>}, ` +
 				`or "values": [...] for "in". Clauses are combined with AND.`,
-			SemanticTarget: `"similar_to": <free text> — one similarity clause, ranked by the hybrid retriever.`,
-			Traversal: `"traverse": {"relation": <relation below>, "where": [...]} — exactly one hop. ` +
+			SemanticTarget: `"similar_to": <free text> (one similarity clause, ranked by the hybrid retriever).`,
+			Traversal: `"traverse": {"relation": <relation below>, "where": [...]} (exactly one hop). ` +
 				`A second hop is refused; ask it as its own query.`,
 			Limit: fmt.Sprintf("%q: 1..%d; omit for the default page.", "limit", maxPlanLimit),
 			Refusal: "Anything outside this vocabulary is refused with a typed clarification naming " +
 				"what was not understood. Nothing is coerced, and no plan is narrowed to the part " +
-				"that was recognised.",
+				"that was recognized.",
 		},
 		// EMPTY, and that is the change. within_radius used to be declared
 		// permanently unavailable here because no record carried coordinates;
