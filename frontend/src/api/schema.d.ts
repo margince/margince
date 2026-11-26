@@ -30632,6 +30632,11 @@ export interface components {
             /** @description Summary of the connection's backfill run; state `none` when never run. */
             backfill?: components["schemas"]["BackfillStatus"];
             /**
+             * @description A period no sync of this mailbox read: a sync found its provider cursor gone and listed only the newest mail, or a first sync could not reach back to where it was to start. A successful sync since, and a finished import, do not clear it. Only an import whose window reaches back over it, and that failed no message, does. Absent when there is none.
+             *     A recent `last_success_at` and a `backfill` in state `done` say a poll and a scan completed. This period says which mail neither of them read, so the owner knows to import a window that covers it.
+             */
+            unread_period?: components["schemas"]["CaptureUnreadPeriod"];
+            /**
              * @description This mailbox's own answer to reading contact details out of its mail, or null to
              *     follow the tenant default (`CaptureSettings.signature_enrich`). Null is a third state
              *     and not a missing value: a mailbox that never chose moves with the default, and one

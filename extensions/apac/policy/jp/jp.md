@@ -2,11 +2,15 @@
 jurisdiction: jp
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)"
     effective: 2002-07-01
     provision: "arts. 3 and 4"
     source-url: https://laws.e-gov.go.jp/law/414AC0100000026
+    text-url: "https://laws.e-gov.go.jp/api/2/law_data/414AC0100000026?response_format=xml"
+    text-digest: 5a418a3003c3ec77bbc5923dfdff9d835c80d582cba508062d14e0d828fb62d7
+    text-fetched: 2026-11-25
   - name: "Act No. 54 of 2008, amending Act No. 26 of 2002"
     effective: 2008-12-01
 reply-window: 8760h
