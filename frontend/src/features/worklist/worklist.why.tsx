@@ -7,9 +7,10 @@
 // fact behind it, what waiting costs and what to do. They leave out how the row
 // ranks against the rest of the queue.
 
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import { Button } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
+import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
@@ -42,12 +43,15 @@ export function WorklistWhy({
   item,
   answer = false,
   groundsShown = false,
+  plain = false,
 }: Readonly<{
   item: WorklistItem;
   // Draws the row's own verbs, for a drawer that covers the row it opened from.
   answer?: boolean;
   // The surface already reads the row's reason out, so it is not said twice.
   groundsShown?: boolean;
+  // The pane's first section under its own heading, not a card inside it.
+  plain?: boolean;
 }>) {
   const t = useT();
   const clock = useHappenedClock();
@@ -63,63 +67,75 @@ export function WorklistWhy({
   const detail = codedDetail(item, t);
   // A row asking whether our later mail kept its promise has no ask to say.
   const open = saysOpen(item);
+  const headingId = useId();
+  const sections = (
+    <div className="worklist-why">
+      {(happened.length > 0 || detail) && (
+        <WhySection heading={t("worklist.why.happened")}>
+          {happened.length > 0 && (
+            <ul className="worklist-why-happened">
+              {happened.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          )}
+          {detail &&
+            // Only a promise's detail is verbatim source evidence, quoted from a
+            // message; every other detail is the product's explanation.
+            (item.source === QUOTED_SOURCE ? (
+              <figure className="worklist-why-quote">
+                <figcaption className="t-caption">
+                  {t("worklist.why.detail")}
+                </figcaption>
+                <blockquote>{detail}</blockquote>
+              </figure>
+            ) : (
+              <p>{detail}</p>
+            ))}
+        </WhySection>
+      )}
+      {item.website_inquiry && (
+        <WebsiteInquiryFacts facts={item.website_inquiry} />
+      )}
+      {reasons.length > 0 && (
+        <WhySection heading={t("worklist.why.now")}>
+          <ol
+            className="worklist-why-reasons"
+            aria-label={t("worklist.why.reasons")}
+          >
+            {reasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ol>
+        </WhySection>
+      )}
+      {consequence && (
+        <WhySection heading={t("worklist.why.consequence")}>
+          <p>{consequence}</p>
+        </WhySection>
+      )}
+      {(open || answer) && (
+        <WhySection heading={t("worklist.why.todo")}>
+          {open && <p>{todoLine(item, t, told)}</p>}
+          <OurLastReply item={item} />
+          {answer && <RowVerbs item={item} />}
+        </WhySection>
+      )}
+    </div>
+  );
+  if (plain) {
+    return (
+      <section className="worklist-why-plain" aria-labelledby={headingId}>
+        <Heading size="medium" as="h3" id={headingId}>
+          {t("worklist.why.title")}
+        </Heading>
+        {sections}
+      </section>
+    );
+  }
   return (
     <Panel title={t("worklist.why.title")} tone="accent">
-      <PanelBody>
-        <div className="worklist-why">
-          {(happened.length > 0 || detail) && (
-            <WhySection heading={t("worklist.why.happened")}>
-              {happened.length > 0 && (
-                <ul className="worklist-why-happened">
-                  {happened.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-              )}
-              {detail &&
-                // Only a promise's detail is verbatim source evidence, quoted from a
-                // message; every other detail is the product's explanation.
-                (item.source === QUOTED_SOURCE ? (
-                  <figure className="worklist-why-quote">
-                    <figcaption className="t-caption">
-                      {t("worklist.why.detail")}
-                    </figcaption>
-                    <blockquote>{detail}</blockquote>
-                  </figure>
-                ) : (
-                  <p>{detail}</p>
-                ))}
-            </WhySection>
-          )}
-          {item.website_inquiry && (
-            <WebsiteInquiryFacts facts={item.website_inquiry} />
-          )}
-          {reasons.length > 0 && (
-            <WhySection heading={t("worklist.why.now")}>
-              <ol
-                className="worklist-why-reasons"
-                aria-label={t("worklist.why.reasons")}
-              >
-                {reasons.map((reason) => (
-                  <li key={reason}>{reason}</li>
-                ))}
-              </ol>
-            </WhySection>
-          )}
-          {consequence && (
-            <WhySection heading={t("worklist.why.consequence")}>
-              <p>{consequence}</p>
-            </WhySection>
-          )}
-          {(open || answer) && (
-            <WhySection heading={t("worklist.why.todo")}>
-              {open && <p>{todoLine(item, t, told)}</p>}
-              <OurLastReply item={item} />
-              {answer && <RowVerbs item={item} />}
-            </WhySection>
-          )}
-        </div>
-      </PanelBody>
+      <PanelBody>{sections}</PanelBody>
     </Panel>
   );
 }

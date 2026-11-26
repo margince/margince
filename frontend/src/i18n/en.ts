@@ -8878,6 +8878,8 @@ export const en = {
   "tasks.remind.needsTime": "Enter a day and a time.",
   "tasks.remind.past": "Pick a time that is still ahead.",
   "tasks.log.action": "Log what happened",
+  "tasks.more": "More",
+  "tasks.context": "Context",
   "tasks.log.record": "Which record is this activity for?",
   "tasks.log.chooseRecord": "Choose another record",
   "tasks.log.noRecord": "Log without a record",

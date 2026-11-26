@@ -8900,6 +8900,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.remind.needsTime": "Gib einen Tag und eine Uhrzeit ein.",
   "tasks.remind.past": "Wähle eine Zeit, die noch bevorsteht.",
   "tasks.log.action": "Ergebnis erfassen",
+  "tasks.more": "Mehr",
+  "tasks.context": "Kontext",
   "tasks.log.record": "Zu welchem Datensatz gehört diese Aktivität?",
   "tasks.log.chooseRecord": "Anderen Datensatz wählen",
   "tasks.log.noRecord": "Ohne Datensatz erfassen",

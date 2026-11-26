@@ -8664,6 +8664,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.remind.needsTime": "Hãy nhập ngày và giờ.",
   "tasks.remind.past": "Hãy chọn một thời điểm chưa qua.",
   "tasks.log.action": "Ghi lại kết quả",
+  "tasks.more": "Thêm",
+  "tasks.context": "Ngữ cảnh",
   "tasks.log.record": "Hoạt động này thuộc bản ghi nào?",
   "tasks.log.chooseRecord": "Chọn bản ghi khác",
   "tasks.log.noRecord": "Ghi lại không gắn bản ghi",

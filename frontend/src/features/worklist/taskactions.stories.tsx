@@ -117,6 +117,9 @@ function linksOf(filed: boolean, contactTask?: "call" | "typed") {
   return contactTask ? [{ entity_type: "contact", entity_id: "c-1" }] : [];
 }
 
+/** The fixture reader's id, so the task is theirs and offers Remind me. */
+const READER = "00000000-0000-4000-8000-000000000001";
+
 function DetailModal({
   emailRequest = false,
   meetingSource = false,
@@ -130,7 +133,8 @@ function DetailModal({
   contactTask?: "call" | "typed";
 }>) {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    // The reader holds the task and may change it, so every verb shows.
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/email-1": () =>
       jsonResponse({
         id: "email-1",
@@ -186,6 +190,8 @@ function DetailModal({
       jsonResponse({
         id: "a-1",
         kind: "task",
+        writable: true,
+        version: 3,
         subject: "Send the renewal paperwork",
         body: emailRequest
           ? null
@@ -198,7 +204,7 @@ function DetailModal({
         due_at: emailRequest ? null : "2026-08-01T09:00:00Z",
         occurred_at: "2026-07-28T09:00:00Z",
         is_done: false,
-        assignee_id: "u-1",
+        assignee_id: READER,
         links: linksOf(filed, contactTask),
         email_target: contactTask
           ? { entity_type: "contact", entity_id: "c-1" }
@@ -225,7 +231,7 @@ function DetailModal({
       jsonResponse({ id: "o-1", display_name: "Brandt Automotive" }),
     "GET /users": () =>
       jsonResponse({
-        data: [{ id: "u-1", display_name: "Mira Voss" }],
+        data: [{ id: READER, display_name: "Mira Voss" }],
         page: { has_more: false, next_cursor: null },
       }),
   });
@@ -257,7 +263,8 @@ export const FiledUnderDeal: Story = {
   render: () => <DetailModal filed />,
 };
 
-// A task read out of a call: Call, Email and Open contact above its own verbs.
+// A task read out of a call: Call is its step, and Email and Open contact wait
+// under More.
 export const DetailFromCall: Story = {
   render: () => <DetailModal contactTask="call" />,
   play: async () => {
@@ -266,12 +273,26 @@ export const DetailFromCall: Story = {
   },
 };
 
-// A task typed by hand still opens the contact the server names for it.
+// A task typed by hand still opens the contact the server names for it, from
+// More, which lists Log what happened first.
 export const DetailTypedByHand: Story = {
   render: () => <DetailModal contactTask="typed" />,
   play: async () => {
     const body = within(document.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: en["tasks.more"] }),
+    );
     await body.findByRole("link", { name: en["task.next.openContact"] });
+  },
+};
+
+// The due chip opens Snooze and the day to move the task to.
+export const DetailDueOpen: Story = {
+  render: () => <DetailModal />,
+  play: async () => {
+    const body = within(document.body);
+    await userEvent.click(await body.findByRole("button", { name: /^Due / }));
+    await body.findByRole("button", { name: en["tasks.snooze"] });
   },
 };
 
@@ -304,7 +325,7 @@ function MoveBody() {
     update,
   };
   return (
-    <div className="task-detail-verbs">
+    <div className="task-detail-move">
       <div className="task-detail-buttons">
         <TaskQuickActions {...task} showComplete={false} />
       </div>
