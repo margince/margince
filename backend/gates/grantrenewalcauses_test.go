@@ -39,6 +39,9 @@ import (
 const (
 	grantRenewalContract = "api/crm.yaml"
 	grantRenewalCard     = "../frontend/src/features/automations/overnight-grant.tsx"
+	// grantStanding reads the causes for the card and for Home's first-day
+	// card, so the card's branches live there; the card must still call it.
+	grantRenewalStanding = "../frontend/src/lib/overnight-grant.ts"
 )
 
 // TestEveryRenewalCauseReachesTheCardThatAsksForIt is the parity check.
@@ -55,7 +58,15 @@ func TestEveryRenewalCauseReachesTheCardThatAsksForIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the settings card: %v", err)
 	}
-	card := codeOf(string(source))
+	standing, err := gatekit.ReadFile(grantRenewalStanding)
+	if err != nil {
+		t.Fatalf("reading the grant standing: %v", err)
+	}
+	if !strings.Contains(codeOf(string(source)), "grantStanding(") {
+		t.Fatalf("%s no longer calls grantStanding, so the causes %s reads never reach the card",
+			grantRenewalCard, grantRenewalStanding)
+	}
+	card := codeOf(string(source)) + codeOf(string(standing))
 	for _, cause := range causes {
 		// The field READ, in CODE. A name in a type annotation satisfies a bare
 		// substring search while the cause goes unshown, which is the exact

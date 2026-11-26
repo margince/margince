@@ -13,6 +13,7 @@ import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { useToast } from "../../design-system/toast";
 import { type Translator, useT } from "../../i18n";
 import { fromHere } from "../../lib/navigatefrom";
 import {
@@ -271,6 +272,7 @@ const UNSURE_WRITE = "idempotency_key_failed";
 // regenerate needs no confirm modal.
 export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
+  const toast = useToast();
   const queryClient = useQueryClient();
 
   const { key, renew } = useIdempotencyKey();
@@ -298,6 +300,11 @@ export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         queryKey: ["deal-offers", newDraft.deal_id],
       });
       from.navigate({ screen: "offers", id: newDraft.id });
+      // A revision with no AI lines is still the revision asked for, so the
+      // plain copy is said here rather than read as a failure.
+      if (newDraft.ai_generated !== true) {
+        toast.show(t("offer.regeneratedPlain"), { tone: "info" });
+      }
     },
     onError: (error) => {
       settleUnsureOfferWrite(error, queryClient, offer.deal_id, renew);
