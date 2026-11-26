@@ -3037,6 +3037,7 @@
   "compose.scopedToCounted": "Bezogen auf {key} · {inScope} von {total} Aktivitäten",
   "compose.scopedTo": "Bezogen auf {key}",
   "compose.body": "Nachrichtentext",
+  "compose.transportEmail": "E-Mail",
   "compose.bcc": "Bcc",
   "compose.fileRemove": "{filename} entfernen",
   "calendar.previousMonth": "Voriger Monat",
