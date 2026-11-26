@@ -7,7 +7,7 @@ branch `renovate/go-dependencies-(non-major)`. It runs `go mod tidy` in each mod
 checksums that `make install` writes. The `go-work-sum` gate fails such a pull request, and it is right
 to: a missing checksum breaks a project that pins this repository as a submodule.
 
-So a person or the nightly maintenance session finishes each Go update. No CI job pushes to a Renovate
+So a maintainer or the nightly maintenance session finishes each Go update. No CI job pushes to a Renovate
 branch.
 
 ## Steps
