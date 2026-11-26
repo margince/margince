@@ -298,7 +298,7 @@
 1795639501_core_only_kind_columns_are_validated.up.sql | * | the procedural body validates seven CHECKs and writes no row; a CHECK a stored row breaks stays NOT VALID
 1795657800_a_google_docs_corpus_and_a_document_that_knows_its_source_id.down.sql | knowledge_corpus, knowledge_document | runs only on a rollback and deletes only the rows of the gdocs source, which is one corpus and the Google Docs a workspace chose to sync
 1795657801_the_google_docs_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795661043_a_task_explanation_is_cached_per_reader.up.sql | * | creates an empty cache table; the procedural marker is the two text-bound trigger definitions on it
-1795661044_a_record_keeps_a_status_line_from_its_latest_activity.up.sql | * | creates an empty table of derived status lines; the procedural marker is the two text-bound trigger definitions on it
+1795672240_a_task_explanation_is_cached_per_reader.up.sql | * | creates an empty cache table; the procedural marker is the two text-bound trigger definitions on it
+1795672241_a_record_keeps_a_status_line_from_its_latest_activity.up.sql | * | creates an empty table of derived status lines; the procedural marker is the two text-bound trigger definitions on it
 1795657803_a_source_id_is_bounded.up.sql | * | replaces the two text-length guards on knowledge_document with ones that also name external_id; it creates triggers and reads or rewrites no row
 1795657803_a_source_id_is_bounded.down.sql | * | runs only on a rollback; restores the earlier guards without external_id and changes no row
