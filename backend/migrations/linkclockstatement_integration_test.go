@@ -178,3 +178,50 @@ func TestALinkStatementMovesAClockWithoutEditingTheRecord(t *testing.T) {
 			after.lastActivity, before.version, after.version, before.updatedAt, after.updatedAt)
 	}
 }
+
+// A link statement locks its contacts before its project, the order an
+// activity update takes them in, so the two cannot wait on each other. The
+// advance is replaced by a recorder inside a rolled-back transaction, because
+// locks leave no ordered trace of their own.
+func TestALinkStatementLocksItsContactBeforeItsProject(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	headSchema(t, conn)
+	ctx := context.Background()
+
+	early := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
+	f := seedLinkClockFixture(t, conn, early, early.AddDate(0, 0, 7), early.AddDate(0, 0, 14))
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("opening the recording transaction: %v", err)
+	}
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Errorf("rolling the recorder back: %v", err)
+		}
+	}()
+	if _, err := tx.Exec(ctx, `
+		CREATE TEMP TABLE advanced_in_order (seq serial, kind text) ON COMMIT DROP;
+		CREATE OR REPLACE FUNCTION advance_last_activities(tbl regclass, rids uuid[], ats timestamptz[]) RETURNS void
+		    LANGUAGE plpgsql AS $$
+		BEGIN
+		  IF EXISTS (SELECT 1 FROM unnest(rids) r WHERE r IS NOT NULL) THEN
+		    INSERT INTO advanced_in_order (kind) VALUES (tbl::text);
+		  END IF;
+		END;
+		$$;`); err != nil {
+		t.Fatalf("installing the recorder: %v", err)
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, contact_id, project_id)
+		VALUES ($1, 'project', NULL, $3), ($1, 'contact', $2, NULL)`, f.late, f.contactA, f.projectP); err != nil {
+		t.Fatalf("linking: %v", err)
+	}
+	var order []string
+	if err := tx.QueryRow(ctx, `SELECT coalesce(array_agg(kind ORDER BY seq), '{}') FROM advanced_in_order`).Scan(&order); err != nil {
+		t.Fatalf("reading the order: %v", err)
+	}
+	if len(order) != 2 || order[0] != "contact" || order[1] != "project" {
+		t.Fatalf("the statement advanced %v, want [contact project]: a project locked first can deadlock "+
+			"against an activity update, which locks the contact first", order)
+	}
+}
