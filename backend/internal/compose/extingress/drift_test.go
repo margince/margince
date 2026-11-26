@@ -154,6 +154,10 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 	"CredentialsMasked": "false is the right answer for a unit. The sink masks every record it is handed " +
 		"and sets the flag itself when that changed the text; a unit stating it would claim a mask the " +
 		"core never performed, and the flag decides which replay proof applies",
+	"sourceRevision": "unexported, and zero for a unit. It is a chat provider's edit time, which the core's chat change " +
+		"path stamps when a message is edited. A unit hands over each record as captured, so it has no edit to date",
+	"sourceRevisionSeq": "unexported, and zero for a unit, for the reason sourceRevision's is: it orders two edits the " +
+		"provider reported at one time, and a unit reports none",
 	"memberOwned":   "unexported, and derived from the binding FileChatMessage is handed: a source is member-owned when it pins a posture, which is a declaration an operator reads and no record can state",
 	"pinnedPosture": "unexported, and copied from the declared source's IngressSource.PinnedPosture onto the chat binding. A unit stating it per record could pick the widest posture its declaration allows",
 	"sourceRevision": "zero, an original with no edit, is the right answer for a record a unit hands over. Unexported, and " +

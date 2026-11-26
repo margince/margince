@@ -222,6 +222,10 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 				Args: TelegramIngestArgs{RawCaptureID: ids.NewV7().String()},
 			})
 		},
+		WhatsAppIngestArgs{}.Kind(): func(ctx context.Context) error {
+			worker := &whatsappedge.Worker[WhatsAppIngestArgs]{Bind: workspaceJobCtx}
+			return worker.Work(ctx, &river.Job[WhatsAppIngestArgs]{})
+		},
 		TelegramPollArgs{}.Kind(): func(ctx context.Context) error {
 			return (&telegramPollWorker{}).Work(ctx, &river.Job[TelegramPollArgs]{
 				Args: TelegramPollArgs{ConnectionID: ids.NewV7().String()},

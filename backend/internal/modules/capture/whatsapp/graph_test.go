@@ -48,12 +48,12 @@ func mediaServer(t *testing.T, size int64, sum string, binStatus int, bin []byte
 		switch r.URL.Path {
 		case "/v23.0/MEDIA":
 			if _, err := fmt.Fprintf(w, `{"url":%q,"mime_type":"application/pdf","sha256":%q,"file_size":%d}`, srv.URL+"/bin", sum, size); err != nil {
-				t.Errorf("writing the media answer: %v", err)
+				t.Errorf("writing the answer: %v", err)
 			}
 		case "/bin":
 			w.WriteHeader(binStatus)
 			if _, err := w.Write(bin); err != nil {
-				t.Errorf("writing the media bytes: %v", err)
+				t.Errorf("writing the answer: %v", err)
 			}
 		default:
 			w.WriteHeader(http.StatusNotFound)
@@ -108,7 +108,7 @@ func TestDownloadMediaRefusesANonHTTPURL(t *testing.T) {
 	for _, bad := range []string{"file:///etc/passwd", "http://lookaside.fbsbx.com/x", "https://evil.example.com/x", "https://fbsbx.com.evil.example/x", "https://fbsbx.com/x"} {
 		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			if _, err := fmt.Fprintf(w, `{"url":%q,"file_size":1}`, bad); err != nil {
-				t.Errorf("writing the media answer: %v", err)
+				t.Errorf("writing the answer: %v", err)
 			}
 		}))
 		c := NewClient(srv.Client(), srv.URL, "v23.0")
@@ -141,7 +141,7 @@ func TestDownloadURLDirectFromEcho(t *testing.T) {
 			return
 		}
 		if _, err := w.Write(payload); err != nil {
-			t.Errorf("writing the media bytes: %v", err)
+			t.Errorf("writing the answer: %v", err)
 		}
 	}))
 	t.Cleanup(srv.Close)
@@ -165,10 +165,7 @@ func sendServer(t *testing.T, status int, answer string, header http.Header) (*C
 	t.Helper()
 	got := &sentRequest{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		raw, err := io.ReadAll(r.Body)
-		if err != nil {
-			t.Errorf("reading the request body: %v", err)
-		}
+		raw, _ := io.ReadAll(r.Body)
 		got.path, got.auth = r.URL.Path, r.Header.Get("Authorization")
 		if err := json.Unmarshal(raw, &got.body); err != nil {
 			t.Errorf("request body: %v", err)

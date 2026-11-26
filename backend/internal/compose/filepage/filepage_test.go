@@ -40,10 +40,10 @@ func servesAFile(contentTypes map[string]bool) bool {
 	return true
 }
 
-// notOpenedInATab are the GET routes that answer neither JSON nor a page. Only
-// a machine calls them, so a refusal page would serve no reader.
-var notOpenedInATab = gatekit.Waive(map[string]string{
-	httpserver.BaseURL + "/channel-events/whatsapp": "Meta's subscription check, answered with the challenge as plain text; a refusal page there would reach no reader",
+// answersAMachine lists the GETs that answer plain text to a calling server.
+// Nobody opens them as a link in a tab, so no refusal page belongs on them.
+var answersAMachine = gatekit.Waive(map[string]string{
+	httpserver.BaseURL + "/channel-events/whatsapp": "Meta's server calls it to check the webhook subscription and reads the echoed challenge; nobody opens it in a browser",
 })
 
 func TestEveryFileRouteIsOneTheContractServesAsAFile(t *testing.T) {
@@ -61,16 +61,16 @@ func TestEveryFileRouteIsOneTheContractServesAsAFile(t *testing.T) {
 		for contentType := range ok.Value.Content {
 			contentTypes[contentType] = true
 		}
-		if servesAFile(contentTypes) {
+		if servesAFile(contentTypes) && !answersAMachine.Waived(t, httpserver.BaseURL+path) {
 			served[httpserver.BaseURL+path] = true
 		}
 	}
+	answersAMachine.AssertAllMatched(t)
 	if len(served) == 0 {
 		t.Fatal("the contract declares no GET that answers a file, so this reads nothing")
 	}
-	defer notOpenedInATab.AssertAllMatched(t)
 	for route := range served {
-		if !fileRoutes[route] && !notOpenedInATab.Waived(t, route) {
+		if !fileRoutes[route] {
 			t.Errorf("GET %s answers a file but is not in fileRoutes, so its link opened in a tab reads JSON", route)
 		}
 	}
