@@ -28,9 +28,3 @@ ALTER TABLE knowledge_document ADD CONSTRAINT knowledge_document_managed_source_
 ALTER TABLE knowledge_document ADD CONSTRAINT knowledge_document_external_id_shape
     CHECK ((external_id IS NULL OR managed_source IS NOT NULL)
        AND (meta IS NULL OR jsonb_typeof(meta) = 'object')) NOT VALID;
-
--- One live document per source id per corpus, held by the schema: the upsert
--- reads before it writes, and two syncs can both run that read first.
-CREATE UNIQUE INDEX knowledge_document_one_per_external_id
-    ON knowledge_document (corpus_id, external_id)
-    WHERE external_id IS NOT NULL AND archived_at IS NULL;
