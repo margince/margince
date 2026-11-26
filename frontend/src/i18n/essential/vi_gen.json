@@ -1949,7 +1949,7 @@
   "payments.syncFailed": "Đồng bộ kế toán không thành công. Số tiền được lấy từ lần đồng bộ thành công gần nhất.",
   "payments.syncUnavailable": "Dữ liệu hóa đơn sẽ có sau khi đồng bộ kế toán thành công.",
   "finance.loading": "Đang tải hóa đơn…",
-  "finance.syncing": "Đang đồng bộ với hệ thống kế toán. Số liệu sẽ hiện sau lần đồng bộ đầu tiên.",
+  "finance.syncing": "Đang chờ lần đồng bộ đầu tiên với hệ thống kế toán. Việc đồng bộ chạy sáu giờ một lần, và quản trị viên có thể bắt đầu sớm hơn trong Cài đặt → Tích hợp.",
   "finance.col.invoice": "Hóa đơn",
   "finance.col.due": "Hạn",
   "finance.unnumbered": "Không số",

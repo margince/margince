@@ -240,7 +240,7 @@ day it was issued. If that day has no rate yet, an admin can add older history i
 |---|---|
 | **No connection** | "No accounting system connected." |
 | **Unmapped** | "Connected, but this company is not yet matched to a customer in the accounting system." |
-| **Syncing** | "Figures appear after the first sync." |
+| **Syncing** | "Waiting for the first sync with the accounting system." It runs every six hours, and an admin can start it sooner. |
 | **Connected** | Working |
 | **Stale** | Connected, but the last sync is old |
 | **Error** | The sync failed |

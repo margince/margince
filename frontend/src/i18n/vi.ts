@@ -3868,7 +3868,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.strip.fin.neverInvoiced": "Chưa xuất hóa đơn",
   "co.strip.fin.noConnection": "Chưa kết nối kế toán",
   "co.strip.fin.unmapped": "Chưa khớp khách hàng",
-  "co.strip.fin.syncing": "Đang đồng bộ",
+  "co.strip.fin.syncing": "Chờ đồng bộ lần đầu",
   "co.strip.fin.staleFigure": "Dữ liệu đồng bộ đã cũ",
   "co.strip.fin.notCurrent": "Chưa cập nhật",
   "co.strip.fin.errorFigure": "Lần đồng bộ gần nhất bị lỗi",
@@ -4328,7 +4328,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "finance.none": "Chưa ghi nhận gì.",
   "finance.loading": "Đang tải hóa đơn…",
   "finance.syncing":
-    "Đang đồng bộ với hệ thống kế toán. Số liệu sẽ hiện sau lần đồng bộ đầu tiên.",
+    "Đang chờ lần đồng bộ đầu tiên với hệ thống kế toán. Việc đồng bộ chạy sáu giờ một lần, và quản trị viên có thể bắt đầu sớm hơn trong Cài đặt → Tích hợp.",
   "finance.noConnection":
     "Chưa kết nối hệ thống kế toán. Hóa đơn và hành vi thanh toán của khách hàng này sẽ hiện khi đã kết nối.",
   "finance.unmapped":

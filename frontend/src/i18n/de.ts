@@ -3995,7 +3995,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.strip.fin.neverInvoiced": "Nicht fakturiert",
   "co.strip.fin.noConnection": "Buchhaltung nicht verbunden",
   "co.strip.fin.unmapped": "Kunde nicht zugeordnet",
-  "co.strip.fin.syncing": "Wird synchronisiert",
+  "co.strip.fin.syncing": "Erste Synchronisierung ausstehend",
   "co.strip.fin.staleFigure": "Synchronisierung veraltet",
   "co.strip.fin.notCurrent": "Nicht aktuell",
   "co.strip.fin.errorFigure": "Letzte Synchronisierung fehlgeschlagen",
@@ -4460,7 +4460,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "finance.none": "Nichts erfasst.",
   "finance.loading": "Rechnungen werden geladen…",
   "finance.syncing":
-    "Synchronisierung mit dem Buchhaltungssystem läuft. Die Zahlen erscheinen nach der ersten Synchronisierung.",
+    "Die erste Synchronisierung mit dem Buchhaltungssystem steht noch aus. Margince synchronisiert alle sechs Stunden, und ein Admin kann die Synchronisierung unter Einstellungen → Anbindungen früher starten.",
   "finance.noConnection":
     "Kein Buchhaltungssystem verbunden. Rechnungen und Zahlungsverhalten dieses Kunden erscheinen, sobald eines verbunden ist.",
   "finance.unmapped":
@@ -7089,6 +7089,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.lineMoved": "{name} ist jetzt Position {position} von {total}",
   "offer.lineHandleUnnamed": "Position {position} von {total} verschieben",
   "offer.lineMovedUnnamed":
+    "Die Position ist jetzt Position {position} von {total}",
   "offer.lapsed":
     "Das Datum „Gültig bis“ dieses Angebots ist überschritten. Ändere es bei einem Entwurf unter „Kopfdaten bearbeiten“ oder erzeuge für ein gesendetes Angebot eine neue Revision.",
   "offer.position": "Position",

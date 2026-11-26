@@ -3922,7 +3922,7 @@ export const en = {
   "co.strip.fin.neverInvoiced": "Not invoiced",
   "co.strip.fin.noConnection": "Accounting not connected",
   "co.strip.fin.unmapped": "Customer not matched",
-  "co.strip.fin.syncing": "Syncing",
+  "co.strip.fin.syncing": "First sync pending",
   "co.strip.fin.staleFigure": "Sync outdated",
   "co.strip.fin.notCurrent": "Not current",
   "co.strip.fin.errorFigure": "Last sync failed",
@@ -4404,7 +4404,7 @@ export const en = {
   "finance.none": "Nothing recorded.",
   "finance.loading": "Loading invoices…",
   "finance.syncing":
-    "Syncing with the accounting system. Figures appear after the first sync.",
+    "Waiting for the first sync with the accounting system. It runs every six hours, and an admin can start it sooner in Settings → Integrations.",
   "finance.noConnection":
     "No accounting system connected. Invoices and payment behavior for this customer appear once one is.",
   "finance.unmapped":

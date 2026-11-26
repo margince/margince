@@ -122,8 +122,8 @@ func (h Handlers) LinkFinanceSourceCustomer(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	customer, err := h.store.LinkCustomer(r.Context(), externalID, companyID)
-	// A linked company reads as syncing until a pass has mirrored it. So the
-	// link queues that pass, rather than leave it to the six-hourly sweep.
+	// A new link's invoices arrive only with the next pass, so the link queues
+	// one rather than leave the company empty until the six-hourly sweep.
 	if err == nil && h.queue != nil {
 		err = h.queue.QueueSync(r.Context())
 	}
