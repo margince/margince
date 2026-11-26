@@ -98,8 +98,32 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Offene Wochenpläne dieses Mitglieds abschließen.",
   "users.retirement.analytics_shares":
     "Aktive geteilte Analytics-Ansichten für dieses Mitglied widerrufen.",
-  "users.retirement.source_used":
-    "Nur ungenutzte importierte oder eingeladene Konten können zusammengeführt werden. Bei eingerichteten Konten Arbeit übergeben und das Mitglied deaktivieren.",
+  "users.retirement.confirmation_missing":
+    "Wer hinter einem Konto steht, das sich noch anmelden kann, muss diese Zusammenführung bestätigen. Fordere unten die Bestätigung an; ein deaktiviertes Konto braucht keine.",
+  "users.retirement.sign_in_dropped":
+    "Passwort, verknüpfte Anmeldeanbieter und zweiter Faktor des zusammengeführten Kontos werden nicht übernommen. Wer das Konto nutzt, meldet sich mit dem Konto an, das bleibt.",
+  "users.merge.confirmTitle": "Bestätigung durch die Kontoinhaber",
+  "users.merge.state.confirmed": "Bestätigt",
+  "users.merge.state.requested": "Link gesendet, Antwort offen",
+  "users.merge.state.not_requested": "Noch nicht angefragt",
+  "users.merge.state.not_needed": "Nicht nötig",
+  "users.merge.ask": "Bestätigung anfordern",
+  "users.merge.askAgain": "Links erneut senden",
+  "users.merge.asked": "Bestätigungslinks gesendet.",
+  "users.mergeConfirm.title": "Zusammenführung deiner Konten bestätigen",
+  "users.mergeConfirm.body":
+    "Ein Admin möchte zwei Konten zusammenführen, die dir gehören. Private E-Mails und Aktivitäten des Kontos, das entfällt, wandern in das Konto, das bleibt. Das meldet dich nicht an.",
+  "users.mergeConfirm.action": "Zusammenführung bestätigen",
+  "users.mergeConfirm.done":
+    "Bestätigt. Der Admin kann die Zusammenführung jetzt abschließen. Du kannst diese Seite schließen.",
+  "users.mergeConfirm.dead":
+    "Dieser Link gilt nicht mehr. Er ist vielleicht abgelaufen, schon benutzt oder ersetzt worden. Wende dich an den Admin, damit er einen neuen sendet.",
+  "users.mergeConfirm.failed":
+    "Die Bestätigung ist nicht durchgegangen. Versuche es gleich noch einmal.",
+  "users.retirement.suspended_side":
+    "Ein gesperrtes Konto kann nicht bestätigen. Aktiviere oder deaktiviere es zuerst.",
+  "users.mergeNeedsConfirmation":
+    "Das Zusammenführen eines benutzten Kontos wartet auf die Nutzenden: Jedes Konto, das sich noch anmelden kann, erhält einen Link zur Bestätigung.",
   "users.retirement.self_survivor":
     "Ein anderes Mitglied als sich selbst als Ziel wählen.",
   "users.retirement.deactivate_first":
@@ -164,6 +188,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.editCancel": "Abbrechen",
   "users.editSave": "Mitglied speichern",
   "users.merge": "Duplikat zusammenführen",
+  "users.mergeRefused.sole_admin":
+    "Das ist die einzige Administration, deshalb lässt sich das Konto nicht zusammenführen.",
+  "users.mergeRefused.self":
+    "Das ist dein eigenes Konto, deshalb lässt es sich nicht zusammenführen.",
+  "users.mergeRefused.agent_seat":
+    "Agentenplätze lassen sich nicht zusammenführen.",
+  "users.mergeRefused.other":
+    "Dieses Konto lässt sich im Moment nicht zusammenführen.",
   "users.remove": "Mitglied entfernen",
   "users.mergeTitle": "{name} mit einem anderen Konto zusammenführen?",
   "users.removeTitle": "{name} entfernen?",

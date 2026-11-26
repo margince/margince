@@ -77,16 +77,13 @@ func (w *Worker[T]) discard(ctx context.Context, rawID ids.UUID) error {
 }
 
 // file files the message while its connection is live. It destroys the stored item
-// when the connection is not live or the customer has been erased. A reaction,
-// edit or revoke keeps its stored item for the path that will apply changes.
+// when the connection is not live or the customer has been erased. An edit or a
+// revoke goes through the change path. A reaction changes nothing, so its item
+// is destroyed.
 func (w *Worker[T]) file(ctx context.Context, connection, rawID ids.UUID, msg whatsapp.Message) error {
 	chat, err := whatsapp.ChatMessage(msg)
 	if errors.Is(err, connector.ErrSkip) {
-		// A reaction, edit or revoke has no place in a conversation entry yet. The
-		// stored item stays for the path that will apply changes, and carries no
-		// new content beyond what the customer already sent.
-		w.Log.InfoContext(ctx, "whatsapp_ingest: kept a message change that is not applied yet", "kind", string(msg.Kind))
-		return nil
+		return w.change(ctx, connection, rawID, msg)
 	}
 	if err != nil {
 		return fmt.Errorf("whatsapp_ingest: mapping the message: %w", err)
@@ -106,6 +103,42 @@ func (w *Worker[T]) file(ctx context.Context, connection, rawID ids.UUID, msg wh
 	})
 	if err == nil && !live {
 		w.Log.InfoContext(ctx, "whatsapp_ingest: discarded a message whose connection is no longer live")
+	}
+	return err
+}
+
+// change applies an edit or a revoke to the message it names, through the one
+// function every chat network changes a message through. The stored item is the
+// message's original when the edit lands, and is deleted when it changes
+// nothing. An edit whose original has not landed fails the job, so River
+// retries it after the original.
+func (w *Worker[T]) change(ctx context.Context, connection, rawID ids.UUID, msg whatsapp.Message) error {
+	change, err := whatsapp.ChatChange(msg)
+	if errors.Is(err, connector.ErrSkip) {
+		w.Log.InfoContext(ctx, "whatsapp_ingest: discarded a stored item that changes no message", "kind", string(msg.Kind))
+		return w.discard(ctx, rawID)
+	}
+	if err != nil {
+		return fmt.Errorf("whatsapp_ingest: mapping the change: %w", err)
+	}
+	sink, ok := w.Sink.(capture.ChatSink)
+	if !ok {
+		return errors.New("whatsapp_ingest: the sink acts on no chat changes")
+	}
+	change.StoredOriginal = rawID
+	actorCtx := principal.WithCorrelationID(principal.WithActor(ctx, w.Actor), ids.NewV7())
+	live, err := capture.FileThroughLiveChatLink(actorCtx, w.Pool, connection.String(), rawID, func(link connector.ChatLink) error {
+		outcome, err := capture.ChangeChatMessage(actorCtx, sink, whatsapp.ChatBinding(msg, link), change)
+		if err != nil {
+			return fmt.Errorf("whatsapp_ingest: changing a message: %w", err)
+		}
+		if outcome == connector.ChatChangeNotFiled {
+			return errors.New("whatsapp_ingest: the message this change is about has not been filed yet")
+		}
+		return nil
+	})
+	if err == nil && !live {
+		w.Log.InfoContext(ctx, "whatsapp_ingest: discarded a change whose connection is no longer live")
 	}
 	return err
 }

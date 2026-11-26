@@ -268,3 +268,111 @@ func TestTheRosterOffersRemovalOnlyOnADeactivatedMember(t *testing.T) {
 		t.Errorf("a deactivated member is not offered remove: %v", offers[gone.UserID.UUID])
 	}
 }
+
+// rosterRefusals reads the management roster's unavailable_actions, as caller.
+func rosterRefusals(t *testing.T, e *revocationEnv, h Handlers, caller Identity) map[ids.UUID][]crmcontracts.MemberUnavailableAction {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/users?include_inactive=true", nil).
+		WithContext(withIdentity(e.wsCtx(caller), caller))
+	inactive, limit := true, 200
+	h.ListUsers(rec, req, crmcontracts.ListUsersParams{IncludeInactive: &inactive, Limit: &limit})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("roster status = %d: %s", rec.Code, rec.Body)
+	}
+	var page crmcontracts.UserListResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	out := map[ids.UUID][]crmcontracts.MemberUnavailableAction{}
+	for _, user := range page.Data {
+		if user.UnavailableActions == nil {
+			t.Fatalf("%s carries no unavailable_actions on a member administrator's roster", user.Email)
+		}
+		out[ids.UUID(user.Id)] = *user.UnavailableActions
+	}
+	return out
+}
+
+func mergeReasons(refused []crmcontracts.MemberUnavailableAction) []string {
+	var out []string
+	for _, r := range refused {
+		if r.Action == crmcontracts.MemberUnavailableActionAction(actionMerge) {
+			out = append(out, string(r.Reason))
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// A used account is offered merge and flagged as needing confirmation. An
+// unused one is offered merge with no flag. Only a real refusal is a reason.
+func TestTheRosterOffersMergeOnAUsedMemberAndSaysItNeedsConfirmation(t *testing.T) {
+	e := setupRevocationEnv(t, "refused-merge")
+	h := NewHandlers(e.svc)
+	unused := e.seat(t, "refused-unused", "rep")
+	passworded := e.seat(t, "refused-password", "rep")
+	linked := e.seat(t, "refused-linked", "rep")
+	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET password_hash = 'x' WHERE id = $1`, passworded.UserID); err != nil {
+		t.Fatal(err)
+	}
+	linkFederatedIdentityRow(t, e.owner, linked.UserID, "refused-linked-subject", "refused-linked@"+e.slug+".test")
+
+	offers := rosterActions(t, e, h, e.admin)
+	refusals := rosterRefusals(t, e, h, e.admin)
+	needs := rosterNeedsConfirmation(t, e, h, e.admin)
+	merge := crmcontracts.UserAllowedActions(actionMerge)
+	for name, want := range map[string]struct {
+		id    ids.UserID
+		needs bool
+	}{"unused": {unused.UserID, false}, "password only": {passworded.UserID, true}, "linked provider": {linked.UserID, true}} {
+		if !slices.Contains(offers[want.id.UUID], merge) {
+			t.Errorf("%s: merge is not offered: %v", name, offers[want.id.UUID])
+		}
+		if len(mergeReasons(refusals[want.id.UUID])) != 0 {
+			t.Errorf("%s: refused with %v", name, refusals[want.id.UUID])
+		}
+		if needs[want.id.UUID] != want.needs {
+			t.Errorf("%s: merge_needs_confirmation = %v, want %v", name, needs[want.id.UUID], want.needs)
+		}
+	}
+	if got := mergeReasons(refusals[e.admin.UserID.UUID]); !slices.Contains(got, reasonSelf) {
+		t.Errorf("the caller's own row: reasons = %v, want self", got)
+	}
+	for id, offered := range offers {
+		if slices.Contains(offered, merge) && len(mergeReasons(refusals[id])) > 0 {
+			t.Errorf("%s is offered merge and refused it: %v", id, refusals[id])
+		}
+	}
+}
+
+// rosterNeedsConfirmation reads merge_needs_confirmation off the roster.
+func rosterNeedsConfirmation(t *testing.T, e *revocationEnv, h Handlers, caller Identity) map[ids.UUID]bool {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/users?include_inactive=true", nil).
+		WithContext(withIdentity(e.wsCtx(caller), caller))
+	inactive, limit := true, 200
+	h.ListUsers(rec, req, crmcontracts.ListUsersParams{IncludeInactive: &inactive, Limit: &limit})
+	var page crmcontracts.UserListResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	out := map[ids.UUID]bool{}
+	for _, user := range page.Data {
+		out[ids.UUID(user.Id)] = user.MergeNeedsConfirmation != nil && *user.MergeNeedsConfirmation
+	}
+	return out
+}
+
+// A caller without the user_admin delete grant is told nothing about merge,
+// not even that the sole administrator cannot be merged.
+func TestTheRosterGivesNoMergeReasonToACallerWithoutTheVerb(t *testing.T) {
+	e := setupRevocationEnv(t, "refused-merge-no-verb")
+	h := NewHandlers(e.svc)
+	updater := e.seat(t, "noverb-holder", e.customRole(t, "Updates only", "rep",
+		map[string]storedGrant{objectUserAdmin: {Read: true, Update: true}}))
+	if got := mergeReasons(rosterRefusals(t, e, h, updater)[e.admin.UserID.UUID]); len(got) != 0 {
+		t.Errorf("a caller without the delete verb is told %v", got)
+	}
+}

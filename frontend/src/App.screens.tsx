@@ -161,6 +161,12 @@ export const ConfirmDetailsScreen = lazy(() =>
   })),
 );
 
+export const MergeConfirmScreen = lazy(() =>
+  SCREEN_CODE.confirm().then((m) => ({
+    default: m.MergeConfirmScreen,
+  })),
+);
+
 export const AnalyticsScreen = lazy(() =>
   SCREEN_CODE.analytics().then((m) => ({
     default: m.AnalyticsScreen,

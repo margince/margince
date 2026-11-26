@@ -80,8 +80,32 @@ export const en = {
   "users.retirement.weekly_plans": "Close this member’s open weekly plans.",
   "users.retirement.analytics_shares":
     "Revoke live analytics shares scoped to this member.",
-  "users.retirement.source_used":
-    "Only unused imported or invited identities can be merged. Hand over work and deactivate a member who has already completed sign-in setup.",
+  "users.retirement.confirmation_missing":
+    "The holder of each account that can still sign in must confirm this merge. Ask for confirmation below; a deactivated account needs none.",
+  "users.retirement.sign_in_dropped":
+    "The merged account’s password, linked sign-in providers and second factor are not moved. Its holder signs in with the account you keep.",
+  "users.merge.confirmTitle": "Confirmation by the account holders",
+  "users.merge.state.confirmed": "Confirmed",
+  "users.merge.state.requested": "Link sent, waiting",
+  "users.merge.state.not_requested": "Not asked yet",
+  "users.merge.state.not_needed": "Not needed",
+  "users.merge.ask": "Ask for confirmation",
+  "users.merge.askAgain": "Send the links again",
+  "users.merge.asked": "Confirmation links sent.",
+  "users.mergeConfirm.title": "Confirm the merge of your accounts",
+  "users.mergeConfirm.body":
+    "An administrator asked to merge two accounts that belong to you. The private mail and activity of the account that goes away move to the account that stays. This does not sign you in.",
+  "users.mergeConfirm.action": "Confirm the merge",
+  "users.mergeConfirm.done":
+    "Confirmed. The administrator can finish the merge now. You can close this page.",
+  "users.mergeConfirm.dead":
+    "This link is not valid any more. It may have expired, been used, or been replaced. Ask the administrator to send a new one.",
+  "users.mergeConfirm.failed":
+    "The confirmation did not go through. Try again in a moment.",
+  "users.retirement.suspended_side":
+    "A suspended account cannot confirm. Reactivate or deactivate it first.",
+  "users.mergeNeedsConfirmation":
+    "Merging a used account waits for the holders: each account that can still sign in gets a link to confirm.",
   "users.retirement.self_survivor":
     "Choose a surviving member other than yourself.",
   "users.retirement.deactivate_first":
@@ -141,6 +165,12 @@ export const en = {
   "users.editCancel": "Cancel",
   "users.editSave": "Save member",
   "users.merge": "Merge duplicate",
+  "users.mergeRefused.sole_admin":
+    "This is the only administrator, so it cannot be merged.",
+  "users.mergeRefused.self":
+    "This is your own account, so it cannot be merged.",
+  "users.mergeRefused.agent_seat": "Agent seats cannot be merged.",
+  "users.mergeRefused.other": "This account cannot be merged right now.",
   "users.remove": "Remove member",
   "users.mergeTitle": "Merge {name} into another account?",
   "users.removeTitle": "Remove {name}?",

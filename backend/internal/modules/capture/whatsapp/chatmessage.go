@@ -18,8 +18,8 @@ import (
 const CapturedBy = "connector:whatsapp"
 
 // ChatMessage maps one decoded message to what the provider said about it. A
-// reaction, an edit and a revoke have no place in a conversation entry yet, so
-// they answer connector.ErrSkip. A media item files as its caption, or as a
+// reaction, an edit and a revoke are no new conversation entry, so they answer
+// connector.ErrSkip. ChatChange maps the edit and the revoke. A media item files as its caption, or as a
 // placeholder naming its type until media is downloaded.
 func ChatMessage(msg Message) (connector.ChatMessage, error) {
 	_, userID := CustomerIdentity(msg)
@@ -56,6 +56,29 @@ func ChatMessage(msg Message) (connector.ChatMessage, error) {
 		Body:           body,
 		OccurredAt:     msg.At,
 	}, nil
+}
+
+// ChatChange maps an edit or a revoke to a change of the message it names. The
+// edit's revision is the time of the edit event, and WhatsApp states no order
+// for two edits stamped alike, so RevisionSeq stays zero. Any other kind, and an
+// edit that carries no text, answer connector.ErrSkip.
+func ChatChange(msg Message) (connector.ChatChange, error) {
+	_, userID := CustomerIdentity(msg)
+	if userID == "" {
+		return connector.ChatChange{}, fmt.Errorf("%w: a message names no customer", ErrMalformedItem)
+	}
+	change := connector.ChatChange{ConversationID: userID, IdempotencyKey: msg.OriginalID}
+	switch {
+	case msg.OriginalID == "":
+		return connector.ChatChange{}, connector.ErrSkip
+	case msg.Kind == KindEdit && msg.Text != "":
+		change.Kind, change.Body, change.Revision = connector.ChatEdited, msg.Text, msg.At
+	case msg.Kind == KindRevoke:
+		change.Kind = connector.ChatDeleted
+	default:
+		return connector.ChatChange{}, connector.ErrSkip
+	}
+	return change, nil
 }
 
 func placeholderName(typ string) string {

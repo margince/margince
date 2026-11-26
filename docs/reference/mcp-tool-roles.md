@@ -39,10 +39,10 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
-| [Business operations](#business-operations) | 392 | 390✓ 2✗ | 364✓ 28✗ | 366✓ 26✗ | 363✓ 29✗ | 182✓ 210✗ | 335✓ 57✗ |
+| [Business operations](#business-operations) | 394 | 392✓ 2✗ | 366✓ 28✗ | 368✓ 26✗ | 365✓ 29✗ | 184✓ 210✗ | 337✓ 57✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 47 | 47✓ 0✗ | 27✓ 20✗ | 27✓ 20✗ | 32✓ 15✗ | 11✓ 36✗ | 26✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 44 | 44✓ 0✗ | 38✓ 6✗ | 38✓ 6✗ | 44✓ 0✗ | 28✓ 16✗ | 37✓ 7✗ |
-| [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 39 | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 34✓ 5✗ | 39✓ 0✗ |
+| [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 40 | 40✓ 0✗ | 40✓ 0✗ | 40✓ 0✗ | 40✓ 0✗ | 35✓ 5✗ | 40✓ 0✗ |
 | [Admin settings](#admin-settings) | 117 | 117✓ 0✗ | 10✓ 107✗ | 0✓ 117✗ | 84✓ 33✗ | 0✓ 117✗ | 0✓ 117✗ |
 | [The user's own account and security](#the-users-own-account-and-security) | 18 | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 17✓ 1✗ | 18✓ 0✗ |
 | [Agent governance](#agent-governance) | 4 | 4✓ 0✗ | 4✓ 0✗ | 4✓ 0✗ | 4✓ 0✗ | 3✓ 1✗ | 4✓ 0✗ |
@@ -113,6 +113,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_details.link_candidates` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_details.offered_values` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_relationships.company_id` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `read_workspace.company_types` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `run_research.ask_about_company` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `run_research.draft_intro_request` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `run_research.refresh_company_brief` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -415,6 +416,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_context.catch_up` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_context.meeting` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.actions` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `read_workspace.link_types` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.list_filters` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.query` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.record_fields` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -787,6 +789,12 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_workspace.web_form` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.web_forms` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
+### Extensions
+
+| Call | admin | management | manager | ops | read_only | rep |
+|---|---|---|---|---|---|---|
+| `read_workspace.record_kinds` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
 ### Installation settings
 
 | Call | admin | management | manager | ops | read_only | rep |
@@ -1138,6 +1146,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Companies | `read_details.link_candidates` | `list_company_link_candidates` | `company.read` `contact.read` `relationship.read` |
 | Companies | `read_details.offered_values` | `list_company_offered_values` | `company.read` |
 | Companies | `read_relationships.company_id` | `intro_path_to` | `company.read` `contact.read` `relationship.read` |
+| Companies | `read_workspace.company_types` | `read_company_types` |  |
 | Companies | `run_research.ask_about_company` | `ask_about_company` | `activity.read` `company.read` `contact.read` `deal.read` `list.read` `project.read` `relationship.read` `tag.read` |
 | Companies | `run_research.draft_intro_request` | `draft_intro_request` | `activity.read` `company.read` `contact.read` `relationship.read` |
 | Companies | `run_research.refresh_company_brief` | `regenerate_company_brief` | `activity.read` `company.read` `contact.read` `deal.read` `list.read` `project.read` `relationship.read` `tag.read` |
@@ -1365,6 +1374,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Search and record context | `read_context.catch_up` | `catch_me_up_on` | `activity.read,company.read,contact.read,lead.read,project.read` `company.read,contact.read,lead.read,project.read,relationship.read` |
 | Search and record context | `read_context.meeting` | `prep_for_meeting` | `company.read,contact.read,lead.read,project.read` |
 | Search and record context | `read_workspace.actions` | `describe_router_actions` |  |
+| Search and record context | `read_workspace.link_types` | `read_link_types` |  |
 | Search and record context | `read_workspace.list_filters` | `describe_list_filters` |  |
 | Search and record context | `read_workspace.query` | `describe_query_vocabulary` |  |
 | Search and record context | `read_workspace.record_fields` | `describe_record_fields` |  |
@@ -1620,6 +1630,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Web forms | `read_details.website_inquiry_preview` | `preview_website_inquiries` | `activity.create` `automation.read` `integrations.read` |
 | Web forms | `read_workspace.web_form` | `get_web_form` | `integrations.read` |
 | Web forms | `read_workspace.web_forms` | `list_web_forms` | `integrations.read` |
+| Extensions | `read_workspace.record_kinds` | `read_record_kinds` |  |
 | Installation settings | `read_details.jurisdiction_document` | `download_jurisdiction_document` | `installation_settings.read` |
 | Installation settings | `read_workspace.installation_jurisdiction` | `read_installation_jurisdiction` | `installation_settings.read` |
 

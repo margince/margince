@@ -6244,7 +6244,7 @@ export interface paths {
          *     screen shows for each. Which extensions are installed is a fact of the binary, so the
          *     contract cannot list the values; this operation does.
          *
-         *     Readable by any signed-in seat, because the company list shows these types and filters
+         *     Readable by any signed-in seat and its agent, because the company list shows these types and filters
          *     on them. Each value and label is declared in extension code, never typed by an
          *     administrator. Empty when no installed extension declares a type.
          */
@@ -20646,6 +20646,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/{id}/merge-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the holders of two accounts to confirm merging them. Admin-only, human-only.
+         * @description For a source account that has been used. Mails a single-use confirmation link to the
+         *     sign-in address of each side that is not deactivated and has not confirmed yet, and
+         *     supersedes any link still open for that side. The merge itself still goes through
+         *     `mergeMembers`, and refuses until every such side has confirmed. A link confirms and
+         *     signs nobody in. It dies when the account's address changes, its credentials end or it is
+         *     deactivated, and after three days.
+         *
+         *     Refused (409) unless the preview the token names has no blocker other than
+         *     `confirmation_missing`, and when this installation cannot send email. Answers the
+         *     preview as it stands after the request, with a token to merge from once every side has
+         *     confirmed. Shares the set-password link limits per actor and per target. Audited on each
+         *     side's account.
+         */
+        post: operations["requestMemberMerge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/confirm-member-merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm that this account may be merged into another, from the mailed link.
+         * @description Spends the single-use token mailed by `requestMemberMerge`. It signs nobody in and changes nothing about the account. An expired, used, unknown or withdrawn token, and one whose account has since left, produce one neutral error. Audited.
+         */
+        post: operations["confirmMemberMerge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}/merge": {
         parameters: {
             query?: never;
@@ -20660,7 +20714,7 @@ export interface paths {
         put?: never;
         /**
          * Merge a duplicate into the selected surviving member.
-         * @description The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+         * @description An unused source merges at once. A used source merges only after the holder of each side that is not deactivated has confirmed through `requestMemberMerge`; a deactivated side needs no confirmation, so two deactivated accounts merge on an administrator's say alone. The acting administrator can be neither side.
          */
         post: operations["mergeMembers"];
         delete?: never;
@@ -51390,10 +51444,20 @@ export interface components {
             /** Format: date-time */
             expected_updated_at: string;
         };
+        /** @description One member verb the caller holds the grant for and this member refuses, with why. */
+        MemberUnavailableAction: {
+            /** @enum {string} */
+            action: "merge";
+            /**
+             * @description Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
+             * @enum {string}
+             */
+            reason: "sole_admin" | "self" | "agent_seat";
+        };
         /** @enum {string} */
-        MemberRetirementBlocker: "approval_decisions" | "automations" | "booking_pages" | "data_requests" | "deal_rooms" | "introductions" | "lists" | "stewarded_lists" | "mail_drafts" | "meeting_invitations" | "meeting_proposals" | "privacy_notices" | "record_responsibilities" | "reports" | "report_schedules" | "saved_views" | "scheduled_mail" | "handoffs" | "voice_profiles" | "web_forms" | "webhooks" | "weekly_plans" | "analytics_shares" | "source_used" | "self_survivor" | "deactivate_first" | "choose_survivor" | "choose_receiver" | "private_tasks" | "work_not_transferable" | "state_changed";
+        MemberRetirementBlocker: "approval_decisions" | "automations" | "booking_pages" | "data_requests" | "deal_rooms" | "introductions" | "lists" | "stewarded_lists" | "mail_drafts" | "meeting_invitations" | "meeting_proposals" | "privacy_notices" | "record_responsibilities" | "reports" | "report_schedules" | "saved_views" | "scheduled_mail" | "handoffs" | "voice_profiles" | "web_forms" | "webhooks" | "weekly_plans" | "analytics_shares" | "confirmation_missing" | "suspended_side" | "self_survivor" | "deactivate_first" | "choose_survivor" | "choose_receiver" | "private_tasks" | "work_not_transferable" | "state_changed";
         /** @enum {string} */
-        MemberRetirementConsequence: "source_signed_out" | "connectors_reconnect" | "survivor_access" | "original_attribution" | "private_alerts_archived" | "crm_private_records_move" | "private_audiences_retained" | "email_reserved" | "survivor_inactive";
+        MemberRetirementConsequence: "source_signed_out" | "connectors_reconnect" | "survivor_access" | "original_attribution" | "private_alerts_archived" | "crm_private_records_move" | "private_audiences_retained" | "email_reserved" | "survivor_inactive" | "sign_in_dropped";
         MemberRetirementPreview: {
             owned: components["schemas"]["HandoverCounts"];
             signal_count: number;
@@ -51411,6 +51475,20 @@ export interface components {
             survivor_name?: string;
             /** Format: email */
             survivor_email?: string;
+            /** @description Present for a merge whose source account has been used: one entry per side, saying whether that side's holder has confirmed. `confirmation_missing` is in `blockers` while any side is `requested` or `not_requested`. */
+            confirmations?: components["schemas"]["MemberMergeConfirmation"][];
+        };
+        MemberMergeConfirmation: {
+            /** Format: uuid */
+            user_id: string;
+            /** @enum {string} */
+            side: "source" | "survivor";
+            display_name: string;
+            /**
+             * @description `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
+             * @enum {string}
+             */
+            state: "confirmed" | "requested" | "not_requested" | "not_needed";
         };
         /**
          * @description The records that hold one blocker. `total` counts every one of them. `records` lists the
@@ -51516,6 +51594,10 @@ export interface components {
             merged_from?: components["schemas"]["SeatName"][];
             /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
             allowed_actions?: ("change_role" | "issue_password_link" | "resend_invite" | "remove_mfa" | "deactivate" | "reactivate" | "hand_over" | "edit" | "merge" | "remove")[];
+            /** @description True when `merge` is in `allowed_actions` and this account has been used (a password, a sign-in or a linked provider), so merging it waits for the holder of each side that can still sign in to confirm. Absent otherwise, and on the same views as `allowed_actions`. */
+            merge_needs_confirmation?: boolean;
+            /** @description The member verbs the caller holds the `user_admin` grant for and this member refuses, each with the reason, so a client explains the missing button instead of hiding it. An action never appears here and in `allowed_actions`. Present wherever `allowed_actions` is; empty when nothing is refused. */
+            unavailable_actions?: components["schemas"]["MemberUnavailableAction"][];
             /**
              * Format: date-time
              * @description When this member last used the product: the latest request any of their sign-in sessions made, including a session since signed out, revoked or expired. Clearing dead sessions records the latest of their requests on the member first, so the value outlives the sessions. Signing in counts as activity. Work an agent or a connected app did on their behalf does not.
@@ -69660,7 +69742,7 @@ export interface operations {
                 status?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
-                /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. */
+                /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. `listCompanyTypes` lists the values, and an agent reads them with the `read_workspace` action `company_types`. */
                 extension_relationship_type?: string;
                 /**
                  * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
@@ -72864,7 +72946,7 @@ export interface operations {
                 priority?: "low" | "medium" | "high" | "unset";
                 /** @description An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker. */
                 acquisition_source?: string;
-                /** @description A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. */
+                /** @description A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. `listLinkTypes` lists the values, and an agent reads them with the `read_workspace` action `link_types`. */
                 link_type?: string;
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
@@ -83904,7 +83986,7 @@ export interface operations {
     getFilterVocabulary: {
         parameters: {
             query: {
-                /** @description The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. */
+                /** @description The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. `listRecordKinds` lists the kinds the caller may read, and an agent reads them with the `read_workspace` action `record_kinds`. */
                 resource: components["schemas"]["FilterResource"];
             };
             header?: never;
@@ -98361,6 +98443,98 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    requestMemberMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeMembersRequest"];
+            };
+        };
+        responses: {
+            /** @description The preview after the request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberRetirementPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Another change since the preview, a blocker still open, nothing left to confirm, or no way to send email. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    confirmMemberMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Confirmed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid, used, or expired token (one neutral error for all of them). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     mergeMembers: {
