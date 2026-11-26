@@ -96,13 +96,15 @@ describe("the mcp-view-copy rule, over planted views", () => {
           'type S = "cancelled" | "open";',
           'const done = status === "cancelled" || status != "cancelled";',
           'switch (status) { case "cancelled": break; }',
+          'const grouped = status === ("cancelled");',
+          'switch (status) { case ("cancelled"): break; }',
           'const t = "Cancelled order";',
         ].join("\n"),
       ),
     ).toEqual([
       quoted(
         "spells American English",
-        "src/mcp-apps/card/main.ts:4:11",
+        "src/mcp-apps/card/main.ts:6:11",
         "Cancelled order",
       ),
     ]);
@@ -137,7 +139,7 @@ describe("the mcp-view-copy rule, over planted views", () => {
       `<meta name="description" content='A "b"'>`,
       "<script>const we = 1;</script><style>p { color: red }</style>",
       "</head><body><p>We know it</p>",
-      '<img alt=\'A&apos;s\' /><input placeholder="Find…" aria-describedby="Us"',
+      "<img alt='A&apos;s' /><input placeholder=\"Find…\"",
       ' title="Don’t',
       '  stop" /></body></html>',
     ].join("\n");
@@ -155,10 +157,20 @@ describe("the mcp-view-copy rule, over planted views", () => {
         "src/mcp-apps/card/index.html <p>",
         "We know it",
       ),
+    ]);
+  });
+
+  it("reads a text ARIA attribute and no id reference", () => {
+    const button = [
+      '<button aria-describedby="we" aria-labelledby="our" aria-controls="us"',
+      ' aria-owns="we" aria-activedescendant="we" aria-details="we"',
+      ' aria-errormessage="we" aria-flowto="we" aria-label="Our deals"></button>',
+    ].join("\n");
+    expect(findingsOver({ "card/index.html": button })).toEqual([
       quoted(
         "never speaks as we",
-        "src/mcp-apps/card/index.html <input aria-describedby>",
-        "Us",
+        "src/mcp-apps/card/index.html <button aria-label>",
+        "Our deals",
       ),
     ]);
   });
@@ -187,6 +199,16 @@ describe("the mcp-view-copy rule, over planted views", () => {
     ).toEqual([
       "reads JSON this rule cannot: src/mcp-apps/card/main.ts imports ./copy.json",
       "reads JSON this rule cannot: src/mcp-apps/card/main.ts imports ./actions.json",
+    ]);
+  });
+
+  it("names a dynamic JSON import as it names a static one", () => {
+    expect(
+      module(
+        'const tools = import("../actions.json");\nconst copy = await import("./copy.json");\n',
+      ),
+    ).toEqual([
+      "reads JSON this rule cannot: src/mcp-apps/card/main.ts imports ./copy.json",
     ]);
   });
 

@@ -22,7 +22,9 @@ const COMPARISONS = new Set([
   ts.SyntaxKind.ExclamationEqualsToken,
 ]);
 
-const PAGE_ATTRIBUTE = /^(content|alt|title|placeholder|aria-.+)$/;
+// The ARIA attributes that hold text; the rest name element ids.
+const PAGE_ATTRIBUTE =
+  /^(content|alt|title|placeholder|aria-(label|description|roledescription|placeholder|valuetext|braillelabel|brailleroledescription))$/;
 const NOT_READ = new Set(["SCRIPT", "STYLE"]);
 const QUOTED = /"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'/g;
 
@@ -43,17 +45,24 @@ function decoded(text: string): string {
 // A literal compared against, matched by a case, or written as a type is a
 // wire value, which keeps the spelling the wire has.
 function isWireValue(node: ts.Node): boolean {
-  const parent = node.parent;
+  let grouped = node;
+  while (ts.isParenthesizedExpression(grouped.parent)) grouped = grouped.parent;
+  const parent = grouped.parent;
   return (
     (ts.isBinaryExpression(parent) &&
       COMPARISONS.has(parent.operatorToken.kind)) ||
-    (ts.isCaseClause(parent) && parent.expression === node) ||
+    (ts.isCaseClause(parent) && parent.expression === grouped) ||
     ts.isLiteralTypeNode(parent) ||
+    isDynamicImport(parent) ||
     ts.isImportDeclaration(parent) ||
     ts.isExportDeclaration(parent) ||
     ts.isExternalModuleReference(parent)
   );
 }
+
+const isDynamicImport = (node: ts.Node): node is ts.CallExpression =>
+  ts.isCallExpression(node) &&
+  node.expression.kind === ts.SyntaxKind.ImportKeyword;
 
 function templateText(node: ts.TemplateExpression): string {
   return (
@@ -120,14 +129,25 @@ function moduleCopy(file: CensusFile, source: ts.SourceFile): Copy[] {
 }
 
 export function jsonImports(file: CensusFile): string[] {
-  return (file.source?.statements ?? []).flatMap((statement) =>
-    ts.isImportDeclaration(statement) &&
-    ts.isStringLiteral(statement.moduleSpecifier) &&
-    statement.moduleSpecifier.text.endsWith(".json") &&
-    resolve(dirname(file.path), statement.moduleSpecifier.text) !== TOOL_LIST
-      ? [`${file.rel} imports ${statement.moduleSpecifier.text}`]
-      : [],
-  );
+  const found: string[] = [];
+  const visit = (node: ts.Node): void => {
+    const specifier = ts.isImportDeclaration(node)
+      ? node.moduleSpecifier
+      : isDynamicImport(node)
+        ? node.arguments[0]
+        : undefined;
+    if (
+      specifier &&
+      ts.isStringLiteralLike(specifier) &&
+      specifier.text.endsWith(".json") &&
+      resolve(dirname(file.path), specifier.text) !== TOOL_LIST
+    ) {
+      found.push(`${file.rel} imports ${specifier.text}`);
+    }
+    ts.forEachChild(node, visit);
+  };
+  if (file.source) visit(file.source);
+  return found;
 }
 
 function pageCopy(file: CensusFile): Copy[] {
