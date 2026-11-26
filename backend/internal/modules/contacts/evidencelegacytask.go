@@ -17,20 +17,19 @@ import (
 )
 
 // legacyEvidenceTable is one table whose rows the data task moves, and the
-// kind of subject a row of it belongs to.
+// kind of subject a row of it belongs to, which its <kind>_id column names.
 type legacyEvidenceTable struct {
 	step        string
 	table       string
-	subject     string
 	subjectKind string
 }
 
 // legacyEvidenceTables are walked in this order. A company's move takes both
 // of its tables, so the second step finds only companies the first did not.
 var legacyEvidenceTables = []legacyEvidenceTable{
-	{step: "move_company_facts", table: "company_fact_legacy", subject: "company_id", subjectKind: entityCompany},
-	{step: "move_company_profile_fields", table: "company_profile_field_legacy", subject: "company_id", subjectKind: entityCompany},
-	{step: "move_contact_profile_fields", table: "contact_profile_field_legacy", subject: "contact_id", subjectKind: entityContact},
+	{step: "move_company_facts", table: "company_fact_legacy", subjectKind: entityCompany},
+	{step: "move_company_profile_fields", table: "company_profile_field_legacy", subjectKind: entityCompany},
+	{step: "move_contact_profile_fields", table: "contact_profile_field_legacy", subjectKind: entityContact},
 }
 
 // LegacyEvidenceDataTask moves the evidence rows written before field_provenance
@@ -94,7 +93,7 @@ func moveLegacyEvidenceBatch(ctx context.Context, tx pgx.Tx, legacy legacyEviden
 	if len(page) == 0 {
 		return datatask.AdvanceUUID(in, page, 0)
 	}
-	if err := moveLegacySubjectsOf(ctx, tx, legacy.subjectKind, `SELECT `+pgx.Identifier{legacy.subject}.Sanitize()+
+	if err := moveLegacySubjectsOf(ctx, tx, legacy.subjectKind, `SELECT `+pgx.Identifier{legacy.subjectKind + "_id"}.Sanitize()+
 		` FROM `+pgx.Identifier{legacy.table}.Sanitize()+` WHERE id = ANY($1)`, page); err != nil {
 		return datatask.BatchOut{}, err
 	}

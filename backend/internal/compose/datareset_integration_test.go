@@ -339,7 +339,9 @@ var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	// Not a guard: the trigger counts fact writes and refuses no delete. Its
 	// counter rows go with their company by FK cascade, so a reset that clears
 	// the companies leaves no counter behind. TestAResetLeavesNoFactRevision holds it.
-	"company_fact trg_company_fact_count_revision":                    "counts a company's fact writes and refuses no delete; the counter rows cascade with their company, so a reset leaves none",
+	"company deleted_company_drops_evidence":                          "deletes the swept companies' evidence rows from field_provenance and refuses no delete, as the typed tables' cascade did",
+	"field_provenance trg_deleted_company_evidence_counts_revision":   "counts a company's fact writes and refuses no delete; the counter rows cascade with their company, so a reset leaves none",
+	"contact deleted_contact_drops_evidence":                          "deletes the swept contacts' evidence rows from field_provenance and refuses no delete, as the typed tables' cascade did",
 	"record_grant home_read_fence_record_grant":                       "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
 	"activity_audience_member home_read_fence_audience_member":        "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
 	"activity_link home_read_fence_link_removed":                      "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
