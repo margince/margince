@@ -107,7 +107,6 @@ public.activity_review_template.shipped_label_key document
 public.activity_review_template.source document
 public.activity_sales_state.channel_provider document
 public.activity_sales_state.kind document
-public.activity_sales_state.set_by document
 public.activity_sales_state.thread_key document
 public.agent_run.agent_spec document
 public.agent_run.degrade_reason note
@@ -254,7 +253,6 @@ public.auth_token.purpose document
 public.auth_token.token_hash document
 public.automation.key document
 public.automation.name label
-public.automation.origin document
 public.automation.paused_reason note
 public.automation.tier document
 public.automation_effect_claim.effect_fingerprint document
@@ -349,11 +347,13 @@ public.capture_trace.source_id exempt bounded diagnostic identities keep the exi
 public.capture_trace.source_system exempt bounded diagnostic identities keep the existing trace format and privacy limits
 public.capture_trace.stage exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.capture_trace.subject exempt bounded diagnostic copies retain their existing privacy excerpt limit
+public.channel_connection.account_id document
 public.channel_connection.address line
 public.channel_connection.channel_id document
 public.channel_connection.channel_label label
 public.channel_connection.credential_ref document
 public.channel_connection.events_credential_ref document
+public.channel_connection.ownership document
 public.channel_connection.provider document
 public.channel_connection.status document
 public.channel_provider.credential_model document
@@ -456,23 +456,23 @@ public.company.description document checked: every writer checks 20000 (companyd
 public.company.display_name exempt imported business identities retain their source names
 public.company.email document
 public.company.geocode_input_hash document
-public.company.geocode_provider document
+public.company.geocode_source document
 public.company.geocode_status document
-public.company.industry document
+public.company.industry note
 public.company.legal_name line
-public.company.lifecycle document
 public.company.linkedin_url document checked: normalized to one profile slug
 public.company.logo_icon_object_key document
-public.company.logo_icon_origin document
+public.company.logo_icon_source document
 public.company.logo_object_key document
-public.company.logo_origin document
+public.company.logo_source document
 public.company.name_source document
 public.company.phone document
 public.company.size_band document
 public.company.source document
 public.company.source_author_name exempt imported source attribution retains the original author identity
 public.company.source_id exempt bounded imported identities keep the existing indexed wire contract
-public.company.source_system document
+public.company.source_system identity
+public.company.status document
 public.company.visibility document
 public.company_address_country.countries document
 public.company_domain.captured_by document
@@ -498,7 +498,6 @@ public.company_fact.source_url document checked: a crawled page URL
 public.company_fact.value document checked: must match the cited passage or the page excerpt of 18000 runes
 public.company_fact.value_key document
 public.company_geocode_state.input_hash document
-public.company_geocode_state.last_outcome document
 public.company_geocode_state.provider document
 public.company_geocode_state.status document
 public.company_offered_value.field_key document
@@ -594,6 +593,7 @@ public.contact_acquisition_evidence.request_retracted_by document
 public.contact_acquisition_evidence.source_entity_type document
 public.contact_acquisition_evidence.stated_source document
 public.contact_address_country.countries document
+public.contact_channel_identity.account_scope document
 public.contact_channel_identity.captured_by document
 public.contact_channel_identity.channel_user_id document
 public.contact_channel_identity.membership_bot_id document
@@ -637,8 +637,6 @@ public.contact_provider_claim.employment_processing_error document checked: one 
 public.contact_provider_claim.provider document
 public.contact_provider_claim.source document
 public.contact_provider_claim.validation_status document
-public.contact_signature_enrich_state.last_outcome label
-public.contact_signature_enrich_state.last_skip_reason label
 public.contact_social.handle document
 public.contact_social.platform document
 public.contract.captured_by document
@@ -707,7 +705,6 @@ public.deal_correction.fields document
 public.deal_correction.remaining_open_stages document
 public.deal_correction.reversed_by document
 public.deal_correction.standing_close_date document
-public.deal_document_hide.hidden_by document
 public.deal_line_item.billing_model document
 public.deal_line_item.captured_by document
 public.deal_line_item.catalog_name line
@@ -742,15 +739,12 @@ public.deal_room_document.source document
 public.deal_room_document.title label
 public.deal_room_engagement.kind document
 public.deal_room_invitation.captured_by document
-public.deal_room_invitation.failure_reason note
-public.deal_room_invitation.source document
 public.deal_room_participant.capability document
 public.deal_room_participant.captured_by document
 public.deal_room_participant.email document
 public.deal_room_participant.full_name exempt participant identities can be copied from an existing customer record
 public.deal_room_participant.source document
 public.deal_room_session.captured_by document
-public.deal_room_session.source document
 public.deal_room_thread.captured_by document
 public.deal_room_thread.source document
 public.deal_room_thread.state document
@@ -817,15 +811,11 @@ public.field_provenance.field_name label
 public.field_provenance.object_type document
 public.field_provenance.source document
 public.finance_connection.captured_by document
-public.finance_connection.credential_ref document
 public.finance_connection.last_error_code document
 public.finance_connection.provider document
-public.finance_connection.source document
 public.finance_connection.status document
 public.finance_customer_link.captured_by document
 public.finance_customer_link.external_customer_id document
-public.finance_customer_link.source document
-public.finance_customer_link.sync_hash document
 public.finance_external_customer.captured_by document
 public.finance_external_customer.display_name exempt external customer identities retain the provider name
 public.finance_external_customer.external_customer_id document
@@ -920,6 +910,7 @@ public.knowledge_corpus.topic_statement document
 public.knowledge_document.captured_by document
 public.knowledge_document.checksum document
 public.knowledge_document.content_type document
+public.knowledge_document.external_id document
 public.knowledge_document.filename document
 public.knowledge_document.ingest_detail document checked: fixed sentences and numbers
 public.knowledge_document.ingest_status document
@@ -1054,7 +1045,6 @@ public.meeting_invitation.status document
 public.meeting_proposal.link_ref document
 public.meeting_proposal.token_hash document
 public.meeting_readiness.agenda_fingerprint document
-public.meeting_readiness.captured_by document
 public.meeting_readiness.participants_fingerprint document
 public.meeting_readiness.revision document
 public.mfa_challenge_spent.jti document
@@ -1112,7 +1102,6 @@ public.partner.captured_by document
 public.partner.cert_status document
 public.partner.margin_tier document
 public.partner.next_step document
-public.partner.partner_fit_override_reason note
 public.partner.partner_kinds document
 public.partner.relationship_stage document
 public.partner.served_segments document
@@ -1177,6 +1166,7 @@ public.project_health_assessment.note note
 public.project_health_assessment.source document
 public.project_health_assessment.source_author document
 public.project_health_assessment.state document
+public.project_phase_history.cause_kind label
 public.project_phase_history.changed_by document
 public.project_phase_history.from_phase document
 public.project_phase_history.reason note
@@ -1275,9 +1265,7 @@ public.sales_initiative.captured_by document
 public.sales_initiative.description document checked: typed by a user
 public.sales_initiative.name label
 public.sales_initiative.objective_metric document
-public.sales_initiative.source document
 public.sales_initiative.status document
-public.sales_initiative_baseline.status document
 public.sales_initiative_enrolment.captured_by document
 public.sales_initiative_enrolment.reason document
 public.sales_initiative_enrolment.record_type document
@@ -1333,9 +1321,9 @@ public.signal_resolution.outcome document
 public.signal_resolution.source document
 public.signal_thread_scan.thread_key document
 public.site_read.logo_icon_object_key document
-public.site_read.logo_icon_origin document
+public.site_read.logo_icon_source document
 public.site_read.logo_object_key document
-public.site_read.logo_origin document
+public.site_read.logo_source document
 public.site_read.phase document
 public.site_read.proposal_hash document
 public.site_read.requested_by document
@@ -1418,10 +1406,8 @@ public.voice_learning_signal.final_captured_by document
 public.voice_learning_signal.final_text exempt a copy of the sent mail body, which has no length bound
 public.voice_learning_signal.generated_original exempt a copy of the model-drafted mail body, which mail_draft.body keeps whole
 public.voice_learning_signal.outcome document
-public.voice_learning_signal.source document
 public.voice_profile.active_source_hash document
 public.voice_profile.captured_by document
-public.voice_profile.model_ref document
 public.voice_profile.personality_md document checked: typed by the owner; voice.go refuses past 20000
 public.voice_profile.scope document
 public.voice_profile.source document
@@ -1499,10 +1485,8 @@ public.workflow_run.handler document
 public.workflow_run.idempotency_key document
 public.workflow_run.status document
 public.worklist_done.row_id document
-public.worklist_done.set_by document
 public.worklist_done.source document
 public.worklist_pin.row_id document
-public.worklist_pin.set_by document
 public.worklist_pin.source document
 public.worklist_snapshot.params_fingerprint document
 public.workspace_email_domain.domain document

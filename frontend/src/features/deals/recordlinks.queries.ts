@@ -29,12 +29,16 @@ export function useLinkTypes() {
   });
 }
 
-/** A type's label, or its raw name when no declaration is known (a retired unit). */
+/**
+ * A type's label. While the list loads, or for a type no unit declares any
+ * more, it is `fallback`: the raw name is a key such as `ext:<unit>:<type>`.
+ */
 export function linkTypeLabel(
   types: readonly LinkType[] | undefined,
   name: string,
+  fallback: string,
 ): string {
-  return types?.find((type) => type.name === name)?.label ?? name;
+  return types?.find((type) => type.name === name)?.label ?? fallback;
 }
 
 /** The links a record starts or ends, as the server lets this reader see them. */

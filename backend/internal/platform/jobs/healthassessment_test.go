@@ -60,3 +60,24 @@ func TestRunnableWaitIsOverdueOnlyPastItsDeclaredTick(t *testing.T) {
 	}
 	t.Fatal("no declared periodic kind tested")
 }
+
+func TestAClockTimePassIsOverdueOnlyPastItsLongestGap(t *testing.T) {
+	const kind = "ext_health_clock_report"
+	t.Cleanup(func() {
+		if err := RegisterComposed(nil); err != nil {
+			t.Error(err)
+		}
+	})
+	if err := RegisterComposed([]Spec{{Kind: kind, Role: Dispatcher, Cadence: Cadence{ClockGap: 72 * time.Hour}}}); err != nil {
+		t.Fatal(err)
+	}
+	age := (72 * time.Hour).Seconds()
+	row := KindHealth{Kind: kind, Waiting: 1, OldestWaitingAgeSeconds: &age}
+	if got := AssessHealth(row); got.Code == "queue_overdue" || got.Expectation != 72*time.Hour {
+		t.Fatalf("at the gap: %+v, want on time against a 72h expectation", got)
+	}
+	age++
+	if AssessHealth(row).Code != "queue_overdue" {
+		t.Fatal("a wait past the longest gap must be overdue")
+	}
+}

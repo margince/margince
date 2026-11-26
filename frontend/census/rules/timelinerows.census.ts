@@ -7,6 +7,7 @@
 import { relative } from "node:path";
 import {
   alternativesOf,
+  chain,
   classesOf,
   compounds,
 } from "../../scripts/lib/css-rules";
@@ -19,17 +20,6 @@ import {
 
 type Verdict = { rows: number; leaks: string[] };
 
-function combinatorsOf(selector: string, parts: readonly string[]): string[] {
-  const between: string[] = [];
-  let at = selector.indexOf(parts[0]) + parts[0].length;
-  for (const part of parts.slice(1)) {
-    const next = selector.indexOf(part, at);
-    between.push(selector.slice(at, next).trim() || " ");
-    at = next + part.length;
-  }
-  return between;
-}
-
 const isLi = (compound: string) => /^li(?![\w-])/i.test(compound);
 const isTimeline = (compound: string) => classesOf(compound).has("timeline");
 
@@ -38,8 +28,7 @@ const isTimeline = (compound: string) => classesOf(compound).has("timeline");
 export function judge(selector: string): Verdict {
   const verdict: Verdict = { rows: 0, leaks: [] };
   for (const alternative of alternativesOf(selector)) {
-    const parts = compounds(alternative);
-    const joins = combinatorsOf(alternative, parts);
+    const { compounds: parts, combinators: joins } = chain(alternative);
     parts.forEach((part, index) => {
       if (!isLi(part) || !parts.slice(0, index).some(isTimeline)) {
         return;

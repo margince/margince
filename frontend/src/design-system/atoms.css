@@ -929,8 +929,8 @@
   border-radius: 50%;
   background: var(--accent);
 }
-/* Keyboard focus reads an accent-token ring (matches .input/.textarea) rather
- * than the browser's off-palette native outline. */
+/* Keyboard focus shows as the glow. The outline is transparent until forced
+ * colours repaint it, so the browser's off-palette ring never shows. */
 .segmented button:focus-visible {
   outline: var(--focus-ring-forced);
   outline-offset: 2px;
@@ -1131,8 +1131,8 @@
 }
 .recordpicker-option {
   width: 100%;
-  text-align: left;
-  /* The name with its detail line beneath it, both from the left edge. */
+  text-align: start;
+  /* The name with its detail line beneath it, both from the start edge. */
   flex-direction: column;
   align-items: flex-start;
   gap: 0;
@@ -1303,7 +1303,7 @@ span.error-line {
   font: inherit;
   color: inherit;
   background: var(--bgField);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-control);
   padding: var(--inputPaddingY) var(--inputPaddingX);
   min-block-size: var(--inputHeight);
@@ -1381,8 +1381,8 @@ span.error-line {
 /* The glow REPLACES the well rather than joining it: nothing in this product
    stacks a shadow under a shadow. */
 .input:focus {
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 /*
  * A field nobody may edit says so. Until this rule, it did not: `.input` sets
@@ -1399,19 +1399,28 @@ span.error-line {
  * focusable to be discoverable says it the ARIA way — a `disabled` attribute
  * takes it out of the tab order, which is the wrong answer for a field whose
  * label a reader still needs to reach.
+ *
+ * The edge drops to --borderStrong: 1.4.11 exempts a control nobody may use,
+ * and the full-strength edge is what reads as live.
  */
 .input:disabled,
 .input[aria-disabled="true"],
 .textarea:disabled,
 .textarea[aria-disabled="true"] {
   background: var(--bgInset);
+  border-color: var(--borderStrong);
   cursor: not-allowed;
 }
 /* The shell owns the boundary for a field that has something inside it, so it
    is the shell that has to dim — the input within it draws no fill of its own. */
-.field-shell:has(:disabled),
-.field-shell:has([aria-disabled="true"]) {
+.field-shell:has(
+  .input:disabled,
+  .input[aria-disabled="true"],
+  .textarea:disabled,
+  .textarea[aria-disabled="true"]
+) {
   background: var(--bgInset);
+  border-color: var(--borderStrong);
 }
 
 /* The field's OUTLINE, moved off the input, for the fields that have something
@@ -1428,7 +1437,7 @@ span.error-line {
   padding-inline: var(--inputPaddingX);
   min-block-size: var(--inputHeight);
   background: var(--bgField);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-well);
   transition:
@@ -1438,8 +1447,8 @@ span.error-line {
     color var(--dur-state) var(--ease-out);
 }
 .field-shell:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 /* A refused field says so in its boundary as well as in its words — but never
    ONLY in its boundary: the sentence under it carries the meaning, and this is
@@ -1454,7 +1463,7 @@ span.error-line {
   border-color: var(--danger);
 }
 .input[aria-invalid="true"]:focus {
-  box-shadow: var(--focus-glow-danger);
+  box-shadow: var(--focus-field-danger);
 }
 /* A textarea carries its own class rather than `.input`, so the boundary above
    never reached one: a refused body sat unmarked beside a refused subject that
@@ -1463,13 +1472,13 @@ span.error-line {
   border-color: var(--danger);
 }
 .textarea[aria-invalid="true"]:focus {
-  box-shadow: var(--focus-glow-danger);
+  box-shadow: var(--focus-field-danger);
 }
 .field-shell:has([aria-invalid="true"]) {
   border-color: var(--danger);
 }
 .field-shell:has([aria-invalid="true"]):focus-within {
-  box-shadow: var(--focus-glow-danger);
+  box-shadow: var(--focus-field-danger);
 }
 /* Inside the shell the input is only the text: the shell owns the fill, the
    boundary, the radius, the focus ring, the horizontal padding and the HEIGHT.
@@ -1615,7 +1624,8 @@ span.error-line {
 /* The field whose container draws the chrome (SearchField `flush`): the ⌘K
    palette's bar has its own ground, inset and bottom rule, so a bordered field
    nested inside it reads as a box in a box. The magnifier stays — it is the
-   affordance, not the chrome — and moves to the bar's own left inset. */
+   affordance, not the chrome — and moves to the bar's own left inset. The
+   container clears the field's edge, since only its sheet knows it rules one. */
 .input-icon-flush {
   display: flex;
   flex: 1;
@@ -1625,7 +1635,6 @@ span.error-line {
   left: 0;
 }
 .input-icon-flush .input {
-  border: 0;
   background: transparent;
   box-shadow: none;
   border-radius: 0;
@@ -1636,7 +1645,6 @@ span.error-line {
 .input-icon-flush .input:focus-visible {
   outline: none;
   box-shadow: none;
-  border: 0;
 }
 
 /* A textarea is the same field as .input, only taller: the two sit next to each
@@ -1656,7 +1664,7 @@ span.error-line {
   font: inherit;
   color: inherit;
   background: var(--bgField);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-sm);
   /* The field's own insets, so a textarea and the input above it start their
      text in the same place. Both figures are stated: a box of several lines has
@@ -1674,8 +1682,8 @@ span.error-line {
   resize: vertical;
 }
 .textarea:focus {
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 /* A note that grows with what is typed, from three lines up to ten, then
    scrolls. Dragging the corner still resizes it. */

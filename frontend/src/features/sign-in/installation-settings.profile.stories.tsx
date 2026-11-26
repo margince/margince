@@ -43,7 +43,7 @@ const SETTINGS: InstallationSettings = {
   forecast_self_correcting: true,
   forecast_likely_threshold: 90,
   base_currency_locked_reason:
-    "3 rate(s) in the sheet convert into EUR and cannot be restated against another base; clear the rate sheet first",
+    "3 rate(s) in the sheet convert into EUR and cannot be restated against another base; remove every currency from the rate sheet first",
   base_currency_lock: { reason: "rate_sheet", count: 3, base_currency: "EUR" },
 };
 

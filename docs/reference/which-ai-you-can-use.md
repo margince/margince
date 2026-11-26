@@ -15,13 +15,14 @@ AI works with Margince in two ways. **Margince AI** is the AI inside the product
 | How we test it | Each feature, on the product's real prompts, many tries | Everyday jobs, done from start to end, several tries |
 
 ### Which AI model should I choose for Margince?
-For Margince AI, choose the model setup with the most features ready. Today that is **Google Gemini**, with 28 of its 38 features ready. A model setup says which model does which kind of work, and the table below shows each one we tested. Your administrator sets it up under **Settings**, then **AI models**.
+For Margince AI, choose the model setup with the most features ready. Today that is **Anthropic Claude**, with 33 of its 38 features ready. A model setup says which model does which kind of work, and the table below shows each one we tested. Your administrator sets it up under **Settings**, then **AI models**.
 Also called: which model should I use, best model, recommended model, which LLM, which provider, model tiers.
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 28 | 9 | 1 | 0 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 28 | 9 | 1 | 0 |
+| Google Gemini | global cloud | 28 | 10 | 0 | 0 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 28 | 10 | 0 | 0 |
+| Anthropic Claude | global cloud | 33 | 4 | 1 | 0 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 8 | 6 |
 | Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 0 | 4 | 33 |
@@ -29,7 +30,7 @@ Also called: which model should I use, best model, recommended model, which LLM,
 | Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 38 |
 | Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 38 |
 
-87 of these 163 grades were measured on an older version of Margince and wait for a re-check.
+87 of these 201 grades were measured on an older version of Margince and wait for a re-check.
 
 ### What does a grade of a Margince AI feature mean?
 A grade of a Margince AI feature says how often it was right. **Ready** means right in at least 90 of every 100 tries: turn it on. **Usable with care** means right in most tries: have someone look over what it makes. **Not reliable yet** means wrong too often: leave it off. **Not measured** means nobody has tested that feature on that model yet.
@@ -40,8 +41,9 @@ Also called: grade, rating, certified, how reliable is the AI.
 
 | Model setup | Not reliable yet |
 |---|---|
-| Google Gemini | Reply drafting |
-| Google Gemini in the EU, through Vertex AI | Reply drafting |
+| Google Gemini | none |
+| Google Gemini in the EU, through Vertex AI | none |
+| Anthropic Claude | Natural-language search |
 | OpenAI GPT-6, through OpenRouter | Thread confidentiality check<br>First-time sender check<br>Meeting follow-up extraction |
 | Open models from OpenAI and Mistral, through OpenRouter | Message classification<br>First-time sender check<br>Buying-role reading<br>Website research<br>Stage evidence extraction<br>Record summary<br>Tag suggestions<br>Meeting follow-up extraction |
 | Gemma 4 you could run yourself, through OpenRouter | First-time sender check<br>Signature enrichment<br>Unanswered-message triage<br>Checking whether the reply answered the request |
@@ -57,8 +59,9 @@ Also called: which AI tool works with Margince, Claude, Codex, Gemini, ChatGPT, 
 
 | Assistant | How we connected it | Jobs done reliably | Can I trust it? |
 |---|---|---:|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 78 of 81 (2 not yet run) | 🟡 Mostly |
-| `gemini-4-hydrogen-medium` | Antigravity CLI | 79 of 81 (2 not yet run) | 🟡 Mostly |
+| `claude-sonnet-5-5` | Claude Code CLI | 81 of 81 (2 not yet run) | 🟢 Yes |
+| `claude-sonnet-5-5` | Claude Agent SDK | 2 of 2 (81 not yet run) | ⚪ Not enough tested yet |
+| `gemini-4-hydrogen-medium` | Antigravity CLI | 81 of 81 (2 not yet run) | 🟢 Yes |
 | `gpt-5.6-sol` | Codex CLI | 74 of 82 (1 not yet run) | 🟡 Mostly |
 
 ### Can I use an AI assistant that is not in the table?
@@ -68,7 +71,7 @@ Also called: untested assistant, another AI tool, my own agent.
 The job by job results are in [Your AI assistant: test results](mcp-tool-coverage.md).
 
 ### What did you test, and what not?
-For Margince AI we ran 344 test cases. Each one is an example with a known right answer, in one of the 62 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
+For Margince AI we ran 345 test cases. Each one is an example with a known right answer, in one of the 62 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
 Also called: how is the AI tested, test coverage, certification.
 
 ## Where to go next

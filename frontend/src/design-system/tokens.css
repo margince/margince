@@ -107,16 +107,12 @@
 
   --borderSubtle: #e3eae6;
   --borderStrong: #d1d8d4;
-  /* The boundary of an INTERACTIVE control — a text input, a button that carries
-     no fill — and it is a separate token from --borderStrong because it answers
-     to a different rule. --borderStrong divides content, where any visible
-     hairline does the job; this one is often the ONLY thing telling a user that
-     a rectangle accepts typing, and WCAG 1.4.11 therefore asks it for 3:1
-     against its background. --borderStrong measures 1.45:1 on white and cannot
-     be raised to 3:1 without turning every content divider into a hard rule.
-     Chosen to clear 3:1 against BOTH --bgElevated and --bgPage (3.30 / 3.11),
-     since controls sit on both. */
-  --borderControl: #868f89;
+  /* The edge that alone parts a control from its ground, so WCAG 1.4.11 asks it
+     for 3:1. --borderStrong divides content and stays faint for that reason. */
+  --borderControl: #747d77;
+  /* A focused field's edge. The width step of --focus-field carries focus;
+     this hue only has to stand off --borderControl (tokens.test.ts). */
+  --focusEdge: var(--accent);
 
   /* Identity, not status: the teal pair marks OUR side of a diagram apart from
    * the agent's indigo and the counterparty's neutral. It says nothing about
@@ -760,6 +756,11 @@
    * --focus-glow-danger is one, not a second spelling. Six rules hand-spelled
    * it before it existed. */
   --focus-glow-ai: 0 0 0 3px var(--aiMed);
+  /* A focused field: every user draws a 1px border, and this ring doubles it in
+     one colour, so focus does not rest on hue. The glow sits outside it. */
+  --focus-field: 0 0 0 1px var(--focusEdge), var(--focus-glow);
+  --focus-field-danger: 0 0 0 1px var(--danger), var(--focus-glow-danger);
+  --focus-field-ai: 0 0 0 1px var(--aiText), var(--focus-glow-ai);
 
   /*
    * Motion. Three durations and three curves, and the reason there are so few is
@@ -891,8 +892,10 @@
 
   --borderSubtle: #2f3937;
   --borderStrong: #3f4b48;
-  /* The 1.4.11 floor of 3:1 on every ground and on --bgControl over it. */
-  --borderControl: #7c8c88;
+  /* 3:1 on every ground, bare, hovered or striped, and under --bgControl. */
+  --borderControl: #8c9c98;
+  /* --accentText lifted until it stands 1.5:1 off --borderControl. */
+  --focusEdge: #71ccb4;
 
   /* Themed, because a 5% black is invisible on a near-black page: any surface
      whose face depends on this simply loses its top side in dark. Only the INK
@@ -1042,7 +1045,8 @@
     --borderSubtle: #2f3937;
     --borderStrong: #3f4b48;
 
-    --borderControl: #7c8c88;
+    --borderControl: #8c9c98;
+    --focusEdge: #71ccb4;
 
     --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);

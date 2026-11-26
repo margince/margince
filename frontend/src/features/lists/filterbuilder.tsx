@@ -154,13 +154,7 @@ function GroupNode({
           <p className="filter-group-empty t-sub">{t("filters.emptyGroup")}</p>
         )}
       </div>
-      <GroupFoot
-        group={group}
-        fields={fields}
-        depth={depth}
-        tree={tree}
-        onChange={onChange}
-      />
+      <GroupFoot group={group} depth={depth} tree={tree} onChange={onChange} />
     </>
   );
   if (!nested) {
@@ -261,11 +255,10 @@ function switchJoin(tree: Node, groupID: string): Node {
  */
 function GroupFoot({
   group,
-  fields,
   depth,
   tree,
   onChange,
-}: NodeProps & Readonly<{ group: Group }>) {
+}: Omit<NodeProps, "fields"> & Readonly<{ group: Group }>) {
   const t = useT();
   const nested = depth > 1;
   // A group beside nothing would only wrap the whole filter in one more box,
@@ -275,9 +268,7 @@ function GroupFoot({
     <div className="filter-group-foot">
       <Button
         variant="link"
-        onClick={() =>
-          onChange(addToGroup(tree, group.id, firstClause(fields)))
-        }
+        onClick={() => onChange(addToGroup(tree, group.id, firstClause()))}
       >
         {t(nested ? "filters.addToGroup" : "filters.addClause")}
       </Button>
@@ -289,9 +280,7 @@ function GroupFoot({
               addToGroup(
                 tree,
                 group.id,
-                newGroup(group.join === "and" ? "or" : "and", [
-                  firstClause(fields),
-                ]),
+                newGroup(group.join === "and" ? "or" : "and", [firstClause()]),
               ),
             )
           }

@@ -14,6 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ABSENT } from "../../format/absent";
 import { LocaleProvider } from "../../i18n";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { openFilterValues } from "../../testing/listquery.testkit";
@@ -56,15 +57,22 @@ describe("ProjectsScreen", () => {
           key: null,
           phase: "delivering",
           owner_id: null,
+          last_activity_at: null,
         }),
       ],
     });
     render(<ProjectsScreen />);
     expect(await screen.findByText("CRM rollout")).toBeTruthy();
+    // An empty cell carries the same mark as an empty Company cell.
+    const fleet = screen.getByRole("link", { name: /Fleet retrofit/ });
+    expect(fleet.closest("tr")?.textContent).toContain(ABSENT);
+    // The tab and the phase say one word for one fact.
+    expect(screen.getAllByText("Delivering").length).toBeGreaterThan(1);
+    expect(screen.queryByText("In delivery")).toBeNull();
     expect(screen.getByText("ACME-CRM")).toBeTruthy();
     expect(screen.getByText("Fleet retrofit")).toBeTruthy();
     expect(screen.getByText("Initiative")).toBeTruthy();
-    expect(screen.getByText("Delivering")).toBeTruthy();
+    expect(fleet.closest("tr")?.textContent).toContain("Delivering");
     expect(await screen.findAllByText("Brandt Automotive")).toHaveLength(2);
     expect(screen.getByText("Unassigned")).toBeTruthy();
     // The row is a link to the project's own page.
@@ -274,7 +282,10 @@ describe("ProjectsScreen", () => {
     // The pick is named by the candidate it came from, not by its bare id.
     expect(screen.getByText("Wendt Logistik")).toBeTruthy();
     expect(screen.queryByText(FAR_COMPANY.id)).toBeNull();
-    await user.click(screen.getByRole("combobox", { name: "Starting phase" }));
+    // The form opens on the phase the server would give a project anyway.
+    const phase = screen.getByRole("combobox", { name: /Starting phase/ });
+    expect(phase.textContent).toContain("Initiative");
+    await user.click(phase);
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", {
         name: "Pursuing",

@@ -356,6 +356,7 @@ const (
 	ResolvedNotRelevant      PublicEventForecastExceptionResolvedOutcome = "not_relevant"
 	ResolvedReassign         PublicEventForecastExceptionResolvedOutcome = "reassign"
 	ResolvedRemindLater      PublicEventForecastExceptionResolvedOutcome = "remind_later"
+	ResolvedSeparate         PublicEventForecastExceptionResolvedOutcome = "separate"
 	ResolvedValueCorrect     PublicEventForecastExceptionResolvedOutcome = "value_correct"
 )
 
@@ -373,6 +374,8 @@ func (e PublicEventForecastExceptionResolvedOutcome) Valid() bool {
 	case ResolvedReassign:
 		return true
 	case ResolvedRemindLater:
+		return true
+	case ResolvedSeparate:
 		return true
 	case ResolvedValueCorrect:
 		return true
@@ -1611,7 +1614,7 @@ type PublicEventCompanyRestored struct{}
 
 // PublicEventCompanyUpdated Payload for company.updated, an open envelope. Eight emit sites carry different shapes. They include a flat column patch, the anchor company save's field delta and the partner extension's nested delta. Others are enrichment and deep-read applies, and a relationship delta. So the payload is a change-set map rather than a fixed field list.
 type PublicEventCompanyUpdated struct {
-	// ChangedFields What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form.
+	// ChangedFields What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site. A column patch carries a flat field → new-value entry. The recompute/routing/relationship sites carry a `{delta: {...}}` sub-object, sometimes with a sibling `source`. Read a key's value as either form. A change to the company's `status` also carries the value under `lifecycle`, the key this version first gave it. `lifecycle` is deprecated; read `status`.
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
@@ -2143,7 +2146,7 @@ type PublicEventForecastCreated struct {
 	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
 }
 
-// PublicEventForecastExceptionResolved Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
+// PublicEventForecastExceptionResolved Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the eight alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
 type PublicEventForecastExceptionResolved struct {
 	ActorUserId openapi_types.UUID `json:"actor_user_id"`
 	ExceptionId openapi_types.UUID `json:"exception_id"`
@@ -2464,7 +2467,7 @@ type PublicEventNotificationPreferenceChanged struct {
 	Class string `json:"class"`
 }
 
-// PublicEventOfferAccepted Payload for offer.accepted — a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity).
+// PublicEventOfferAccepted Payload for offer.accepted: a sent offer was accepted. The deal's headline amount is synced from this offer's net, the figure without tax, in the same transaction. The paired deal.updated carries that net. This payload still states the offer's own gross.
 type PublicEventOfferAccepted struct {
 	// Currency The currency of gross_minor (ISO 4217), so the amount can be printed.
 	Currency *string `json:"currency,omitempty"`

@@ -84,22 +84,22 @@ describe("currencyNote words the lock facts in the reader's language", () => {
     [
       "en",
       sheet(1),
-      "1 currency rate converts into CHF. Clear the currency rates first to change the base currency.",
+      "1 currency rate converts into CHF. Remove every currency from the rate sheet first to change the base currency.",
     ],
     [
       "en",
       sheet(3),
-      "3 currency rates convert into CHF. Clear the currency rates first to change the base currency.",
+      "3 currency rates convert into CHF. Remove every currency from the rate sheet first to change the base currency.",
     ],
     [
       "en",
       unnamed(1),
-      "1 currency rate converts into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+      "1 currency rate converts into a base currency that is not on record. Remove every currency from the rate sheet first to change the base currency.",
     ],
     [
       "en",
       unnamed(3),
-      "3 currency rates convert into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+      "3 currency rates convert into a base currency that is not on record. Remove every currency from the rate sheet first to change the base currency.",
     ],
     [
       "de",
@@ -114,22 +114,22 @@ describe("currencyNote words the lock facts in the reader's language", () => {
     [
       "de",
       sheet(1),
-      "1 Wechselkurs rechnet in CHF um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+      "1 Wechselkurs rechnet in CHF um. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
     ],
     [
       "de",
       sheet(3),
-      "3 Wechselkurse rechnen in CHF um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+      "3 Wechselkurse rechnen in CHF um. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
     ],
     [
       "de",
       unnamed(1),
-      "1 Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+      "1 Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
     ],
     [
       "de",
       unnamed(3),
-      "3 Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+      "3 Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
     ],
     [
       "vi",
@@ -139,12 +139,12 @@ describe("currencyNote words the lock facts in the reader's language", () => {
     [
       "vi",
       sheet(3),
-      "3 tỷ giá đang quy đổi sang CHF. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+      "3 tỷ giá đang quy đổi sang CHF. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
     ],
     [
       "vi",
       unnamed(3),
-      "3 tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+      "3 tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
     ],
   ];
   for (const [locale, lock, sentence] of cases) {

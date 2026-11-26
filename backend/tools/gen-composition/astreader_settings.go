@@ -19,6 +19,8 @@ type declaredSetting struct {
 	Label string `json:"label"`
 	Hint  string `json:"hint,omitempty"`
 	Kind  string `json:"kind"`
+	// Initial is the declared value before an admin changes it.
+	Initial string `json:"initial,omitempty"`
 }
 
 // readSettings reads the Settings slice literal. Each setting passes the
@@ -36,7 +38,7 @@ func (r *unitReader) readSettings(expr ast.Expr, file *ast.File) ([]declaredSett
 		if err != nil {
 			return nil, err
 		}
-		decl := extension.Setting{Key: s.Key, Label: s.Label, Hint: s.Hint, Kind: extension.SettingKind(s.Kind)}
+		decl := extension.Setting{Key: s.Key, Label: s.Label, Hint: s.Hint, Kind: extension.SettingKind(s.Kind), Initial: s.Initial}
 		if err := decl.Validate(); err != nil {
 			return nil, r.errPos(elt, "%v", err)
 		}
@@ -76,6 +78,8 @@ func (r *unitReader) readSetting(elt ast.Expr, ext string) (declaredSetting, err
 			s.Hint, err = r.stringLit(kv.Value, "Setting.Hint")
 		case "Kind":
 			s.Kind, err = r.constValue(kv.Value, ext)
+		case "Initial":
+			s.Initial, err = r.stringLit(kv.Value, "Setting.Initial")
 		default:
 			err = r.errAt(kv, "Setting field %s is not derivable by this generator", k.Name)
 		}

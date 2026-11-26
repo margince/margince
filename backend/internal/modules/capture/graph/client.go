@@ -363,6 +363,9 @@ func dotSegment(path string) bool {
 	return false
 }
 
+// mimeConversionFailed is the Graph error code for a message that has no MIME form.
+const mimeConversionFailed = "ErrorMimeContentConversionFailed"
+
 func (a *httpAPI) GetMIME(ctx context.Context, accessToken, folderID, msgID string) ([]byte, error) {
 	u := a.root() + "/messages/" + url.PathEscape(msgID) + "/$value"
 	if folderID != "" {
@@ -392,6 +395,11 @@ func (a *httpAPI) GetMIME(ctx context.Context, accessToken, folderID, msgID stri
 		// The message was deleted, or moved out of the folder asked for, since
 		// it was listed. Skip it: a retry would wedge the sync on it.
 		return nil, fmt.Errorf("graph: message %s no longer exists: %w", msgID, connector.ErrSkip)
+	}
+	if resp.StatusCode >= 500 && graphReason(body) == mimeConversionFailed {
+		// Graph cannot render this message as MIME and never will: a retry
+		// would wedge the sync on it, so it is a per-message drop.
+		return nil, fmt.Errorf("graph: message %s cannot be converted to MIME: %w", msgID, connector.ErrSkip)
 	}
 	if err := classifyStatus(resp, messageOp, body); err != nil {
 		return nil, err

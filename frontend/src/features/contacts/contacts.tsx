@@ -189,6 +189,7 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
                 </span>
               ) : null,
             sort: "primary_email",
+            holds: "email",
           },
           {
             key: "title",

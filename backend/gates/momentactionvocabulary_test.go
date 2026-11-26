@@ -33,27 +33,22 @@ type offeredVerbs struct {
 	constPrefix string
 	// The enum's size today. A floor, so an extraction that goes short fails.
 	floor int
-	// How an entry says "this verb writes".
-	writes func(t *testing.T, mapName, kind string, value ast.Expr) bool
 }
 
 var offeredVerbVocabularies = []offeredVerbs{
 	{
 		schema: "ContactMomentAction", source: "internal/compose/momentaction/withhold.go",
 		mapName: "writesAnActivity", constPrefix: "ContactMomentActionKind", floor: 8,
-		writes: boolLiteral,
 	},
 	{
 		schema: "WorklistMove", anchors: []string{"\n        action:"},
 		source:  "internal/compose/momentaction/writeverbs.go",
 		mapName: "worklistVerbWrites", constPrefix: "WorklistMoveAction", floor: 7,
-		writes: refusalPhrase,
 	},
 	{
 		schema: "Company360Suggestion", anchors: []string{"\n        action:", "\n            kind:"},
 		source:  "internal/compose/momentaction/writeverbs.go",
 		mapName: "suggestionVerbWrites", constPrefix: "Company360SuggestionActionKind", floor: 3,
-		writes: refusalPhrase,
 	},
 }
 
@@ -175,7 +170,7 @@ func (v offeredVerbs) classification(t *testing.T) (kinds map[string]bool, writi
 					continue
 				}
 				kind := v.kindOf(t, pair.Key)
-				writes := v.writes(t, v.mapName, kind, pair.Value)
+				writes := boolLiteral(t, v.mapName, kind, pair.Value)
 				kinds[kind] = writes
 				if writes {
 					writing++
@@ -221,21 +216,6 @@ func boolLiteral(t *testing.T, mapName, kind string, value ast.Expr) bool {
 			"without running it", mapName, kind, value)
 	}
 	return answer.Name == "true"
-}
-
-// refusalPhrase reads an entry whose answer is `nil` for a read, or the
-// address of the refusal a writing verb gets.
-func refusalPhrase(t *testing.T, mapName, kind string, value ast.Expr) bool {
-	t.Helper()
-	if ident, ok := value.(*ast.Ident); ok && ident.Name == "nil" {
-		return false
-	}
-	if unary, ok := value.(*ast.UnaryExpr); ok && unary.Op == token.AND {
-		return true
-	}
-	t.Fatalf("%s[%s] is %T rather than nil or &phrase; the classification has to be readable "+
-		"without running it", mapName, kind, value)
-	return false
 }
 
 // snakeOf turns `OpenMeetingBrief` into `open_meeting_brief`.

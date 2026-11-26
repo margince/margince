@@ -266,14 +266,17 @@ var segmentEngines = map[string]storekit.Query{
 		// export built on one can carry it.
 		BaseWhere: whereArchivedNull + " AND NOT t.is_anchor",
 		Fields: withFields(standardFields[typeCompany], map[string]storekit.Field{
-			ownerIDField:     {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
-			ownerTeamIDField: ownerTeamField,
-			"industry":       {Expr: "t.industry", Type: storekit.FieldPicklist, Options: industryValues},
-			"size_band":      {Expr: "t.size_band", Type: storekit.FieldPicklist, Options: sizeBandValues},
-			"lifecycle":      {Expr: "t.lifecycle", Type: storekit.FieldPicklist, Options: lifecycleValues},
+			ownerIDField:        {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
+			ownerTeamIDField:    ownerTeamField,
+			"industry":          {Expr: "t.industry", Type: storekit.FieldPicklist, Options: industryValues},
+			"size_band":         {Expr: "t.size_band", Type: storekit.FieldPicklist, Options: sizeBandValues},
+			companyStatusColumn: {Expr: statusExpr, Type: storekit.FieldPicklist, Options: lifecycleValues},
+			// The name status had before its rename, kept so a saved segment
+			// that says it still evaluates. Named in retiredCoreFields below.
+			"lifecycle": {Expr: statusExpr, Type: storekit.FieldPicklist},
 			// RETIRED with the column (ADR-0079/A124), and kept here for the one
-			// release it survives: a saved segment written against it must keep
-			// evaluating until its author has moved it to lifecycle. Dropping the
+			// release it survives. A saved segment written against it must keep
+			// evaluating until its author moves it to status. Dropping the
 			// field would turn every such list into an error at read time, which
 			// is a worse answer than a stale one. Named in retiredCoreFields
 			// below, so no surface OFFERS it for a new clause.
@@ -304,7 +307,7 @@ var segmentEngines = map[string]storekit.Query{
 			"company_id":         {Expr: "t.company_id", Type: storekit.FieldID, References: storekit.RefCompany},
 			"partner_company_id": {Expr: "t.partner_company_id", Type: storekit.FieldID, References: storekit.RefCompany},
 			"project_id":         {Expr: "t.project_id", Type: storekit.FieldID, References: storekit.RefProject},
-			"status":             {Expr: "t.status", Type: storekit.FieldPicklist, Options: dealStatusValues},
+			"status":             {Expr: statusExpr, Type: storekit.FieldPicklist, Options: dealStatusValues},
 			"win_probability":    {Expr: winprobability.SQL("t"), Type: storekit.FieldNumber},
 			tagFilterField:       tagLinkFor("deal"),
 			// The customer's own attributes, so "the pipeline for manufacturing"
@@ -318,7 +321,8 @@ var segmentEngines = map[string]storekit.Query{
 			// a fresh dependency on a column that is going away.
 			"company_industry":  customerField("industry", storekit.FieldPicklist, industryValues...),
 			"company_size_band": customerField("size_band", storekit.FieldPicklist, sizeBandValues...),
-			"company_lifecycle": customerField("lifecycle", storekit.FieldPicklist, lifecycleValues...),
+			"company_status":    customerField(companyStatusColumn, storekit.FieldPicklist, lifecycleValues...),
+			"company_lifecycle": customerField(companyStatusColumn, storekit.FieldPicklist),
 			"company_country":   customerField("address_country", storekit.FieldText),
 			// The products a deal sells, from its accepted offer or set by hand.
 			"product_id": productLinkField("EXISTS (SELECT 1 FROM deal_product dp WHERE dp.deal_id = t.id AND %s)"),
@@ -328,7 +332,7 @@ var segmentEngines = map[string]storekit.Query{
 		Table:     "lead",
 		BaseWhere: whereArchivedNull,
 		Fields: withFields(standardFields[typeLead], map[string]storekit.Field{
-			"status":                {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
+			"status":                {Expr: statusExpr, Type: storekit.FieldPicklist, Options: leadStatusValues},
 			ownerIDField:            {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField:        ownerTeamField,
 			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldCompanyKey, FoldCase: true},
@@ -372,9 +376,17 @@ var segmentEngines = map[string]storekit.Query{
 //
 // Keyed by resource rather than by bare name: two resources may legitimately
 // carry a field of the same name where only one of them has retired it.
+// companyStatusColumn is the company column a deal or contact filter reads
+// through its customer.
+const companyStatusColumn = "status"
+
+// statusExpr reads the status column of the row a filter is over.
+const statusExpr = "t." + companyStatusColumn
+
 var retiredCoreFields = map[string]map[string]bool{
-	// ADR-0079/A124 replaced it with lifecycle.
-	typeCompany: {"classification": true},
+	// classification was retired from the company record; lifecycle is status under its old name.
+	typeCompany: {"classification": true, "lifecycle": true},
+	typeDeal:    {"company_lifecycle": true},
 }
 
 // SegmentEngine returns the ONE predicate engine for a filterable resource: the

@@ -70,18 +70,18 @@ function details(
 describe("the dates", () => {
   it("names the target end as a day, with no count beside it", () => {
     details("2026-09-20");
-    expect(screen.getByText(en["project.aside.targetEnd"])).toBeTruthy();
+    expect(screen.getByText(en["project.targetEnd"])).toBeTruthy();
     expect(screen.getByText("20 Sept 2026")).toBeTruthy();
     expect(screen.queryByText(/in \d+ days?/)).toBeNull();
   });
 
   it("folds a date nobody set behind the empty fields link", async () => {
     details(null);
-    expect(screen.queryByText(en["project.aside.targetEnd"])).toBeNull();
+    expect(screen.queryByText(en["project.targetEnd"])).toBeNull();
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: /Show \d+ empty fields?/ }));
-    expect(screen.getByText(en["project.aside.targetEnd"])).toBeTruthy();
+    expect(screen.getByText(en["project.targetEnd"])).toBeTruthy();
   });
 });
 

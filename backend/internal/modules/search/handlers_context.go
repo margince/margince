@@ -60,7 +60,7 @@ var contextAnchorTypes = func() string {
 func (h Handlers) GetRecordContext(w http.ResponseWriter, r *http.Request,
 	entityType string, id crmcontracts.Id, params crmcontracts.GetRecordContextParams,
 ) {
-	if !knownEntity(entityType) {
+	if !knownEntity(r.Context(), entityType) {
 		httperr.Write(w, r, httperr.Validation("entity_type", "invalid_entity_type",
 			"entity_type must be one of "+contextAnchorTypes))
 		return

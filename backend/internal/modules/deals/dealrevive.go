@@ -244,14 +244,10 @@ const suggestionKindKey = "kind"
 // recordRevived settles the suggestion as the reopen of the deal. Its kind
 // says so, so no reader takes it for the suggestion the deal was opened from.
 func recordRevived(ctx context.Context, tx pgx.Tx, suggestion, deal ids.UUID) error {
-	actor, err := storekit.Actor(ctx)
-	if err != nil {
-		return err
-	}
 	tag, err := tx.Exec(ctx, `
-		UPDATE deal_suggestion SET state = $2, kind = $3, accepted_deal_id = $4, decided_by = $5, decided_at = now()
+		UPDATE deal_suggestion SET state = $2, kind = $3, accepted_deal_id = $4, decided_at = now()
 		 WHERE id = $1 AND state = 'open'`,
-		suggestion, SuggestionAccepted, SuggestionKindRevive, deal, storekit.UUIDOrNil(actor.UserID))
+		suggestion, SuggestionAccepted, SuggestionKindRevive, deal)
 	if err != nil {
 		return fmt.Errorf("deals: recording the reopen on the suggestion: %w", err)
 	}
@@ -298,7 +294,7 @@ func (s *Store) revertDealRevive(
 		return err
 	}
 	history := *c.StageHistoryID
-	closed, err := s.advanceOnTx(ctx, tx, c.DealID, AdvanceDealInput{
+	_, err = s.advanceOnTx(ctx, tx, c.DealID, AdvanceDealInput{
 		ToStageID: lostStage, ReversalOf: &history, auditEvidence: evidence,
 		LostReason: loss.note, LostReasonCode: loss.code, closedAt: loss.closedAt,
 		// The deal goes back to the lost stage it left, so the move claims no win.
@@ -311,7 +307,7 @@ func (s *Store) revertDealRevive(
 	if err != nil {
 		return err
 	}
-	stamped, err := markReversed(ctx, tx, c.ID, closed.AuditLogID, by)
+	stamped, err := markReversed(ctx, tx, c.ID, by)
 	if err != nil {
 		return err
 	}

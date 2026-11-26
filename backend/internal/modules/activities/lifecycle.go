@@ -414,7 +414,7 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		UPDATE activity SET
 		  subject = coalesce($%[2]d, subject),
 		  body = CASE WHEN $%[3]d::text IS NULL THEN body ELSE nullif($%[3]d::text, '') END,
-		  body_own_end = CASE WHEN $%[3]d::text IS NULL THEN body_own_end ELSE $%[30]d::int END,
+		  body_own_end = CASE WHEN $%[3]d::text IS NULL AND $%[2]d::text IS NULL THEN body_own_end ELSE $%[30]d::int END,
 		  occurred_at = coalesce($%[4]d, occurred_at),
 		  due_at = CASE WHEN $%[11]d THEN NULL ELSE coalesce($%[5]d, due_at) END,
 		  remind_at = CASE WHEN $%[12]d THEN NULL ELSE coalesce($%[6]d, remind_at) END,
@@ -449,7 +449,7 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
 		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)), arg(in.sourceActivityID),
 		arg(pickedWall(in.DueIntent)), arg(pickedZone(in.DueIntent)), arg(pickedWall(in.RemindIntent)), arg(pickedZone(in.RemindIntent)), arg(pickedWall(in.MeetingIntent)), arg(pickedZone(in.MeetingIntent)),
-		arg(in.TaskType), arg(in.AIAssisted), arg(in.clears(auditFieldMeetingStatus)), arg(patchedOwnEnd(current, in.Body)))
+		arg(in.TaskType), arg(in.AIAssisted), arg(in.clears(auditFieldMeetingStatus)), arg(patchedOwnEnd(current, in)))
 	query += fmt.Sprintf(" AND version = $%d", arg(current.Version))
 	result, err := tx.Exec(ctx, query, args...)
 	if err != nil {

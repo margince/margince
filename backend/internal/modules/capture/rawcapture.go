@@ -100,3 +100,15 @@ func GetRawCapturePayloadTx(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]byte
 	}
 	return originalstore.Decode(ctx, payload)
 }
+
+// DeleteRawCaptureTx destroys one original that was stored and will not be filed,
+// in the caller's transaction. Content of an object it offloaded is released by
+// the original store's own sweep.
+func DeleteRawCaptureTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	rows, err := tx.Query(ctx, `DELETE FROM raw_capture WHERE id = $1 RETURNING payload_object`, id)
+	if err != nil {
+		return fmt.Errorf("capture: discarding an original that will not be filed: %w", err)
+	}
+	_, _, err = originalstore.CountReturned(rows)
+	return err
+}

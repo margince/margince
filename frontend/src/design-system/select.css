@@ -29,6 +29,7 @@
 .select-control:disabled {
   cursor: not-allowed;
   background: var(--bgInset);
+  border-color: var(--borderStrong);
 }
 /* The face never pushes the chevron out of the control: a long label ellipsizes
    inside the field rather than widening it, which is what a native select does
@@ -67,7 +68,7 @@
    ellipsizes, and the chevron keeps the far edge. */
 .select-button {
   justify-content: space-between;
-  text-align: left;
+  text-align: start;
 }
 
 /* In the top layer (toplayer.ts): a select inside a dialog draws over the

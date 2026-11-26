@@ -24,52 +24,53 @@ import (
 )
 
 // argumentSchema reads the operation's argument shape from wherever the method
-// says it lives, and refuses it in the other place.
-//
-// The refusals are the point rather than tidiness: this seam reads a body OR a
-// query, never both, so arguments declared on the side it does not read would be
-// published to every client and then silently dropped on every call. That is the
-// defect the old body-only reader had in mirror image — it refused GET outright
-// with "a route whose arguments never arrive" — and it is worth a named
-// generation failure at the declaration's own position.
-func argumentSchema(method string, body, params *yaml.Node) (json.RawMessage, error) {
+// says it lives, and refuses it in the other place. The seam reads a body or a
+// query, never both. Arguments on the other side would be published and then
+// dropped on every call. Path arguments join either, as plain properties.
+func argumentSchema(method, route string, body, params *yaml.Node) (json.RawMessage, error) {
+	declared, err := readParameters(params)
+	if err != nil {
+		return nil, err
+	}
+	if err := checkPathParameters(route, declared); err != nil {
+		return nil, err
+	}
 	if extension.CarriesBody(method) {
-		if !params.IsZero() {
-			return nil, fmt.Errorf("the operation declares %s and also declares parameters — a %s carries its arguments in the body, so the parameters would be published and never read. Move them into the requestBody schema, or declare the operation GET", method, method)
+		if declared.query > 0 {
+			return nil, fmt.Errorf("the operation declares %s and also declares query parameters — a %s carries its arguments in the body, so the parameters would be published and never read. Move them into the requestBody schema, or declare the operation GET", method, method)
 		}
-		return requestSchema(body)
+		schema, err := requestSchema(body)
+		if err != nil || len(declared.path) == 0 {
+			return schema, err
+		}
+		return withPathProperties(schema, declared)
 	}
 	if !body.IsZero() {
 		return nil, fmt.Errorf("the operation declares %s and also declares a requestBody — a %s carries no body, so the schema would be published and never read. Declare the arguments as query parameters, or declare the operation POST", method, method)
 	}
-	return querySchema(params)
+	return querySchema(declared)
 }
 
-// querySchema assembles a bodyless operation's input schema from its declared
-// query parameters: one property per parameter, `required` from the parameters
-// that say so, and `additionalProperties: false` because the serving seam
-// refuses a query key nothing declared.
-//
-// The assembled object is what a model is shown as the tool's argument shape and
-// what the seam decodes against, so it is built from the SAME declaration a
-// human reads in the contract rather than restated. An operation with no
-// parameters yields the empty object, which is the honest shape for a list or a
-// status probe — not nil, because "takes no arguments" is a fact worth
-// publishing rather than a gap a default fills in.
-func querySchema(params *yaml.Node) (json.RawMessage, error) {
-	schema := struct {
-		Type                 string                     `json:"type"`
-		Properties           map[string]json.RawMessage `json:"properties,omitempty"`
-		Required             []string                   `json:"required,omitempty"`
-		AdditionalProperties bool                       `json:"additionalProperties"`
-	}{Type: "object"}
+// parameters are an operation's declared path and query parameters, as the
+// properties of the tool's input schema.
+type parameters struct {
+	properties map[string]json.RawMessage
+	required   []string
+	path       []string
+	query      int
+}
+
+// readParameters reads every declared parameter. `header` and `cookie` are
+// refused, because a tool's arguments are its arguments: transport metadata is
+// not something a model may be handed as an input field.
+func readParameters(params *yaml.Node) (parameters, error) {
+	declared := parameters{properties: map[string]json.RawMessage{}}
 	if params.IsZero() {
-		return json.Marshal(schema)
+		return declared, nil
 	}
 	if params.Kind != yaml.SequenceNode {
-		return nil, errors.New("the operation's parameters is not a list")
+		return parameters{}, errors.New("the operation's parameters is not a list")
 	}
-	schema.Properties = make(map[string]json.RawMessage, len(params.Content))
 	for _, param := range params.Content {
 		var decl struct {
 			Name     string `yaml:"name"`
@@ -77,44 +78,113 @@ func querySchema(params *yaml.Node) (json.RawMessage, error) {
 			Required bool   `yaml:"required"`
 		}
 		if err := param.Decode(&decl); err != nil {
-			return nil, fmt.Errorf("the operation declares a parameter this reader cannot decode: %w", err)
+			return parameters{}, fmt.Errorf("the operation declares a parameter this reader cannot decode: %w", err)
 		}
-		// Query only. `path` is refused because an extension route may carry no
-		// template (see extension.Verb's route grammar), and `header`/`cookie`
-		// because a tool's arguments are its arguments — transport metadata is not
-		// something a model may be handed as an input field.
-		if decl.In != "query" {
-			return nil, fmt.Errorf("parameter %q is declared in %q — a bodyless extension operation takes its arguments from the query string only", decl.Name, decl.In)
+		switch {
+		case decl.In == "path" && !decl.Required:
+			return parameters{}, fmt.Errorf("path parameter %q is not required — a path segment is always present, so declare it required: true", decl.Name)
+		case decl.In == "path":
+			declared.path = append(declared.path, decl.Name)
+		case decl.In == "query":
+			declared.query++
+		default:
+			return parameters{}, fmt.Errorf("parameter %q is declared in %q — an extension operation takes its arguments from the path, the query string or the body", decl.Name, decl.In)
 		}
 		if decl.Name == "" {
-			return nil, errors.New("the operation declares a query parameter with no name")
+			return parameters{}, errors.New("the operation declares a parameter with no name")
 		}
-		if _, dup := schema.Properties[decl.Name]; dup {
+		if _, dup := declared.properties[decl.Name]; dup {
 			// json.Marshal would silently keep one of the two, and the published
 			// schema would describe an argument set no reader of the contract wrote.
-			return nil, fmt.Errorf("the operation declares the query parameter %q twice", decl.Name)
+			return parameters{}, fmt.Errorf("the operation declares the parameter %q twice", decl.Name)
 		}
 		node := yamlChild(param, "schema")
 		if node == nil {
-			return nil, fmt.Errorf("query parameter %q declares no schema — the seam coerces a query value against its declared type, so an untyped one could not be decoded", decl.Name)
+			return parameters{}, fmt.Errorf("parameter %q declares no schema — the seam coerces a path or query value against its declared type, so an untyped one could not be decoded", decl.Name)
 		}
 		// Through jsonSchema for the $ref refusal, which matters here for the same
 		// reason it matters for a body: the emitted literal is a standalone schema
 		// and this generator resolves nothing.
 		encoded, err := jsonSchema("parameter "+decl.Name, node)
 		if err != nil {
-			return nil, err
+			return parameters{}, err
 		}
-		schema.Properties[decl.Name] = encoded
+		declared.properties[decl.Name] = encoded
 		if decl.Required {
-			schema.Required = append(schema.Required, decl.Name)
+			declared.required = append(declared.required, decl.Name)
 		}
 	}
 	// Sorted, because `required` is a LIST and YAML declaration order would
 	// otherwise reach the emitted literal and the manifest digest — making a
 	// reordering of the contract look like a changed argument contract.
-	slices.Sort(schema.Required)
+	slices.Sort(declared.required)
+	return declared, nil
+}
+
+// checkPathParameters refuses a path parameter the route does not carry. A
+// `{name}` the parameters do not declare is Verb.Validate's to refuse, since
+// the input schema then lacks the argument.
+func checkPathParameters(route string, declared parameters) error {
+	routed := extension.Verb{Route: route}.PathArguments()
+	for _, name := range declared.path {
+		if !slices.Contains(routed, name) {
+			return fmt.Errorf("path parameter %q is not a {%s} segment of %s", name, name, route)
+		}
+	}
+	return nil
+}
+
+// querySchema assembles a bodyless operation's input schema from its declared
+// parameters. `additionalProperties` is false because the serving seam refuses
+// a query key nothing declared. With no parameters it is the empty object, not
+// nil, so a model is told the tool takes no arguments.
+func querySchema(declared parameters) (json.RawMessage, error) {
+	schema := struct {
+		Type                 string                     `json:"type"`
+		Properties           map[string]json.RawMessage `json:"properties,omitempty"`
+		Required             []string                   `json:"required,omitempty"`
+		AdditionalProperties bool                       `json:"additionalProperties"`
+	}{Type: "object", Properties: declared.properties, Required: declared.required}
 	return json.Marshal(schema)
+}
+
+// withPathProperties adds a body operation's path arguments to its request
+// schema, so the tool takes them as properties of one arguments object. A body
+// property of the same name is refused: the served route could not tell which
+// of the two values the caller meant.
+func withPathProperties(schema json.RawMessage, declared parameters) (json.RawMessage, error) {
+	var root map[string]json.RawMessage
+	if err := json.Unmarshal(schema, &root); err != nil {
+		return nil, fmt.Errorf("the requestBody schema cannot take path arguments: %w", err)
+	}
+	properties := map[string]json.RawMessage{}
+	if raw, ok := root["properties"]; ok {
+		if err := json.Unmarshal(raw, &properties); err != nil {
+			return nil, fmt.Errorf("the requestBody schema's properties cannot be read: %w", err)
+		}
+	}
+	var required []string
+	if raw, ok := root["required"]; ok {
+		if err := json.Unmarshal(raw, &required); err != nil {
+			return nil, fmt.Errorf("the requestBody schema's required cannot be read: %w", err)
+		}
+	}
+	for _, name := range declared.path {
+		if _, shadowed := properties[name]; shadowed {
+			return nil, fmt.Errorf("the requestBody declares %q, which is also a path parameter — rename one of the two", name)
+		}
+		properties[name] = declared.properties[name]
+		required = append(required, name)
+	}
+	slices.Sort(required)
+	var err error
+	if root["properties"], err = json.Marshal(properties); err != nil {
+		return nil, err
+	}
+	if root["required"], err = json.Marshal(required); err != nil {
+		return nil, err
+	}
+	return json.Marshal(root)
 }
 
 // requestSchema reads the operation's inline JSON request schema. A $ref is

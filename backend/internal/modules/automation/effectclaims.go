@@ -46,6 +46,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -201,10 +202,16 @@ func applyCreate(ctx context.Context, ex Executors, eff workflow.Effect, action 
 	if action.Kind == workflow.ActionCreateTask {
 		entity = datasource.EntityActivity
 	}
+	// A record table holds source to the fixed channels. An activity keeps the
+	// engine's own word, which its readers select on.
+	source := systemSource
+	if entity != datasource.EntityActivity {
+		source = provenance.RecordSourceAutomation
+	}
 	created, createErr := ex.Provider.Create(systemtext.WithMessage(ctx, action.SystemText), datasource.CreateInput{
 		EntityType: entity,
 		Fields:     action.Args,
-		Source:     systemSource,
+		Source:     source,
 	})
 	if createErr == nil && created.ID != ids.Nil {
 		action.Created = &created

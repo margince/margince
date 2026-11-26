@@ -59,8 +59,14 @@ describe("history field labels", () => {
   // renamed column keeps looking covered while the new spelling renders raw.
   it("has no word for a field no record update writes", () => {
     const written = new Set([...fieldsARecordUpdateWrites().values()].flat());
+    // A renamed column keeps its word while audit rows written before the
+    // rename still carry the old key; each entry names the column it became.
+    const renamedBefore = new Map([["lifecycle", "status"]]);
+    for (const [old, now] of renamedBefore) {
+      expect(written.has(now), `${old} was renamed to ${now}`).toBe(true);
+    }
     const orphans = historyFieldLabelled()
-      .filter((field) => !written.has(field))
+      .filter((field) => !written.has(field) && !renamedBefore.has(field))
       .sort(stable);
     expect(
       orphans,

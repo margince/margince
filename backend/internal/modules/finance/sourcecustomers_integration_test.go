@@ -40,7 +40,7 @@ func (a *sourceAdmin) syncDirectory(t *testing.T) {
 func (a *sourceAdmin) seedCompany(t *testing.T, name string, owner *ids.UUID) ids.CompanyID {
 	t.Helper()
 	id := ids.New[ids.CompanyKind]()
-	a.ownerExec(t, `INSERT INTO company (id, display_name, lifecycle, source, captured_by, owner_id)
+	a.ownerExec(t, `INSERT INTO company (id, display_name, status, source, captured_by, owner_id)
 		VALUES ($1, $2, 'customer', 'manual', 'human:test', $3)`, id, name, owner)
 	return id
 }

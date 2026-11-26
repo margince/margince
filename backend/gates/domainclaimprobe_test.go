@@ -132,12 +132,12 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 			if filepath.Base(path) == "domainclaimprobe_test.go" {
 				return nil
 			}
-			source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
-			if readErr != nil {
-				return readErr
+			file, parseErr := gatekit.ParseFile(path, 0)
+			if parseErr != nil {
+				return parseErr
 			}
 			judged++
-			for _, statement := range gatekit.SQLStatementsIn(t, path, string(source)) {
+			for _, statement := range gatekit.SQLStatementsOf(file) {
 				if !asksWhoOwnsADomain(statement) {
 					continue
 				}

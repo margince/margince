@@ -128,7 +128,7 @@ func maskRowTextTx(
 		UPDATE activity SET subject = $2, body = $3, body_own_end = $6, `+declineStampsClearedWhen("true")+`
 		 WHERE id = $1
 		   AND subject IS NOT DISTINCT FROM $4 AND body IS NOT DISTINCT FROM $5`,
-		id, maskedSubject, maskedBody, subject, body, mailquote.OwnEnd(kind, maskedBody))
+		id, maskedSubject, maskedBody, subject, body, mailquote.OwnEnd(kind, deref(maskedSubject), maskedBody))
 	if err != nil {
 		return false, fmt.Errorf("activities: masking the stored text of %s: %w", id, err)
 	}

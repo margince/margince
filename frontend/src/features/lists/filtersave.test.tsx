@@ -14,7 +14,12 @@ import { en } from "../../i18n/en";
 import type { FilterVocabulary } from "../../lib/filterdata";
 import { TEAM_ID } from "../../testing/lists.fixtures";
 import { FiltersScreen } from "./filters";
-import { type FiltersServer, mountFilters, type Sent } from "./filters.testkit";
+import {
+  addCondition,
+  type FiltersServer,
+  mountFilters,
+  type Sent,
+} from "./filters.testkit";
 
 // "Save this filter", driven from the page that offers it: what each answer
 // sends, where the reader lands, and what the dialog keeps between openings.
@@ -63,9 +68,7 @@ const withToasts = (page: ReactNode) => (
 
 /** One complete condition, then Save: the dialog open on the page. */
 async function openSave(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(
-    await screen.findByRole("button", { name: en["filters.addClause"] }),
-  );
+  await addCondition(user, "Name");
   await user.type(screen.getByLabelText("Value"), "ann");
   await user.click(
     await screen.findByRole("button", { name: en["filters.save"] }),

@@ -5,11 +5,12 @@ package deals
 
 // The one way a deal row changes.
 //
-// This module writes the deal row from flows that agree on nothing else: a
-// client's partial update under an If-Match, a stage advance, an archive, an
-// accepted offer syncing its gross, and the nightly close-date corrector
-// re-dating under a held lock. They differ in what guards the write and in what
-// else their transaction does.
+// This module writes the deal row from flows that agree on nothing else.
+// They are a client's partial update under an If-Match, a stage advance, an
+// archive, an accepted offer syncing its net, and the nightly close-date
+// corrector.
+// The corrector re-dates under a held lock.
+// They differ in what guards the write and in what else their transaction does.
 //
 // What they share is the patch. Each applies through a seam below, so the
 // audit trail records the same before and after values whichever flow wrote

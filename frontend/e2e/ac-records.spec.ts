@@ -202,6 +202,8 @@ test.describe("calling a contact", () => {
   const tel = `tel:${PRIMARY_PHONE}`;
   const callVerb = (scope: Page | Locator) =>
     scope.getByRole("link", { name: de["record.verb.call"], exact: true });
+  const openMore = (dialog: Locator) =>
+    dialog.getByRole("button", { name: de["tasks.more"], exact: true }).click();
 
   test("the number in the details dials the primary of two numbers", async ({
     page,
@@ -297,13 +299,6 @@ test.describe("calling a contact", () => {
       await expect(number).toBeVisible();
       await expect(copy).toBeVisible();
       await expect(call).toHaveAttribute("href", tel);
-      // Mail is the other way, offered after the call.
-      await expect(
-        dialog.getByRole("button", {
-          name: de["task.next.draftEmail"],
-          exact: true,
-        }),
-      ).toBeVisible();
       await settleAnimations(page);
       await expectNoAaViolations(page, "home (task to call open)");
 
@@ -324,6 +319,15 @@ test.describe("calling a contact", () => {
       await page.keyboard.press("Tab");
       await expect(call).toBeFocused();
 
+      // Mail is the other way, kept under More after the call.
+      await openMore(dialog);
+      await expect(
+        page.getByRole("button", {
+          name: de["task.next.draftEmail"],
+          exact: true,
+        }),
+      ).toBeVisible();
+      await page.keyboard.press("Escape");
       await page.keyboard.press("Escape");
       await expect(dialog).toBeHidden();
       await expect(opener).toBeFocused();
@@ -334,15 +338,17 @@ test.describe("calling a contact", () => {
     }) => {
       const { dialog } = await openTask(page, typedTask.subject);
       await expect(
-        dialog.getByRole("link", { name: de["task.next.openContact"] }),
-      ).toBeVisible();
-      await expect(
         dialog.getByRole("button", {
           name: de["task.next.draftEmail"],
           exact: true,
         }),
       ).toBeVisible();
-      await expect(callVerb(dialog)).toHaveAttribute("href", tel);
+      // Call and the contact are the other ways, kept under More.
+      await openMore(dialog);
+      await expect(
+        page.getByRole("link", { name: de["task.next.openContact"] }),
+      ).toBeVisible();
+      await expect(callVerb(page)).toHaveAttribute("href", tel);
     });
   });
 });
