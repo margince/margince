@@ -38,7 +38,9 @@ const (
 	// workspace through this package's unexported job helpers.
 	// Raised by 1 production file for agentfor.go, the one seam that binds the
 	// product acting for a named colleague, split out of the deal-owner seam.
-	composeRootProductionFiles = 1386
+	// Raised by 1 for the Zalo ingest and token renewal job args, which the
+	// generated job kinds require in this package.
+	composeRootProductionFiles = 1387
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -117,10 +119,11 @@ const (
 	// History query, boot owner check and filter preview handler.
 	// Raised by 44 production and 99 test lines for the agent-for-a-colleague
 	// seam, the finance card's hidden billing count and their cases.
+	// Raised by 94 production lines for the Zalo ingest and token renewal job args.
 	// Raised by 23 production and 11 test lines for the date-only precision a
 	// company route and a quiet reason carry, and their cases.
-	composeRootProductionLines = 231_526
-	composeRootTestLines       = 362_375
+	composeRootProductionLines = 231_620
+	composeRootTestLines       = 362_380
 )
 
 // A read under these floors stopped early or read the wrong place, and would

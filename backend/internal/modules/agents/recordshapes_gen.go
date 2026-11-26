@@ -1464,6 +1464,8 @@ var contractFieldEnums = map[string]contractFieldEnum{
 	"WorklistSourceUnavailable.reason":                                  {Values: []string{"withheld", "failed"}, ResponseOnly: []string{}, Description: ""},
 	"WorklistValue.kind":                                                {Values: []string{"date", "money", "days", "level", "score", "count", "none"}, ResponseOnly: []string{}, Description: ""},
 	"WorkspaceEmailDomain.source":                                       {Values: []string{"admin", "mailbox"}, ResponseOnly: []string{}, Description: "Who contributed the row. `mailbox` was observed from a connected account and is a candidate; `admin` was entered by a human."},
+	"ZaloOAConnection.mailVisibility":                                   {Values: []string{"held", "shared"}, ResponseOnly: []string{}, Description: "What the seat asks of the account's messages. Changed with `PATCH /channel-connections/zalo-oa/{id}/visibility`."},
+	"ZaloOAConnection.status":                                           {Values: []string{"connected", "reauth_required", "disconnected"}, ResponseOnly: []string{}, Description: "`reauth_required` when Zalo refused the refresh token, so the Official Account must be disconnected and connected again with fresh tokens."},
 }
 
 // listRecordFilters is the CONTRACT half of what list_records may be asked to
