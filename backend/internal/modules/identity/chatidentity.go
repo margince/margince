@@ -118,15 +118,18 @@ func (s *Service) StartChatVerification(ctx context.Context, network ChatNetwork
 	if err != nil {
 		return "", time.Time{}, err
 	}
-	expires := s.now().Add(ChatCodeLifetime)
+	var expires time.Time
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `UPDATE app_user SET `+cols.codeHash+` = $2, `+cols.codeExpires+` = $3 WHERE id = $1 AND `+workforce.LiveMemberSQL(""),
-			self, hashChatCode(code), expires)
+		// The database clock dates the code here and judges it when it is sent,
+		// so the API and the worker cannot disagree about it.
+		err := tx.QueryRow(ctx, `UPDATE app_user SET `+cols.codeHash+` = $2, `+cols.codeExpires+` = now() + make_interval(secs => $3)
+			WHERE id = $1 AND `+workforce.LiveMemberSQL("")+` RETURNING `+cols.codeExpires,
+			self, hashChatCode(code), ChatCodeLifetime.Seconds()).Scan(&expires)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
 		if err != nil {
 			return fmt.Errorf("identity: storing a chat code: %w", err)
-		}
-		if tag.RowsAffected() != 1 {
-			return apperrors.ErrNotFound
 		}
 		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
 			return err
@@ -183,22 +186,22 @@ func (s *Service) MyChatIdentities(ctx context.Context) ([]ChatIdentity, error) 
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var wa, tg, zalo, oa *string
 		var at, codes [3]*time.Time
-		if err := tx.QueryRow(ctx, `SELECT chat_whatsapp_phone, chat_whatsapp_verified_at, chat_whatsapp_code_expires_at,
-			chat_telegram_user_id, chat_telegram_verified_at, chat_telegram_code_expires_at,
-			chat_zalo_user_id, chat_zalo_oa_id, chat_zalo_verified_at, chat_zalo_code_expires_at FROM app_user WHERE id = $1`, self).
+		if err := tx.QueryRow(ctx, `SELECT chat_whatsapp_phone, chat_whatsapp_verified_at,
+			CASE WHEN chat_whatsapp_code_expires_at > now() THEN chat_whatsapp_code_expires_at END,
+			chat_telegram_user_id, chat_telegram_verified_at,
+			CASE WHEN chat_telegram_code_expires_at > now() THEN chat_telegram_code_expires_at END,
+			chat_zalo_user_id, chat_zalo_oa_id, chat_zalo_verified_at,
+			CASE WHEN chat_zalo_code_expires_at > now() THEN chat_zalo_code_expires_at END FROM app_user WHERE id = $1`, self).
 			Scan(&wa, &at[0], &codes[0], &tg, &at[1], &codes[1], &zalo, &oa, &at[2], &codes[2]); err != nil {
 			return fmt.Errorf("identity: reading chat accounts: %w", err)
 		}
-		now := s.now()
 		for i, row := range []ChatIdentity{
 			{Network: ChatWhatsApp, Account: derefChat(wa)},
 			{Network: ChatTelegram, Account: derefChat(tg)},
 			{Network: ChatZalo, Account: derefChat(zalo), OAID: derefChat(oa)},
 		} {
 			row.VerifiedAt = at[i]
-			if codes[i] != nil && codes[i].After(now) {
-				row.CodeExpiresAt = codes[i]
-			}
+			row.CodeExpiresAt = codes[i]
 			if row.VerifiedAt != nil || row.CodeExpiresAt != nil {
 				out = append(out, row)
 			}
@@ -245,7 +248,7 @@ func ChatMemberTx(ctx context.Context, tx pgx.Tx, network ChatNetwork, scope, ac
 // text was a pending code, so the caller files nothing for one. A code that is
 // wrong or expired changes nothing and reports false. An account another member
 // already verified is refused.
-func RedeemChatCodeTx(ctx context.Context, tx pgx.Tx, now time.Time, network ChatNetwork, scope, account, text string) (ids.UUID, bool, error) {
+func RedeemChatCodeTx(ctx context.Context, tx pgx.Tx, network ChatNetwork, scope, account, text string) (ids.UUID, bool, error) {
 	cols, err := columnsOf(network)
 	if err != nil {
 		return ids.Nil, false, err
@@ -255,8 +258,8 @@ func RedeemChatCodeTx(ctx context.Context, tx pgx.Tx, now time.Time, network Cha
 		return ids.Nil, false, nil
 	}
 	var member ids.UUID
-	err = tx.QueryRow(ctx, `SELECT id FROM app_user WHERE `+cols.codeHash+` = $1 AND `+cols.codeExpires+` > $2
-		AND `+workforce.LiveMemberSQL("")+` AND NOT is_agent FOR UPDATE`, hashChatCode(code), now).Scan(&member)
+	err = tx.QueryRow(ctx, `SELECT id FROM app_user WHERE `+cols.codeHash+` = $1 AND `+cols.codeExpires+` > now()
+		AND `+workforce.LiveMemberSQL("")+` AND NOT is_agent FOR UPDATE`, hashChatCode(code)).Scan(&member)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, false, nil
 	}
@@ -302,3 +305,13 @@ func recordChatChange(ctx context.Context, tx pgx.Tx, user ids.UUID, image map[s
 		UserId: openapi_types.UUID(user), By: openapi_types.UUID(user),
 	})
 }
+
+// clearedChatAccountsSQL sets every chat account and pending code of a member to
+// nothing. A member who leaves frees their accounts, so a successor can confirm
+// the same company account, and no code of theirs stays usable.
+const clearedChatAccountsSQL = `chat_whatsapp_phone = NULL, chat_whatsapp_verified_at = NULL,
+	chat_whatsapp_code_hash = NULL, chat_whatsapp_code_expires_at = NULL,
+	chat_telegram_user_id = NULL, chat_telegram_verified_at = NULL,
+	chat_telegram_code_hash = NULL, chat_telegram_code_expires_at = NULL,
+	chat_zalo_user_id = NULL, chat_zalo_oa_id = NULL, chat_zalo_verified_at = NULL,
+	chat_zalo_code_hash = NULL, chat_zalo_code_expires_at = NULL`

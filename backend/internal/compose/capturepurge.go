@@ -264,7 +264,7 @@ func (p *CapturePurger) carryOut(
 	// destroyed and a colleague's shared ones still claimed, which the next run
 	// finishes; the other order would release a claim and then fail to destroy,
 	// leaving mail the owner believes is gone with nobody's name on it.
-	if _, err := p.retention.PurgeActivities(ctx, subject.SoleImports, reason); err != nil {
+	if _, err := p.retention.PurgeActivitiesIf(ctx, subject.SoleImports, reason, subject.StillPurgeable); err != nil {
 		return anonymised, err
 	}
 	// Every claim on a DESTROYED message goes with it. PurgeActivities empties
@@ -317,10 +317,8 @@ func (p *CapturePurger) carryOut(
 }
 
 // DestroyExpiredForwards runs the executor over the forwards past their window.
-func (p *CapturePurger) DestroyExpiredForwards(ctx context.Context, s capture.PurgeSubject) (err error) {
-	if p != nil {
-		_, err = p.carryOut(ctx, s, nil, nil, ids.Nil, privacy.PurgeForwardExpired)
-	}
+func (p *CapturePurger) DestroyExpiredForwards(ctx context.Context, s capture.PurgeSubject) error {
+	_, err := p.carryOut(ctx, s, nil, nil, ids.Nil, privacy.PurgeForwardExpired)
 	return err
 }
 

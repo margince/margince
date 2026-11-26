@@ -18095,11 +18095,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "account.chatTelegram": "Telegram-Konto",
   "account.chatZalo": "Zalo-Konto",
   "account.chatHelp":
-    "Bestätige dein eigenes {network}-Konto. Eine Kundennachricht, die du von dort an ein {network}-Konto der Firma weiterleitest, wird dann für diesen Kunden abgelegt, nie für dich.",
+    "Bestätige dein eigenes {network}-Konto. Eine Kundennachricht, die du von dort an ein {network}-Konto des Unternehmens weiterleitest, wird dann für diesen Kunden abgelegt, nie für dich.",
   "account.chatCode":
-    "Sende diesen Code innerhalb von 10 Minuten als Nachricht von deinem {network}-Konto an ein {network}-Konto der Firma: {code}",
+    "Sende diesen Code innerhalb von 10 Minuten als Nachricht von deinem {network}-Konto an ein {network}-Konto des Unternehmens: {code}",
   "account.chatWaiting":
-    "Ein Code wartet. Sende ihn von deinem {network}-Konto an ein {network}-Konto der Firma, oder starte neu für einen neuen Code.",
+    "Ein Code wartet. Sende ihn von deinem {network}-Konto an ein {network}-Konto des Unternehmens, oder starte neu für einen neuen Code.",
   "account.chatConfirmed": "Bestätigt: {account}",
   "account.chatConfirm": "Mit Code bestätigen",
   "account.chatRemove": "Entfernen",

@@ -124,6 +124,12 @@ func routeForward(ctx context.Context, sink connector.Sink, binding connector.Ch
 	if forward.Author == nil {
 		return ctx, forwardRoute{msg: msg, held: true}, nil
 	}
+	// A colleague is no customer. Their message is held for the forwarder, as
+	// one with no author is, and no contact is made for the colleague.
+	_, colleague, err := finder.ChatMember(ctx, binding.Provider, binding.AccountScope, forward.Author.UserID)
+	if err != nil || colleague {
+		return ctx, forwardRoute{msg: msg, held: colleague}, err
+	}
 	// The forward is its own conversation, so it never reads as the member's
 	// answer inside the member's chat with the account.
 	keys := chatKeys(binding, msg)

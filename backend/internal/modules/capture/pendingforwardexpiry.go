@@ -6,7 +6,6 @@ package capture
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -17,12 +16,17 @@ import (
 // expiredForwardBatch bounds one pass. The rest waits for the next.
 const expiredForwardBatch = 500
 
-// SelectExpiredForwardsTx is the held forwards older than their window at now.
-// Only their member has read them and no colleague holds a copy. The whole
-// selection is therefore the sole copy, and the purge executor takes it as such.
-func SelectExpiredForwardsTx(ctx context.Context, tx pgx.Tx, now time.Time) (PurgeSubject, error) {
+// expiredForwardSQL is the condition a forward must meet to be destroyed: still
+// pending, and past its window by the database clock.
+const expiredForwardSQL = `a.archived_at IS NULL AND a.restricted_at IS NULL AND a.created_at < now() - make_interval(secs => $1)`
+
+// SelectExpiredForwardsTx is the held forwards past their window. Only their
+// member has read them and no colleague holds a copy, so the whole selection is
+// the sole copy. The purge asks again under the row lock, because a member may
+// file one on a record between this read and the purge.
+func SelectExpiredForwardsTx(ctx context.Context, tx pgx.Tx) (PurgeSubject, error) {
 	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE `+pendingforward.Predicate("a")+`
-		AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.created_at < $1 ORDER BY a.id LIMIT $2`, now.Add(-pendingforward.Window), expiredForwardBatch)
+		AND `+expiredForwardSQL+` ORDER BY a.id LIMIT $2`, pendingforward.Window.Seconds(), expiredForwardBatch)
 	if err != nil {
 		return PurgeSubject{}, fmt.Errorf("capture: selecting expired held forwards: %w", err)
 	}
@@ -30,5 +34,16 @@ func SelectExpiredForwardsTx(ctx context.Context, tx pgx.Tx, now time.Time) (Pur
 	if err != nil {
 		return PurgeSubject{}, fmt.Errorf("capture: selecting expired held forwards: %w", err)
 	}
-	return PurgeSubject{SoleImports: due}, nil
+	return PurgeSubject{SoleImports: due, StillPurgeable: forwardStillExpired}, nil
+}
+
+// forwardStillExpired is the recheck the purge runs on the locked row.
+func forwardStillExpired(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
+	var holds bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $2 AND `+pendingforward.Predicate("a")+`
+		AND `+expiredForwardSQL+`)`, pendingforward.Window.Seconds(), id).Scan(&holds)
+	if err != nil {
+		return false, fmt.Errorf("capture: rechecking an expired held forward: %w", err)
+	}
+	return holds, nil
 }

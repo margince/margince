@@ -29,7 +29,7 @@ type Destroyer interface {
 func ExpireForwards(ctx context.Context, pool *pgxpool.Pool, purge Destroyer) error {
 	var subject capture.PurgeSubject
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) (err error) {
-		subject, err = capture.SelectExpiredForwardsTx(ctx, tx, time.Now())
+		subject, err = capture.SelectExpiredForwardsTx(ctx, tx)
 		return err
 	}); err != nil {
 		return err
