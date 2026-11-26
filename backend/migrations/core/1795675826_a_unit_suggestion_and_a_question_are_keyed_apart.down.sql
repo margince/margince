@@ -6,4 +6,5 @@ CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_activity_link_suggestion_targe
 DROP INDEX CONCURRENTLY IF EXISTS uq_activity_link_suggestion_question;
 DROP INDEX CONCURRENTLY IF EXISTS uq_activity_link_suggestion_unit_target;
 DROP INDEX CONCURRENTLY IF EXISTS idx_activity_link_suggestion_for_user;
+DROP INDEX CONCURRENTLY IF EXISTS idx_activity_link_suggestion_activity;
 RESET lock_timeout;

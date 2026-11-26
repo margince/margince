@@ -6356,6 +6356,7 @@ public.idx_activity_counterparty_email CREATE INDEX idx_activity_counterparty_em
 public.idx_activity_direction_page CREATE INDEX idx_activity_direction_page ON public.activity USING btree (direction, occurred_at DESC, id DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))
 public.idx_activity_kind CREATE INDEX idx_activity_kind ON public.activity USING btree (kind, occurred_at DESC) WHERE (archived_at IS NULL)
 public.idx_activity_labeled CREATE INDEX idx_activity_labeled ON public.activity USING btree (capture_labeled_at) WHERE (capture_labeled_at IS NOT NULL)
+public.idx_activity_link_suggestion_activity CREATE INDEX idx_activity_link_suggestion_activity ON public.activity_link_suggestion USING btree (activity_id)
 public.idx_activity_link_suggestion_for_user CREATE INDEX idx_activity_link_suggestion_for_user ON public.activity_link_suggestion USING btree (for_user) WHERE (for_user IS NOT NULL)
 public.idx_activity_link_suggestion_pending CREATE INDEX idx_activity_link_suggestion_pending ON public.activity_link_suggestion USING btree (created_at, id) WHERE (status = 'pending'::text)
 public.idx_activity_meeting_host CREATE INDEX idx_activity_meeting_host ON public.activity USING btree (host_user_id, occurred_at) WHERE ((kind = 'meeting'::text) AND (archived_at IS NULL))

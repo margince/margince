@@ -17,5 +17,10 @@ CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_activity_link_suggestion_unit_
 DROP INDEX CONCURRENTLY IF EXISTS uq_activity_link_suggestion_question;
 CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_activity_link_suggestion_question
     ON activity_link_suggestion (activity_id, entity_type, entity_id, for_user) WHERE for_user IS NOT NULL;
+-- The old key was also the index a message's delete used to find its
+-- suggestions. The partial keys each serve only part of the rows.
+DROP INDEX CONCURRENTLY IF EXISTS idx_activity_link_suggestion_activity;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_activity_link_suggestion_activity
+    ON activity_link_suggestion (activity_id);
 DROP INDEX CONCURRENTLY IF EXISTS uq_activity_link_suggestion_target;
 RESET lock_timeout;

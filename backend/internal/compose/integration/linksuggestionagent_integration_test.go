@@ -32,8 +32,9 @@ func TestAnAgentReadsAndAnswersOnlyItsOwnColleaguesDealQuestion(t *testing.T) {
 		bearer, _ := apptest.PassportWithID(t, seat, "which deal agent", "read", "write")
 		return apptest.NewMCPClient(seat, strings.TrimPrefix(bearer["Authorization"], "Bearer ")), member
 	}
-	asked, askedID := agentOf("asked@agent-which-deal.test")
-	other, _ := agentOf("other@agent-which-deal.test")
+	stem := ids.NewV7().String()[24:]
+	asked, askedID := agentOf("asked-" + stem + "@agent-which-deal.test")
+	other, _ := agentOf("other-" + stem + "@agent-which-deal.test")
 
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	deal := createdID(t, d.e, "/v1/deals", AnyMap{

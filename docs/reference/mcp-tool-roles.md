@@ -1251,7 +1251,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Activities, mail and tasks | `read_details.project_filing` | `get_activity_project_filing` | `activity.read` |
 | Activities, mail and tasks | `read_details.scheduled_send` | `get_scheduled_send` | `activity.read` |
 | Activities, mail and tasks | `read_details.scheduled_sends` | `list_scheduled_sends` | `activity.read` |
-| Activities, mail and tasks | `read_workspace.link_suggestions` | `list_link_suggestions` | `activity.read` `deal.read` |
+| Activities, mail and tasks | `read_workspace.link_suggestions` | `list_link_suggestions` | `activity.read` |
 | Activities, mail and tasks | `send_outbound.answer_invitation` | `answer_calendar_invitation` | `activity.read` |
 | Activities, mail and tasks | `send_outbound.chat_reply` | `send_message` | `activity.create` `activity.read` |
 | Activities, mail and tasks | `send_outbound.email_new` | `send_company_email` | `activity.create` `activity.read` `company.read` `contact.create` `contact.read` `deal.read` `lead.read` `project.read` |
