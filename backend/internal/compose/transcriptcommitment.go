@@ -27,6 +27,20 @@ import (
 // colleague's is filed by transcriptReadSystemID (fileFor).
 const transcriptProposalActor = "agent:transcript-proposer"
 
+// sameJobFilers are the other ids the job that filed under extractor files
+// under. A transcript reading files its requester's promises as its agent and
+// other colleagues' as the system. Before that split it filed every one as the
+// agent, so a re-read renews what either id filed.
+func sameJobFilers(extractor string) []string {
+	switch extractor {
+	case transcriptProposalActor:
+		return []string{transcriptReadSystemID}
+	case transcriptReadSystemID:
+		return []string{transcriptProposalActor}
+	}
+	return nil
+}
+
 // commitmentFrom rechecks the quoted promiser against the meeting participants.
 func (p *TranscriptProposer) commitmentFrom(
 	ctx context.Context, tx pgx.Tx, step proposedStep,
