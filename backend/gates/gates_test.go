@@ -22,10 +22,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
 	"testing"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -153,14 +155,15 @@ var trackedIndex = sync.OnceValues(func() ([]trackedFile, error) {
 })
 
 // mayHoldFolded is the cheap question in front of a case-insensitive scan: it
-// is false only when text is ASCII and holds none of words in any case, so a
-// scan it skips could not have matched. Other text always goes to the scan,
-// because (?i) folds ſ to s and the Kelvin sign to k where ToLower does not.
+// is false only when text holds none of words in any case, so a scan it skips
+// could not have matched.
+// foldsToASCIIUnlowered is the one rune (?i) matches to an ASCII letter that
+// strings.ToLower leaves alone: ſ, which folds to s.
+const foldsToASCIIUnlowered = 'ſ'
+
 func mayHoldFolded(text string, words ...string) bool {
-	for i := 0; i < len(text); i++ {
-		if text[i] >= utf8.RuneSelf {
-			return true
-		}
+	if strings.ContainsRune(text, foldsToASCIIUnlowered) {
+		return true
 	}
 	folded := strings.ToLower(text)
 	for _, word := range words {
@@ -169,4 +172,24 @@ func mayHoldFolded(text string, words ...string) bool {
 		}
 	}
 	return false
+}
+
+// The fold the regexp engine uses is derived here from the Unicode tables Go
+// ships, so a rune a later table adds is caught.
+func TestMayHoldFoldedNeverSkipsTextACaseInsensitiveWordMatches(t *testing.T) {
+	t.Parallel()
+	for r := rune(utf8.RuneSelf); r <= unicode.MaxRune; r++ {
+		for fold := unicode.SimpleFold(r); fold != r; fold = unicode.SimpleFold(fold) {
+			if fold >= utf8.RuneSelf || !unicode.IsLetter(fold) {
+				continue
+			}
+			word := string(unicode.ToLower(fold))
+			if !regexp.MustCompile("(?i)" + word).MatchString(string(r)) {
+				t.Fatalf("(?i)%s does not match U+%04X, so this test no longer reads the fold the regexp engine uses", word, r)
+			}
+			if !mayHoldFolded(string(r), word) {
+				t.Errorf("(?i)%s matches U+%04X, and mayHoldFolded skips text holding it", word, r)
+			}
+		}
+	}
 }
