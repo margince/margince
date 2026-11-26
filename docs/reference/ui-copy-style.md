@@ -245,11 +245,13 @@ stands, keeps none of them.
 
 Findings that wait for a rewrite are listed in `stylebaseline.txt` in that
 folder, one rule and sentence a line. A test fails a line whose sentence now
-passes, or that no Go string spells. `wantStyleWaivers` in
-`stylebaseline_test.go` pins how many lines the file holds, and a test fails
-when the two differ. The command below drops the lines that fail, lowers the
-pin to match, and never adds a line. A line added by hand raises the pin in the
-same change, and review must accept it. Run it from `backend/`:
+passes, or that no Go string spells. Two pins in `stylebaseline_test.go` hold
+its lines: `wantStyleWaivers` is how many there are, and `wantStyleDigest` the
+SHA-256 of them sorted, comments left out. A test fails when either differs.
+
+The command below only drops the lines that fail, and rewrites both pins to
+match. Any other edit, whether it adds, drops or swaps a line, changes both pins
+in the same change, where review sees it. Run it from `backend/`:
 
 ```sh
 go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut

@@ -186,6 +186,7 @@ func checkNested(t *testing.T) { langcopytest.EnglishText(t, "x", nested["saved"
 func TestUnwalked(t *testing.T) { _ = unwalked }
 func TestShadowed(t *testing.T) { check(t); unwalked := struct{ unwalked int }{unwalked: 1}; _ = unwalked.unwalked }
 func unusedCheck(t langcopytest.T) { langcopytest.EnglishText(t, "x", orphaned[0]) }
+func TestLocal(t *testing.T) { unusedCheck := 1; _ = unusedCheck }
 `
 	pkg := &languagePackage{tables: map[string]string{}, literalIn: map[string]bool{}}
 	for name, text := range map[string]string{"copy.go": source, "copy_test.go": walk} {
@@ -410,9 +411,33 @@ func declParts(decl ast.Decl) map[string]ast.Node {
 
 // packageNames answers the names node spells that can mean a top-level
 // declaration: not a field it selects or keys, nor a name it declares itself.
-// A name declared anywhere in node is dropped throughout, even outside its scope.
 func packageNames(node ast.Node) []string {
-	local, field := map[string]bool{}, map[*ast.Ident]bool{}
+	local, field := declaredIn(node), map[*ast.Ident]bool{}
+	ast.Inspect(node, func(n ast.Node) bool {
+		switch n := n.(type) {
+		case *ast.SelectorExpr:
+			field[n.Sel] = true
+		case *ast.KeyValueExpr:
+			if key, ok := n.Key.(*ast.Ident); ok {
+				field[key] = true
+			}
+		}
+		return true
+	})
+	var names []string
+	ast.Inspect(node, func(n ast.Node) bool {
+		if ident, ok := n.(*ast.Ident); ok && !field[ident] && !local[ident.Name] {
+			names = append(names, ident.Name)
+		}
+		return true
+	})
+	return names
+}
+
+// declaredIn answers the names node declares for itself. A name declared
+// anywhere in node counts throughout, even outside its scope.
+func declaredIn(node ast.Node) map[string]bool {
+	local := map[string]bool{}
 	declare := func(exprs ...ast.Expr) {
 		for _, expr := range exprs {
 			if ident, ok := expr.(*ast.Ident); ok {
@@ -434,12 +459,6 @@ func packageNames(node ast.Node) []string {
 	}
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch n := n.(type) {
-		case *ast.SelectorExpr:
-			field[n.Sel] = true
-		case *ast.KeyValueExpr:
-			if key, ok := n.Key.(*ast.Ident); ok {
-				field[key] = true
-			}
 		case *ast.FuncDecl:
 			parameters(n.Recv)
 		case *ast.FuncType:
@@ -467,14 +486,7 @@ func packageNames(node ast.Node) []string {
 		}
 		return true
 	})
-	var names []string
-	ast.Inspect(node, func(n ast.Node) bool {
-		if ident, ok := n.(*ast.Ident); ok && !field[ident] && !local[ident.Name] {
-			names = append(names, ident.Name)
-		}
-		return true
-	})
-	return names
+	return local
 }
 
 // languageKeyed reports whether a literal's type is a map keyed by
@@ -513,10 +525,13 @@ func namedByStyleTests(tests []*ast.File) []string {
 				continue
 			}
 			names[fn.Name.Name] = append(names[fn.Name.Name], packageNames(fn)...)
+			local := declaredIn(fn)
 			ast.Inspect(fn.Body, func(node ast.Node) bool {
 				switch n := node.(type) {
 				case *ast.Ident:
-					spelled[fn.Name.Name] = append(spelled[fn.Name.Name], n.Name)
+					if !local[n.Name] {
+						spelled[fn.Name.Name] = append(spelled[fn.Name.Name], n.Name)
+					}
 				case *ast.SelectorExpr:
 					if x, isIdent := n.X.(*ast.Ident); isIdent && qualifier != "" && x.Name == qualifier {
 						reaches[fn.Name.Name] = true

@@ -6,13 +6,17 @@ package langcopytest
 import (
 	"bytes"
 	"cmp"
+	"crypto/sha256"
+	"encoding/hex"
 	"flag"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -22,22 +26,58 @@ import (
 
 var recut = flag.Bool("recut", false, "drop the stylebaseline.txt lines whose sentence passes its rule or is gone")
 
-// wantStyleWaivers pins how many lines stylebaseline.txt holds, so a line
-// added by hand moves a number review sees.
+// wantStyleWaivers and wantStyleDigest pin the lines of stylebaseline.txt, so
+// a line added, dropped or swapped by hand moves a value review sees.
 const wantStyleWaivers = 157
 
-var styleWaiverPin = regexp.MustCompile(`(?m)^const wantStyleWaivers = \d+$`)
+const wantStyleDigest = "1725483ded77062584462990b8eca6fe029ea145cb31b304d44510d127bfd313"
 
-func TestTheStyleBaselineHoldsItsPinnedCount(t *testing.T) {
+var (
+	styleWaiverPin = regexp.MustCompile(`(?m)^const wantStyleWaivers = \d+$`)
+	styleDigestPin = regexp.MustCompile(`(?m)^const wantStyleDigest = "[0-9a-f]{64}"$`)
+)
+
+func TestTheStyleBaselineHoldsItsPinnedLines(t *testing.T) {
 	t.Parallel()
 	waivers, err := StyleBaseline()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(waivers) != wantStyleWaivers {
-		t.Errorf("%s holds %d waivers, and wantStyleWaivers pins %d. The recut lowers the pin with the lines it drops; "+
-			"a line added by hand raises it in the same change, for review to accept", baselinePath, len(waivers), wantStyleWaivers)
+	if err := pinsHold(waivers); err != nil {
+		t.Error(err)
 	}
+}
+
+func TestASwappedStyleWaiverBreaksTheDigestPin(t *testing.T) {
+	t.Parallel()
+	waivers, err := StyleBaseline()
+	if err != nil {
+		t.Fatal(err)
+	}
+	swapped := slices.Clone(waivers)
+	swapped[0] = Waiver{Rule: "en.dash", Text: "A sentence no rewrite has reached — yet."}
+	if pinsHold(swapped) == nil {
+		t.Error("a baseline with one line swapped for another still matches both pins")
+	}
+}
+
+func pinsHold(waivers []Waiver) error {
+	if digest := styleDigest(waivers); len(waivers) != wantStyleWaivers || digest != wantStyleDigest {
+		return fmt.Errorf("%s holds %d waivers with digest %s, and the pins say %d and %s. "+
+			"The recut rewrites both pins when it drops lines; any other edit sets both in the same change, for review to accept",
+			baselinePath, len(waivers), digest, wantStyleWaivers, wantStyleDigest)
+	}
+	return nil
+}
+
+func styleDigest(waivers []Waiver) string {
+	lines := make([]string, len(waivers))
+	for i, w := range waivers {
+		lines[i] = w.line() + "\n"
+	}
+	slices.Sort(lines)
+	sum := sha256.Sum256([]byte(strings.Join(lines, "")))
+	return hex.EncodeToString(sum[:])
 }
 
 func TestEveryStyleWaiverStillBreaksItsRule(t *testing.T) {
@@ -186,34 +226,52 @@ func TestRecutStyleBaseline(t *testing.T) {
 		}
 	}
 	writeBaseline(t, "stylebaseline.txt", kept)
-	writePin(t, "stylebaseline_test.go", len(kept))
+	writePins(t, "stylebaseline_test.go", kept)
 	t.Logf("kept %d of %d waivers", len(kept), len(waivers))
 }
 
-func TestTheRecutLowersThePinToTheLinesItKept(t *testing.T) {
+func TestTheRecutRewritesBothPinsToTheLinesItKept(t *testing.T) {
 	t.Parallel()
-	path := filepath.Join(t.TempDir(), "pin_test.go")
-	if err := os.WriteFile(path, []byte("package x\n\nconst wantStyleWaivers = 160\n"), 0o600); err != nil {
+	waivers, err := StyleBaseline()
+	if err != nil {
 		t.Fatal(err)
 	}
-	writePin(t, path, 157)
-	if got, err := os.ReadFile(path); err != nil || string(got) != "package x\n\nconst wantStyleWaivers = 157\n" {
-		t.Errorf("the recut left the pin as %q: %v", got, err)
+	kept, dir := waivers[1:4], t.TempDir()
+	pins, baseline := filepath.Join(dir, "pin_test.go"), filepath.Join(dir, "stylebaseline.txt")
+	stale := "package x\n\nconst wantStyleWaivers = 160\n\nconst wantStyleDigest = \"" + strings.Repeat("0", 64) + "\"\n"
+	if err := os.WriteFile(pins, []byte(stale), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	writeBaseline(t, baseline, kept)
+	writePins(t, pins, kept)
+	written, err := os.ReadFile(baseline)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reread, err := parseBaseline(string(written))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "package x\n\nconst wantStyleWaivers = 3\n\nconst wantStyleDigest = \"" + styleDigest(reread) + "\"\n"
+	if got, err := os.ReadFile(pins); err != nil || string(got) != want || len(reread) != len(kept) {
+		t.Errorf("the recut wrote %d lines and left the pins as %q, want %q: %v", len(reread), got, want, err)
 	}
 }
 
-// writePin sets wantStyleWaivers in path to the count the recut kept.
-func writePin(t *testing.T, path string, kept int) {
+func writePins(t *testing.T, path string, kept []Waiver) {
 	t.Helper()
 	source, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(styleWaiverPin.FindAll(source, -1)) != 1 {
-		t.Fatalf("%s no longer declares wantStyleWaivers once on a line of its own", path)
+	for _, pin := range []*regexp.Regexp{styleWaiverPin, styleDigestPin} {
+		if len(pin.FindAll(source, -1)) != 1 {
+			t.Fatalf("%s no longer declares %s once on a line of its own", path, pin)
+		}
 	}
-	pinned := styleWaiverPin.ReplaceAll(source, []byte("const wantStyleWaivers = "+strconv.Itoa(kept)))
-	if err := os.WriteFile(path, pinned, 0o600); err != nil {
+	source = styleWaiverPin.ReplaceAllLiteral(source, []byte("const wantStyleWaivers = "+strconv.Itoa(len(kept))))
+	source = styleDigestPin.ReplaceAllLiteral(source, []byte(`const wantStyleDigest = "`+styleDigest(kept)+`"`))
+	if err := os.WriteFile(path, source, 0o600); err != nil {
 		t.Fatal(err)
 	}
 }

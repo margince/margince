@@ -25,7 +25,7 @@ const (
 	ruleViToneClosed      = "vi.tone-closed"
 	ruleViDash            = "vi.dash"
 	ruleViExclamation     = "vi.exclamation"
-	ruleViNFC             = "vi.nfc"
+	ruleViCombiningMark   = "vi.combining-mark"
 	ruleViQuotes          = "vi.quotes"
 	ruleViToi             = "vi.toi"
 	ruleViChungToi        = "vi.chung-toi"
@@ -139,7 +139,7 @@ var styleRules = []styleRule{
 		matches(ruleViExclamation, asWritten),
 	},
 	{
-		ruleViNFC, textlang.Vietnamese, "holds a combining mark, so it is not NFC; write each letter precomposed", alone,
+		ruleViCombiningMark, textlang.Vietnamese, "holds a combining mark; write each letter precomposed", alone,
 		func(_ sources, text, _ string) bool { return strings.ContainsFunc(text, isCombiningMark) },
 	},
 	{
@@ -182,9 +182,11 @@ var styleRules = []styleRule{
 	},
 }
 
-// isCombiningMark is a nonspacing mark, which NFC Vietnamese never holds:
-// every Vietnamese letter has a precomposed form.
-func isCombiningMark(r rune) bool { return unicode.Is(unicode.Mn, r) }
+// Every Vietnamese letter has a precomposed form, so Vietnamese copy holds no combining mark.
+// Full NFC of each literal is held by gates/stringliteralnfc_test.go.
+func isCombiningMark(r rune) bool {
+	return unicode.Is(unicode.Mn, r) && !unicode.Is(unicode.Variation_Selector, r)
+}
 
 // withoutPaths keeps a quoted vendor label, a file name and a URL out of the
 // vocabulary rule. Each keeps the spelling the reader must match or type.

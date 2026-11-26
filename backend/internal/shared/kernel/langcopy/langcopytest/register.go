@@ -24,7 +24,7 @@ var member = Register{name: "member copy", drops: []string{ruleViOutsiderAddress
 
 var mechanics = []string{
 	ruleEnDash, ruleEnSpelling, ruleEnAmpersand,
-	ruleViToneOpen, ruleViToneClosed, ruleViDash, ruleViExclamation, ruleViNFC, ruleViQuotes,
+	ruleViToneOpen, ruleViToneClosed, ruleViDash, ruleViExclamation, ruleViCombiningMark, ruleViQuotes,
 }
 
 // Agent is an agent speaking in a chat bubble, which may say I.
