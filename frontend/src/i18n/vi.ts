@@ -22255,6 +22255,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.retryRefusedEventGone":
     "Sự kiện kích hoạt không còn tồn tại, nên không thể chạy lại. Quy tắc theo lịch sẽ tự kiểm tra lại.",
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem. Thử lại.",
+  "worklist.verb.sendAgain": "Gửi lại",
+  "worklist.verb.sendAgainAddress": "Địa chỉ đã sửa",
+  "worklist.verb.sendAgainHint":
+    "Cùng thư này sẽ được gửi đến địa chỉ này ngay khi bạn lưu. Địa chỉ này thay cho địa chỉ đã từ chối thư trên liên hệ.",
+  "worklist.verb.sentAgain": "Đã gửi lại thư đến địa chỉ đã sửa.",
   "worklist.verb.approvalRetried": "Đã thực hiện thay đổi đã duyệt",
   "worklist.verb.approvalRetryFailed":
     "Thay đổi đã duyệt vẫn chưa được thực hiện. Thử lại sau, hoặc đánh dấu đã xem.",

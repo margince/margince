@@ -29790,6 +29790,12 @@ components:
           type: [string, 'null']
           format: date-time
           description: When the provider accepted it. Null unless the state is `sent`.
+        can_send_again:
+          type: boolean
+          description: |-
+            True when the reader may send this bounced message again to a corrected address,
+            by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+            message that bounced hard qualifies, once, and not one an agent wrote.
         files:
           type: array
           items: {$ref: '#/components/schemas/EmailDeliveryFile'}
@@ -59086,7 +59092,7 @@ components:
             The way back from work that was APPLIED rather than approved.
         actions:
           type: array
-          items: {type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel]}
+          items: {type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel, send_again]}
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string

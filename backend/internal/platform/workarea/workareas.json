@@ -1948,6 +1948,7 @@
     "search": "search",
     "searchContext": "search",
     "searchReportEvidence": "reports",
+    "sendBouncedMessageAgain": "worklist",
     "sendCompanyEmail": "activities",
     "sendEmail": "activities",
     "sendMessage": "activities",

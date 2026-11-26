@@ -15346,6 +15346,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/attention/bounces/{id}/send-again": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a bounced message again to a corrected address.
+         * @description The `send_again` verb of a bounce row. `{id}` is the bounced delivery's id, which is the
+         *     row's `id`. The same message goes to the new address: the same subject, text, files, cc
+         *     and bcc, filed under the same records, under the consent purpose the first send went out
+         *     with. Nothing is inferred and nothing is chosen for the sender.
+         *
+         *     It is the one send. Authorization refuses before the consent gate answers, the gate is
+         *     asked the same question about the same purpose for the corrected address, and a
+         *     withdrawn consent, a suppression or a missing grant refuses the send exactly as it
+         *     refuses any other.
+         *
+         *     In order:
+         *
+         *     * the bounced address on the contact the message is filed under is replaced by `address`,
+         *       keeping its type, and the replaced address is archived. A caller who may not change the
+         *       contact is refused before anything is sent. A contact already holding `address` is
+         *       not written again;
+         *     * the message goes out to `address` wherever the bounced address stood, in To, cc or bcc.
+         *
+         *     A bounce can be sent again once. A repeat that bounces carries no `send_again`, and a
+         *     second request for the same bounce answers 404, as does a bounce of another user's, a
+         *     soft bounce, one filed under no contact the caller can read, and a message sent before
+         *     its text was recorded. `address` equal to the address that refused answers 422.
+         *
+         *     Humans only: it changes a contact's address and sends a message a user wrote, and an
+         *     agent has the `send_email` tool for its own mail.
+         */
+        post: operations["sendBouncedMessageAgain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/magic": {
         parameters: {
             query?: never;
@@ -31832,6 +31879,12 @@ export interface components {
              * @description When the provider accepted it. Null unless the state is `sent`.
              */
             delivered_at?: string | null;
+            /**
+             * @description True when the reader may send this bounced message again to a corrected address,
+             *     by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+             *     message that bounced hard qualifies, once, and not one an agent wrote.
+             */
+            can_send_again?: boolean;
             /**
              * @description What the message was staged with, as it was at that moment. Empty when it carried
              *     nothing.
@@ -63386,6 +63439,10 @@ export interface components {
              *     domain. Reopening retries identification without settling identity. These verbs route
              *     to `/capture/domain-questions/{domain}/…`.
              *
+             *     `send_again` is offered on a bounced message that may be sent once more. The reader
+             *     types a corrected address and the same message goes out to it, through
+             *     `POST /attention/bounces/{id}/send-again`.
+             *
              *     `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
              *     to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
              *     to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
@@ -63393,7 +63450,14 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel" | "send_again")[];
+        };
+        BounceSendAgainRequest: {
+            /**
+             * Format: email
+             * @description The corrected address. It replaces the address that refused, and it must differ from it.
+             */
+            address: string;
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -65108,7 +65172,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel" | "send_again")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -91873,6 +91937,38 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    sendBouncedMessageAgain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BounceSendAgainRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted for send (queued); the resulting outbound activity is logged. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["SendRefused"];
+            422: components["responses"]["SendValidationError"];
         };
     };
     getMagic: {

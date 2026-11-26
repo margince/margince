@@ -710,6 +710,7 @@ var Declared = map[string][]string{
 	"POST /v1/attachments/{id}/extraction:accept":                              {},
 	"POST /v1/attachments/{id}/extraction:file-chat":                           {},
 	"POST /v1/attachments/{id}/request-access":                                 {},
+	"POST /v1/attention/bounces/{id}/send-again":                               {},
 	"POST /v1/auth/change-password":                                            {},
 	"POST /v1/auth/logout":                                                     {},
 	"POST /v1/automations":                                                     {},

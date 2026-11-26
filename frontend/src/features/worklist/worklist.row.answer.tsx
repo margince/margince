@@ -18,6 +18,7 @@ import {
 } from "../automations/approvaldrawer";
 import { hasMoveControl, MoveButton } from "../records/movebutton";
 import {
+  BounceSendAgain,
   FailedApprovalAnswer,
   NoticeAcknowledge,
 } from "./worklist.acknowledge";
@@ -107,6 +108,10 @@ const ANSWER_BY_SOURCE: Partial<
   automation_run: {
     verbs: ["retry"],
     draw: (item) => ({ primary: <AutomationRetry id={item.id} /> }),
+  },
+  bounce: {
+    verbs: ["send_again"],
+    draw: (item) => ({ primary: <BounceSendAgain item={item} /> }),
   },
   // Any answering verb draws the answer: a redirected site offers discard and
   // reopen but never keep. The control asks the row again for each button.
