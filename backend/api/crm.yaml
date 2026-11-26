@@ -18700,7 +18700,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WhatsAppWebhookReceipt' }
-        '401':
+        '403':
           description: 'The body is signed by no connected number (`code: channel_event_rejected`). The answer is the same for each cause.'
           content:
             application/problem+json:
