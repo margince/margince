@@ -231,6 +231,10 @@ func TestAcceptAttachmentExtractionPersistsFieldsAndAuditNotes(t *testing.T) {
 	if total := a.totalAcceptNotes(t); total != 4 {
 		t.Errorf("total accept notes = %d, want 4", total)
 	}
+	if n := a.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND action = 'create'
+		AND actor_type = 'agent' AND actor_id = 'agent:attachment-extractor' AND on_behalf_of IS NOT NULL`); n != 4 {
+		t.Errorf("%d notes written by agent:attachment-extractor for the accepter, want 4", n)
+	}
 }
 
 func TestAcceptAttachmentExtractionEditFlipsProvenanceAndCapturedBy(t *testing.T) {

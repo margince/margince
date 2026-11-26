@@ -18,7 +18,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -41,10 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/extraction"
 )
 
-// extractionExecutorID stamps the audit note of a field accepted exactly
-// as extracted: the value is the machine's, released by the human's
-// accept — the same PrincipalSystem exec shape as the coldstart-accept
-// executor, with the accepting human on OnBehalfOf.
+// extractionExecutorID stamps the note of a field accepted as extracted. The value is the machine's, and the human's accept released it.
 const extractionExecutorID = "agent:attachment-extractor"
 
 // extractionAcceptSource marks the notes as this operation's effect —
@@ -199,27 +195,15 @@ func (a *ExtractionAccept) Accept(ctx context.Context, attachmentID ids.UUID, re
 	return out, nil
 }
 
-// auditAcceptedFieldsTx writes one timeline note per accepted field inside
-// the caller's already-open transaction (the same one the deal update just
-// ran in — a note failure rolls that update back), linked to the deal:
-// subject names the field, body is the verbatim source quote the value
-// was grounded in — the evidence stays on the timeline whoever typed the
-// final value. Provenance rides captured_by, the way every write in this
-// system carries it: an unedited field executes as the extractor
-// (PrincipalSystem, agent:attachment-extractor, on behalf of the accepting
-// human), an edited one is the human's own write under the request
-// principal.
+// auditAcceptedFieldsTx writes one timeline note per accepted field, linked to
+// the deal, in the deal update's own transaction. The body is the source quote
+// the value was grounded in. An unedited field is written by the extractor
+// agent under the accepting human's grants; an edited one is the human's own.
 func (a *ExtractionAccept) auditAcceptedFieldsTx(ctx context.Context, tx pgx.Tx, dealID ids.UUID, accepted []acceptedExtractionField) error {
-	human, ok := principal.Actor(ctx)
-	if !ok {
-		return errors.New("compose: extraction accept reached the audit step without an acting principal")
+	execCtx, err := agentForActor(ctx, extractionExecutorID)
+	if err != nil {
+		return err
 	}
-	execCtx := principal.WithActor(ctx, principal.Principal{
-		Type:       principal.PrincipalSystem,
-		ID:         extractionExecutorID,
-		UserID:     human.UserID,
-		OnBehalfOf: human.UserID,
-	})
 	for _, f := range accepted {
 		noteCtx := execCtx
 		if f.Edited {
@@ -227,7 +211,7 @@ func (a *ExtractionAccept) auditAcceptedFieldsTx(ctx context.Context, tx pgx.Tx,
 		}
 		subject := fmt.Sprintf(systemtext.Copy("extraction.accepted", textlang.English), f.Field)
 		body := f.SourceQuote
-		_, _, err := a.attachments.LogActivityTx(noteCtx, tx, activities.LogActivityInput{
+		_, _, err = a.attachments.LogActivityTx(noteCtx, tx, activities.LogActivityInput{
 			SystemText: &systemtext.Message{Subject: systemtext.Sentence("extraction.accepted", systemtext.Text(f.Field)), Body: systemtext.Prose(systemtext.Quote, "")},
 			Kind:       string(crmcontracts.ActivityKindNote),
 			Subject:    &subject,
