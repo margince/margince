@@ -148,10 +148,6 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 			worker := &chatsync.PullWorker[ChatPullArgs]{Bind: workspaceJobCtx}
 			return worker.Work(ctx, &river.Job[ChatPullArgs]{})
 		},
-		WhatsAppIngestArgs{}.Kind(): func(ctx context.Context) error {
-			worker := &whatsappedge.Worker[WhatsAppIngestArgs]{Bind: workspaceJobCtx}
-			return worker.Work(ctx, &river.Job[WhatsAppIngestArgs]{})
-		},
 		GeocodeCompanyArgs{}.Kind(): func(ctx context.Context) error {
 			return (&geocodeWorker{}).Work(ctx, &river.Job[GeocodeCompanyArgs]{})
 		},
