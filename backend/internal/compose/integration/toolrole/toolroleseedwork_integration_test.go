@@ -330,7 +330,7 @@ func tagSuggestion(s sweepSeed) string {
 		"occurred_at": clocktest.Now(s.t).Add(-time.Hour).UTC().Format(time.RFC3339),
 		"links":       []integration.AnyMap{{"entity_type": "contact", "entity_id": contact}},
 	})
-	ctx := s.systemContext("agent:tag-scout")
+	ctx := s.systemContext("system:tag-scout")
 	if err := database.WithWorkspaceTx(ctx, s.e.Pool, func(tx pgx.Tx) error {
 		_, err := compose.RunTagScout(ctx, tx, clocktest.Now(s.t))
 		return err

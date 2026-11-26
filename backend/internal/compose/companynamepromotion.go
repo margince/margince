@@ -45,8 +45,11 @@ const (
 	// whose name is in question, so the target's own visibility decides who
 	// may see and decide the offer.
 	companyNameTargetType = "company"
-	// companyNamePromotionActor is the principal the sweep and the accept write as.
+	// companyNamePromotionActor is the agent an accepted rename is written by,
+	// for the decider. The sweep that offers the rename acts for no one, and
+	// keeps its own system name.
 	companyNamePromotionActor = "agent:" + companyNameProposalKind
+	companyNameSweepActor     = "system:" + companyNameProposalKind
 	// companyNamePromotionPageSize bounds ONE page of candidates — a memory bound,
 	// not a work bound: the pass reads every candidate, a page at a time.
 	companyNamePromotionPageSize = 200
@@ -148,7 +151,7 @@ func NewCompanyNamePromoter(pool *pgxpool.Pool, log *slog.Logger) *CompanyNamePr
 func (p *CompanyNamePromoter) RunWorkspace(ctx context.Context, ws ids.UUID) error {
 	// The promotion writes an audit row and a company.updated event,
 	// so the pass binds the system actor like every worker job.
-	wsCtx := principal.SystemActing(ctx, companyNamePromotionActor)
+	wsCtx := principal.SystemActing(ctx, companyNameSweepActor)
 	return p.sweepWorkspace(wsCtx, ws)
 }
 

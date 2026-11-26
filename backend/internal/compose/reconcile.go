@@ -387,9 +387,13 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 	}
 }
 
-// overnightAgent captures the overnight pass's follow-up tasks, so a task
-// reads as the agent's suggestion and not as something a rep typed.
+// overnightAgent writes a released follow-up proposal, acting for the decider,
+// so the task reads as the agent's suggestion and not as something a rep typed.
 const overnightAgent = "agent:overnight"
+
+// overnightSweep is the overnight pass itself, which acts for no one. The
+// tasks it files directly carry it.
+const overnightSweep = "system:overnight"
 
 // writeOvernightFollowUp puts the follow-up task on the deal owner's list, when
 // the owner still works here.
@@ -413,7 +417,7 @@ func writeOvernightFollowUp(
 	}
 	assignee := ids.From[ids.UserKind](owner)
 	in.AssigneeID = &assignee
-	return logTaskOrUnassignedTx(onBehalfOf(extractorContext(sweepCtx, overnightAgent), owner), tx, tasks, in)
+	return logTaskOrUnassignedTx(onBehalfOf(extractorContext(sweepCtx, overnightSweep), owner), tx, tasks, in)
 }
 
 // followUpAlreadyAnswered reports a proposal for this interaction that a rep

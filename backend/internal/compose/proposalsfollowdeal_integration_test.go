@@ -566,7 +566,7 @@ func TestADraftComposedForAnOwnerWhoLeftIsDroppedAndRedraftedNextSweep(t *testin
 		pool:  e.Pool,
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:overnight")
+	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:overnight")
 	if err := deals.NewFollowUpReconciler(e.DB(), stager, quiet).ReconcileWorkspace(sweep); err != nil {
 		t.Fatal(err)
 	}
@@ -703,7 +703,7 @@ func TestADraftingFailureStagesNothingInsteadOfATask(t *testing.T) {
 		pool:  e.Pool,
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:overnight")
+	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:overnight")
 	if err := deals.NewFollowUpReconciler(e.DB(), stager, quiet).ReconcileWorkspace(sweep); err == nil {
 		t.Fatal("the pass reported success while the drafter was down")
 	}

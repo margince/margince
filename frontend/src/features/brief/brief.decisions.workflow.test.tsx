@@ -398,17 +398,17 @@ describe("ApprovalTray — a bundle says only what its members agree on", () => 
     const queue = [
       proposal("apy-1", "Lead: Anna Weber", {
         bundle_id: "bn-3",
-        proposed_by: "agent:deal-scout",
+        proposed_by: "agent:overnight",
       }),
       proposal("apy-2", "Lead: Mira Osei", {
         bundle_id: "bn-3",
-        proposed_by: "agent:deal-scout",
+        proposed_by: "agent:overnight",
       }),
     ];
     stubApi({ "GET /approvals": () => pendingPage(queue, new Set<string>()) });
     render(<ApprovalTray />);
 
     expect(await screen.findByText("1 decision · 2 items")).toBeTruthy();
-    expect(screen.getByText("Automated by Deal Scout")).toBeTruthy();
+    expect(screen.getByText("Automated by Overnight agent")).toBeTruthy();
   });
 });

@@ -138,7 +138,7 @@ func (e *reconcileEnv) grantOwner(t *testing.T, userID ids.UUID, document string
 // scope the follow_up_workspace worker binds.
 func (e *reconcileEnv) reconcile() error {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	ctx = principal.SystemActing(ctx, "agent:overnight")
+	ctx = principal.SystemActing(ctx, "system:overnight")
 	return e.reconciler.ReconcileWorkspace(ctx)
 }
 
@@ -276,9 +276,8 @@ func (e *reconcileEnv) stageLegacyFollowUp(t *testing.T, dealID, evidence ids.UU
 	return id, proposal
 }
 
-// dealTasks reports the follow-up tasks the confirm effect created on the
-// deal, and the provenance of the first — used to prove exactly-once and
-// the agent:overnight attribution.
+// dealTasks reports the follow-up tasks on the deal and the provenance of the
+// newest. It proves the task is filed once, and who it is attributed to.
 func (e *reconcileEnv) dealTasks(t *testing.T, dealID ids.UUID) (count int, capturedBy, sourceSystem string, due *time.Time) {
 	t.Helper()
 	ctx := context.Background()
@@ -326,8 +325,8 @@ func TestFollowUpReconcileFilesTheTaskOnTheOwnersList(t *testing.T) {
 	if count != 1 {
 		t.Fatalf("follow-up tasks = %d, want 1", count)
 	}
-	if capturedBy != "agent:overnight" || sourceSystem != "overnight-reconcile" {
-		t.Errorf("task captured by %q from %q, want agent:overnight from overnight-reconcile", capturedBy, sourceSystem)
+	if capturedBy != "system:overnight" || sourceSystem != "overnight-reconcile" {
+		t.Errorf("task captured by %q from %q, want system:overnight from overnight-reconcile", capturedBy, sourceSystem)
 	}
 	wantDue := today().AddDate(0, 0, 3).Format(time.DateOnly)
 	if due == nil || due.UTC().Format(time.DateOnly) != wantDue {
@@ -585,7 +584,7 @@ func TestTheSlippingLaneReadsABookedMeetingAsANextStep(t *testing.T) {
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithActor(ctx,
-		principal.Principal{Type: principal.PrincipalSystem, ID: "agent:overnight"})
+		principal.Principal{Type: principal.PrincipalSystem, ID: "system:overnight"})
 	stepless, err := dealsWithNoOpenNextStep(
 		ctx, e.Pool, []ids.UUID{booked, bare}, time.Now().UTC())
 	if err != nil {

@@ -279,6 +279,7 @@ var actorKeys = map[string]string{
 	"system:capture_auto_enrich": byWebsiteReader,
 	"agent:enrich":               "magic.by.signature_reader",
 	"agent:overnight":            "magic.by.overnight_agent",
+	"system:overnight":           "magic.by.overnight_agent",
 	"system:capture_classify":    byMailReader,
 	"system:owed_verdict":        byMailReader,
 	"agent:signal-scan":          byMailReader,
