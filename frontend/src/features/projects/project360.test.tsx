@@ -599,7 +599,7 @@ describe("Edit project in the More menu", () => {
       }),
       respond: async (url, method, request) => {
         if (new URL(url).pathname === "/v1/custom-fields") {
-          return jsonResponse({ data: [region] });
+          return jsonResponse({ page: { has_more: false }, data: [region] });
         }
         if (method === "PATCH") {
           writes.push({
@@ -654,7 +654,7 @@ describe("Edit project in the More menu", () => {
     expect(
       screen.queryByRole("dialog", { name: en["project.edit"] }),
     ).toBeNull();
-    answer(jsonResponse({ data: [region] }));
+    answer(jsonResponse({ page: { has_more: false }, data: [region] }));
     const dialog = await screen.findByRole("dialog", {
       name: en["project.edit"],
     });
