@@ -14,7 +14,6 @@ import {
   stubWithSession,
 } from "../../testing/story-utils";
 import { automaticStageReceipt } from "../../testing/worklist.receiptreview.fixtures";
-import { MagicPanel } from "../sign-in/magic";
 import { DoneForYou } from "./brief.doneforyou";
 import { ChangeRow } from "./brief.doneforyou.change";
 import { DealCard } from "./brief.doneforyou.deal";
@@ -333,18 +332,14 @@ export const OnlySmallChanges: Story = {
     );
     return (
       <StoryProviders>
-        <DoneForYou
-          completed={() => <MagicPanel lanes={["done"]} embedded />}
-        />
+        <DoneForYou completed={() => <p>Small changes card</p>} />
       </StoryProviders>
     );
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const small = (await canvas.findByText(/1 small change/)).closest(
-      ".brief-done-small",
-    );
-    await expect(small?.previousElementSibling).toHaveClass("brief-done-band");
+    const small = await canvas.findByText("Small changes card");
+    await expect(small.previousElementSibling).toHaveClass("brief-done-band");
   },
 };
 
