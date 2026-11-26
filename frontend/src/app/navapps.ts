@@ -1,5 +1,5 @@
 import { Plug } from "lucide-react";
-import { ENTRY_ICONS } from "../components/extensionentries";
+import { entryIcon } from "../components/extensionentries";
 import { translate } from "../i18n";
 import {
   EXTENSION_APP_SCREEN,
@@ -28,8 +28,6 @@ export function appItems(
         de: translate("de", app.label),
         vi: translate("vi", app.label),
       },
-      icon: Object.hasOwn(ENTRY_ICONS, app.icon)
-        ? (ENTRY_ICONS[app.icon] ?? Plug)
-        : Plug,
+      icon: entryIcon(app.icon) ?? Plug,
     }));
 }

@@ -137,6 +137,10 @@ func writeEvidence[T any](
 		if err != nil {
 			return err
 		}
+		if w.correctsNothing(p, created) {
+			out, err = w.readAfter(ctx, tx)
+			return err
+		}
 
 		// The patch runs even for a removal, so the row a delete is about
 		// carries the same provenance the audit entry below reports — and it
@@ -184,6 +188,21 @@ func writeEvidence[T any](
 		return err
 	})
 	return out, err
+}
+
+// correctsNothing is a correction that sends the stored value back under the
+// provenance the row already holds. Its verification time is the only column
+// that would move, and a resend verifies nothing new. A confirmation always
+// writes: restamping who agreed, and when, is what that verb is for. A claim
+// with a canonical hook always writes too. The record's own column, or the
+// check it queues, may have moved on since the claim was stated.
+func (w evidenceWrite[T]) correctsNothing(p *storekit.Patch, created bool) bool {
+	if w.value == nil || created || w.remove || w.canonical != nil {
+		return false
+	}
+	moved := p.Moved()
+	delete(moved, auditKeyVerifiedAt)
+	return len(moved) == 0
 }
 
 // verdictPatch is what a correction or a confirmation writes: the value when

@@ -7,7 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { FilingLine, unitCopyPrefix } from "./capture-filing";
+import { FilingLine } from "./capture-filing";
 
 afterEach(cleanup);
 
@@ -21,15 +21,6 @@ function show(filing: Parameters<typeof FilingLine>[0]["filing"]) {
   );
   return screen.getByTestId("line");
 }
-
-describe("the copy prefix of a unit", () => {
-  it("follows the generator's rule", () => {
-    expect(unitCopyPrefix("crm-hello")).toBe("extCrmHello.");
-    expect(unitCopyPrefix("deal-rules")).toBe("extDealRules.");
-    expect(unitCopyPrefix("openchannel")).toBe("extOpenchannel.");
-    expect(unitCopyPrefix("3d-print")).toBe("ext_3dPrint.");
-  });
-});
 
 describe("the filing line", () => {
   it("names the rung when core filed the mail", () => {

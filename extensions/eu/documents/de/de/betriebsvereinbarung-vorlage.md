@@ -16,7 +16,7 @@ objektiv zur Überwachung von Verhalten und Leistung geeignet und damit nach
 ## 2. Geltungsbereich
 
 Alle Beschäftigten, deren dienstliches Postfach mit Margince verbunden wird.
-Die Verbindung erfolgt durch die beschäftigte Person selbst.
+Die beschäftigte Person verbindet ihr Postfach selbst.
 
 ## 3. Was erfasst wird
 
@@ -36,7 +36,7 @@ einzelner Beschäftigter. Das gilt namentlich für:
 - Zeitstempel des letzten Kontakts und daraus abgeleitete Kennzahlen,
 - Beziehungsstärke-, Wärme- und Abdeckungswerte,
 - die Erfassungsprotokolle (`capture_trace`),
-- das Prüfprotokoll (`audit_log`).
+- das Audit-Log (`audit_log`).
 
 Aus diesen Daten gewonnene Erkenntnisse dürfen in einem arbeitsrechtlichen
 Verfahren nicht verwertet werden. Auswertungen über einzelne Beschäftigte

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -308,20 +309,6 @@ func (s *Store) checkBookingCalendar(ctx context.Context, host ids.UserID, store
 	return s.validateBookingCalendars(ctx, host, profile)
 }
 
-// bookingCalendarChanged compares what the provider check vouches for. An
-// absent blocking list and an empty one block the same nothing.
-func bookingCalendarChanged(stored, next crmcontracts.SchedulingProfile) bool {
-	return stored.Provider != next.Provider || stored.CalendarId != next.CalendarId ||
-		!slices.Equal(blockingCalendars(stored), blockingCalendars(next))
-}
-
-func blockingCalendars(p crmcontracts.SchedulingProfile) []string {
-	if p.BlockingCalendars == nil {
-		return nil
-	}
-	return *p.BlockingCalendars
-}
-
 func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, profile *crmcontracts.SchedulingProfile) error {
 	if s.calendar == nil {
 		return apperrors.ErrPermissionDenied
@@ -447,7 +434,8 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
-		if errors.Is(err, pgx.ErrNoRows) || (profile.ReplaceLink != nil && *profile.ReplaceLink) {
+		replaced := errors.Is(err, pgx.ErrNoRows) || (profile.ReplaceLink != nil && *profile.ReplaceLink)
+		if replaced {
 			id, err = s.replaceBookingPage(ctx, tx, host, profile.Enabled)
 			if err != nil {
 				return err
@@ -457,6 +445,10 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 		profile.HostName, profile.Blocker = nil, nil
 		profile.TeamMembers = mergeTeam(before, profile.TeamMembers)
 		stored := schedulingProfileToStore(ctx, profile, before, canonicalDefault)
+		// The page saved as it stands moves nothing and tells nobody.
+		if !replaced && before != nil && reflect.DeepEqual(*before, stored) {
+			return nil
+		}
 		args := []any{stored, id}
 		if _, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE booking_page SET scheduling_policy=$%d WHERE id=$%d`, len(args)-1, len(args)), args...); err != nil {
 			return err

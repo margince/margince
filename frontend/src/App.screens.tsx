@@ -16,13 +16,8 @@ import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import { useHiddenCoreFeatures } from "./lib/corefeatures";
 import { findApp, mayOpenApp } from "./lib/extensionapps";
-import {
-  composedApps,
-  composedScreens,
-  EXTENSION_SCREEN,
-  findExtension,
-  unitTitle,
-} from "./lib/extensions";
+import { EXTENSION_SCREEN, findExtension, unitTitle } from "./lib/extensions";
+import { composedApps, composedScreens } from "./lib/extensionscreens";
 import { navigate, routeHash } from "./lib/router";
 import { useMe } from "./lib/session";
 import { useAddressWriters } from "./lib/urlstate";
