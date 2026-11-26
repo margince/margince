@@ -6,7 +6,11 @@ package activities
 import (
 	"context"
 	"fmt"
+	"strconv"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -25,18 +29,34 @@ const (
 )
 
 // importFactColumns renders both columns for alias. thread_audience_yours is
-// true when the thread audience write finds the row. That needs the caller to
-// have imported it, and the row live and not restricted, as
-// capture.ThreadActivityIDsTx requires.
+// true when ThreadAudienceSetter.Decide would act on the row. That needs a
+// human or agent caller on a seat that may write, holding activity:update, and
+// a row storekit.ThreadImportedByClause admits.
 func importFactColumns(ctx context.Context, alias string, arg func(any) int) map[string]string {
 	yours := "false"
-	if actor, ok := principal.Actor(ctx); ok && actor.HumanOrItsAgent() && actor.UserID != ids.Nil {
-		yours = fmt.Sprintf(`(%[1]s.thread_key IS NOT NULL AND %[1]s.archived_at IS NULL AND %[1]s.restricted_at IS NULL
- AND EXISTS (SELECT 1 FROM capture_import i WHERE i.activity_id = %[1]s.id AND i.user_id = $%[2]d))`,
-			alias, arg(actor.UserID))
+	if actor, ok := principal.Actor(ctx); ok && actor.HumanOrItsAgent() && actor.UserID != ids.Nil && mayUpdateActivities(ctx) {
+		yours = storekit.ThreadImportedByClause(alias, "$"+strconv.Itoa(arg(actor.UserID)))
 	}
 	return map[string]string{
 		mailboxImportedColumn:     importRowExistsSQL(alias+".id") + " AS " + mailboxImportedColumn,
 		threadAudienceYoursColumn: yours + " AS " + threadAudienceYoursColumn,
 	}
+}
+
+// callerHoldsThreadWrite answers whether the thread audience write acts on this
+// message for the caller. callerIsSenderSeat also admits a sender who holds no
+// import row, which the write answers with 404, so the drawer asks this
+// instead.
+func callerHoldsThreadWrite(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID == ids.Nil {
+		return false, nil
+	}
+	var holds bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $1 AND `+storekit.ThreadImportedByClause("a", "$2")+`)`,
+		id.UUID, actor.UserID).Scan(&holds); err != nil {
+		return false, fmt.Errorf("activities: reading whether the caller holds the thread write: %w", err)
+	}
+	return holds, nil
 }

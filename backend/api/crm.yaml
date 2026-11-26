@@ -62120,11 +62120,11 @@ components:
         mailbox_imported:
           type: boolean
           readOnly: true
-          description: Whether any seat's connection imported this activity. The per-message audience write refuses such a row. Absent when the content is withheld.
+          description: Whether an import brought this in; the per-message audience write refuses it.
         thread_audience_yours:
           type: boolean
           readOnly: true
-          description: Whether this caller imported this activity, so that the thread audience write finds it. Absent when the content is withheld.
+          description: Whether the thread audience write acts on this row for the caller.
 
         writable:
           type: boolean

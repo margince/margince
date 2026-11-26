@@ -20,6 +20,7 @@
 // back. Here the server says which write it would accept, as `change_mode`, and
 // nothing guesses.
 
+import type { QueryKey } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { components } from "../../api/schema";
@@ -49,6 +50,7 @@ import {
 } from "../lists/audiencemembers";
 import "./emailaccesseditor.css";
 
+type Activity = components["schemas"]["Activity"];
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 type EmailAccess = components["schemas"]["EmailAccess"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];
@@ -382,4 +384,83 @@ function sameSet(
   }
   const inB = new Set(b.map(memberKey));
   return a.every((member) => inB.has(memberKey(member)));
+}
+
+// ThreadAudienceAction shares or holds back the whole conversation a captured
+// chat message belongs to. It shows when the server's thread write
+// finds the row: the caller imported it (`thread_audience_yours`).
+export function ThreadAudienceAction({
+  activity,
+  invalidate,
+}: Readonly<{
+  activity: Activity;
+  invalidate: QueryKey[];
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const [open, setOpen] = useState(false);
+  const [choice, setChoice] = useState<"shared" | "private">("shared");
+  const [held, setHeld] = useState<number | null>(null);
+  const threadKey = activity.thread_key;
+  const mutation = useThreadAudience({
+    invalidate: () => invalidate,
+    onSettled: ({ outcome }) => {
+      const others = outcome && !outcome.shared ? outcome.held_by_others : 0;
+      setHeld(others > 0 ? others : null);
+      setOpen(others === 0);
+    },
+  });
+  if (
+    activity.thread_audience_yours !== true ||
+    !threadKey ||
+    activity.content_state === "withheld"
+  ) {
+    return null;
+  }
+  return (
+    <>
+      <Button
+        onClick={() => {
+          setChoice(activity.audience === "workspace" ? "shared" : "private");
+          setHeld(null);
+          setOpen(true);
+        }}
+      >
+        {t("compose.threadAudience")}
+      </Button>
+      <ConfirmModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t("compose.threadAudienceTitle")}
+        intent="form"
+        confirmLabel={t("compose.audienceConfirm")}
+        onConfirm={() =>
+          mutation.mutate({ threadKey, share: choice === "shared" })
+        }
+        pending={mutation.isPending}
+        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
+      >
+        <div className="compose-fields">
+          <ChoiceList
+            legend={t("compose.threadAudienceLegend")}
+            value={choice}
+            onChange={setChoice}
+            choices={[
+              { value: "shared", label: t("compose.audienceWorkspace") },
+              { value: "private", label: t("compose.threadAudiencePrivate") },
+            ]}
+          />
+          <p className="t-caption">{t("compose.threadAudienceNote")}</p>
+          {held !== null && (
+            <p className="t-caption">
+              {plural("compose.threadStillHeld", held, {
+                count: formatNumber(held, locale),
+              })}
+            </p>
+          )}
+        </div>
+      </ConfirmModal>
+    </>
+  );
 }

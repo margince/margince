@@ -228,6 +228,15 @@ func TestAnImporterIsOfferedTheThreadDecisionOnlyWhereItMayDecide(t *testing.T) 
 		t.Fatalf("sharing with the workspace: %v", err)
 	}
 	e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, id.UUID, e.Rep2)
+	importerCtx := OnSeat(e.As(e.Rep2, []ids.UUID{e.Team1}, activityLifecyclePerms), principal.SeatFull)
+	unthreaded, err := e.Activities.GetEmailPresentation(importerCtx, id, nil)
+	if err != nil {
+		t.Fatalf("reading an unthreaded import: %v", err)
+	}
+	if unthreaded.Access.CanChange {
+		t.Error("an importer is offered the thread decision on a message with no thread, where the write finds nothing")
+	}
+	e.WsExec(t, `UPDATE activity SET thread_key = 'drawer-thread' WHERE id = $1`, id.UUID)
 
 	for _, importer := range []struct {
 		name   string

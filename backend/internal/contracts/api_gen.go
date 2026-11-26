@@ -34229,7 +34229,7 @@ type Activity struct {
 	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
-	// MailboxImported Whether any seat's connection imported this activity. The per-message audience write refuses such a row. Absent when the content is withheld.
+	// MailboxImported Whether an import brought this in; the per-message audience write refuses it.
 	MailboxImported *bool `json:"mailbox_imported,omitempty"`
 
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
@@ -34285,7 +34285,7 @@ type Activity struct {
 	// TaskType Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`.
 	TaskType *TaskType `json:"task_type,omitempty"`
 
-	// ThreadAudienceYours Whether this caller imported this activity, so that the thread audience write finds it. Absent when the content is withheld.
+	// ThreadAudienceYours Whether the thread audience write acts on this row for the caller.
 	ThreadAudienceYours *bool `json:"thread_audience_yours,omitempty"`
 
 	// ThreadKey The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.

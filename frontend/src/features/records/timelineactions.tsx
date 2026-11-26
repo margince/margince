@@ -23,20 +23,17 @@ import { Button } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { OverflowMenu } from "../../design-system/overflowmenu";
-import { formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
 import { fileListKeys } from "../../lib/attachmentkeys";
-import {
-  useMessageAudience,
-  useThreadAudience,
-} from "../../lib/audienceservice";
+import { useMessageAudience } from "../../lib/audienceservice";
 import { useCanWriteRecord } from "../../lib/capability";
 import { captureReviewTarget } from "../../lib/capturereview";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
 import { hashWithParams } from "../../lib/urlstate";
+import { ThreadAudienceAction } from "../capture/emailaccesseditor";
 import {
   AUDIENCE_HINT,
   AUDIENCE_LABEL,
@@ -199,8 +196,7 @@ export function TimelineActions(props: RowVerbProps) {
         {activity.kind !== "email" && (
           <ThreadAudienceAction
             activity={activity}
-            entityType={entityType}
-            entityId={entityId}
+            invalidate={entityTimelineKeys(entityType, entityId)}
           />
         )}
         {/* Last, farthest from the press that opened the menu. */}
@@ -424,87 +420,6 @@ export function AudienceAction({
           <p className="t-caption">
             {t(internal ? "internalMail.shareNote" : words.scope)}
           </p>
-        </div>
-      </ConfirmModal>
-    </>
-  );
-}
-
-// ThreadAudienceAction shares or holds back the whole conversation a captured
-// chat message belongs to. It shows when the server's thread write
-// finds the row: the caller imported it (`thread_audience_yours`).
-function ThreadAudienceAction({
-  activity,
-  entityType,
-  entityId,
-}: Readonly<{
-  activity: Activity;
-  entityType: RelinkKind;
-  entityId: string;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const [open, setOpen] = useState(false);
-  const [choice, setChoice] = useState<"shared" | "private">("shared");
-  const [held, setHeld] = useState<number | null>(null);
-  const threadKey = activity.thread_key;
-  const mutation = useThreadAudience({
-    invalidate: () => entityTimelineKeys(entityType, entityId),
-    onSettled: ({ outcome }) => {
-      const others = outcome && !outcome.shared ? outcome.held_by_others : 0;
-      setHeld(others > 0 ? others : null);
-      setOpen(others === 0);
-    },
-  });
-  if (
-    activity.thread_audience_yours !== true ||
-    !threadKey ||
-    activity.content_state === "withheld"
-  ) {
-    return null;
-  }
-  return (
-    <>
-      <Button
-        onClick={() => {
-          setChoice(activity.audience === "workspace" ? "shared" : "private");
-          setHeld(null);
-          setOpen(true);
-        }}
-      >
-        {t("compose.threadAudience")}
-      </Button>
-      <ConfirmModal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={t("compose.threadAudienceTitle")}
-        intent="form"
-        confirmLabel={t("compose.audienceConfirm")}
-        onConfirm={() =>
-          mutation.mutate({ threadKey, share: choice === "shared" })
-        }
-        pending={mutation.isPending}
-        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
-      >
-        <div className="compose-fields">
-          <ChoiceList
-            legend={t("compose.threadAudienceLegend")}
-            value={choice}
-            onChange={setChoice}
-            choices={[
-              { value: "shared", label: t("compose.audienceWorkspace") },
-              { value: "private", label: t("compose.threadAudiencePrivate") },
-            ]}
-          />
-          <p className="t-caption">{t("compose.threadAudienceNote")}</p>
-          {held !== null && (
-            <p className="t-caption">
-              {plural("compose.threadStillHeld", held, {
-                count: formatNumber(held, locale),
-              })}
-            </p>
-          )}
         </div>
       </ConfirmModal>
     </>

@@ -45178,9 +45178,9 @@ export interface components {
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities. */
             readonly can_share_internal?: boolean;
-            /** @description Whether any seat's connection imported this activity. The per-message audience write refuses such a row. Absent when the content is withheld. */
+            /** @description Whether an import brought this in; the per-message audience write refuses it. */
             readonly mailbox_imported?: boolean;
-            /** @description Whether this caller imported this activity, so that the thread audience write finds it. Absent when the content is withheld. */
+            /** @description Whether the thread audience write acts on this row for the caller. */
             readonly thread_audience_yours?: boolean;
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;

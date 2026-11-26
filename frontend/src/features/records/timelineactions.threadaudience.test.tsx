@@ -42,7 +42,11 @@ const chat: Activity = {
   version: 1,
 };
 
-async function openMenu(activity: Activity, posts: unknown[] = []) {
+async function openMenu(
+  activity: Activity,
+  posts: unknown[] = [],
+  grants: string[] = ["read", "update"],
+) {
   stubWithSession(
     {
       "POST /activities/threads/chat-thread/audience": (body) => {
@@ -50,7 +54,7 @@ async function openMenu(activity: Activity, posts: unknown[] = []) {
         return jsonResponse({ messages: 2, shared: false, held_by_others: 0 });
       },
     },
-    { activity: ["read", "update"] },
+    { activity: grants },
   );
   render(
     <StoryProviders>
@@ -100,4 +104,9 @@ it("keeps the per-message control on a connector row no import row backs", async
   expect(
     screen.getByRole("button", { name: "Change visibility" }),
   ).toBeInTheDocument();
+});
+
+it("offers no thread control to a caller without the update grant, whom the server marks as not holding the write", async () => {
+  await openMenu({ ...chat, thread_audience_yours: false }, [], ["read"]);
+  expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
 });
