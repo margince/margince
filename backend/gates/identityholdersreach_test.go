@@ -83,6 +83,7 @@ type identityKeyWriter struct {
 func TestEveryIdentityKeyWriterAsksWhoHoldsIt(t *testing.T) {
 	t.Parallel()
 	packages := map[string][]*ast.FuncDecl{}
+	calls := map[*ast.FuncDecl]map[string]bool{}
 	shared := map[string]map[string]string{}
 	files := map[string]*ast.File{}
 	for _, path := range handWrittenGoSources(t) {
@@ -111,6 +112,10 @@ func TestEveryIdentityKeyWriterAsksWhoHoldsIt(t *testing.T) {
 				continue
 			}
 			packages[dir] = append(packages[dir], fn)
+			calls[fn] = map[string]bool{}
+			for _, name := range calleeNames(fn.Body) {
+				calls[fn][name] = true
+			}
 			if how, writes := identityKeyWrite(fn, shared[dir]); writes {
 				writers = append(writers, identityKeyWriter{file: where, fn: fn, how: how})
 			}
@@ -124,7 +129,7 @@ func TestEveryIdentityKeyWriterAsksWhoHoldsIt(t *testing.T) {
 	defer identityReachVerdicts.AssertAllMatched(t)
 	for _, w := range writers {
 		key := strings.TrimPrefix(w.file, "internal/") + ":" + w.fn.Name.Name
-		reach := callReach{funcs: packages[filepath.Dir(w.file)], probe: identityProbe, visiting: map[*ast.FuncDecl]bool{}}
+		reach := callReach{funcs: packages[filepath.Dir(w.file)], calls: calls, probe: identityProbe, visiting: map[*ast.FuncDecl]bool{}}
 		if !reach.guarded(w.fn) && !identityReachVerdicts.Waived(t, key) {
 			t.Errorf("%s: %s %s and no path to it asks storekit.LockIdentityHolders who holds the key.\n"+
 				"Ask it in the same transaction before the write, or state here how the writer reaches it.",
@@ -208,7 +213,9 @@ func requireIdentityCensus(t *testing.T, writers []identityKeyWriter) {
 // callReach answers, within one package, whether a function asks the probe:
 // itself, through a function it calls, or because every caller of it does.
 type callReach struct {
-	funcs    []*ast.FuncDecl
+	funcs []*ast.FuncDecl
+	// calls holds the names each function calls, read once rather than per question.
+	calls    map[*ast.FuncDecl]map[string]bool
 	probe    string
 	visiting map[*ast.FuncDecl]bool
 }
@@ -224,7 +231,7 @@ func (r callReach) guarded(fn *ast.FuncDecl) bool {
 	defer delete(r.visiting, fn)
 	callers := 0
 	for _, caller := range r.funcs {
-		if caller == fn || !callsName(caller, fn.Name.Name) {
+		if caller == fn || !r.calls[caller][fn.Name.Name] {
 			continue
 		}
 		callers++
@@ -238,12 +245,12 @@ func (r callReach) guarded(fn *ast.FuncDecl) bool {
 // asks reports whether fn calls the probe, or calls a function of its package
 // that does. A name two methods share counts for both.
 func (r callReach) asks(fn *ast.FuncDecl, seen map[*ast.FuncDecl]bool) bool {
-	if callsName(fn, r.probe) {
+	if r.calls[fn][r.probe] {
 		return true
 	}
 	seen[fn] = true
 	for _, callee := range r.funcs {
-		if !seen[callee] && callsName(fn, callee.Name.Name) && r.asks(callee, seen) {
+		if !seen[callee] && r.calls[fn][callee.Name.Name] && r.asks(callee, seen) {
 			return true
 		}
 	}

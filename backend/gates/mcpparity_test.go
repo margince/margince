@@ -502,6 +502,9 @@ func summarizeParity(scan webScan, ops []parityOperation) parityReport {
 }
 
 func TestTheMCPParityCatalogIsPublished(t *testing.T) {
+	if !*updateMCPParity {
+		t.Parallel()
+	}
 	contract := readParityContract(t)
 	routes := contract.routeMethods()
 	scan, strays, err := scanWebApp(routes)
