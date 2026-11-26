@@ -21923,6 +21923,7 @@ export const en = {
   "worklist.take.failed": "Task was not assigned to you. Retry.",
   "worklist.owner.shared": "Shared responsibility: {names}",
   "worklist.owner.left": "{name} left. This needs a new owner.",
+  "deal.owner.choose": "Choose a new owner",
   "worklist.owner.sharedCount_one": "{count} responsible recipient",
   "worklist.owner.sharedCount_other": "{count} responsible recipients",
   "worklist.owner.visibleLabel": "Viewing",

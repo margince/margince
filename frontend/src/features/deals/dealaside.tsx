@@ -44,7 +44,7 @@ import {
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
 import { useDealEdit } from "./dealedit";
-import { DealPartner } from "./dealpartner";
+import { DealOwnerLeft, DealPartner } from "./dealpartner";
 import { ProbabilityHint } from "./dealprobabilityhint";
 import type { Deal, Stage } from "./deals";
 import "./deal360/deal360.css";
@@ -159,6 +159,10 @@ function DealAsideBody({
   ];
   return (
     <>
+      <DealOwnerLeft
+        ownerId={deal.owner_id}
+        onChoose={change.ownership?.onEdit}
+      />
       <RecordDetails
         sections={sections}
         footnote={t("deal.details.closingFootnote")}
