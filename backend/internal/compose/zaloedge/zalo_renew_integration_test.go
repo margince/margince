@@ -283,11 +283,9 @@ func TestConcurrentRenewalsSpendTheRefreshTokenOnce(t *testing.T) {
 	r := e.renewer(f, e.vault)
 	var wg sync.WaitGroup
 	var first error
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		first = r.RenewWorkspace(context.Background(), e.ws)
-	}()
+	})
 	<-entered
 	second := r.RenewWorkspace(context.Background(), e.ws)
 	close(release)

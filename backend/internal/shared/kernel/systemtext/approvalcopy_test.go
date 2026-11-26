@@ -14,7 +14,7 @@ import (
 // the contact as its subject, the mail as its object.
 func TestATaskReceiptForAnUnnamedContactReadsInGerman(t *testing.T) {
 	for booking, want := range map[bool]string{
-		true:  "Erledigt, weil der Kontakt ein Meeting für 2026-11-21 gebucht hat",
+		true:  "Erledigt, weil der Kontakt einen Termin für 2026-11-21 gebucht hat",
 		false: "Erledigt, weil du dem Kontakt am 2026-11-21 geschrieben hast",
 	} {
 		contact := Copy(TaskClosedContactKey(booking), textlang.German)

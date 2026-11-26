@@ -65,6 +65,7 @@ export const AUDIT_KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   deal_suggestion: "audit.kind.deal_suggestion",
   dedupe_candidate: "audit.kind.dedupe_candidate",
   existing_customer_notice: "audit.kind.existing_customer_notice",
+  extension_object_usage: "audit.kind.extension_object_usage",
   field_provenance: "audit.kind.field_provenance",
   finance_connection: "audit.kind.finance_connection",
   finance_customer_link: "audit.kind.finance_customer_link",

@@ -795,6 +795,7 @@ public.extension_ingest_position.source_system document
 public.extension_ingest_position.unit document
 public.extension_ingest_refusal.refusal document
 public.extension_ingest_refusal.unit document
+public.extension_object_usage.unit document
 public.extension_secret.extension_name label
 public.extension_secret.key document
 public.extension_secret.vault_ref document

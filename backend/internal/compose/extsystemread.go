@@ -3,8 +3,9 @@
 
 package compose
 
-// The core's half of the published system reads. They run as the invocation's
-// system actor, so no grant narrows them. systemRead is what makes that safe:
+// The core's half of the published system reads that take no actAs. They run as
+// the invocation's system actor, so no grant narrows them; extsystemseatdeals.go
+// holds their seat-bound forms. systemRead is what makes that safe:
 // they answer only on a job tick or a bus delivery, where no caller receives the
 // answer. CanRead then answers under one colleague's own grants and masks, and
 // so may also answer a signed-in human about themselves.
@@ -290,11 +291,8 @@ func (a systemAuthority) CanRead(ctx context.Context, user extension.UserID, rec
 	if err != nil {
 		return false, err
 	}
-	known := dealFieldNames()
-	for _, field := range fields {
-		if !slices.Contains(known, field) {
-			return false, fmt.Errorf("%w: a deal has no field %q", extension.ErrInvalid, field)
-		}
+	if err := knownDealFields(fields); err != nil {
+		return false, err
 	}
 	if err := a.rt.traceSystemRead(ctx, extension.SystemReadAuthority, record.Type, record.ID); err != nil {
 		return false, err
@@ -430,17 +428,9 @@ func (d systemDirectory) Emails(ctx context.Context, users []extension.UserID) (
 	if err != nil {
 		return nil, err
 	}
-	if len(users) > extension.MaxResponsible {
-		return nil, fmt.Errorf("%w: %d users in one call, and the most is %d",
-			extension.ErrInvalid, len(users), extension.MaxResponsible)
-	}
-	wanted := make([]ids.UUID, 0, len(users))
-	for _, user := range users {
-		id, err := unitID(string(user), "user")
-		if err != nil {
-			return nil, err
-		}
-		wanted = append(wanted, id)
+	wanted, err := colleagueIDs(users)
+	if err != nil {
+		return nil, err
 	}
 	if len(wanted) == 0 {
 		return map[extension.UserID]string{}, nil

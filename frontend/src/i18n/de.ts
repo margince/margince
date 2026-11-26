@@ -15213,6 +15213,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.deal_suggestion": "Deal-Vorschlag",
   "audit.kind.dedupe_candidate": "Mögliches Duplikat",
   "audit.kind.existing_customer_notice": "Hinweis auf Bestandskunden",
+  "audit.kind.extension_object_usage": "Erweiterungsspeicher",
   "audit.kind.field_provenance": "Herkunft eines Feldes",
   "audit.kind.finance_connection": "Buchhaltungsverbindung",
   "audit.kind.finance_customer_link": "Verknüpfung mit Buchhaltungskunden",
@@ -24064,6 +24065,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiServing.previewFailed":
     "Der Server konnte diesen Wert nicht prüfen: {reason} Speichern bleibt deaktiviert, bis der Server den Wert prüfen kann.",
   "dealDecline.action": "Gehört nicht zu diesem Deal",
+  "dealFiling.byUnit": "Von {unit} hier zugeordnet: {reason}",
+  "dealFiling.byUnitNoReason": "Von {unit} hier zugeordnet",
   "dealDecline.done":
     "Als nicht zu diesem Deal gehörig markiert. Der Eintrag hält den Deal nicht mehr aktiv.",
   "dealDecline.doneProjectKept":

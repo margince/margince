@@ -36,6 +36,7 @@ const chatLinksAuditOnly = "chat links are audit-only: the closed catalog (event
 // events.md gains the missing event types, wiring storekit.Emit into
 // these mutations removes the entries.
 var auditOnlyWrites = gatekit.Waive(map[string]string{
+	"internal/compose/extcapability:recordChange":           "counts one extension's stored objects and bytes beside the store call that changed them. The count is the core's own quota bookkeeping: no record changes, the closed event catalog has no event a unit or module would act on, and the audit row names the unit, the call and the object",
 	"internal/modules/contacts:MoveDealRefsTx":              "the module moving its own rows onto the survivor of a deal merge, with an audit row for each row moved. The merge ships deal.merged in the same transaction, and that is the announcement a subscriber acts on. The audit rows give each moved row's history the survivor",
 	"internal/modules/contracts:MoveDealRefsTx":             "the module moving its own rows onto the survivor of a deal merge, with an audit row for each row moved. The merge ships deal.merged in the same transaction, and that is the announcement a subscriber acts on. The audit rows give each moved row's history the survivor",
 	"internal/modules/assignments:MoveDealRefsTx":           "the module moving its own rows onto the survivor of a deal merge, with an audit row for each row moved. The merge ships deal.merged in the same transaction, and that is the announcement a subscriber acts on. The audit rows give each moved row's history the survivor",
