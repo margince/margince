@@ -300,3 +300,5 @@
 1795657801_the_google_docs_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795661043_a_task_explanation_is_cached_per_reader.up.sql | * | creates an empty cache table; the procedural marker is the two text-bound trigger definitions on it
 1795661044_a_record_keeps_a_status_line_from_its_latest_activity.up.sql | * | creates an empty table of derived status lines; the procedural marker is the two text-bound trigger definitions on it
+1795657803_a_source_id_is_bounded.up.sql | * | replaces the two text-length guards on knowledge_document with ones that also name external_id; it creates triggers and reads or rewrites no row
+1795657803_a_source_id_is_bounded.down.sql | * | runs only on a rollback; restores the earlier guards without external_id and changes no row
