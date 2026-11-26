@@ -56279,10 +56279,11 @@ components:
         One thread of the room's conversation, with its comments. Served to both
         sides in the same shape: the buyer and the seller read the same
         conversation, and neither side's ids beyond the thread's own are in it.
-      required: [id, room_id, required_change, state, author, created_at, comments]
+      required: [id, room_id, required_change, state, author, created_at, comments, visible_to_buyer]
       properties:
         id: {type: string, format: uuid}
         room_id: {type: string, format: uuid}
+        visible_to_buyer: {type: boolean}
         document_id: {type: [string, 'null'], format: uuid, description: Null for a room-level thread.}
         required_change: {type: boolean}
         state: {type: string, description: '`open` or `resolved`. A plain string, not an inline enum, for the reason `DealRoomParticipantCapability` gives.'}
