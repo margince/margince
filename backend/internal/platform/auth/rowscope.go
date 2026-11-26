@@ -72,15 +72,22 @@ const (
 )
 
 func ownerPredicate(p principal.Principal, arg func(any) int, unowned unownedRows) func(alias string) string {
+	return ownerColumnPredicate(p, arg, unowned, "owner_id")
+}
+
+// ownerColumnPredicate is ownerPredicate over a named owner column, for a table
+// whose owner column is declared rather than called owner_id. The column must
+// already be a safe identifier.
+func ownerColumnPredicate(p principal.Principal, arg func(any) int, unowned unownedRows, column string) func(alias string) string {
 	if Unbounded(p) {
 		return func(string) string { return truePredicate }
 	}
 	me := arg(p.UserID)
 	col := func(alias string) string {
 		if alias == "" {
-			return "owner_id"
+			return column
 		}
-		return alias + ".owner_id"
+		return alias + "." + column
 	}
 	nullArm := ""
 	if unowned == unownedIsShared {

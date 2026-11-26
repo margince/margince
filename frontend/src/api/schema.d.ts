@@ -6244,7 +6244,7 @@ export interface paths {
          *     screen shows for each. Which extensions are installed is a fact of the binary, so the
          *     contract cannot list the values; this operation does.
          *
-         *     Readable by any signed-in seat, because the company list shows these types and filters
+         *     Readable by any signed-in seat and its agent, because the company list shows these types and filters
          *     on them. Each value and label is declared in extension code, never typed by an
          *     administrator. Empty when no installed extension declares a type.
          */
@@ -69735,7 +69735,7 @@ export interface operations {
                 status?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
-                /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. */
+                /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. `listCompanyTypes` lists the values, and an agent reads them with the `read_workspace` action `company_types`. */
                 extension_relationship_type?: string;
                 /**
                  * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
@@ -72939,7 +72939,7 @@ export interface operations {
                 priority?: "low" | "medium" | "high" | "unset";
                 /** @description An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker. */
                 acquisition_source?: string;
-                /** @description A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. */
+                /** @description A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. `listLinkTypes` lists the values, and an agent reads them with the `read_workspace` action `link_types`. */
                 link_type?: string;
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
@@ -83979,7 +83979,7 @@ export interface operations {
     getFilterVocabulary: {
         parameters: {
             query: {
-                /** @description The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. */
+                /** @description The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. `listRecordKinds` lists the kinds the caller may read, and an agent reads them with the `read_workspace` action `record_kinds`. */
                 resource: components["schemas"]["FilterResource"];
             };
             header?: never;

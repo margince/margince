@@ -6,7 +6,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-91 columns · primary key `(id)` · referenced by 49 foreign keys
+93 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -88,6 +88,8 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
 | `source_id` | `text` |  | Provider message/event id; part of the idempotency key. |
+| `source_revision` | `timestamp with time zone` |  |  |
+| `source_revision_seq` | `bigint`, default `0` | yes |  |
 | `subject` | `text` |  |  |
 | `system_text` | `jsonb` |  |  |
 | `task_type` | `text` |  | Task only, absent on every other kind. |
