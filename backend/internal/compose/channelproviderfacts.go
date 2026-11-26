@@ -59,6 +59,7 @@ type channelProviderFacts struct {
 var coreProviderLabels = map[string]string{
 	"whatsapp": "WhatsApp",
 	"linkedin": "LinkedIn",
+	"zalo_oa":  "Zalo",
 }
 
 // providerLabel is what a human reads where the raw id would otherwise appear.

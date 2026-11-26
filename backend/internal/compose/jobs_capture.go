@@ -20,8 +20,10 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/whatsappedge"
+	"github.com/margince/margince/backend/internal/compose/zaloedge"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/whatsapp"
+	"github.com/margince/margince/backend/internal/modules/capture/zalo"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -105,6 +107,9 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// credential (no deployment-wide OAuth app to gate on), so there is nothing
 	// to check for before wiring it up.
 	addDeclaredWorker[TelegramIngestArgs](reg, newTelegramIngestWorker(pool, cfg.CaptureConfig, log))
+	addDeclaredWorker[ZaloOAIngestArgs](reg, &zaloedge.Worker[ZaloOAIngestArgs]{
+		Bind: workspaceJobCtx, Pool: pool, Sink: newCaptureSink(pool, cfg.CaptureConfig), Actor: chatChannelPrincipal(zalo.CapturedBy), Log: log,
+	})
 	addDeclaredWorker[WhatsAppIngestArgs](reg, &whatsappedge.Worker[WhatsAppIngestArgs]{
 		Bind: workspaceJobCtx, Pool: pool, Sink: newCaptureSink(pool, cfg.CaptureConfig), Actor: chatChannelPrincipal(whatsapp.CapturedBy), Log: log,
 	})

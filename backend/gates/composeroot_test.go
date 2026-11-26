@@ -38,7 +38,9 @@ const (
 	// workspace through this package's unexported job helpers.
 	// Raised by 1 production file for agentfor.go, the one seam that binds the
 	// product acting for a named colleague, split out of the deal-owner seam.
-	composeRootProductionFiles = 1386
+	// Raised by 1 for the Zalo ingest and token renewal job args, which the
+	// generated job kinds require in this package.
+	composeRootProductionFiles = 1387
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
