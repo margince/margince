@@ -277,7 +277,7 @@ func TestARoomOfAnArchivedOrClosedDealIsFoundWhenTheListShowsIt(t *testing.T) {
 }
 
 // A seat that reads rooms but not deals gets one answer for a room part that
-// exists and one that does not, so the status cannot say which ids are real.
+// exists and one that does not. So the status cannot say which ids are real.
 func TestARoomPartReadWithoutDealReadAnswersTheSameForAMissingAndAnExistingId(t *testing.T) {
 	e := SetupSearch(t)
 	f := seedRooms(t, e)

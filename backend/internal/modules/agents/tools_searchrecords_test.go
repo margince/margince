@@ -103,8 +103,8 @@ func TestAGroupedPageNeverReadsBackMoreThanAPage(t *testing.T) {
 	}
 }
 
-// A room is found through its deal, so naming deal_room without the deal grant
-// is refused as any ungranted type is, and never answered with an empty page.
+// A room is found through its deal. So naming deal_room without the deal grant
+// is refused as any ungranted type is. It is never answered with an empty page.
 func TestARoomSearchWithoutTheDealGrantIsRefused(t *testing.T) {
 	engine := &rankingProbe{}
 	_, err := searchRecordsOver(nil, engine).Handle(searchReader("deal_room"),

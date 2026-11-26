@@ -115,12 +115,11 @@ func roomKey(r crmcontracts.DealRoom) (time.Time, ids.UUID) {
 }
 
 // requireRoomRead is the object gate of every room read: the room grant, then
-// the deal grant a room is seen through. The deal grant is asked before any
-// lookup by id, so a seat without it gets one answer for a missing id and for
-// an existing one.
+// the deal grant. It runs before any lookup by id. So a seat without the deal
+// grant gets one answer for a missing id and for an existing one.
 func requireRoomRead(ctx context.Context) error {
 	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
 		return err
 	}
-	return auth.Require(ctx, dealTable, principal.ActionRead)
+	return auth.Require(ctx, dealObject, principal.ActionRead)
 }
