@@ -104,8 +104,8 @@ func provenanceOf(t *testing.T, owner *pgx.Conn, id ids.UUID) (string, string) {
 }
 
 const (
-	noActivitySubject = "Check in: no activity since 2026-09-05"
-	cadenceSubject    = "Time for a check-in: last touched 2026-09-05"
+	noActivitySubject = "Check in — no activity since 2026-09-05"
+	cadenceSubject    = "Time for a check-in — last touched 2026-09-05"
 )
 
 // Three reminders on one record, written as the anchor moved, collapse to the
