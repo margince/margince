@@ -73,7 +73,7 @@ export const MoreThanTheVisibleCards: Story = {
 const noop = () => undefined;
 
 // The facts line as the page draws it: the date and when Margince prepared
-// the brief over the agenda, with the view dial at its far end.
+// the brief, over the agenda. The view dial stands at its far end.
 export const Briefed: Story = {
   args: {
     ...CompleteAgenda.args,
