@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { CF_OBJECTS } from "../../lib/customfields.logic";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { FieldChangeTrail } from "./customfields.trail";
@@ -76,7 +77,11 @@ const json = (body: unknown) =>
     headers: { "Content-Type": "application/json" },
   });
 
-function backend(allow: GrantSpec, catalogReads: string[]) {
+function backend(
+  allow: GrantSpec,
+  catalogReads: string[],
+  failCatalogs = { times: 0 },
+) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/v1/me")) return json(meFixture({ allow }));
@@ -85,6 +90,13 @@ function backend(allow: GrantSpec, catalogReads: string[]) {
     }
     const object = new URL(url).searchParams.get("object") ?? "";
     catalogReads.push(object);
+    if (object === "company" && failCatalogs.times > 0) {
+      failCatalogs.times -= 1;
+      return new Response(JSON.stringify({ title: "Unavailable" }), {
+        status: 503,
+        headers: { "Content-Type": "application/problem+json" },
+      });
+    }
     const known = (["contact", "company", "deal"] as const).find(
       (one) => one === object,
     );
@@ -153,6 +165,30 @@ describe("FieldChangeTrail", () => {
     await user.click(summary);
     await screen.findAllByRole("listitem");
     expect(new Set(catalogReads)).toEqual(new Set(CF_OBJECTS));
+  });
+
+  it("says a field catalog it could not read failed, and reads it again on retry", async () => {
+    const catalogReads: string[] = [];
+    const failCatalogs = { times: 1 };
+    vi.stubGlobal(
+      "fetch",
+      backend({ audit_log: ["read"] }, catalogReads, failCatalogs),
+    );
+    const user = userEvent.setup();
+    mount();
+
+    await user.click(await screen.findByText("Recent field changes"));
+    const retry = await screen.findByRole("button", {
+      name: en["state.retry"],
+    });
+    expect(screen.queryAllByRole("listitem")).toEqual([]);
+
+    await user.click(retry);
+    const rows = await screen.findAllByRole("listitem");
+    expect(within(rows[1] as HTMLElement).getByText(/ · /).textContent).toBe(
+      "Company · Budget",
+    );
+    expect(catalogReads.filter((one) => one === "company")).toHaveLength(2);
   });
 
   it("asks for nothing when the role may not read the trail", async () => {

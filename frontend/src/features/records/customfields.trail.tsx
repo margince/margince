@@ -23,7 +23,17 @@ function useFieldsById(enabled: boolean) {
       .flatMap((catalog) => catalog.data?.data ?? [])
       .map((field) => [field.id, field]),
   );
-  return { byId, loading: catalogs.some((catalog) => catalog.isLoading) };
+  return {
+    byId,
+    loading: catalogs.some((catalog) => catalog.isLoading),
+    // A failed catalog would leave its entries unnamed under a ready trail.
+    failed: catalogs.some((catalog) => catalog.isError),
+    retry: () => {
+      for (const catalog of catalogs) {
+        if (catalog.isError) void catalog.refetch();
+      }
+    },
+  };
 }
 
 /** The changes made to custom fields, behind a row the reader opens. */
@@ -62,11 +72,14 @@ export function FieldChangeTrail({
         state={auditState(
           readsAuditTrail,
           audit.isPending || fields.loading,
-          audit.isError,
+          audit.isError || fields.failed,
           entries.length,
         )}
         meUserId={meUserId}
-        onRetry={() => void audit.refetch()}
+        onRetry={() => {
+          if (audit.isError) void audit.refetch();
+          fields.retry();
+        }}
       />
       {/* True for every reader: the recording happens whether or not this
           one may read it back. */}

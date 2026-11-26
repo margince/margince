@@ -15,40 +15,53 @@ type CustomField = components["schemas"]["CustomField"];
 type Image = NonNullable<AuditLogEntry["after"]>;
 type Setting = keyof CustomField;
 
-const moved = (image: Image, setting: Setting) => setting in image;
+// A write records every setting its request carried, changed or not, so a
+// setting moved only where its value before and after the write differ.
+const moved = (before: Image, after: Image, setting: Setting) =>
+  setting in after &&
+  JSON.stringify(before[setting]) !== JSON.stringify(after[setting]);
 
 function switched(
-  image: Image,
+  before: Image,
+  after: Image,
   setting: Setting,
   keys: Readonly<{ on: MessageKey; off: MessageKey }>,
 ): MessageKey | undefined {
-  const value: unknown = image[setting];
+  if (!moved(before, after, setting)) return undefined;
+  const value: unknown = after[setting];
   if (typeof value !== "boolean") return undefined;
   return value ? keys.on : keys.off;
 }
 
-// An update's images hold only the settings it moved, under the field's own
-// contract names. Each rule reads one of them from the image after the change.
-const UPDATE_RULES: readonly ((after: Image) => MessageKey | undefined)[] = [
-  (after) => (moved(after, "label") ? "cf.audit.renamed" : undefined),
-  (after) => (moved(after, "options") ? "cf.audit.choices" : undefined),
+// An update's images hold the settings its request carried, under the
+// field's own contract names. Each rule reads one of them.
+const UPDATE_RULES: readonly ((
+  before: Image,
+  after: Image,
+) => MessageKey | undefined)[] = [
+  (before, after) =>
+    moved(before, after, "label") ? "cf.audit.renamed" : undefined,
+  (before, after) =>
+    moved(before, after, "options") ? "cf.audit.choices" : undefined,
   // A change of choices rewrites their translations too, and is not one.
-  (after) =>
-    moved(after, "label_translations") ||
-    (moved(after, "option_translations") && !moved(after, "options"))
+  (before, after) =>
+    moved(before, after, "label_translations") ||
+    (moved(before, after, "option_translations") &&
+      !moved(before, after, "options"))
       ? "cf.audit.translations"
       : undefined,
-  (after) =>
-    switched(after, "show_in_create", {
+  (before, after) =>
+    switched(before, after, "show_in_create", {
       on: "cf.audit.shownInCreate",
       off: "cf.audit.hiddenFromCreate",
     }),
-  (after) =>
-    switched(after, "reportable", {
+  (before, after) =>
+    switched(before, after, "reportable", {
       on: "cf.audit.addedToReports",
       off: "cf.audit.removedFromReports",
     }),
-  (after) => (moved(after, "activity_kinds") ? "cf.audit.kinds" : undefined),
+  (before, after) =>
+    moved(before, after, "activity_kinds") ? "cf.audit.kinds" : undefined,
 ];
 
 /**
@@ -61,7 +74,8 @@ export function fieldChangeKeys(entry: AuditLogEntry): readonly MessageKey[] {
   // An archive also takes the field out of reports, as its own consequence.
   const status: Setting = "status";
   if (after[status] === "retired") return ["audit.action.archive"];
-  return UPDATE_RULES.flatMap((rule) => rule(after) ?? []);
+  const before = entry.before ?? {};
+  return UPDATE_RULES.flatMap((rule) => rule(before, after) ?? []);
 }
 
 /**

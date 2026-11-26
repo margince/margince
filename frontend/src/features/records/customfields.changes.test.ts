@@ -113,6 +113,25 @@ describe("fieldChangeKeys", () => {
     expect(words(both)).toEqual(["Renamed", "Hidden from create forms"]);
   });
 
+  it("names no rename for a write that carried the label unchanged", () => {
+    const kept = update(
+      { label: "Budget", show_in_create: true },
+      { label: "Budget", show_in_create: false },
+    );
+    expect(words(kept)).toEqual(["Hidden from create forms"]);
+  });
+
+  it("names nothing for a write that changed no setting it carried", () => {
+    expect(
+      fieldChangeKeys(
+        update(
+          { label: "Budget", reportable: true },
+          { label: "Budget", reportable: true },
+        ),
+      ),
+    ).toEqual([]);
+  });
+
   it("names nothing for a setting it does not know", () => {
     expect(
       fieldChangeKeys(update({ colour: "red" }, { colour: "blue" })),
