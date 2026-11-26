@@ -186,10 +186,10 @@ func TestAHumanCorrectionSurvivesEveryLaterLookup(t *testing.T) {
 	// by captured_by, the column the precedence guard tests.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			UPDATE company_fact
+			UPDATE field_provenance
 			   SET value = 'Eigener Mailserver',
 			       captured_by = 'human:' || $2, source = 'human'
-			 WHERE company_id = $1 AND field = $3`,
+			 WHERE object_type = 'company' AND value IS NOT NULL AND object_id = $1 AND field_name = $3`,
 			companyID, e.rep.String(), FactMailProvider)
 		return err
 	}); err != nil {
@@ -239,8 +239,8 @@ func TestAHumanHeldRowIsNeverReconciledAway(t *testing.T) {
 	}
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			UPDATE company_fact SET captured_by = 'human:' || $2, source = 'human'
-			 WHERE company_id = $1 AND field = $3`, companyID, e.rep.String(), FactOperatedService)
+			UPDATE field_provenance SET captured_by = 'human:' || $2, source = 'human'
+			 WHERE object_type = 'company' AND value IS NOT NULL AND object_id = $1 AND field_name = $3`, companyID, e.rep.String(), FactOperatedService)
 		return err
 	}); err != nil {
 		t.Fatalf("mark the row as a contact's: %v", err)
@@ -575,9 +575,9 @@ func TestAHumanAnswerSettlesTheWholeSingleValuedField(t *testing.T) {
 	}
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			UPDATE company_fact
+			UPDATE field_provenance
 			   SET value = 'Eigener Mailserver', captured_by = 'human:' || $2, source = 'human'
-			 WHERE company_id = $1 AND field = $3`,
+			 WHERE object_type = 'company' AND value IS NOT NULL AND object_id = $1 AND field_name = $3`,
 			companyID, e.rep.String(), FactMailProvider)
 		return err
 	}); err != nil {

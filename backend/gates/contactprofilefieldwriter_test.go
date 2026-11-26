@@ -5,9 +5,10 @@
 
 package gates
 
-// contacts.writeContactProfileField is the one writer of contact_profile_field, and the
-// one place the precedence rule lives: a machine fill claims an unanswered
-// field, a human's acceptance replaces what is there.
+// contacts.writeContactProfileField is the one writer of a contact's evidence.
+// Those are the contact's field_provenance rows, which the contact_profile_field
+// view reads. It is the one place the precedence rule lives: a machine fill
+// claims an unanswered field, a human's acceptance replaces what is there.
 //
 // That was five hand-copied INSERTs, three of them DO NOTHING and one DO
 // UPDATE, each arguing its own conflict clause in a comment beside it. Nothing
@@ -44,7 +45,11 @@ import (
 // clause. No such statement exists in the tree today, which is exactly when a
 // census is cheap to widen. DELETE stays out — erasure and the retention sweep
 // clear this table deliberately, and that is somebody else's rule.
-var contactProfileFieldWrite = regexp.MustCompile(`(?i)(INSERT\s+INTO|UPDATE)\s+contact_profile_field`)
+//
+// A contact's row in field_provenance is named by its 'contact' literal, which
+// a company's or a stamp's write does not carry.
+var contactProfileFieldWrite = regexp.MustCompile(
+	`(?is)(INSERT\s+INTO|UPDATE)\s+(contact_profile_field|field_provenance\b.*'contact')`)
 
 // contactProfileFieldOwner is where the writer this census requires lives. Its
 // own statement is the definition rather than a copy of it.
@@ -60,7 +65,8 @@ const contactProfileFieldOwner = "internal/modules/contacts/contactprofilefieldw
 // decides the second half of the key, so a statement that stops being a
 // carry-over stops being waived.
 var bulkRelinkIsNotAFill = gatekit.Waive(map[string]string{
-	"internal/modules/contacts/mergerelink.go#carry-over": "re-homes existing rows whole at a merge, all of a contact's fields in one statement, rather than deciding one fill — it examines no value and writes none of its own",
+	"internal/modules/contacts/evidencelegacymove.go#carry-over": "moves a contact's rows whole out of the legacy table under their own ids, deciding no fill — it examines no value and writes none of its own",
+	"internal/modules/contacts/mergerelink.go#carry-over":        "re-homes existing rows whole at a merge, all of a contact's fields in one statement, rather than deciding one fill — it examines no value and writes none of its own",
 })
 
 // isCarryOver reports whether a write takes its rows FROM this table rather
@@ -68,7 +74,9 @@ var bulkRelinkIsNotAFill = gatekit.Waive(map[string]string{
 // relink a different act from a fill, so it is what the waiver is keyed on.
 func isCarryOver(sql string) bool { return carryOverSource.MatchString(sql) }
 
-var carryOverSource = regexp.MustCompile(`(?is)INSERT\s+INTO\s+contact_profile_field.*\bFROM\s+contact_profile_field\b`)
+var carryOverSource = regexp.MustCompile(
+	`(?is)INSERT\s+INTO\s+field_provenance\b.*\bFROM\s+field_provenance\b|` +
+		`DELETE\s+FROM\s+contact_profile_field_legacy\b.*\bINSERT\s+INTO\s+field_provenance\b`)
 
 func TestEveryProfileFieldWriteUsesTheOneWriter(t *testing.T) {
 	t.Parallel()
@@ -112,12 +120,12 @@ func TestEveryProfileFieldWriteUsesTheOneWriter(t *testing.T) {
 	// A census that judged nothing certifies nothing. The floor sits far below
 	// the real count so it catches a broken walk, not a changing tree.
 	if judged < 5 {
-		t.Fatalf("only %d statement(s) naming contact_profile_field were judged, so this census covered almost nothing", judged)
+		t.Fatalf("only %d statement(s) naming a contact's evidence were judged, so this census covered almost nothing", judged)
 	}
 	if len(findings) == 0 {
 		return
 	}
-	t.Errorf("these statements write contact_profile_field by hand:\n  %s\n\n"+
+	t.Errorf("these statements write a contact's evidence by hand:\n  %s\n\n"+
 		"contacts.writeContactProfileField is the one writer, and the ON CONFLICT clause is not the "+
 		"caller's to choose: it follows from WHO is writing — a machine fill claims an "+
 		"unanswered field (claimUnanswered), a human's acceptance replaces what is there "+
@@ -139,7 +147,8 @@ func contactProfileFieldStatements(decl ast.Decl) []string {
 		// case-insensitive and a prefilter narrower than its detector is where
 		// a census goes blind: the file is dropped before anything looks at it,
 		// and there is no finding to notice.
-		if !ok || !strings.Contains(strings.ToLower(text), "contact_profile_field") {
+		lower := strings.ToLower(text)
+		if !ok || (!strings.Contains(lower, "contact_profile_field") && !strings.Contains(lower, "field_provenance")) {
 			return true
 		}
 		out = append(out, text)
@@ -153,7 +162,8 @@ func contactProfileFieldStatements(decl ast.Decl) []string {
 func firstContactProfileFieldLine(sql string) string {
 	lines := strings.Split(sql, "\n")
 	for _, line := range lines {
-		if strings.Contains(strings.ToLower(line), "contact_profile_field") {
+		if lower := strings.ToLower(line); strings.Contains(lower, "contact_profile_field") ||
+			strings.Contains(lower, "field_provenance") {
 			return strings.TrimSpace(line)
 		}
 	}
@@ -191,19 +201,28 @@ var contactProfileFieldProbes = []struct {
 	// in front of it did not, which drops the statement before the detector
 	// ever runs.
 	{"the table identifier in upper case", true, "\nfunc write() string {\n\treturn `INSERT INTO CONTACT_PROFILE_FIELD (contact_id, field, value) VALUES ($1, $2, $3)`\n}"},
+
+	// The rows themselves live in field_provenance. A contact's carries its
+	// 'contact' literal; a company's evidence and a stamp are other rows.
+	{"a contact's row in field_provenance", true, "\nfunc write() string {\n\treturn `INSERT INTO field_provenance (object_type, object_id, field_name, value) VALUES ('contact', $1, $2, $3)`\n}"},
+	{"an update of a contact's row in field_provenance", true, "\nfunc write() string {\n\treturn `UPDATE field_provenance SET value = $2 WHERE object_type = 'contact' AND object_id = $1`\n}"},
+	{"a company's row in field_provenance", false, "\nfunc write() string {\n\treturn `INSERT INTO field_provenance (object_type, object_id, field_name, value) VALUES ('company', $1, 'contact_email', $2)`\n}"},
+	{"a stamp", false, "\nfunc write() string {\n\treturn `INSERT INTO field_provenance (object_type, object_id, field_name, source) VALUES ($1, $2, $3, $4)`\n}"},
 }
 
 // The waiver's second half, read directly: a file key alone would ratify the
 // topic, and this is what makes it ratify the instance.
 func TestOnlyACarryOverIsRatifiedInTheMergeRelink(t *testing.T) {
 	t.Parallel()
-	carryOver := "INSERT INTO contact_profile_field\n  (contact_id, field, value)\n  SELECT $2, field, value\n    FROM contact_profile_field WHERE contact_id = $1\n  ON CONFLICT (contact_id, field) DO NOTHING"
+	carryOver := "INSERT INTO field_provenance\n  (object_type, object_id, field_name, value)\n  SELECT 'contact', $2, field_name, value\n" +
+		"    FROM field_provenance WHERE object_type = 'contact' AND object_id = $1\n  ON CONFLICT DO NOTHING"
 	if !isCarryOver(carryOver) {
 		t.Error("the merge relink's own statement is not recognised as a carry-over, so its waiver ratifies nothing")
 	}
 	// The shape the file waiver used to exempt: a fill, with a hand-picked
 	// conflict clause, sitting in the ratified file.
-	fill := "INSERT INTO contact_profile_field (contact_id, field, value)\n  VALUES ($1, $2, $3)\n  ON CONFLICT (contact_id, field) DO UPDATE SET value = EXCLUDED.value"
+	fill := "INSERT INTO field_provenance (object_type, object_id, field_name, value)\n  VALUES ('contact', $1, $2, $3)\n" +
+		"  ON CONFLICT DO UPDATE SET value = EXCLUDED.value"
 	if isCarryOver(fill) {
 		t.Error("a plain fill is read as a carry-over, so the merge relink's waiver still exempts the whole file")
 	}

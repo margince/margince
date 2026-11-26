@@ -94,15 +94,15 @@ func writesImportReasons(path string) bool {
 
 // Every place that words a refusal sets the code with it, so a screen never
 // meets a skip it can only show in English. The census reads the writers' own
-// source in both packages that write reasons, as literals and as assignments.
+// source in every package that writes reasons, as literals and as assignments.
 // It fails when it sees too few of any type to be the whole walk.
 func TestEveryReasonWriterSetsACode(t *testing.T) {
 	seen := map[string]int{}
 	var assigned []string
 	fset := token.NewFileSet()
-	for _, dir := range []string{".", "../modules/migration"} {
+	for dir, floor := range map[string]int{".": 20, "../modules/migration": 20, "importwire": 5} {
 		files, err := filepath.Glob(filepath.Join(dir, "*.go"))
-		if err != nil || len(files) < 20 {
+		if err != nil || len(files) < floor {
 			t.Fatalf("found %d source files in %s (%v), want the whole package", len(files), dir, err)
 		}
 		for _, name := range files {

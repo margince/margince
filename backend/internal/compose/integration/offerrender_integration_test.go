@@ -702,10 +702,10 @@ func seedAnchorLegalName(t *testing.T, e *Env, legalName string, confirmed bool)
 	if confirmed {
 		args = append(args, e.AdminUser)
 	}
-	e.WsExec(t, `INSERT INTO company_profile_field
-		(company_id, field, value, source, captured_by, evidence_snippet, source_url, confidence,
+	e.WsExec(t, `INSERT INTO field_provenance
+		(object_type, object_id, field_name, value, source, captured_by, evidence_snippet, evidence_ref, confidence,
 		 verified_at, verified_by)
-		VALUES ($1, 'legal_name', $2, 'site_read', 'agent:enrich', 'Impressum: `+legalName+`',
+		VALUES ('company', $1, 'legal_name', $2, 'site_read', 'agent:enrich', 'Impressum: `+legalName+`',
 		        'https://anchor.test/impressum', 0.9, `+verified+`)`, args...)
 }
 
