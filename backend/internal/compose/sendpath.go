@@ -25,7 +25,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -37,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -207,14 +205,10 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 	})
 }
 
-// NewBounceResend builds Send again on a bounced message from the same send
-// path every other send uses.
+// NewBounceResend builds Send again on a bounce from the one send path.
 func NewBounceResend(pool *pgxpool.Pool, send SendPath) *bounceresend.Service {
 	db := InstallationDB(pool)
-	return &bounceresend.Service{
-		Bounces: comms.NewStore(db, time.Now, activities.NewStore(db)), Contacts: newContactsStore(db),
-		Sends: sendStore(pool, send), Gate: consentGateFor(pool), Delivery: send.Delivery,
-	}
+	return bounceresend.New(db, newContactsStore(db), sendStore(pool, send), consentGateFor(pool), send.Delivery)
 }
 
 // consentGateFor is the ONE spelling of the send path's consent authority.

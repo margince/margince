@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/deliveryrepeat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -224,17 +225,8 @@ type DeliveryRequest struct {
 	// field being non-empty rather than carried alongside it — two fields
 	// could drift apart, one cannot.
 	ListUnsubscribe string
-	// AuthoredBodyLen and AuthoredHTMLLen count the characters at the front of
-	// Body and HTMLBody that are the author's own words. The sign-off,
-	// disclosures and footer follow them. A send that repeats this one starts
-	// from those characters, so it does not add the three parts twice.
-	AuthoredBodyLen int
-	AuthoredHTMLLen int
-	// Claims is what the send stated about why it was sent, as JSON. See
-	// SendClaims.
-	Claims []byte
-	// ResentFrom is the bounced delivery this message repeats, zero otherwise.
-	ResentFrom ids.UUID
+	// Repeat is what a send that repeats this message starts from.
+	Repeat deliveryrepeat.Repeat
 }
 
 // MintMessageID generates the RFC822 message identity for one outbound

@@ -16,12 +16,14 @@ import (
 	"net/http"
 	"net/mail"
 	"strings"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -204,6 +206,17 @@ func resendInput(source comms.ResendSource, corrected string) (activities.SendEm
 		FromConnection:   source.ConnectionID,
 		ResentFrom:       source.ID,
 	}, nil
+}
+
+// New builds the service over the stores and the send path the caller wires.
+func New(
+	db *database.DB, contacts *contacts.Store, sends *activities.Store,
+	gate activities.ConsentGate, delivery activities.DeliveryStager,
+) *Service {
+	return &Service{
+		Bounces: comms.NewStore(db, time.Now, activities.NewStore(db)), Contacts: contacts,
+		Sends: sends, Gate: gate, Delivery: delivery,
+	}
 }
 
 // Handlers is the transport for the bounce row's "Send again".

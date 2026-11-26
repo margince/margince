@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/deliveryrepeat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -176,16 +177,8 @@ type StageInput struct {
 	// ThreadKey then names a new conversation; zero on every other delivery.
 	AnswersActivity ids.UUID
 	ListUnsubscribe string // the Post header is derived from this, never stored
-	// AuthoredBodyLen and AuthoredHTMLLen count the characters at the front of
-	// Body and HTMLBody that the author wrote. A send that repeats this one
-	// starts from them. See activities.DeliveryRequest.
-	AuthoredBodyLen int
-	AuthoredHTMLLen int
-	// Claims is what the send stated about why it was sent, as JSON. A send
-	// that repeats this one reads it back.
-	Claims []byte
-	// ResentFrom is the bounced delivery this one repeats, zero on any other.
-	ResentFrom ids.UUID
+	// Repeat is what a send that repeats this delivery starts from.
+	Repeat deliveryrepeat.Repeat
 }
 
 // StageTx records one delivery inside the caller's transaction. user_id —
@@ -250,7 +243,7 @@ func (s *Store) StageTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.UUID
 		id, in.ActivityID, userID, in.Provider, in.MessageID,
 		recipients, cc, bcc, in.Subject, in.Body, in.HTMLBody, in.FromName, in.ConsentPurpose,
 		in.InReplyTo, refs, in.ThreadKey, in.ListUnsubscribe, s.now().UTC(), files, in.InlineLogoKey, in.ConnectionID,
-		in.AnswersActivity, in.AuthoredBodyLen, in.AuthoredHTMLLen, in.ResentFrom, in.Claims); err != nil {
+		in.AnswersActivity, in.Repeat.BodyLen, in.Repeat.HTMLLen, in.Repeat.From, in.Repeat.Claims); err != nil {
 		// The idempotency key is an ANSWER, and it is mapped rather than
 		// wrapped: a raw violation carries the constraint and table names, and
 		// no caller is owed the schema behind a refusal it can act on.

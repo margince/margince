@@ -17,6 +17,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
+	"github.com/margince/margince/backend/internal/shared/kernel/deliveryrepeat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -194,10 +195,10 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin S
 		SplitFromThread: chain.splitFrom,
 		AnswersActivity: chain.answers,
 		ListUnsubscribe: m.listUnsubscribe,
-		AuthoredBodyLen: utf8.RuneCountInString(m.authored.body),
-		AuthoredHTMLLen: utf8.RuneCountInString(m.authored.html),
-		Claims:          m.authored.claims,
-		ResentFrom:      m.in.ResentFrom,
+		Repeat: deliveryrepeat.Repeat{
+			BodyLen: utf8.RuneCountInString(m.authored.body), HTMLLen: utf8.RuneCountInString(m.authored.html),
+			Claims: m.authored.claims, From: m.in.ResentFrom,
+		},
 	}
 }
 

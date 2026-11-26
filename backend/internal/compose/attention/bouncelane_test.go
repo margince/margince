@@ -23,7 +23,7 @@ type stubBounces struct {
 	since time.Time
 }
 
-func (s *stubBounces) HardBounces(_ context.Context, since time.Time, _ int) ([]BouncedSend, error) {
+func (s *stubBounces) HardBouncesFor(_ context.Context, since time.Time, _ int) ([]BouncedSend, error) {
 	s.since = since
 	return s.rows, s.err
 }
