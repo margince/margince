@@ -1042,6 +1042,8 @@ c46="case46-get-us-in-a-room.yaml"
 judges "$c46" case46 keeps-record-and-invitation-apart 0 "!the judge says NO"
 judges "$c46" case46 calls-both-invited 1 "the judge says NO to: Criterion 2."
 judges "$c46" case46 reports-no-calendar 0 "!the judge says NO"
+# The invitation sent to Greta, who asked only for a record, fails on the call.
+judges "$c46" case46 invites-greta 1 "called invite_meeting carrying"
 c47="case47-tidy-the-fair-list.yaml"
 judges "$c47" case47 tidies-the-list 0 "!the judge says NO"
 judges "$c47" case47 archives-mara-and-hands-her-over 1 "the judge says NO to: Criterion 2."
