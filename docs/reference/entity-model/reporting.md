@@ -83,7 +83,7 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 ## report_edition
 
-12 columns · primary key `(id)` · referenced by 2 foreign keys
+11 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -98,7 +98,6 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 | `publication_team_id` | `uuid` |  | Points at `team.id`. |
 | `redacted_at` | `timestamp with time zone` |  |  |
 | `report_id` | `uuid` | yes | Points at `report_definition.id`. |
-| `report_revision` | `bigint` | yes |  |
 
 **Points at**
 
@@ -112,7 +111,6 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 **Rules**
 
 - `report_edition_execution_id_key`: `UNIQUE (execution_id)`
-- `report_edition_report_revision_js_safe`: `CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
