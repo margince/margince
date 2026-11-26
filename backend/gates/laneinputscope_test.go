@@ -111,7 +111,7 @@ func readWorkflow(t *testing.T, path string) workflowFile {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	var parsed workflowFile
-	if err := yaml.Unmarshal(body, &parsed); err != nil {
+	if err := unmarshalYAML(body, &parsed); err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
 	return parsed
@@ -129,7 +129,7 @@ func filterScopes(t *testing.T, workflow workflowFile) map[string][]string {
 				continue
 			}
 			var declared map[string]yaml.Node
-			if err := yaml.Unmarshal([]byte(step.With.Filters), &declared); err != nil {
+			if err := unmarshalYAML([]byte(step.With.Filters), &declared); err != nil {
 				t.Fatalf("parsing the %s filters: %v", pathsFilterAction, err)
 			}
 			scopes := map[string][]string{}

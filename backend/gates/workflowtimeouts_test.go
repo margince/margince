@@ -31,8 +31,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -98,7 +96,7 @@ func readWorkflowJobs(t *testing.T, path string) workflowJobs {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	var wf workflowJobs
-	if err := yaml.Unmarshal(raw, &wf); err != nil {
+	if err := unmarshalYAML(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", path, err)
 	}
 	if len(wf.Jobs) == 0 {
@@ -364,7 +362,7 @@ func readCompositeSteps(t *testing.T, path string) []workflowStep {
 			Steps []workflowStep `yaml:"steps"`
 		} `yaml:"runs"`
 	}
-	if err := yaml.Unmarshal(raw, &action); err != nil {
+	if err := unmarshalYAML(raw, &action); err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
 	return action.Runs.Steps

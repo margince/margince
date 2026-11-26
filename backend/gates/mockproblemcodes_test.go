@@ -300,7 +300,7 @@ func contractProblemExampleCodes(t *testing.T) []string {
 		t.Fatalf("reading %s: %v", contractPath, err)
 	}
 	var doc yaml.Node
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("decoding %s: %v", contractPath, err)
 	}
 	// A shared response no operation references promises nothing a client

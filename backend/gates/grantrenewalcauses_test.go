@@ -31,8 +31,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -98,7 +96,7 @@ func credentialFieldsOfMyAgentGrant(t *testing.T) []string {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(document, &contract); err != nil {
+	if err := unmarshalYAML(document, &contract); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	schema, declared := contract.Components.Schemas["MyAgentGrant"]

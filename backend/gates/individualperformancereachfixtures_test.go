@@ -18,8 +18,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -228,7 +226,7 @@ func TestAnOperationBesideTheFamilysPathsIsWalked(t *testing.T) {
 		t.Fatal(err)
 	}
 	var doc map[string]any
-	if err := yaml.Unmarshal(src, &doc); err != nil {
+	if err := unmarshalYAML(src, &doc); err != nil {
 		t.Fatal(err)
 	}
 	paths, _ := doc["paths"].(map[string]any)
