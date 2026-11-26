@@ -127,7 +127,7 @@ func (d systemDeals) ResponsibleAs(ctx context.Context, actAs extension.UserID, 
 }
 
 // opensDeal admits the seat only to a deal it may open in the app. A seat with
-// no deal read is refused as the app refuses it; a deal outside its scope
+// no deal read is refused as the app refuses it. A deal outside its scope
 // answers ErrNotFound, so it cannot be told from one that does not exist.
 func (s systemSeat) opensDeal(seatCtx context.Context, deal ids.UUID) error {
 	if err := auth.Require(seatCtx, fieldmask.Deal, principal.ActionRead); err != nil {
