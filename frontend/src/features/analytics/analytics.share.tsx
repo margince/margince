@@ -99,6 +99,7 @@ export function ShareViewButton({
           target={target}
           scope={scope}
           snapshotId={snapshotId}
+          refusal={refusal}
           onClose={() => setOpen(false)}
         />
       )}
@@ -106,15 +107,19 @@ export function ShareViewButton({
   );
 }
 
+// A period change does not close the dialog, so the refusal that disables the
+// opener also holds its Create link.
 function ShareDialog({
   target,
   scope,
   snapshotId,
+  refusal,
   onClose,
 }: Readonly<{
   target: string;
   scope: AnalyticsScope;
   snapshotId?: string;
+  refusal?: string;
   onClose: () => void;
 }>) {
   const t = useT();
@@ -168,6 +173,7 @@ function ShareDialog({
       onClose={onClose}
       title={t("analytics.share.title")}
       confirmLabel={t("analytics.share.create")}
+      confirmReason={refusal}
       onConfirm={() => create.mutate({ kind, target, scope, snapshotId })}
       pending={create.isPending}
       error={create.error ? problemMessageOf(create.error, t) : undefined}
