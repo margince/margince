@@ -7,8 +7,8 @@
    Except where the caller's face IS a button: a popover opened from one half
    of a split control is already a `.btn` and has its own ground, padding and
    radius. Stripping those would draw the caret as bare text inside a filled
-   control. */
-.popover-trigger:not(.btn) {
+   control. A chip trigger keeps its pill for the same reason. */
+.popover-trigger:not(.btn, .chip) {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -19,7 +19,7 @@
   cursor: pointer;
 }
 
-.popover-trigger:not(.btn):focus-visible {
+.popover-trigger:not(.btn, .chip):focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--r-sm);

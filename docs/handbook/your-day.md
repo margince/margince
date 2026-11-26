@@ -10,7 +10,7 @@ Under **Needs you**, every task is its own card, and the first one is open. Pres
 
 When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests. You can also choose **Mark handled** to finish one of those tasks. After an upgrade, Margince applies this rule once to the email it already holds, and those tasks show in **Done for you** with **Undo** too.
 
-Open a task's details and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome. A task filed on no record asks which record the outcome is for: pick one, or press **Log without a record**. **Back** returns to the task's actions.
+Open a task's details, press **More** and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome. A task filed on no record asks which record the outcome is for: pick one, or press **Log without a record**. **Back** returns to the task's actions.
 
 ## Daily tasks
 
@@ -37,7 +37,7 @@ To snooze a customer who is waiting for a reply in Margince, press **More action
 3. Choose **Snooze** for one day, or **Snooze for 3 days**, **Snooze for 7 days** or **Until they reply**.
 4. The note that follows offers **Undo**.
 
-A task's **More actions** has no snooze. In its details, **Snooze 1 day** moves the due date for everyone. A task with no date uses **Move to** ([How do I complete a task?](#how-do-i-complete-a-task)).
+A task's **More actions** has no snooze. In its details, press the due date and choose **Snooze 1 day**, which moves the due date for everyone. A task with no date uses **Move to** ([How do I complete a task?](#how-do-i-complete-a-task)).
 
 Snoozing a deal also hides its at-risk row until the snooze ends. Its tasks remain separate work. A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
 
@@ -58,7 +58,7 @@ The open card under **Needs you** on **Home** says what happened, what to do nex
 
 A meeting with no outcome asks **How did it go?** with **It happened** and **Add notes**, plus **Did not happen** unless Margince sent its invitation. A colleague's meeting you cannot change reads **No outcome yet for** the meeting. Press **Done** to take it off your list. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
-The **Why this is on your list** panel in **View details** answers in four parts. **What happened** says the event, its day and who it is with, and for a contact the last contact each way. **Why now** lists the facts that put the row on your list. **If nothing is done** says what waiting costs, such as a contact who keeps waiting. **What to do** names the next step and who it is with. The title on the card and in **View details** says what is wrong, such as a deal that has gone quiet.
+The **Why this is on your list** section in **View details** answers in four parts. **What happened** says the event, its day and who it is with, and for a contact the last contact each way. **Why now** lists the facts that put the row on your list. **If nothing is done** says what waiting costs, such as a contact who keeps waiting. **What to do** names the next step and who it is with. The title on the card and in **View details** says what is wrong, such as a deal that has gone quiet.
 
 ### How do I hand a task on to a colleague?
 To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.
@@ -106,7 +106,7 @@ A task more than 30 days late leaves the Worklist and its counts. A pin keeps it
 To complete a task in Margince, press **Done** on its Worklist row, or on the task in the record's list of next steps.
 1. Open **Home** → **Show Worklist**, or open the contact, company or deal the task is on.
 2. Press **Done**. The task is marked "Task completed".
-3. Not ready yet? Press **Snooze 1 day** to move its due date a day later. Or open the task and pick a day under **Move to**.
+3. Not ready yet? Press **Snooze 1 day** to move its due date a day later. Or open the task, press its due date and pick a day under **Move to**.
 
 **Snooze 1 day** moves the due date one day later, or to tomorrow if that is later, keeping its time. A task with no date does not show it. If it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
@@ -122,7 +122,7 @@ Every task has a type, and the type decides its one step. The type shows as a ch
 
 | Type | The step |
 | --- | --- |
-| **Reply** | Answers the way the message came in: **Draft email** for an email, the number and **Call** for a call. Any other reply offers both, as **Reach out** does. The other way is always there too: under the card's **More actions**, and in the task's details |
+| **Reply** | Answers the way the message came in: **Draft email** for an email, the number and **Call** for a call. Any other reply offers both, as **Reach out** does. The other way is always there too: under the card's **More actions**, and under **More** in the task's details |
 | **Reach out** | Keeps to the way the talk it came from went. A promise made in an email offers **Draft email**, and a call offers the number and **Call**; the other way waits under **More actions**. With neither, **Draft email** to the task's contact, lead or company, then the number with **Copy number** and **Call**. **Call** is the colour button when no email can be drafted |
 | **Meet** | **Book a meeting** with the task's contact |
 | **Review** | Opens the record to check, such as **Review lead** |
@@ -131,7 +131,7 @@ Every task has a type, and the type decides its one step. The type shows as a ch
 
 **Draft email** opens the composer already drafting a message about the task. With no connected mailbox it is **Email** and opens your own mail app. A task with no single contact drafts to its one open lead, or with none, to its one linked company. For a company the composer asks which contact it is for; a task on two open leads offers none. A task filed on a deal alone drafts to the deal's one contact, else to the deal's company. One on several contacts and no open lead drafts to the company they all work at now.
 
-A task filed on no record has no one to write to and offers none. **Draft email** is refused with the reason for a closed lead with no linked company, and for a lead or contact with no email address. An archived contact is refused too. A task linked to one contact also offers **Open contact**. The task's row on a timeline offers **Write email** to the same contact, lead or company.
+A task filed on no record has no one to write to and offers none. **Draft email** is refused with the reason for a closed lead with no linked company, and for a lead or contact with no email address. An archived contact is refused too. A task linked to one contact also offers **Open contact**, under **More** in its details. The task's row on a timeline offers **Write email** to the same contact, lead or company.
 
 **Call** and **Book a meeting** go to the first contact the task is filed on, and an archived contact gets neither. **Call** dials. If you may log activity, it also opens **Log activity** on **Call** under the task, which does not complete the task. A done or read-only task offers the same steps. On the open card under **Needs you** on **Home**, the step is the colour button and **Done** is a plain one. A **Do** task, or one whose step has nothing to act on, keeps **Done** as the colour button.
 
