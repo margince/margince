@@ -307,7 +307,7 @@ type workflow struct {
 // exactly where it should be — one file over.
 func gateWorkflowDeclaring(t *testing.T, job string) string {
 	t.Helper()
-	paths, err := filepath.Glob("../.github/workflows/*.yml")
+	paths, err := gatekit.Glob("../.github/workflows/*.yml")
 	if err != nil {
 		t.Fatalf("listing workflows: %v", err)
 	}

@@ -8,7 +8,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"reflect"
 	"slices"
 	"strconv"
@@ -93,7 +92,7 @@ func uniqueItemsSite(path []string) string {
 // Type.json_name.
 func uniqueTaggedFields(t *testing.T, path string) map[string]bool {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatal(err)
 	}

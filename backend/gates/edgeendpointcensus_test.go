@@ -282,7 +282,7 @@ func endpointDeclSpec(decl ast.Decl) (*ast.ValueSpec, bool) {
 // sortedMigrationsUp lists every applied-direction core migration in migration order.
 func sortedMigrationsUp(t *testing.T) []string {
 	t.Helper()
-	matches, err := filepath.Glob(filepath.Join(coreMigrations, "*.up.sql"))
+	matches, err := gatekit.Glob(filepath.Join(coreMigrations, "*.up.sql"))
 	if err != nil {
 		t.Fatalf("listing %s: %v", coreMigrations, err)
 	}

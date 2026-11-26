@@ -256,7 +256,7 @@ var jobsYAMLDispatcher = regexp.MustCompile(`(?m)^\s*role: dispatcher\s*$`)
 // declare, valued by the file that declares it.
 func extensionDispatcherKinds(t *testing.T, root string) map[string]string {
 	t.Helper()
-	files, err := filepath.Glob(filepath.Join(root, "*", "api", "jobs.yaml"))
+	files, err := gatekit.Glob(filepath.Join(root, "*", "api", "jobs.yaml"))
 	if err != nil {
 		t.Fatalf("listing jobs fragments under %s: %v", root, err)
 	}
@@ -286,7 +286,7 @@ func extensionDispatcherKinds(t *testing.T, root string) map[string]string {
 // and job. The unit is its directory's name.
 func extensionDeclaredJobs(t *testing.T, root string) map[string]string {
 	t.Helper()
-	files, err := filepath.Glob(filepath.Join(root, "*", "*.go"))
+	files, err := gatekit.Glob(filepath.Join(root, "*", "*.go"))
 	if err != nil {
 		t.Fatalf("listing units under %s: %v", root, err)
 	}

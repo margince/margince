@@ -74,7 +74,7 @@ func workflowFiles(t *testing.T) []string {
 	t.Helper()
 	var files []string
 	for _, ext := range []string{"*.yml", "*.yaml"} {
-		found, err := filepath.Glob(filepath.Join(workflowDir, ext))
+		found, err := gatekit.Glob(filepath.Join(workflowDir, ext))
 		if err != nil {
 			t.Fatalf("listing %s workflows: %v", ext, err)
 		}
@@ -341,7 +341,7 @@ func compositeActionFiles(t *testing.T) []string {
 	// GitHub honours either, so reading one would leave a whole class of action
 	// unscanned.
 	for _, name := range []string{"action.yml", "action.yaml"} {
-		matched, err := filepath.Glob(filepath.Join(actionDir, "*", name))
+		matched, err := gatekit.Glob(filepath.Join(actionDir, "*", name))
 		if err != nil {
 			t.Fatalf("listing composite actions: %v", err)
 		}

@@ -31,7 +31,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"go/types"
 	"path/filepath"
 	"strings"
@@ -262,7 +261,7 @@ func TestTheToolMinorUnitDetectorSeesWhatItClaimsTo(t *testing.T) {
 	root := t.TempDir()
 	writePromptFixture(t, filepath.Join(root, toolResultDir, "tools.go"), toolFixture)
 	findings, resolved, unresolved := toolMinorUnitFindings(t, root, func(path string) (*ast.File, error) {
-		return parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+		return gatekit.ParseFile(path, parser.SkipObjectResolution)
 	})
 	agents := filepath.Join(root, toolResultDir)
 	want := []string{agents + ".Bare.CostMinor", agents + ".Hidden.AmountMinor", agents + ".Line.NetMinor",

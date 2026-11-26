@@ -157,7 +157,7 @@ func systemActingNames(t *testing.T, parsed gatekit.ParsedFile, consts packageCo
 func helperArguments(t *testing.T, parsed gatekit.ParsedFile, consts packageConsts, helper string, index int) []string {
 	t.Helper()
 	dir := packageDir(parsed)
-	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	sources, err := gatekit.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s: %v", dir, err)
 	}
@@ -251,7 +251,7 @@ type declaredString struct {
 
 func constExprs(t *testing.T, dir string) map[string]declaredString {
 	t.Helper()
-	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	sources, err := gatekit.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s: %v", dir, err)
 	}

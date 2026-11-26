@@ -161,7 +161,7 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 // the two row-probe spellings, and the standing probe beside it.
 func moduleDirsWith(t *testing.T, identifiers ...string) []string {
 	t.Helper()
-	paths, err := filepath.Glob("internal/modules/*/*.go")
+	paths, err := gatekit.Glob("internal/modules/*/*.go")
 	if err != nil {
 		t.Fatalf("listing the module sources: %v", err)
 	}

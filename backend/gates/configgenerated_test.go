@@ -11,6 +11,7 @@ package gates
 // schema describing a product that no longer exists.
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -48,7 +49,7 @@ func TestGeneratedConfigurationFilesAreCurrent(t *testing.T) {
 func TestEveryShippedConfigValidatesAgainstTheSchema(t *testing.T) {
 	t.Parallel()
 	schema := compiledConfigSchema(t)
-	paths, err := filepath.Glob("../config/margince*.yaml")
+	paths, err := gatekit.Glob("../config/margince*.yaml")
 	if err != nil {
 		t.Fatalf("globbing the shipped configs: %v", err)
 	}
@@ -97,16 +98,11 @@ func TestTheSchemaAcceptsAnExplicitNullWhereTheLoaderDoes(t *testing.T) {
 
 func compiledConfigSchema(t *testing.T) *jsonschema.Schema {
 	t.Helper()
-	raw, err := os.Open("../config/margince.schema.json")
+	raw, err := gatekit.ReadFile("../config/margince.schema.json")
 	if err != nil {
-		t.Fatalf("open schema: %v", err)
+		t.Fatalf("read schema: %v", err)
 	}
-	defer func() {
-		if cerr := raw.Close(); cerr != nil {
-			t.Errorf("close schema: %v", cerr)
-		}
-	}()
-	doc, err := jsonschema.UnmarshalJSON(raw)
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(raw))
 	if err != nil {
 		t.Fatalf("parse schema: %v", err)
 	}

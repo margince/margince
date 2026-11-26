@@ -100,7 +100,7 @@ func TestEveryGoWorkflowFallsThroughAFailingModuleProxy(t *testing.T) {
 
 func TestEveryPinnedToolDownloadRetries(t *testing.T) {
 	t.Parallel()
-	scripts, err := filepath.Glob(pinScriptGlob)
+	scripts, err := gatekit.Glob(pinScriptGlob)
 	if err != nil {
 		t.Fatalf("listing pin scripts: %v", err)
 	}

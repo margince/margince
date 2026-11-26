@@ -44,7 +44,7 @@ var currentNames = sync.OnceValue(buildRenames)
 // buildRenames walks the core migrations in apply order and collects every
 // rename, following a chain so a name moved twice lands on where it is now.
 func buildRenames() map[string]string {
-	files, err := filepath.Glob(filepath.Join(repoRoot, "backend", "migrations", "core", "*.up.sql"))
+	files, err := gatekit.Glob(filepath.Join(repoRoot, "backend", "migrations", "core", "*.up.sql"))
 	if err != nil || len(files) == 0 {
 		return nil
 	}

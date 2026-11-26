@@ -226,7 +226,7 @@ func TestCoreMigrationsKeepLargeCorrectionsInDataTasks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	files, err := filepath.Glob("migrations/core/*.sql")
+	files, err := gatekit.Glob("migrations/core/*.sql")
 	if err != nil || len(files) == 0 {
 		t.Fatalf("core migration census: %d files, %v", len(files), err)
 	}
