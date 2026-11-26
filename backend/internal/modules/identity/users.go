@@ -415,7 +415,7 @@ func endCredentialAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID, r
 	}
 	// A merge confirmation speaks for the credentials the account had, so it ends with them.
 	_, err := tx.Exec(ctx,
-		`UPDATE auth_token SET `+expireTokenSQL+`
+		`UPDATE auth_token SET `+expireNowSQL+`
 		  WHERE (user_id = $1 OR counterpart_user_id = $1) AND purpose = $2 AND expires_at > now()`,
 		userID, purposeMemberMergeConfirm)
 	return err

@@ -41,9 +41,9 @@ const (
 	confirmationNotNeeded    = "not_needed"
 )
 
-// expireTokenSQL ends a token now. expires_at must stay after created_at, and a
+// expireNowSQL ends a token now. expires_at must stay after created_at, and a
 // token minted a moment ago in this transaction is later than now().
-const expireTokenSQL = `expires_at = greatest(now(), created_at + interval '1 microsecond')`
+const expireNowSQL = `expires_at = greatest(now(), created_at + interval '1 microsecond')`
 
 // mergeToken is the live confirmation token one side holds for one pair.
 type mergeToken struct {
@@ -158,7 +158,7 @@ func applyMergeConfirmations(
 // answers their ids for the audit row. The ids stay in the audit row after the
 // credential reaper removes the spent rows, and a spent row counts for no merge.
 func spendMergeConfirmations(ctx context.Context, tx pgx.Tx, source, survivor ids.UUID) ([]ids.UUID, error) {
-	rows, err := tx.Query(ctx, `UPDATE auth_token SET `+expireTokenSQL+`
+	rows, err := tx.Query(ctx, `UPDATE auth_token SET `+expireNowSQL+`
  WHERE purpose = @purpose AND used_at IS NOT NULL AND expires_at > now()
    AND ((user_id = @source AND counterpart_user_id = @survivor AND merge_survivor = false)
      OR (user_id = @survivor AND counterpart_user_id = @source AND merge_survivor = true))
@@ -268,7 +268,7 @@ func mintMergeConfirmation(ctx context.Context, tx pgx.Tx, side, other ids.UUID,
 	if err := tx.QueryRow(ctx, `SELECT email FROM app_user WHERE id = @side`, pgx.StrictNamedArgs{"side": side}).Scan(&link.Email); err != nil {
 		return link, err
 	}
-	if _, err := tx.Exec(ctx, `UPDATE auth_token SET `+expireTokenSQL+`
+	if _, err := tx.Exec(ctx, `UPDATE auth_token SET `+expireNowSQL+`
  WHERE user_id = @side AND counterpart_user_id = @other AND merge_survivor = @survivor AND purpose = @purpose AND used_at IS NULL AND expires_at > now()`,
 		pgx.StrictNamedArgs{"side": side, "other": other, "survivor": bool(survivor), "purpose": purposeMemberMergeConfirm}); err != nil {
 		return link, err
