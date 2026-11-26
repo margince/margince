@@ -33,7 +33,7 @@ const lineSystem = `You write the one sentence a CRM shows under "How it stands"
 Return ONLY a JSON object: {"keep_previous":true|false,"sentences":[{"text":"...","evidence":[{"entity_type":"activity","entity_id":"<the activity's ref, such as a1>"}]}]}.
 The sentence says where things stand now, in substance, as a colleague would: who said or did what last and what that means for the next step. For example: "In her last mail on 24 November, Anna Weber confirmed the rollout plan and asked for the contract draft by Friday."
 Read the newest activity first. Use an older one only when the newest makes no sense without it.
-Name people by the name the summary gives. The line is read by several colleagues, so never write "you" or "we". "side": "customer" is the customer's side, "our team" is a colleague.
+Name each contact and colleague by the name the summary gives. The line is read by several colleagues, so never write "you" or "we". "side": "customer" is the customer's side, "our team" is a colleague.
 Never say only who wrote or how often ("both sides have written", "there was an exchange", "they replied"). Say what was said.
 Name a date only as the summary gives it. Never compute one. Never invent a promise, an amount or a stage.
 If "previous_line" is present and still says correctly where things stand, return {"keep_previous":true,"sentences":[]}.
@@ -46,6 +46,8 @@ func systemFor(fence promptfence.Fence, lang string) string {
 
 // LineRequest builds the one request this site sends. Exported so the
 // certification case sends the request production sends.
+//
+//promptvoice:exempt the line is shared on a record's page, so it never says "you" or "I", which the voice requires.
 func LineRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{

@@ -216,7 +216,7 @@ func wireSentences(in []claims.Sentence) []crmcontracts.CompanyBriefSentence {
 }
 
 func (s *Service) cached(ctx context.Context, reader ids.UserID, taskID ids.ActivityID) (stored, bool, error) {
-	row, found, err := generatedsummary.Read(ctx, s.pool, reader, generatedsummary.TaskExplanation(taskID))
+	row, found, err := generatedsummary.ReadTaskExplanation(ctx, s.pool, reader, taskID)
 	if err != nil || !found {
 		return stored{}, false, err
 	}
@@ -234,7 +234,7 @@ func (s *Service) save(ctx context.Context, reader ids.UserID, taskID ids.Activi
 		return fmt.Errorf("encode the task explanation: %w", err)
 	}
 	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		return generatedsummary.SaveTx(ctx, tx, reader, generatedsummary.TaskExplanation(taskID), generatedsummary.Entry{
+		return generatedsummary.SaveTaskExplanationTx(ctx, tx, reader, taskID, generatedsummary.Entry{
 			Fingerprint: written.Fingerprint,
 			GeneratedAt: written.GeneratedAt,
 			GeneratedBy: string(written.GeneratedBy),

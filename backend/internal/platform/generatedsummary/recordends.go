@@ -25,8 +25,7 @@ func ForgetContacts(ctx context.Context, tx pgx.Tx, contacts ...ids.ContactID) e
 		`DELETE FROM generated_summary WHERE contact_id = ANY($1)`, keys); err != nil {
 		return fmt.Errorf("delete the generated summaries of a contact: %w", err)
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM generated_summary WHERE kind = $1`, KindTaskExplanation); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM task_explanation`); err != nil {
 		return fmt.Errorf("delete the task explanations that may quote a contact: %w", err)
 	}
 	return forgetStandingLinesTx(ctx, tx, keys)

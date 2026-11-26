@@ -93,7 +93,7 @@ func FromActivities(kind, previous string, rows []crmcontracts.Activity) Input {
 }
 
 // authorOf names who wrote an activity and which side they are on. The line is
-// shared, so it names people and never says "you".
+// shared, so it names who wrote and never says "you".
 func authorOf(voice *crmcontracts.ActivityVoice) (string, string) {
 	if voice == nil || voice.Author == nil {
 		return "", ""
@@ -122,7 +122,7 @@ func deref(s *string) string {
 	return *s
 }
 
-// Activities is every activity the line was written from, its evidence.
+// Activities lists the ids of the activities the line was written from.
 func (in Input) Activities() []string {
 	out := make([]string, len(in.Recent))
 	for i, act := range in.Recent {

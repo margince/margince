@@ -110,6 +110,7 @@ func censusJobConfig() JobRunnerConfig {
 		DeepReadBrain:          seam,
 		TranscriptProposeBrain: seam,
 		StageEvidenceBrain:     seam,
+		StandingLineLane:       StandingLineLane{StandingLineBrain: seam},
 		AccountScanBrain:       seam,
 		Geocoder:               censusGeocoder{},
 		VatChecker:             censusVatChecker{},

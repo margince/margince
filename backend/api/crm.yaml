@@ -10184,6 +10184,7 @@ paths:
       x-waits-on-model: on-miss
       x-agent-access: human-only
       x-human-only-reason: covered   # an agent reads the task and its contact through read_record and read_context
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
       summary: Why one task is on the reader's list, written from that task's own records.
       description: |
         What happened, what it costs if nothing is done, and what to do, for one open task. A

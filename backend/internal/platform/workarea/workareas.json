@@ -1457,6 +1457,7 @@
     "getSystemHealth": "system_health",
     "getTag": "tags",
     "getTagSuggestion": "tags",
+    "getTaskExplanation": "activities",
     "getTeamBoard": "worklist",
     "getTeamExceptions": "worklist",
     "getTeamMarginceChanges": "worklist",

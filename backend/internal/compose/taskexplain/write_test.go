@@ -10,6 +10,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -97,6 +98,7 @@ func TestAStockSentenceIsDropped(t *testing.T) {
 }
 
 func TestEveryFloorTemplateIsSpecific(t *testing.T) {
+	langcopytest.Census(t, floorPhrases)
 	for _, lang := range []textlang.Lang{textlang.English, textlang.German, textlang.Vietnamese} {
 		for _, s := range Floor(promiseInput(), string(lang)) {
 			if Generic(s.Text) {

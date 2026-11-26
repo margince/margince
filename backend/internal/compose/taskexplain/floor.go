@@ -23,7 +23,7 @@ var floorPhrases = struct {
 }{
 	NamedSaid:    phrase{En: "%s wrote: “%s”", De: "%s schrieb: „%s“", Vi: "%s đã viết: “%s”"},
 	BareSaid:     phrase{En: "The message behind this task says: “%s”", De: "Die Nachricht hinter dieser Aufgabe sagt: „%s“", Vi: "Tin nhắn dẫn đến việc này viết: “%s”"},
-	NamedSubject: phrase{En: "This task comes from %s's message “%s”.", De: "Diese Aufgabe stammt aus der Nachricht „%[2]s“ von %[1]s.", Vi: "Việc này đến từ tin nhắn “%[2]s” của %[1]s."},
+	NamedSubject: phrase{En: "This task comes from %s's message “%s”.", De: "Diese Aufgabe stammt aus einer Nachricht von %s: „%s“.", Vi: "Việc này đến từ tin nhắn của %s: “%s”."},
 	BareSubject:  phrase{En: "This task comes from the message “%s”.", De: "Diese Aufgabe stammt aus der Nachricht „%s“.", Vi: "Việc này đến từ tin nhắn “%s”."},
 	TheyLast:     phrase{En: "%s's latest message: “%s”", De: "Die neueste Nachricht von %s: „%s“", Vi: "Tin nhắn mới nhất của %s: “%s”"},
 	YouLast:      phrase{En: "Your latest message: “%s”", De: "Deine neueste Nachricht: „%s“", Vi: "Tin nhắn mới nhất của bạn: “%s”"},

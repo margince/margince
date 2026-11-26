@@ -6153,32 +6153,29 @@ public.fx_rate.to_currency currency_code NOT NULL gen=- def=-
 public.fx_rate_current_pair_day CREATE UNIQUE INDEX fx_rate_current_pair_day ON public.fx_rate USING btree (from_currency, to_currency, rate_date) WHERE (superseded_at IS NULL)
 public.fx_rate_pkey CREATE UNIQUE INDEX fx_rate_pkey ON public.fx_rate USING btree (id)
 public.generated_summary acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.generated_summary.activity_id uuid gen=- def=-
 public.generated_summary.company_id uuid gen=- def=-
 public.generated_summary.contact_id uuid gen=- def=-
 public.generated_summary.deal_id uuid gen=- def=-
 public.generated_summary.fingerprint text NOT NULL gen=- def=-
 public.generated_summary.generated_at timestamp with time zone NOT NULL gen=- def=now()
 public.generated_summary.generated_by text NOT NULL gen=- def=-
-public.generated_summary.generated_summary_activity_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.generated_summary.generated_summary_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.generated_summary.generated_summary_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.generated_summary.generated_summary_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.generated_summary.generated_summary_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
-public.generated_summary.generated_summary_kind_check CHECK ((kind = ANY (ARRAY['company_brief'::text, 'company_dossier'::text, 'company_growth_fit'::text, 'contact_brief'::text, 'deal_status_card'::text, 'task_explanation'::text])))
-public.generated_summary.generated_summary_kind_names_its_record CHECK (((num_nonnulls(company_id, contact_id, deal_id, activity_id) = 1) AND ((contact_id IS NOT NULL) = (kind = 'contact_brief'::text)) AND ((deal_id IS NOT NULL) = (kind = 'deal_status_card'::text)) AND ((activity_id IS NOT NULL) = (kind = 'task_explanation'::text))))
-public.generated_summary.generated_summary_reader_kind_record_key UNIQUE NULLS NOT DISTINCT (user_id, kind, company_id, contact_id, deal_id, activity_id)
+public.generated_summary.generated_summary_kind_check CHECK ((kind = ANY (ARRAY['company_brief'::text, 'company_dossier'::text, 'company_growth_fit'::text, 'contact_brief'::text, 'deal_status_card'::text])))
+public.generated_summary.generated_summary_kind_names_its_record CHECK (((num_nonnulls(company_id, contact_id, deal_id) = 1) AND ((contact_id IS NOT NULL) = (kind = 'contact_brief'::text)) AND ((deal_id IS NOT NULL) = (kind = 'deal_status_card'::text))))
+public.generated_summary.generated_summary_reader_kind_record_key UNIQUE NULLS NOT DISTINCT (user_id, kind, company_id, contact_id, deal_id)
 public.generated_summary.generated_summary_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.generated_summary.kind text NOT NULL gen=- def=-
 public.generated_summary.payload jsonb NOT NULL gen=- def=-
 public.generated_summary.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.generated_summary FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000,"kind":20000}')
 public.generated_summary.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.generated_summary FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000,"kind":20000}')
 public.generated_summary.user_id uuid NOT NULL gen=- def=-
-public.generated_summary_activity_ix CREATE INDEX generated_summary_activity_ix ON public.generated_summary USING btree (activity_id) WHERE (activity_id IS NOT NULL)
 public.generated_summary_company_ix CREATE INDEX generated_summary_company_ix ON public.generated_summary USING btree (company_id) WHERE (company_id IS NOT NULL)
 public.generated_summary_contact_ix CREATE INDEX generated_summary_contact_ix ON public.generated_summary USING btree (contact_id) WHERE (contact_id IS NOT NULL)
 public.generated_summary_deal_ix CREATE INDEX generated_summary_deal_ix ON public.generated_summary USING btree (deal_id) WHERE (deal_id IS NOT NULL)
-public.generated_summary_reader_kind_record_key CREATE UNIQUE INDEX generated_summary_reader_kind_record_key ON public.generated_summary USING btree (user_id, kind, company_id, contact_id, deal_id, activity_id) NULLS NOT DISTINCT
+public.generated_summary_reader_kind_record_key CREATE UNIQUE INDEX generated_summary_reader_kind_record_key ON public.generated_summary USING btree (user_id, kind, company_id, contact_id, deal_id) NULLS NOT DISTINCT
 public.geocode_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.geocode_cache.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.geocode_cache.geocode_cache_pkey PRIMARY KEY (query)
@@ -10582,6 +10579,21 @@ public.taggable.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT 
 public.taggable.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.taggable FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000, "assigned_by_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"assigned_by_kind":20000,"entity_type":20000}')
 public.taggable_pkey CREATE UNIQUE INDEX taggable_pkey ON public.taggable USING btree (id)
 public.taggable_unique CREATE UNIQUE INDEX taggable_unique ON public.taggable USING btree (tag_id, entity_type, entity_id)
+public.task_explanation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.task_explanation.activity_id uuid NOT NULL gen=- def=-
+public.task_explanation.fingerprint text NOT NULL gen=- def=-
+public.task_explanation.generated_at timestamp with time zone NOT NULL gen=- def=now()
+public.task_explanation.generated_by text NOT NULL gen=- def=-
+public.task_explanation.payload jsonb NOT NULL gen=- def=-
+public.task_explanation.task_explanation_activity_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.task_explanation.task_explanation_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
+public.task_explanation.task_explanation_pkey PRIMARY KEY (user_id, activity_id)
+public.task_explanation.task_explanation_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.task_explanation.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.task_explanation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')
+public.task_explanation.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.task_explanation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')
+public.task_explanation.user_id uuid NOT NULL gen=- def=-
+public.task_explanation_activity_ix CREATE INDEX task_explanation_activity_ix ON public.task_explanation USING btree (activity_id)
+public.task_explanation_pkey CREATE UNIQUE INDEX task_explanation_pkey ON public.task_explanation USING btree (user_id, activity_id)
 public.tax_rate acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.tax_rate.captured_by text NOT NULL gen=- def=-
 public.tax_rate.category text NOT NULL gen=- def=-

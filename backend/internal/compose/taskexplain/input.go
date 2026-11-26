@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -50,7 +51,7 @@ type TaskIn struct {
 	Title string `json:"title"`
 	Text  string `json:"text,omitempty"`
 	// Origin is what filed the task: a promise read from mail, a customer's
-	// request, an automation rule, or a person.
+	// request, an automation rule, or a colleague.
 	Origin  string `json:"origin"`
 	Created string `json:"created"`
 	Due     string `json:"due,omitempty"`
@@ -70,7 +71,7 @@ func FromTask(task crmcontracts.Activity, now time.Time) TaskIn {
 	in.Title, in.Text = readerWords(task)
 	if task.DueAt != nil {
 		in.Due = task.DueAt.UTC().Format(time.DateOnly)
-		in.Overdue = task.DueAt.Before(now)
+		in.Overdue = deadline.Passed(task.DueAt, now)
 	}
 	return in
 }
@@ -118,7 +119,7 @@ func deref(s *string) string {
 	return *s
 }
 
-// knownRecords is every record a sentence may cite, with what the model was
+// knownRecords maps the records a sentence may cite to what the model was
 // shown of it: the task, its source and the relationship's own records.
 func knownRecords(in Input) map[claims.Evidence]string {
 	known := map[claims.Evidence]string{}

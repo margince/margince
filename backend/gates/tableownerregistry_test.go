@@ -613,6 +613,8 @@ var tableOwners = map[string]string{
 	// Each record's status line, shared by its readers and served only to one
 	// who may open every activity it was written from.
 	"standing_line": generatedSummaryStoreDir,
+	// Why a task is on one reader's list, rebuilt from the task's records.
+	"task_explanation": generatedSummaryStoreDir,
 }
 
 // sqlTarget is one write a literal performs: which table, by which verb, and
