@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
+	"github.com/margince/margince/backend/internal/compose/languages"
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -44,6 +45,9 @@ func RecordComposition(
 	}
 	if err := ReconcileChannelProviders(ctx, pool); err != nil {
 		return fmt.Errorf("compose: registering this binary's channel vocabulary: %w", err)
+	}
+	if err := languages.Reconcile(ctx, pool, exts); err != nil {
+		return fmt.Errorf("compose: registering the units' languages: %w", err)
 	}
 	if err := FillExtensionRbacDefaults(ctx, pool, log); err != nil {
 		return fmt.Errorf("compose: filling the units' default role grants: %w", err)

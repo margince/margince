@@ -194,6 +194,7 @@ var foreignKeyNoIndexNeeded = map[string]string{
 	"sdr_handoff_reason":         "a reason is a vocabulary row the handoffs that cite it keep resolving",
 	"activity_kind":              "the kind vocabulary. Nothing deletes a kind, and an index on it would cost every insert of the busiest table in the schema to serve a delete that does not happen",
 	"ai_call_config":             "a configuration is superseded rather than removed, so a call can still say what it ran under",
+	"language":                   "a language is a vocabulary row. Nothing deletes one, because stored rows keep naming it, and an index on each of eight columns would cost every insert of the busiest tables to serve a delete that does not happen",
 	"channel_provider":           "a provider is a vocabulary row; the identities bound to it keep naming it",
 	"deal_acquisition_source":    "a source is vocabulary the deals that cite it keep resolving",
 	"offer":                      "an offer is archived with its deal rather than deleted",

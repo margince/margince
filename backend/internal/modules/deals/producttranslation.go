@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -35,15 +35,8 @@ const (
 	translationTextLimit    = values.TextDocumentCharacters
 )
 
-var languageShape = regexp.MustCompile(`^[a-z]{2}$`)
-
-// checkLanguage refuses anything but a lower-case ISO 639-1 code.
-func checkLanguage(language string) error {
-	if !languageShape.MatchString(language) {
-		return &values.ParseError{Field: languageField, Code: "invalid_language", Message: "language is an ISO 639-1 code, for example de"}
-	}
-	return nil
-}
+// checkLanguage refuses a code the language table does not hold.
+func checkLanguage(language string) error { return textlang.CheckRegistered(languageField, language) }
 
 // ListProductTranslations answers a product's text in every further language.
 func (s *Store) ListProductTranslations(ctx context.Context, id ids.ProductID) ([]crmcontracts.ProductTranslation, error) {

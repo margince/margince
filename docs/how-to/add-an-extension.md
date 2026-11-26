@@ -875,6 +875,25 @@ Set the types on a company with `Core().Companies().SetExtensionTypes(ctx, compa
 
 A user or an agent can also set a declared value with `PATCH /v1/companies/{id}`, in `extension_relationship_types`. A value that no unit declares is refused with a 422 on that field and the code `invalid_enum`. A company that already holds a value keeps it when its unit is later removed, and a save that does not change it is accepted. `GET /v1/company-types` lists every declared value with its label, for any signed-in user. The company list takes a declared value in `extension_relationship_type`. The `relationship_type` filter stays core's own list.
 
+## Declare a language
+
+Core ships German, English and Vietnamese. Every column that holds a language code, such as an activity's language or the language of a consent notice, points at the `language` table, so a typo cannot be stored. A unit that works in another language adds it, with no core migration.
+
+```go
+Languages: []extension.Language{
+	{Code: "ar", Label: "Arabic"},
+},
+```
+
+| Field | Meaning |
+|---|---|
+| `Code` | A lower-case two-letter ISO 639-1 code. A code core already ships is refused. |
+| `Label` | The language's name in English. Required, at most 120 characters. |
+
+The start writes each declared language into the table before anything serves, and refuses a bad declaration with a message that names the unit. Two units may declare the same code. The row stays when a unit is removed, because stored rows still name it.
+
+A declared language does not translate the product. The screens keep falling back to English for a language with no catalogue. Offers, product translations and legal entities take a language only if core ships it or a unit declares it, so an offer in `fr` is refused until a unit declares `fr`.
+
 ## Declare a record kind
 
 A unit that keeps records core does not know, such as a ledger account, can declare them as a record kind. Core then

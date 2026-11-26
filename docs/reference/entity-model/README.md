@@ -30,9 +30,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 355 |
-| Columns | 4393 |
-| Foreign keys | 620 |
+| Tables | 356 |
+| Columns | 4396 |
+| Foreign keys | 628 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -52,10 +52,11 @@ Ranked by how many foreign keys point at them.
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 30 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 14 | 9 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 8 | 8 |
-| [`attachment`](activities.md#attachment) | [activities](activities.md) | 28 | 6 |
+| [`language`](compose.md#language) | [compose](compose.md) | 3 | 8 |
 
 ```mermaid
 erDiagram
+    language ||--o{ app_user : locale
     team ||--o{ app_user : routine_mail_team_id
     lead ||--o{ contact : converted_from_lead_id
     activity ||--o{ contact : created_from_activity_id
@@ -64,6 +65,7 @@ erDiagram
     app_user ||--o{ activity : assignee_id
     app_user ||--o{ activity : host_user_id
     app_user ||--o{ activity : invitation_sender
+    language ||--o{ activity : language
     legal_entity ||--o{ activity : legal_entity_id
     app_user ||--o{ activity : sent_by_colleague
     app_user ||--o{ activity : source_author_id
@@ -86,6 +88,7 @@ erDiagram
     company ||--o{ project : company_id
     app_user ||--o{ project : owner_id
     app_user ||--o{ project : source_author_id
+    language ||--o{ legal_entity : default_language
     app_user ||--o{ passport : granted_by
     app_user ||--o{ passport : on_behalf_of
 ```
@@ -107,7 +110,7 @@ erDiagram
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
-| [compose](compose.md) | 43 |
+| [compose](compose.md) | 44 |
 | [consent](consent.md) | 23 |
 | [contacts](contacts.md) | 49 |
 | [continuity](continuity.md) | 1 |
@@ -340,6 +343,7 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 10 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 11 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 15 | 1 |
+| [`language`](compose.md#language) | compose | 3 | 8 |
 | [`lawful_basis_confirmation`](consent.md#lawful_basis_confirmation) | consent | 9 | 0 |
 | [`lead`](contacts.md#lead) | contacts | 50 | 20 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |

@@ -26,34 +26,28 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// composedIngressFor returns the ingress sources the named unit declared in
-// THIS boot's composition.
+// composedFor returns what the named unit declared in THIS boot's composition,
+// read through field.
 //
 // It reads the composed declarations rather than a second registry, for the
 // reason ComposedExtensions exists: the set the boot reconciliation actually
 // validated is the only honest answer to "what may this unit do", and a
 // parallel copy could describe a unit that is not serving.
-func composedIngressFor(unit string) []extension.IngressSource {
+func composedFor[T any](unit string, field func(extension.Extension) []T) []T {
 	for _, ext := range ComposedExtensions() {
 		if string(ext.Name) == unit {
-			return ext.Ingress
+			return field(ext)
 		}
 	}
 	return nil
 }
 
-// composedChannelsFor returns the transports the named unit declared in THIS
-// boot's composition, and it is composedIngressFor's twin for the same reason:
-// what a unit may name at a write door is what the boot reconciliation
-// validated, never a second registry that could describe a unit that is not
-// serving.
+func composedIngressFor(unit string) []extension.IngressSource {
+	return composedFor(unit, func(e extension.Extension) []extension.IngressSource { return e.Ingress })
+}
+
 func composedChannelsFor(unit string) []extension.Channel {
-	for _, ext := range ComposedExtensions() {
-		if string(ext.Name) == unit {
-			return ext.Channels
-		}
-	}
-	return nil
+	return composedFor(unit, func(e extension.Extension) []extension.Channel { return e.Channels })
 }
 
 // declaredUserSecretKeys are the user-scoped secret keys the named unit

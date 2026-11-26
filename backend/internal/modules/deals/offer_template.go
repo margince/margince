@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -38,6 +39,10 @@ import (
 // defaultOfferTemplateLocale is the DE/EN launch default (WP7/OP-T02):
 // an empty locale on create resolves to de-DE, never a blank column.
 const defaultOfferTemplateLocale = "de-DE"
+
+// templateLocaleShape is offer_template_locale_shape: a language and an
+// optional region, so a template for de-DE and one for de-AT stay different.
+var templateLocaleShape = regexp.MustCompile(`^[a-z]{2}(-[A-Z]{2})?$`)
 
 // offerTemplateIsDefaultField names the is_default column/audit-payload
 // key in the one place both the Patch call and the two audit maps

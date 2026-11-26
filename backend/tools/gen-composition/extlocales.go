@@ -24,6 +24,8 @@ import (
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // localesLayer is the directory inside a unit's frontend package holding its
@@ -31,14 +33,20 @@ import (
 const localesLayer = "i18n"
 
 // composedLocales are the locales the core catalogue ships, and the only ones a
-// unit may supply. It is written out rather than discovered from the unit tree
-// on purpose: a unit inventing `fr.json` would silently ship copy no locale
-// switch can ever select, and the honest answer to that is a refusal rather
-// than a file nobody reads.
-//
-// Keep in step with frontend/src/i18n/locale.ts's LOCALES. The two lists are
-// held together by TestComposedLocalesMatchTheCatalogue.
-var composedLocales = []string{"en", "de", "vi"}
+// unit may supply. They are the product's shipped languages, taken from
+// textlang.Shipped rather than written out again; the frontend's LOCALES is held
+// to the same list by TestComposedLocalesMatchTheCatalogue. A unit inventing
+// `fr.json` would silently ship copy no locale switch can ever select, and the
+// honest answer to that is a refusal rather than a file nobody reads.
+var composedLocales = shippedLocales()
+
+func shippedLocales() []string {
+	out := make([]string, len(textlang.Shipped))
+	for i, lang := range textlang.Shipped {
+		out[i] = string(lang)
+	}
+	return out
+}
 
 // unitLocale is one unit's copy for one locale.
 type unitLocale struct {
