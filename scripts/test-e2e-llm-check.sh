@@ -705,6 +705,8 @@ judges "$c5" case5 declares-the-day-clear 1 "$c5_diary" "!$c5_promise"
 judges "$c5" case5 says-the-meeting-is-not-in-the-diary 1 "$c5_diary" "!$c5_promise"
 judges "$c5" case5 presents-the-aufstellung-as-sent 1 "$c5_promise" "!$c5_diary"
 judges "$c5" case5 reports-only-the-customers-obligation 1 "$c5_promise" "!$c5_diary"
+judges "$c5" case5 asks-to-check-whether-it-went 0 "!the judge says NO"
+judges "$c5" case5 asks-if-she-received-it 1 "$c5_promise" "!$c5_diary"
 
 # CASE 3 — the list goes in or waits for the yes, and either is the job done. The
 # defect reports the same numbers as both right answers, and only the server's
