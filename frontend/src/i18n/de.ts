@@ -10170,7 +10170,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.activity.summarize.running": "Die Zusammenfassung wird geschrieben…",
   "agent.activity.summarize.done": "Zusammenfassung bereit",
   "agent.activity.summarize.degraded":
-    "Zusammenfassung mit eingeschränkter KI-Hilfe erstellt",
+    "Zusammenfassung ohne volle KI-Hilfe erstellt",
   "agent.activity.summarize.failed": "Zusammenfassung fehlgeschlagen",
   "agent.activity.summarize.stalled":
     "Die Zusammenfassung dauert ungewöhnlich lange.",
@@ -10178,7 +10178,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.activity.summarizeNamed.running": "{name} wird zusammengefasst…",
   "agent.activity.summarizeNamed.done": "Zusammenfassung von {name} bereit",
   "agent.activity.summarizeNamed.degraded":
-    "Zusammenfassung von {name} mit eingeschränkter KI-Hilfe erstellt",
+    "Zusammenfassung von {name} ohne volle KI-Hilfe erstellt",
   "agent.activity.summarizeNamed.failed":
     "Zusammenfassung von {name} fehlgeschlagen",
   "agent.activity.summarizeNamed.stalled":
@@ -10187,7 +10187,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.activity.draftEmail.running": "Die E-Mail wird entworfen…",
   "agent.activity.draftEmail.done": "E-Mail-Entwurf bereit",
   "agent.activity.draftEmail.degraded":
-    "E-Mail-Entwurf mit eingeschränkter KI-Hilfe erstellt",
+    "E-Mail-Entwurf ohne volle KI-Hilfe erstellt",
   "agent.activity.draftEmail.failed": "E-Mail-Entwurf fehlgeschlagen",
   "agent.activity.draftEmail.stalled":
     "Der E-Mail-Entwurf dauert ungewöhnlich lange.",
@@ -10196,7 +10196,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die E-Mail zu {name} wird entworfen…",
   "agent.activity.draftEmailNamed.done": "E-Mail-Entwurf zu {name} bereit",
   "agent.activity.draftEmailNamed.degraded":
-    "E-Mail-Entwurf zu {name} mit eingeschränkter KI-Hilfe erstellt",
+    "E-Mail-Entwurf zu {name} ohne volle KI-Hilfe erstellt",
   "agent.activity.draftEmailNamed.failed":
     "E-Mail-Entwurf zu {name} fehlgeschlagen",
   "agent.activity.draftEmailNamed.stalled":
@@ -10205,7 +10205,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.activity.offerDraft.running": "Das Angebot wird entworfen…",
   "agent.activity.offerDraft.done": "Angebotsentwurf bereit",
   "agent.activity.offerDraft.degraded":
-    "Angebotsentwurf mit eingeschränkter KI-Hilfe erstellt",
+    "Angebotsentwurf ohne volle KI-Hilfe erstellt",
   "agent.activity.offerDraft.failed": "Angebotsentwurf fehlgeschlagen",
   "agent.activity.offerDraft.stalled":
     "Der Angebotsentwurf dauert ungewöhnlich lange.",
@@ -10214,7 +10214,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Antwort auf „{name}“ wird entworfen…",
   "agent.activity.draftReplyNamed.done": "Antwortentwurf zu „{name}“ bereit",
   "agent.activity.draftReplyNamed.degraded":
-    "Antwortentwurf zu „{name}“ mit eingeschränkter KI-Hilfe erstellt",
+    "Antwortentwurf zu „{name}“ ohne volle KI-Hilfe erstellt",
   "agent.activity.draftReplyNamed.failed":
     "Antwortentwurf zu „{name}“ fehlgeschlagen",
   "agent.activity.draftReplyNamed.stalled":
@@ -10224,7 +10224,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Angebot für {name} wird entworfen…",
   "agent.activity.offerDraftNamed.done": "Angebotsentwurf für {name} bereit",
   "agent.activity.offerDraftNamed.degraded":
-    "Angebotsentwurf für {name} mit eingeschränkter KI-Hilfe erstellt",
+    "Angebotsentwurf für {name} ohne volle KI-Hilfe erstellt",
   "agent.activity.offerDraftNamed.failed":
     "Angebotsentwurf für {name} fehlgeschlagen",
   "agent.activity.offerDraftNamed.stalled":

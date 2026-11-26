@@ -295,7 +295,7 @@ describe("speak", () => {
   it("never calls a new email a reply", () => {
     expect(
       lineFor({ kind: "draft_reply", state: "degraded" }, (key) => en[key]),
-    ).toBe("Email draft made with limited AI help");
+    ).toBe("Email draft made without full AI help");
     expect(
       lineFor({ kind: "draft_reply", state: "failed" }, (key) => de[key]),
     ).toBe("E-Mail-Entwurf fehlgeschlagen");

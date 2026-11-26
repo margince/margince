@@ -9882,14 +9882,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.summarize.queued": "Đang chờ tóm tắt",
   "agent.activity.summarize.running": "Đang viết tóm tắt…",
   "agent.activity.summarize.done": "Tóm tắt đã sẵn sàng",
-  "agent.activity.summarize.degraded": "Tóm tắt được viết với ít hỗ trợ từ AI",
+  "agent.activity.summarize.degraded":
+    "Tóm tắt được viết mà không có đủ hỗ trợ từ AI",
   "agent.activity.summarize.failed": "Không thể tạo tóm tắt",
   "agent.activity.summarize.stalled": "Quá trình tóm tắt kéo dài bất thường",
   "agent.activity.summarizeNamed.queued": "Đang chờ tóm tắt {name}",
   "agent.activity.summarizeNamed.running": "Đang tóm tắt {name}…",
   "agent.activity.summarizeNamed.done": "Tóm tắt {name} đã sẵn sàng",
   "agent.activity.summarizeNamed.degraded":
-    "Tóm tắt {name} được viết với ít hỗ trợ từ AI",
+    "Tóm tắt {name} được viết mà không có đủ hỗ trợ từ AI",
   "agent.activity.summarizeNamed.failed": "Không thể tóm tắt {name}",
   "agent.activity.summarizeNamed.stalled":
     "Quá trình tóm tắt {name} kéo dài bất thường",
@@ -9897,7 +9898,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.draftEmail.running": "Đang soạn email…",
   "agent.activity.draftEmail.done": "Bản nháp email đã sẵn sàng",
   "agent.activity.draftEmail.degraded":
-    "Bản nháp email được soạn với ít hỗ trợ từ AI",
+    "Bản nháp email được soạn mà không có đủ hỗ trợ từ AI",
   "agent.activity.draftEmail.failed": "Không thể soạn bản nháp email",
   "agent.activity.draftEmail.stalled":
     "Quá trình soạn bản nháp email kéo dài bất thường",
@@ -9906,7 +9907,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.draftEmailNamed.running": "Đang soạn email về {name}…",
   "agent.activity.draftEmailNamed.done": "Bản nháp email về {name} đã sẵn sàng",
   "agent.activity.draftEmailNamed.degraded":
-    "Bản nháp email về {name} được soạn với ít hỗ trợ từ AI",
+    "Bản nháp email về {name} được soạn mà không có đủ hỗ trợ từ AI",
   "agent.activity.draftEmailNamed.failed":
     "Không thể soạn bản nháp email về {name}",
   "agent.activity.draftEmailNamed.stalled":
@@ -9915,7 +9916,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.offerDraft.running": "Đang soạn báo giá…",
   "agent.activity.offerDraft.done": "Bản nháp báo giá đã sẵn sàng",
   "agent.activity.offerDraft.degraded":
-    "Bản nháp báo giá được soạn với ít hỗ trợ từ AI",
+    "Bản nháp báo giá được soạn mà không có đủ hỗ trợ từ AI",
   "agent.activity.offerDraft.failed": "Không thể soạn bản nháp báo giá",
   "agent.activity.offerDraft.stalled":
     "Quá trình soạn bản nháp báo giá kéo dài bất thường",
@@ -9925,7 +9926,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.draftReplyNamed.done":
     "Bản nháp trả lời “{name}” đã sẵn sàng",
   "agent.activity.draftReplyNamed.degraded":
-    "Bản nháp trả lời “{name}” được soạn với ít hỗ trợ từ AI",
+    "Bản nháp trả lời “{name}” được soạn mà không có đủ hỗ trợ từ AI",
   "agent.activity.draftReplyNamed.failed":
     "Không thể soạn bản nháp trả lời “{name}”",
   "agent.activity.draftReplyNamed.stalled":
@@ -9936,7 +9937,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.offerDraftNamed.done":
     "Bản nháp báo giá cho {name} đã sẵn sàng",
   "agent.activity.offerDraftNamed.degraded":
-    "Bản nháp báo giá cho {name} được soạn với ít hỗ trợ từ AI",
+    "Bản nháp báo giá cho {name} được soạn mà không có đủ hỗ trợ từ AI",
   "agent.activity.offerDraftNamed.failed":
     "Không thể soạn bản nháp báo giá cho {name}",
   "agent.activity.offerDraftNamed.stalled":
