@@ -26,8 +26,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -559,6 +563,12 @@ func listedStrings[T ~string](list func() []T) func() []string {
 func listedVocabularies() []listedVocabulary {
 	rows := []listedVocabulary{
 		{"communication_decision.resolved_category", "commsauthz.Categories", listedStrings(commsauthz.Categories)},
+		{"brief_item.reopen_on", "values.ReopenConditions", listedStrings(values.ReopenConditions)},
+		{"activity_reader_state.reopen_on", "values.ReopenConditions", listedStrings(values.ReopenConditions)},
+		{"contact.greeting_register", "greetingregister.Values", listedStrings(greetingregister.Values)},
+		{"contact.relationship_mark", "relationshipmark.Values", listedStrings(relationshipmark.Values)},
+		{"contact.narrowing_reason", "contacts.NarrowingReasons", listedStrings(contacts.NarrowingReasons)},
+		{"company_geocode_state.status", "contacts.GeocodeStatuses", contacts.GeocodeStatuses},
 	}
 	for _, table := range slices.Sorted(maps.Keys(recordSourceHeld)) {
 		rows = append(rows, listedVocabulary{table + ".source", "provenance.RecordSources", provenance.RecordSources})

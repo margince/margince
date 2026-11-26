@@ -134,7 +134,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendwebformsigning_test.go` | H3 | The setup dialog hands a website's developer the code that signs a server form's posts. |
 | `frontendwinmovesproject_test.go` | H3 | The won dialog tells the reader that winning also moves the deal's project. |
 | `frontendwriteverbs_test.go` | H3 | The browser hides a moment verb a seat may not take by asking whether the verb writes an activity. |
-| `geocodestatuses_test.go` | H3 | A company's geocode status is spelled once in Go and once in the column's CHECK, and the two are the same set. |
+| `geocodestatuses_test.go` | H3 | The address trigger stamps a company's stale geocode status as a literal, and this file holds that literal to contacts.GeocodeStale. |
 | `goversionpins_test.go` | H3 | One Go version, pinned in several places, and they have to agree. |
 | `grantrenewalcauses_test.go` | H1 | Every reason a standing grant needs renewing must reach the card that asks for it. |
 | `grouprolemapcap_test.go` | H3 | The ceiling on the group to role map is read in three places, and they have to be one number. |
@@ -592,19 +592,16 @@ The eight shapes, what each is for, and how each one silently passes:
 | `geocodestaleness_test.go` | H1 | The staleness rule lives in the schema, and this holds it there. |
 | `gitcontent_test.go` | H3 | What belongs to the repository, as against what happens to be in a working tree. |
 | `gitfixtureisolation_test.go` | H1 | Every test that builds a git repository keeps the caller's git config out of it. |
-| `greetingregistervocabulary_test.go` | H1 | The greeting register is spelled twice: greetingregister.Values() and the column's CHECK. |
 | `jobfault_test.go` | H2 | Every River worker returns through jobs.Fault. |
 | `jobfleetwide_test.go` | H2 | A FleetWide declaration is a promise: this job enumerates and enqueues, and does no tenant write of its own (jobs.FleetWide). |
 | `jobwirekey_test.go` | H2 | One workspace arg, one spelling, and only where it means something. |
 | `listenvelope_test.go` | H2 | The contract's list envelope has one shape, and httperr.withEmptyLists relies on it. |
 | `manifestdigest_test.go` | H2 | Every hash a generated unit manifest publishes says which algorithm produced it. |
-| `narrowingreasonvocabulary_test.go` | H1 | The narrowing reason is spelled twice: contacts.NarrowingReasons() and the column's CHECK. |
 | `noopifmatch_test.go` | H2 | An update that skips its write because nothing changes still answers the If-Match. |
 | `openresponseenums_test.go` | H2 | Every enum a response can carry is open, and every enum only a request carries stays closed. |
 | `positionalrowscan_test.go` | H2 | A positional row mapping may only target a struct its own package declares. |
 | `promptversionderived_test.go` | H2 | A cached answer is keyed by a fingerprint, and the fingerprint has to move when the prompt that produced the answer moves. |
 | `recordsourcevocabulary_test.go` | H1 | A record's source channel is spelled three times: provenance.RecordSources(), the table's CHECK and the contract's enum. |
-| `relationshipmarkvocabulary_test.go` | H1 | The relationship mark is spelled twice: relationshipmark.Values() and the column's CHECK. |
 | `replyverdictvocabulary_test.go` | H1 | The reply verdict is spelled in three places, and they have to agree. |
 | `resetwireshape_test.go` | H2 | The reset-data 200 body has the keys the contract's required list names, in the hand-written resetDataResponse struct. |
 | `retentionseedcoverage_test.go` | H1 | Every scope the retention engine can act on ships a default, or says why not. |
