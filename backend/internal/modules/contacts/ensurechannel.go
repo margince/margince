@@ -65,6 +65,9 @@ type EnsureChannelCounterpartyInput struct {
 	ActivityID ids.ActivityID // the captured activity to link
 	Source     string         // provenance channel, e.g. "telegram:<bot>:<chat>:<msg>"
 	CapturedBy string         // "connector:<provider>"
+	// LinkOnly files the activity under the contact the identity already names
+	// and creates none.
+	LinkOnly bool
 }
 
 // EnsureChannelCounterpartyResult reports what the ensure did. It carries no
@@ -76,6 +79,8 @@ type EnsureChannelCounterpartyResult struct {
 	// does. No contact was made, and the message is filed on the lead.
 	LeadID         ids.LeadID
 	DedupeRecorded bool
+	// Unresolved says LinkOnly found no contact, and the activity was left unlinked.
+	Unresolved bool
 	// Conflict is non-nil only when a later exact lane named a different
 	// contact than the one routing chose (dedupe.go's routeExact). It is a
 	// REPORT the caller decides what to do with (design §7.3/D8) — this
@@ -155,6 +160,9 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 	if err := s.resolveChannelContact(ctx, tx, in, &res); err != nil {
 		return EnsureChannelCounterpartyResult{}, err
 	}
+	if res.Unresolved {
+		return res, nil
+	}
 	if !res.LeadID.IsZero() {
 		allowed, err := mayReadLead(ctx)
 		if err != nil || !allowed {
@@ -193,15 +201,6 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 		}
 	}
 	return res, nil
-}
-
-// channelKeysOf names the identity and its aliases as the suppression list keys them.
-func channelKeysOf(ci connector.ChannelIdentity) []storekit.ChannelIdentityKey {
-	var keys []storekit.ChannelIdentityKey
-	for _, each := range ci.All() {
-		keys = append(keys, storekit.ChannelIdentityKey{Provider: each.Provider, ChannelUserID: storekit.ChannelSuppressionAccount(each.AccountScope, each.ChannelUserID)})
-	}
-	return keys
 }
 
 // resolveChannelContact runs PO-F-1 over the channel identity and, when nothing
@@ -245,6 +244,10 @@ func (s *Store) resolveChannelContact(ctx context.Context, tx pgx.Tx, in EnsureC
 		return nil
 	}
 
+	if in.LinkOnly {
+		res.Unresolved = true
+		return nil
+	}
 	// The mail path's decision: a live lead holding the vouched address is the
 	// record, and no contact is made beside it.
 	if in.CorroboratingEmail != "" {

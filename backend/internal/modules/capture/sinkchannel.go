@@ -51,6 +51,9 @@ type EnsureChannelRequest struct {
 	ActivityID         ids.UUID
 	Source             string
 	CapturedBy         string
+	// LinkOnly files the message under a contact the sender already has and
+	// creates none.
+	LinkOnly bool
 }
 
 // WithChannelEnsurer returns a copy wired to the channel auto-create path. A
@@ -264,6 +267,7 @@ func (s *Sink) ensureChannelCounterparty(ctx context.Context, rec connector.Norm
 		ActivityID:         ref.ID,
 		Source:             captureSource(rec),
 		CapturedBy:         decision.capturedBy,
+		LinkOnly:           decision.linkOnly,
 	})
 	if err != nil {
 		s.logEnsureFault(ctx, rec, err)

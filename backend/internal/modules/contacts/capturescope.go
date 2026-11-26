@@ -148,6 +148,18 @@ func widenTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, w widening) (bool
 		map[string]any{fieldVisibility: visibilityWorkspace})
 }
 
+// adoptOwnerlessTx gives a contact that has no owner the seat that retracts it.
+func adoptOwnerlessTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, owner ids.UUID) error {
+	tag, err := tx.Exec(ctx, `UPDATE contact SET owner_id = $2 WHERE id = $1 AND owner_id IS NULL AND archived_at IS NULL`, id, owner)
+	if err != nil {
+		return fmt.Errorf("contacts: giving a retracted contact its seat as owner: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return nil
+	}
+	return recordVisibilityShift(ctx, tx, id, map[string]any{filterOwnerID: nil}, map[string]any{filterOwnerID: owner.String()})
+}
+
 // narrowTx moves one workspace contact to its owner alone, recording why.
 //
 // Pinned to `workspace` for the reason widenTx is pinned to `owner`: a row
