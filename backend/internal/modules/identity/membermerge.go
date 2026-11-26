@@ -179,7 +179,7 @@ func spendMergeConfirmations(ctx context.Context, tx pgx.Tx, source, survivor id
  WHERE purpose = @purpose AND used_at IS NOT NULL AND expires_at > now()
    AND ((user_id = @source AND counterpart_user_id = @survivor AND merge_survivor = false)
      OR (user_id = @survivor AND counterpart_user_id = @source AND merge_survivor = true))
- RETURNING id`, pgx.StrictNamedArgs{"purpose": purposeMemberMergeConfirm, "source": source, "survivor": survivor})
+ RETURNING id`, pgx.StrictNamedArgs{purposeArg: purposeMemberMergeConfirm, "source": source, "survivor": survivor})
 	if err != nil {
 		return nil, err
 	}

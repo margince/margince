@@ -82,8 +82,7 @@ func TestAnExternalDocumentBeingReadIsNotReplacedUnderTheReader(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, _, err = ie.file(t, "drive-2", prose(3), nil)
-	var busy *knowledge.IngestBusyError
-	if !errors.As(err, &busy) {
+	if _, busy := errors.AsType[*knowledge.IngestBusyError](err); !busy {
 		t.Fatalf("replacing a running ingest = %v, want IngestBusyError", err)
 	}
 }
@@ -93,8 +92,7 @@ func TestAnExternalFilingIsHeldToTheUploadBounds(t *testing.T) {
 	_, _, err := ie.store.UpsertExternal(ie.ctx, gdocsCorpus, knowledge.ExternalDocument{
 		ExternalID: "x", Filename: "scan.pdf", ContentType: "application/pdf", Content: strings.NewReader("%PDF"),
 	}, ie.queue)
-	var unsupported *knowledge.UnsupportedTypeError
-	if !errors.As(err, &unsupported) {
+	if _, unsupported := errors.AsType[*knowledge.UnsupportedTypeError](err); !unsupported {
 		t.Fatalf("a PDF = %v, want UnsupportedTypeError", err)
 	}
 	if _, _, err := ie.file(t, "", "text", nil); err == nil {

@@ -15,7 +15,7 @@ package capture
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"log/slog"
 	"os"
 	"strings"
@@ -49,13 +49,13 @@ type burstBrain struct {
 func (b *burstBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	marker, ok := promptfence.MarkerIn(req.System)
 	if !ok {
-		return model.Response{}, fmt.Errorf("the prompt names no boundary")
+		return model.Response{}, errors.New("the prompt names no boundary")
 	}
 	prompt := req.Messages[0].Content
 	_, rest, found := strings.Cut(prompt, "<"+marker+` id="`)
 	ref, _, closed := strings.Cut(rest, `"`)
 	if !found || !closed {
-		return model.Response{}, fmt.Errorf("the prompt fences no thread")
+		return model.Response{}, errors.New("the prompt fences no thread")
 	}
 	verdict := "ordinary"
 	if strings.Contains(prompt, "Chat conversation") {
