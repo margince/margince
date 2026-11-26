@@ -13,10 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-func count(n int) *int { return &n }
-
 // A company with no profile rows but a description, a lifecycle, contacts and
-// open deals: the record the overview used to call empty.
+// open deals: a record the overview must not call empty.
 func recordedCompany() Input {
 	return Input{
 		CompanyID: ids.NewV7().String(),
@@ -25,8 +23,8 @@ func recordedCompany() Input {
 		Standing: Standing{
 			Description: "Load-shifting software for factories",
 			Lifecycle:   "customer",
-			Contacts:    count(3),
-			OpenDeals:   count(2),
+			Contacts:    new(3),
+			OpenDeals:   new(2),
 		},
 	}
 }
@@ -58,7 +56,7 @@ func TestTheFloorStatesTheCompanyRecordInTheReadersLanguage(t *testing.T) {
 func TestACompanyWithNothingRecordedStillReadsAsEmpty(t *testing.T) {
 	in := Input{
 		CompanyID: ids.NewV7().String(),
-		Standing:  Standing{Lifecycle: "", Contacts: count(0), OpenDeals: count(0)},
+		Standing:  Standing{Lifecycle: "", Contacts: new(0), OpenDeals: new(0)},
 	}
 	if got := floorTexts(in, "en"); len(got) != 0 {
 		t.Errorf("a company with none of the core fields got %v, want no section", got)
@@ -85,9 +83,9 @@ func TestEveryLifecycleButUnknownIsWorded(t *testing.T) {
 }
 
 func TestTheStandingIsReadFromTheCompanyRowAndLeavesUnknownOut(t *testing.T) {
-	want := Standing{Description: "Clinics", Contacts: count(4), OpenDeals: count(1)}
+	want := Standing{Description: "Clinics", Contacts: new(4), OpenDeals: new(1)}
 	stub := stubFacts{in: Input{Standing: Standing{
-		Description: " Clinics ", Lifecycle: "unknown", Contacts: count(4), OpenDeals: count(1),
+		Description: " Clinics ", Lifecycle: "unknown", Contacts: new(4), OpenDeals: new(1),
 	}}}
 	got, err := readStanding(context.Background(), stub, ids.From[ids.CompanyKind](ids.NewV7()))
 	if err != nil {
